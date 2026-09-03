@@ -43,7 +43,9 @@ class RenewalLoanOption:
     loan_type_name: str
     calculation_mode: str
     principal: Decimal
+    contractual_total: Decimal
     remaining_balance: Decimal
+    paid_amount: Decimal
     daily_amount: Decimal
     date_released: date
     due_date: date
@@ -54,15 +56,14 @@ class RenewalLoanOption:
     blocking_request_status: str | None = None
 
     @property
-    def paid_amount(self) -> Decimal:
-        return max(Decimal("0"), self.principal - self.remaining_balance)
-
-    @property
     def paid_percent(self) -> Decimal:
-        if self.principal <= 0:
+        if self.contractual_total <= 0:
             return Decimal("0")
-        return (self.paid_amount / self.principal * Decimal("100")).quantize(
-            Decimal("0.1")
+        return min(
+            Decimal("100.0"),
+            (self.paid_amount / self.contractual_total * Decimal("100")).quantize(
+                Decimal("0.1")
+            ),
         )
 
 
@@ -110,8 +111,13 @@ class PostgresRenewalRepository:
                             as loan_type_name,
                         loan_type.calculation_mode,
                         loan.principal,
+                        greatest(
+                            loan.principal,
+                            (loan.daily_amount * greatest(coalesce(loan_type.term_days, 120), 1))::numeric(18,2)
+                        ) as contractual_total,
                         coalesce(state.remaining_balance, loan.principal)
                             as remaining_balance,
+                        coalesce(receipts.paid_amount, 0)::numeric(18,2) as paid_amount,
                         loan.daily_amount,
                         loan.date_released,
                         loan.due_date,
@@ -123,6 +129,13 @@ class PostgresRenewalRepository:
                       on loan_type.id = loan.loan_type_id
                     left join lending.loan_collection_state state
                       on state.loan_id = loan.id
+                    left join lateral (
+                        select coalesce(sum(tx.applied_amount), 0)::numeric(18,2) as paid_amount
+                        from lending.collection_transactions tx
+                        where tx.loan_id = loan.id
+                          and tx.is_voided = false
+                          and tx.entry_type in ('payment', 'advance')
+                    ) receipts on true
                     left join lateral (
                         select request.id, request.status
                         from lending.client_renewal_requests request
@@ -170,13 +183,27 @@ class PostgresRenewalRepository:
                     select
                         loan.id,
                         loan.status,
-                        loan_type.calculation_mode
+                        loan.principal,
+                        loan.daily_amount,
+                        loan_type.term_days,
+                        loan_type.calculation_mode,
+                        greatest(
+                            loan.principal,
+                            (loan.daily_amount * greatest(coalesce(loan_type.term_days, 120), 1))::numeric(18,2)
+                        ) as contractual_total,
+                        coalesce((
+                            select sum(tx.applied_amount)
+                            from lending.collection_transactions tx
+                            where tx.loan_id = loan.id
+                              and tx.is_voided = false
+                              and tx.entry_type in ('payment', 'advance')
+                        ), 0)::numeric(18,2) as paid_amount
                     from lending.loans loan
                     join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
                     where loan.id = %s
                       and loan.client_id = %s
-                    for update
+                    for update of loan
                     """,
                     (loan_id, client["id"]),
                 )
@@ -185,13 +212,26 @@ class PostgresRenewalRepository:
                     raise RenewalLoanNotEligible(
                         "This loan does not belong to the linked borrower."
                     )
-                if str(loan["status"]).lower() not in {"active", "paid"}:
+                status = str(loan["status"]).lower()
+                if status not in {"active", "paid"}:
                     raise RenewalLoanNotEligible(
                         "Only an active or fully paid loan can be renewed."
                     )
-                if str(loan["calculation_mode"]).lower() == "seven_by_seven":
+                is_7x7 = str(loan["calculation_mode"]).lower() == "seven_by_seven"
+                contractual_total = Decimal(loan["contractual_total"] or 0)
+                paid_amount = Decimal(loan["paid_amount"] or 0)
+                paid_percent = (
+                    Decimal("100")
+                    if status == "paid"
+                    else (
+                        Decimal("0")
+                        if contractual_total <= 0
+                        else paid_amount / contractual_total * Decimal("100")
+                    )
+                )
+                if not is_7x7 and status != "paid" and paid_percent < Decimal("50"):
                     raise RenewalLoanNotEligible(
-                        "7x7 renewal requests are handled by the SPINA office."
+                        "Regular renewal becomes available after 50% of the total contractual balance has been paid. Management may review an earlier renewal only through the controlled override path."
                     )
 
                 cursor.execute(
@@ -212,7 +252,7 @@ class PostgresRenewalRepository:
                 if blocking_request:
                     if str(blocking_request["status"]).lower() == "approved":
                         raise RenewalConflict(
-                            "The approved renewal is still awaiting SPINA office processing."
+                            "The approved renewal is still awaiting completion."
                         )
                     raise RenewalConflict(
                         "A renewal request for this loan is already pending."
@@ -241,7 +281,7 @@ class PostgresRenewalRepository:
                     )
                 except UniqueViolation as exc:
                     raise RenewalConflict(
-                        "A renewal request is already awaiting review or office processing."
+                        "A renewal request is already awaiting review or processing."
                     ) from exc
                 request_id = cursor.fetchone()["id"]
                 cursor.execute(
@@ -261,7 +301,9 @@ class PostgresRenewalRepository:
                         jsonb_build_object(
                             'client_id', %s::text,
                             'loan_id', %s::text,
-                            'requested_amount', %s::text
+                            'requested_amount', %s::text,
+                            'calculation_mode', %s::text,
+                            'paid_percent_at_request', %s::text
                         )
                     )
                     """,
@@ -271,6 +313,8 @@ class PostgresRenewalRepository:
                         client["id"],
                         loan_id,
                         requested_amount,
+                        loan["calculation_mode"],
+                        paid_percent.quantize(Decimal("0.1")),
                     ),
                 )
                 return self._fetch_request(cursor, request_id=request_id)
@@ -345,50 +389,51 @@ class PostgresRenewalRepository:
         decision: RenewalDecision,
         review_note: str,
     ) -> RenewalRequestRecord:
+        """Legacy review endpoint: keep rejection safe; approvals use terms workflow."""
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     """
-                    update lending.client_renewal_requests
-                    set
-                        status = %s,
-                        reviewed_by_user_id = %s,
-                        review_note = %s,
-                        reviewed_at = now(),
-                        updated_at = now()
+                    select status, collector_recommendation
+                    from lending.client_renewal_requests
                     where id = %s
-                      and status = 'pending'
-                    returning id
+                    for update
                     """,
-                    (decision, actor_user_id, review_note, request_id),
+                    (request_id,),
                 )
-                if not cursor.fetchone():
+                current = cursor.fetchone()
+                if not current or current["status"] != "pending":
+                    raise RenewalConflict("This renewal request is no longer pending.")
+                if current["collector_recommendation"] is None:
                     raise RenewalConflict(
-                        "This renewal request is no longer pending."
+                        "The permanently assigned Collector must submit a recommendation first."
+                    )
+                if decision == "approved":
+                    raise RenewalConflict(
+                        "Use the renewal terms workflow so Management sets the approved principal, signer requirements, and any override reason before approval."
                     )
                 cursor.execute(
                     """
+                    update lending.client_renewal_requests
+                    set status='rejected', reviewed_by_user_id=%s,
+                        review_note=%s, reviewed_at=now(), updated_at=now()
+                    where id=%s and status='pending'
+                    returning id
+                    """,
+                    (actor_user_id, review_note, request_id),
+                )
+                if not cursor.fetchone():
+                    raise RenewalConflict("This renewal request is no longer pending.")
+                cursor.execute(
+                    """
                     insert into core.audit_logs (
-                        actor_user_id,
-                        action,
-                        target_type,
-                        target_id,
-                        details
-                    )
-                    values (
-                        %s,
-                        %s,
-                        'client_renewal_request',
-                        %s,
+                        actor_user_id, action, target_type, target_id, details
+                    ) values (
+                        %s, 'renewal.rejected', 'client_renewal_request', %s,
                         jsonb_build_object('review_note', %s::text)
                     )
                     """,
-                    (
-                        actor_user_id,
-                        f"renewal.{decision}",
-                        request_id,
-                        review_note,
-                    ),
+                    (actor_user_id, request_id, review_note),
                 )
                 return self._fetch_request(cursor, request_id=request_id)
 
@@ -419,27 +464,40 @@ class PostgresRenewalRepository:
             if row["blocking_request_status"]
             else None
         )
-        eligible = (
-            calculation_mode.lower() != "seven_by_seven"
-            and status.lower() in {"active", "paid"}
+        contractual_total = Decimal(row["contractual_total"] or row["principal"])
+        paid_amount = Decimal(row["paid_amount"] or 0)
+        if status.lower() == "paid":
+            paid_amount = max(paid_amount, contractual_total)
+        paid_percent = (
+            Decimal("0")
+            if contractual_total <= 0
+            else min(Decimal("100"), paid_amount / contractual_total * Decimal("100"))
         )
-        if calculation_mode.lower() == "seven_by_seven":
-            message = "7x7 renewals are handled by the SPINA office."
-        elif not eligible:
+        is_7x7 = calculation_mode.lower() == "seven_by_seven"
+        eligible = status.lower() in {"active", "paid"} and (
+            is_7x7 or status.lower() == "paid" or paid_percent >= Decimal("50")
+        )
+        if status.lower() not in {"active", "paid"}:
             message = "This loan is not currently eligible for renewal."
         elif blocking_status == "approved":
-            message = "Your approved renewal is awaiting SPINA office processing."
+            message = "Your approved renewal is awaiting completion."
         elif row["pending_request_id"]:
             message = "A renewal request is already pending."
+        elif is_7x7:
+            message = "7x7 may be requested for consideration at any paid percentage. Every 7x7 renewal requires Management approval."
+        elif eligible:
+            message = "Regular renewal is available because at least 50% of the total contractual balance has been paid."
         else:
-            message = "Management will review this request before office processing."
+            message = "Regular renewal becomes available after 50% of the total contractual balance is paid. Management may consider an earlier renewal only through its controlled override path."
         return RenewalLoanOption(
             loan_id=row["loan_id"],
             loan_number=str(row["loan_number"]),
             loan_type_name=str(row["loan_type_name"]),
             calculation_mode=calculation_mode,
             principal=Decimal(row["principal"]),
+            contractual_total=contractual_total,
             remaining_balance=Decimal(row["remaining_balance"]),
+            paid_amount=paid_amount,
             daily_amount=Decimal(row["daily_amount"]),
             date_released=row["date_released"],
             due_date=row["due_date"],

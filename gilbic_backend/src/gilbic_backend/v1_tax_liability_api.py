@@ -170,6 +170,9 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_v1_tax_liability_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/tax/liabilities"
+    )
     @router.get("/api/v1/management/financial-accounting/tax/liabilities")
     def list_v1_tax_liabilities(
         accounting_status: Literal[
@@ -208,6 +211,13 @@ def create_v1_tax_liability_router() -> APIRouter:
                     "liability_prepare": LIABILITY_PREPARE_PERMISSION in actor.permissions,
                     "liability_post": LIABILITY_POST_PERMISSION in actor.permissions,
                 },
+                "accounting_status": accounting_status,
+                "limit": limit,
+                "offset": offset,
+                "protected_tax_liability_posting_enabled": True,
+                "tax_settlement_enabled": True,
+                "tax_adjustment_reversal_enabled": True,
+                "automatic_source_posting": False,
                 "notice": (
                     "V1 tax liabilities reuse the protected General Journal and require exact current evidence plus explicit Management confirmation. "
                     "Tax settlement and the protected pre-close correction/reversal core are separate evidence-backed workflows. "
@@ -216,6 +226,9 @@ def create_v1_tax_liability_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/liabilities/{tax_type}/{evidence_id}/prepare"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/liabilities/{tax_type}/{evidence_id}/prepare"
     )
@@ -250,6 +263,9 @@ def create_v1_tax_liability_router() -> APIRouter:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/liabilities/{tax_type}/{evidence_id}/post"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/liabilities/{tax_type}/{evidence_id}/post"
     )

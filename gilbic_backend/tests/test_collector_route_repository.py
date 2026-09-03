@@ -13,6 +13,7 @@ from gilbic_backend.collector_route_repository import (
 
 
 COLLECTOR_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
+OTHER_COLLECTOR_USER_ID = UUID("55555555-5555-4555-8555-555555555555")
 CLIENT_ID = UUID("22222222-2222-4222-8222-222222222222")
 LOAN_ID = UUID("33333333-3333-4333-8333-333333333333")
 TRANSACTION_ID = UUID("44444444-4444-4444-8444-444444444444")
@@ -83,6 +84,8 @@ class FakeConnection:
                     "today_collector_name": "Collector One",
                     "today_transaction_id": TRANSACTION_ID,
                     "today_collector_user_id": COLLECTOR_USER_ID,
+                    "today_assigned_collector_user_id": COLLECTOR_USER_ID,
+                    "today_collection_origin": "assigned_route",
                     "today_is_locked": False,
                     "today_amount": Decimal("600.00"),
                     "today_note": "Selected dates only",
@@ -90,6 +93,7 @@ class FakeConnection:
                         date(2026, 8, 1),
                         date(2026, 8, 3),
                     ),
+                    "today_receipts": [],
                     "covered_dates": (
                         date(2026, 8, 1),
                         date(2026, 8, 3),
@@ -109,20 +113,32 @@ def fake_open_connection(connection: FakeConnection):
     yield connection
 
 
-def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) -> None:
-    connection = FakeConnection()
+def _load_route(monkeypatch, connection: FakeConnection):
     monkeypatch.setattr(
         module,
         "open_connection",
         lambda: fake_open_connection(connection),
     )
-    route_date = date(2026, 8, 1)
-
-    route = PostgresCollectorRouteRepository().get_today_route(
+    # These tests isolate the established route query and edit-authority behavior.
+    # Active-promise lookup has its own focused tests and requires a different
+    # cursor shape, so keep it out of this older repository fake rather than
+    # weakening the production lookup.
+    monkeypatch.setattr(
+        PostgresCollectorRouteRepository,
+        "_active_promise_summaries",
+        staticmethod(lambda connection, *, client_ids: {}),
+    )
+    return PostgresCollectorRouteRepository().get_today_route(
         collector_user_id=COLLECTOR_USER_ID,
         collector_name="Collector One",
-        route_date=route_date,
+        route_date=date(2026, 8, 1),
     )
+
+
+def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) -> None:
+    connection = FakeConnection()
+    route_date = date(2026, 8, 1)
+    route = _load_route(monkeypatch, connection)
 
     assert route.route_date == route_date
     assert route.collector_name == "Collector One"
@@ -168,12 +184,50 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     assert area_parameters == (COLLECTOR_USER_ID,)
     assert entry_parameters == (
         module.CONTRACT_ALLOCATION_SETTING,
+        COLLECTOR_USER_ID,
         route_date,
         route_date,
         route_date,
         route_date,
         COLLECTOR_USER_ID,
     )
+    entry_query = connection.entry_cursor.executions[0][0]
+    assert "contract_next.effective_due_date as contract_next_unpaid_date" in entry_query
+    assert "contract_next.due_date as contract_next_unpaid_date" not in entry_query
+    assert "lending.area_path_contains(" in entry_query
+    assert "lending.collector_area_owner(coalesce(c.area, '')) = %s" in entry_query
+    assert "char_length(lending.normalize_area_path(assignment.area)) desc" in entry_query
+    assert "lower(btrim(c.area)) = lower(btrim(a.area))" not in entry_query
+
+
+def test_assigned_owner_can_edit_latest_unlocked_cross_collector_receipt(monkeypatch) -> None:
+    connection = FakeConnection()
+    row = connection.entry_cursor.rows[0]
+    assert isinstance(row, dict)
+    row["today_collector_user_id"] = OTHER_COLLECTOR_USER_ID
+    row["today_collector_name"] = "Collector Two"
+    row["today_assigned_collector_user_id"] = COLLECTOR_USER_ID
+    row["today_collection_origin"] = "cross_collector"
+    row["today_is_locked"] = False
+
+    route = _load_route(monkeypatch, connection)
+
+    assert route.entries[0].can_edit_today is True
+    assert route.entries[0].today_collector_name == "Collector Two"
+
+
+def test_assigned_owner_cannot_edit_management_direct_receipt(monkeypatch) -> None:
+    connection = FakeConnection()
+    row = connection.entry_cursor.rows[0]
+    assert isinstance(row, dict)
+    row["today_collector_user_id"] = OTHER_COLLECTOR_USER_ID
+    row["today_assigned_collector_user_id"] = COLLECTOR_USER_ID
+    row["today_collection_origin"] = "management_direct"
+    row["today_is_locked"] = False
+
+    route = _load_route(monkeypatch, connection)
+
+    assert route.entries[0].can_edit_today is False
 
 
 def test_contract_setting_blocks_pay_until_verified_gate_is_ready() -> None:

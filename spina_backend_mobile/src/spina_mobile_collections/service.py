@@ -12,6 +12,7 @@ from .contracts import (
     CollectionCommand,
     CollectionEntryType,
     CollectionOutcome,
+    PastDueReasonCode,
 )
 
 CONTRACT_VERSION = "gilbic-collection-v1"
@@ -181,9 +182,16 @@ class CollectionSubmissionService:
                     code="invalid_covered_dates",
                     status_code=422,
                 )
+            self._validate_followup(command)
             return
 
         if command.entry_type is CollectionEntryType.ADVANCE:
+            if command.past_due_followup is not None:
+                raise CollectionProtocolError(
+                    "A covered-date payment cannot contain a Past Due follow-up.",
+                    code="past_due_followup_not_allowed",
+                    status_code=422,
+                )
             if not positive_amount:
                 raise CollectionProtocolError(
                     "A covered-date payment amount greater than zero is required.",
@@ -225,6 +233,57 @@ class CollectionSubmissionService:
             raise CollectionProtocolError(
                 "An unable-to-pay entry cannot contain an amount or covered dates.",
                 code="invalid_pass",
+                status_code=422,
+            )
+        if command.past_due_followup is None:
+            raise CollectionProtocolError(
+                "Choose a Past Due reason before saving Unable to pay.",
+                code="past_due_reason_required",
+                status_code=422,
+            )
+        self._validate_followup(command)
+
+    @staticmethod
+    def _validate_followup(command: CollectionCommand) -> None:
+        followup = command.past_due_followup
+        if followup is None:
+            return
+
+        note = followup.note.strip()
+        if followup.reason_code is PastDueReasonCode.OTHER and not note:
+            raise CollectionProtocolError(
+                "Other Past Due reason requires a short explanation.",
+                code="past_due_other_note_required",
+                status_code=422,
+            )
+
+        is_promise = followup.reason_code is PastDueReasonCode.PROMISED_TO_PAY_LATER
+        if is_promise:
+            if followup.promised_payment_date is None:
+                raise CollectionProtocolError(
+                    "Promised to pay later requires a promised payment date.",
+                    code="promised_payment_date_required",
+                    status_code=422,
+                )
+            if followup.promised_payment_date < command.collection_date:
+                raise CollectionProtocolError(
+                    "Promised payment date cannot be before the collection date.",
+                    code="promised_payment_date_invalid",
+                    status_code=422,
+                )
+            if followup.promised_amount is None or followup.promised_amount <= Decimal("0"):
+                raise CollectionProtocolError(
+                    "Promised to pay later requires a promised amount greater than zero.",
+                    code="promised_amount_required",
+                    status_code=422,
+                )
+        elif (
+            followup.promised_payment_date is not None
+            or followup.promised_amount is not None
+        ):
+            raise CollectionProtocolError(
+                "Promise date and amount are only valid for Promised to pay later.",
+                code="promise_details_not_allowed",
                 status_code=422,
             )
 

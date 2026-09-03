@@ -11,9 +11,11 @@ from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .initial_capital_funding_repository import (
+    EligibleInitialCapitalCashAccount,
     InitialCapitalFundingBlocked,
     InitialCapitalFundingError,
     InitialCapitalFundingItem,
+    InitialCapitalFundingSummary,
     PostgresInitialCapitalFundingRepository,
 )
 from .request_auth import authenticated_device_context
@@ -124,6 +126,24 @@ def _item_payload(item: InitialCapitalFundingItem) -> dict[str, object]:
     }
 
 
+def _summary_payload(summary: InitialCapitalFundingSummary) -> dict[str, object]:
+    return {
+        "evidence_count": summary.evidence_count,
+        "evidence_ready_count": summary.evidence_ready_count,
+        "prepared_not_posted_count": summary.prepared_not_posted_count,
+        "posted_count": summary.posted_count,
+        "blocked_no_open_period_count": summary.blocked_no_open_period_count,
+        "total_amount": format(summary.total_amount, ".2f"),
+        "posted_amount": format(summary.posted_amount, ".2f"),
+    }
+
+
+def _cash_account_payload(
+    account: EligibleInitialCapitalCashAccount,
+) -> dict[str, object]:
+    return {"code": account.code, "name": account.name}
+
+
 def _exception(error: InitialCapitalFundingError) -> HTTPException:
     return HTTPException(
         status_code=409 if isinstance(error, InitialCapitalFundingBlocked) else 500,
@@ -169,6 +189,9 @@ def _require_permission(actor, permission: str) -> None:
 def create_initial_capital_funding_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/initial-capital-funding"
+    )
     @router.get("/api/v1/management/financial-accounting/initial-capital-funding")
     def list_initial_capital_funding(
         limit: int = Query(default=100, ge=1, le=200),
@@ -194,11 +217,21 @@ def create_initial_capital_funding_router() -> APIRouter:
                     _item_payload(item)
                     for item in accounting.list_items(limit=limit, offset=offset)
                 ],
+                "summary": _summary_payload(accounting.list_summary()),
+                "cash_accounts": [
+                    _cash_account_payload(account)
+                    for account in accounting.list_eligible_cash_accounts()
+                ],
                 "permissions": {
                     "evidence_record": EVIDENCE_PERMISSION in actor.permissions,
                     "prepare": PREPARE_PERMISSION in actor.permissions,
                     "post": POST_PERMISSION in actor.permissions,
                 },
+                "limit": limit,
+                "offset": offset,
+                "protected_initial_capital_funding_enabled": True,
+                "synthetic_opening_balance_required": False,
+                "automatic_source_posting": False,
                 "notice": (
                     "Initial capital is recorded only from retained explicit funding evidence. "
                     "The protected path reuses the General Journal, never requires a synthetic opening balance, and never posts automatically."
@@ -206,6 +239,10 @@ def create_initial_capital_funding_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/initial-capital-funding/evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
     @router.post(
         "/api/v1/management/financial-accounting/initial-capital-funding/evidence",
         status_code=status.HTTP_201_CREATED,
@@ -245,6 +282,9 @@ def create_initial_capital_funding_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/initial-capital-funding/{evidence_id}/prepare"
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/initial-capital-funding/{evidence_id}/prepare"
     )
     def prepare_initial_capital(
@@ -280,6 +320,9 @@ def create_initial_capital_funding_router() -> APIRouter:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/initial-capital-funding/{evidence_id}/post"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/initial-capital-funding/{evidence_id}/post"
     )

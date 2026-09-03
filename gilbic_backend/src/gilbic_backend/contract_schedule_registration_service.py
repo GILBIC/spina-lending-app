@@ -6,6 +6,7 @@ from uuid import UUID
 
 from .contract_schedule_engine import ContractInstallment, PaymentFrequency
 from .contract_schedule_service import ContractScheduleConflict, store_contract_schedule
+from .seven_by_seven_signed_schedule import SevenBySevenSignedInstallment
 
 
 ContractEvidenceBasis = Literal[
@@ -21,6 +22,9 @@ _ALLOWED_EVIDENCE_BASES = {
 }
 
 
+VerifiedScheduleInstallment = ContractInstallment | SevenBySevenSignedInstallment
+
+
 def register_verified_contract_schedule(
     cursor: Any,
     *,
@@ -30,7 +34,7 @@ def register_verified_contract_schedule(
     contract_signed_date: date,
     effective_from: date,
     grace_days: int,
-    installments: Sequence[ContractInstallment],
+    installments: Sequence[VerifiedScheduleInstallment],
     evidence_basis: ContractEvidenceBasis,
     evidence_reference: str,
     verification_note: str,
@@ -45,6 +49,10 @@ def register_verified_contract_schedule(
     schedule that already has installment allocations cannot be superseded by
     this stage because those historical allocations must first be reconciled by
     a dedicated restructure workflow.
+
+    Component-bearing schedule rows (currently the signed 7x7 model) are stored
+    with principal/interest components on the initial immutable installment-row
+    insert. They are never initialized by a follow-up UPDATE.
     """
 
     if not confirmed:
@@ -62,6 +70,14 @@ def register_verified_contract_schedule(
         raise ContractScheduleConflict("Signed-contract evidence reference is required.")
     if not normalized_note:
         raise ContractScheduleConflict("Contract verification note is required.")
+
+    for installment in installments:
+        principal_component = getattr(installment, "principal_component", None)
+        interest_component = getattr(installment, "interest_component", None)
+        if (principal_component is None) != (interest_component is None):
+            raise ContractScheduleConflict(
+                "Contractual principal and interest components must be supplied together."
+            )
 
     if supersede_active:
         cursor.execute(
@@ -102,7 +118,7 @@ def register_verified_contract_schedule(
         contract_signed_date=contract_signed_date,
         effective_from=effective_from,
         grace_days=grace_days,
-        installments=installments,
+        installments=installments,  # type: ignore[arg-type]
         created_by_user_id=verified_by_user_id,
         supersede_active=supersede_active,
     )

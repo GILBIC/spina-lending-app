@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Shared visual language for SPINA mobile.
@@ -18,22 +19,24 @@ abstract final class SpinaTheme {
   static const Color warning = Color(0xFFA86518);
 
   static ThemeData get light {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: brandPink,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: brandPink,
-      onPrimary: Colors.white,
-      primaryContainer: brandPinkSoft,
-      onPrimaryContainer: brandPinkDark,
-      secondary: brandPinkDark,
-      onSecondary: Colors.white,
-      surface: Colors.white,
-      onSurface: ink,
-      outline: line,
-      outlineVariant: const Color(0xFFF2E5EB),
-      error: const Color(0xFFB3261E),
-    );
+    final platform = defaultTargetPlatform;
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: brandPink,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: brandPink,
+          onPrimary: Colors.white,
+          primaryContainer: brandPinkSoft,
+          onPrimaryContainer: brandPinkDark,
+          secondary: brandPinkDark,
+          onSecondary: Colors.white,
+          surface: Colors.white,
+          onSurface: ink,
+          outline: line,
+          outlineVariant: const Color(0xFFF2E5EB),
+          error: const Color(0xFFB3261E),
+        );
 
     final base = ThemeData(
       useMaterial3: true,
@@ -41,6 +44,7 @@ abstract final class SpinaTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: canvas,
       visualDensity: VisualDensity.standard,
+      platform: platform,
     );
 
     return base.copyWith(
@@ -68,10 +72,7 @@ abstract final class SpinaTheme {
           color: ink,
           fontWeight: FontWeight.w600,
         ),
-        bodyLarge: base.textTheme.bodyLarge?.copyWith(
-          color: ink,
-          height: 1.35,
-        ),
+        bodyLarge: base.textTheme.bodyLarge?.copyWith(color: ink, height: 1.35),
         bodyMedium: base.textTheme.bodyMedium?.copyWith(
           color: ink,
           height: 1.35,
@@ -84,14 +85,14 @@ abstract final class SpinaTheme {
           fontWeight: FontWeight.w700,
         ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: ink,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
+        centerTitle: platform == TargetPlatform.iOS,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: ink,
           fontSize: 20,
           fontWeight: FontWeight.w700,
@@ -111,7 +112,10 @@ abstract final class SpinaTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         labelStyle: const TextStyle(color: inkMuted),
         hintStyle: const TextStyle(color: Color(0xFF9B8892)),
         prefixIconColor: brandPinkDark,
@@ -153,7 +157,7 @@ abstract final class SpinaTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(0, 52),
           foregroundColor: brandPinkDark,
           side: const BorderSide(color: Color(0xFFE5B7CA)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -191,9 +195,7 @@ abstract final class SpinaTheme {
         selectedColor: brandPinkSoft,
         side: const BorderSide(color: line),
         labelStyle: const TextStyle(color: ink, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       ),
       dividerTheme: const DividerThemeData(
         color: Color(0xFFF0E3E9),
@@ -215,17 +217,13 @@ abstract final class SpinaTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
-          return IconThemeData(
-            color: selected ? brandPinkDark : inkMuted,
-          );
+          return IconThemeData(color: selected ? brandPinkDark : inkMuted);
         }),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Colors.white,
@@ -239,9 +237,7 @@ abstract final class SpinaTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: ink,
         contentTextStyle: const TextStyle(color: Colors.white),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: brandPink,

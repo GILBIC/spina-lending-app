@@ -2,14 +2,18 @@ import 'dart:convert';
 
 class SpinaApiException implements Exception {
   const SpinaApiException(
-    this.message, {
+    this._message, {
     this.statusCode,
     this.code,
   });
 
-  final String message;
+  final String _message;
   final int? statusCode;
   final String? code;
+
+  /// Keep legacy/internal SPINA identifiers out of user-facing mobile errors.
+  /// Internal class and protocol names remain unchanged to avoid risky churn.
+  String get message => _message.replaceAll('SPINA', 'Gilbic');
 
   @override
   String toString() => message;

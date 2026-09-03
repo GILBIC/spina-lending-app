@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Never
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -19,12 +20,16 @@ from .collection_void_repository import (
     PostgresCollectionVoidRepository,
 )
 from .request_auth import authenticated_device_context
+from .seven_by_seven_extra_principal_reversal import (
+    ExtraPrincipalReversalRequestResult,
+)
 
 
 class CollectionVoidBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     reason: str = Field(min_length=3, max_length=500)
+    idempotency_key: UUID | None = None
 
 
 def collection_void_repository_dependency() -> PostgresCollectionVoidRepository:
@@ -73,12 +78,10 @@ def _void_payload(record: CollectionVoidRecord) -> dict[str, object]:
     }
 
 
-def _raise_void_error(error: CollectionVoidError) -> None:
+def _raise_void_error(error: CollectionVoidError) -> Never:
     if isinstance(error, CollectionVoidNotFound):
         status_code = 404
-    elif isinstance(error, CollectionVoidLocked):
-        status_code = 409
-    elif isinstance(error, CollectionVoidConflict):
+    elif isinstance(error, (CollectionVoidLocked, CollectionVoidConflict)):
         status_code = 409
     elif isinstance(error, CollectionVoidInvalid):
         status_code = 422
@@ -159,14 +162,39 @@ def create_collection_void_router() -> APIRouter:
             auth=auth,
             accounts=accounts,
         )
+        if (
+            body.idempotency_key is not None
+            and "lending.extra_principal.reverse" not in actor.permissions
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Management Extra Principal reversal permission is required.",
+            )
         try:
             record = voids.void_unremitted(
                 actor_user_id=actor.user_id,
                 transaction_id=transaction_id,
                 reason=body.reason,
+                idempotency_key=body.idempotency_key,
             )
         except CollectionVoidError as error:
             _raise_void_error(error)
+        if isinstance(record, ExtraPrincipalReversalRequestResult):
+            if record.outcome == "blocked_refund_released":
+                raise HTTPException(status_code=409, detail=record.result_payload)
+            if record.collection_void is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": (
+                            "seven_by_seven_extra_principal_reversal_invalid_result"
+                        ),
+                        "message": (
+                            "Stored Extra Principal reversal evidence is incomplete."
+                        ),
+                    },
+                )
+            record = record.collection_void
         return {"success": True, "data": _void_payload(record)}
 
     return router

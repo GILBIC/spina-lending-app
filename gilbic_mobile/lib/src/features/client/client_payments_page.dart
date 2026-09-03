@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
   const ClientPaymentsPage({
@@ -157,6 +158,53 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
             ),
           ),
           const SizedBox(height: 12),
+          Container(
+            key: const Key('client-gcash-placeholder'),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: <Color>[Color(0xFFFFFBFD), Color(0xFFFFEEF5)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF0D6E1)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: SpinaTheme.brandPinkDark,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Direct GCash payment',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Coming soon through Xendit'),
+                      const SizedBox(height: 5),
+                      const Text(
+                        'This is a placeholder only. It cannot accept or post a payment yet.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -179,6 +227,10 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(timeline.proofMessage),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
+                        ),
                       ],
                     ),
                   ),

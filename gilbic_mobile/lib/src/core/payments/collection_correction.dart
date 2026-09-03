@@ -5,6 +5,7 @@ class CollectionCorrectionDraft {
     required this.transactionId,
     required this.entryType,
     required this.reason,
+    required this.expectedRouteRevision,
     this.amount,
     this.coveredDates = const <DateTime>[],
     this.note = '',
@@ -16,10 +17,14 @@ class CollectionCorrectionDraft {
   final List<DateTime> coveredDates;
   final String note;
   final String reason;
+  final String expectedRouteRevision;
 
   String? validate() {
     if (transactionId.trim().isEmpty) {
       return 'The collection transaction is missing. Refresh the route.';
+    }
+    if (expectedRouteRevision.trim().isEmpty) {
+      return 'The route changed or is incomplete. Refresh before editing.';
     }
     if (!const <String>{'payment', 'advance', 'pass'}.contains(entryType)) {
       return 'Choose a valid collection entry type.';
@@ -58,6 +63,7 @@ class CollectionCorrectionDraft {
           .toList(growable: false),
       'note': note.trim(),
       'reason': reason.trim(),
+      'expected_route_revision': expectedRouteRevision.trim(),
     };
   }
 }

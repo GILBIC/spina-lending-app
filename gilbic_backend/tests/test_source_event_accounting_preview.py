@@ -50,9 +50,63 @@ def test_regular_cash_source_is_valid_but_eir_allocation_is_required() -> None:
     assert preview.disposition == "eir_allocation_required"
     assert preview.posting_eligible is False
     assert preview.source_event_key == f"collection:{TX_ID}"
+    assert preview.amount == Decimal("200.00")
+    assert preview.cash_received_amount == Decimal("200.00")
+    assert preview.unallocated_amount == Decimal("0.00")
     assert preview.proposed_lines == ()
     assert "accrued EIR first" in preview.message
     assert "Automatic source posting remains disabled" in preview.message
+
+
+def test_unallocated_receipt_cash_blocks_loan_source_accounting() -> None:
+    preview = build_collection_accounting_preview(
+        event(
+            amount=Decimal("100.00"),
+            cash_received_amount=Decimal("200.00"),
+            unallocated_amount=Decimal("100.00"),
+        ),
+        cutover_date=CUTOVER,
+    )
+
+    assert preview.disposition == "unallocated_cash_review"
+    assert preview.posting_eligible is False
+    assert preview.amount == Decimal("100.00")
+    assert preview.cash_received_amount == Decimal("200.00")
+    assert preview.unallocated_amount == Decimal("100.00")
+    assert preview.proposed_lines == ()
+    assert "custody/remittance" in preview.message
+    assert "do not reduce the loan" in preview.message
+
+
+def test_fully_unallocated_second_receipt_is_preserved_but_not_loan_posted() -> None:
+    preview = build_collection_accounting_preview(
+        event(
+            amount=Decimal("0.00"),
+            cash_received_amount=Decimal("100.00"),
+            unallocated_amount=Decimal("100.00"),
+        ),
+        cutover_date=CUTOVER,
+    )
+
+    assert preview.disposition == "unallocated_cash_review"
+    assert preview.cash_received_amount == Decimal("100.00")
+    assert preview.amount == Decimal("0.00")
+    assert preview.proposed_lines == ()
+
+
+def test_receipt_application_mismatch_blocks_accounting() -> None:
+    preview = build_collection_accounting_preview(
+        event(
+            amount=Decimal("100.00"),
+            cash_received_amount=Decimal("250.00"),
+            unallocated_amount=Decimal("100.00"),
+        ),
+        cutover_date=CUTOVER,
+    )
+
+    assert preview.disposition == "receipt_application_mismatch"
+    assert preview.posting_eligible is False
+    assert preview.proposed_lines == ()
 
 
 def test_7x7_cash_source_never_assumes_full_credit_to_principal() -> None:

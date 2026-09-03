@@ -21,8 +21,8 @@ def test_repository_treats_approved_request_as_blocking() -> None:
 
     assert "request.status in ('pending', 'approved')" in repository
     assert "blocking.status as blocking_request_status" in repository
-    assert "approved renewal is still awaiting SPINA office processing" in repository
-    assert "Your approved renewal is awaiting SPINA office processing" in repository
+    assert "The approved renewal is still awaiting completion." in repository
+    assert "Your approved renewal is awaiting completion." in repository
 
 
 def test_api_exposes_blocking_request_status() -> None:

@@ -17,7 +17,13 @@ PaymentFrequency = Literal[
     "balloon",
     "custom",
 ]
-AllocationBasis = Literal["oldest_due_first", "exact_covered_date"]
+AllocationBasis = Literal[
+    "oldest_due_first",
+    "exact_covered_date",
+    "voluntary_extra_tail",
+    "future_advance_oldest_first",
+]
+ExtraAllocationChoice = Literal["advance", "principal_reduction"]
 InstallmentId = int | UUID | str
 
 
@@ -130,6 +136,10 @@ def plan_payment_allocation(
     installment, including the next future installment when earlier ones are
     already covered. With explicit covered dates, only those contractual due
     dates may receive the payment.
+
+    This legacy/general planner remains available for protected callers that
+    explicitly want oldest-first behavior. New Regular Collector payment flows
+    should use :func:`plan_protected_regular_allocation` instead.
     """
 
     amount = _money(transaction_amount)
@@ -194,6 +204,126 @@ def plan_payment_allocation(
             "Payment exceeds the unpaid contractual amount selected for allocation."
         )
     return tuple(instructions)
+
+
+def plan_protected_regular_allocation(
+    *,
+    transaction_amount: Decimal,
+    installments: Iterable[OutstandingInstallment],
+    collection_date: date,
+    extra_choice: ExtraAllocationChoice | None = None,
+) -> tuple[AllocationInstruction, ...]:
+    """Apply Regular cash using the protected SPINA allocation order.
+
+    Cash first clears every unpaid contractual obligation due on or before the
+    collection date, oldest first. Only money left after all Past Due and Due
+    Today obligations are satisfied is genuine extra cash.
+
+    Genuine extra is never guessed. The borrower must explicitly choose either
+    ``advance`` (oldest future obligation first) or ``principal_reduction``
+    (contractual tail first). Without that choice this function fails closed.
+    """
+
+    amount = _money(transaction_amount)
+    if amount <= 0:
+        raise PaymentAllocationError("Payment amount must be greater than zero.")
+
+    remaining = sorted(
+        (row for row in installments if row.remaining_amount > 0),
+        key=lambda row: (row.due_date, row.installment_number, str(row.installment_id)),
+    )
+    if not remaining:
+        raise PaymentAllocationError("The contractual schedule is already fully paid.")
+
+    amount_left = amount
+    instructions: list[AllocationInstruction] = []
+    due_rows = [row for row in remaining if row.due_date <= collection_date]
+    future_rows = [row for row in remaining if row.due_date > collection_date]
+
+    for row in due_rows:
+        if amount_left <= 0:
+            break
+        applied = _money(min(row.remaining_amount, amount_left))
+        if applied <= 0:
+            continue
+        instructions.append(
+            AllocationInstruction(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                due_date=row.due_date,
+                amount_applied=applied,
+                allocation_basis="oldest_due_first",
+            )
+        )
+        amount_left = _money(amount_left - applied)
+
+    if amount_left <= 0:
+        return tuple(instructions)
+
+    if extra_choice is None:
+        raise PaymentAllocationError(
+            "Payment includes extra cash after Past Due and Due Today. Choose Advance or Principal Reduction."
+        )
+
+    if extra_choice == "advance":
+        extra_candidates = future_rows
+        extra_basis: AllocationBasis = "future_advance_oldest_first"
+    elif extra_choice == "principal_reduction":
+        extra_candidates = list(reversed(future_rows))
+        extra_basis = "voluntary_extra_tail"
+    else:
+        raise PaymentAllocationError("Choose a valid extra allocation: Advance or Principal Reduction.")
+
+    for row in extra_candidates:
+        if amount_left <= 0:
+            break
+        applied = _money(min(row.remaining_amount, amount_left))
+        if applied <= 0:
+            continue
+        instructions.append(
+            AllocationInstruction(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                due_date=row.due_date,
+                amount_applied=applied,
+                allocation_basis=extra_basis,
+            )
+        )
+        amount_left = _money(amount_left - applied)
+
+    if amount_left != Decimal("0.00"):
+        raise PaymentAllocationError(
+            "Payment exceeds the remaining contractual balance. Use the exact payoff amount."
+        )
+    return tuple(instructions)
+
+
+def plan_scheduled_or_voluntary_extra_allocation(
+    *,
+    transaction_amount: Decimal,
+    installments: Iterable[OutstandingInstallment],
+    voluntary_extra: bool,
+) -> tuple[AllocationInstruction, ...]:
+    """Compatibility wrapper for callers using the earlier extra-cash contract.
+
+    New Collector flows must not use the ambiguous ``voluntary_extra`` concept.
+    They should call :func:`plan_protected_regular_allocation` with an explicit
+    borrower choice. This wrapper remains only while older internal callers are
+    migrated.
+    """
+
+    remaining = sorted(
+        (row for row in installments if row.remaining_amount > 0),
+        key=lambda row: (row.due_date, row.installment_number, str(row.installment_id)),
+    )
+    if not remaining:
+        raise PaymentAllocationError("The contractual schedule is already fully paid.")
+    return plan_protected_regular_allocation(
+        transaction_amount=transaction_amount,
+        installments=remaining,
+        collection_date=remaining[0].due_date,
+        extra_choice="principal_reduction" if voluntary_extra else None,
+    )
 
 
 def _generate_due_dates(

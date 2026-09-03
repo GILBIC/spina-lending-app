@@ -13,6 +13,7 @@ from spina_mobile_collections.service import CollectionRejected
 
 
 COLLECTOR_ID = UUID("11111111-1111-4111-8111-111111111111")
+AREA_PATH = "CARDONA › LOOC"
 
 
 def command(collection_date: date) -> CollectionCommand:
@@ -31,43 +32,41 @@ def command(collection_date: date) -> CollectionCommand:
     )
 
 
-def test_explicit_other_area_flow_ignores_only_route_assignment_rejection(
+def _route_rejected(*args, **kwargs) -> None:
+    raise CollectionRejected(
+        "This client is not assigned to your route.",
+        code="route_not_assigned",
+    )
+
+
+def test_other_area_flow_allows_cross_route_collection_without_delegated_grant(
     monkeypatch,
 ) -> None:
-    def reject_assignment(*args, **kwargs) -> None:
-        raise CollectionRejected(
-            "This client is not assigned to your route.",
-            code="route_not_assigned",
-        )
-
     monkeypatch.setattr(
         PostgresCollectionPostingBridge,
         "_validate_loan_and_route",
-        staticmethod(reject_assignment),
+        staticmethod(_route_rejected),
     )
 
     CrossCollectorCollectionPostingBridge._validate_loan_and_route(
         object(),
-        loan={"last_payment_date": date(2026, 8, 2)},
+        loan={"last_payment_date": date(2026, 8, 2), "area": AREA_PATH},
         collector_user_id=COLLECTOR_ID,
         command=command(date(2026, 8, 3)),
     )
 
 
-def test_other_area_flow_preserves_latest_payment_date_guard(monkeypatch) -> None:
-    def reject_assignment(*args, **kwargs) -> None:
-        raise CollectionRejected("Not assigned", code="route_not_assigned")
-
+def test_cross_route_flow_preserves_latest_payment_date_guard(monkeypatch) -> None:
     monkeypatch.setattr(
         PostgresCollectionPostingBridge,
         "_validate_loan_and_route",
-        staticmethod(reject_assignment),
+        staticmethod(_route_rejected),
     )
 
     with pytest.raises(CollectionRejected) as caught:
         CrossCollectorCollectionPostingBridge._validate_loan_and_route(
             object(),
-            loan={"last_payment_date": date(2026, 8, 4)},
+            loan={"last_payment_date": date(2026, 8, 4), "area": AREA_PATH},
             collector_user_id=COLLECTOR_ID,
             command=command(date(2026, 8, 3)),
         )
@@ -88,7 +87,7 @@ def test_other_collection_rejections_are_not_bypassed(monkeypatch) -> None:
     with pytest.raises(CollectionRejected) as caught:
         CrossCollectorCollectionPostingBridge._validate_loan_and_route(
             object(),
-            loan={"last_payment_date": None},
+            loan={"last_payment_date": None, "area": AREA_PATH},
             collector_user_id=COLLECTOR_ID,
             command=command(date(2026, 8, 3)),
         )

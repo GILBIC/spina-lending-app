@@ -1,16 +1,23 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import __version__
 from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
 from .auth_api import create_auth_router
+from .client_gcash_api import create_client_gcash_router
 from .client_loan_api import create_client_loan_router
 from .client_payment_api import create_client_payment_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
 from .collection_void_api import create_collection_void_router
+from .collector_cash_accountability_api import (
+    create_collector_cash_accountability_router,
+)
 from .collector_route_api import create_collector_route_router
+from .collector_schedule_api import create_collector_schedule_router
+from .combined_collection_api import create_combined_collection_router
 from .config import get_settings
 from .contract_collection_activation_api import (
     create_contract_collection_activation_router,
@@ -23,6 +30,7 @@ from .cross_period_accounting_sequence_api import (
 )
 from .cross_remittance_api import create_cross_remittance_router
 from .database import database_ready
+from .delegated_area_api import create_delegated_area_router
 from .ecl_a5_accounting_api import create_ecl_a5_accounting_router
 from .ecl_allowance_posting_api import create_ecl_allowance_posting_router
 from .ecl_credit_risk_label_api import create_ecl_credit_risk_label_router
@@ -57,17 +65,25 @@ from .loan_disbursement_journal_posting_api import (
 from .loan_renewal_execution_evidence_api import (
     create_loan_renewal_execution_evidence_router,
 )
+from .management_alerts_audit_api import create_management_alerts_audit_router
 from .management_api import create_management_router
+from .management_dashboard_overview_api import (
+    create_management_dashboard_overview_router,
+)
+from .management_employee_activity_api import create_management_employee_activity_router
 from .management_loan_api import create_management_loan_router
+from .management_no_collection_api import create_management_no_collection_router
 from .management_operations_api import create_management_operations_router
 from .notification_api import create_notification_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
 from .other_area_api import create_other_area_router
+from .past_due_reporting_api import create_past_due_reporting_router
 from .period_close_api import create_period_close_router
 from .posting_ready_evidence_review_api import (
     create_posting_ready_evidence_review_router,
 )
+from .refund_due_api import create_refund_due_router
 from .regular_journal_draft_api import create_regular_journal_draft_router
 from .regular_journal_posting_api import create_regular_journal_posting_router
 from .remittance_accounting_api import create_remittance_accounting_router
@@ -83,6 +99,8 @@ from .renewal_treatment_accounting_target_api import (
 )
 from .renewal_treatment_decision_api import create_renewal_treatment_decision_router
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
+from .renewal_workflow_api import create_renewal_workflow_router
+from .renewal_workflow_query_api import create_renewal_workflow_query_router
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .seven_by_seven_journal_posting_api import (
     create_seven_by_seven_journal_posting_router,
@@ -98,9 +116,28 @@ from .v1_tax_recoverable_refund_api import create_v1_tax_recoverable_refund_rout
 from .v1_tax_settlement_api import create_v1_tax_settlement_router
 
 
+_PORTAL_ALLOWED_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Idempotency-Key",
+    "X-App-Platform",
+    "X-App-Version",
+    "X-Client-Transaction-Id",
+    "X-Device-Id",
+    "X-Gilbic-Contract-Version",
+]
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=__version__)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=_PORTAL_ALLOWED_HEADERS,
+    )
 
     @app.get("/health/live")
     def liveness() -> dict[str, str]:
@@ -125,8 +162,13 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_management_alerts_audit_router())
+    app.include_router(create_management_dashboard_overview_router())
+    app.include_router(create_management_employee_activity_router())
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
+    app.include_router(create_management_no_collection_router())
+    app.include_router(create_past_due_reporting_router())
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
     app.include_router(create_source_event_accounting_router())
@@ -174,13 +216,21 @@ def create_app() -> FastAPI:
     app.include_router(create_general_journal_router())
     app.include_router(create_client_loan_router())
     app.include_router(create_client_payment_router())
+    app.include_router(create_client_gcash_router())
     app.include_router(create_renewal_router())
+    app.include_router(create_renewal_workflow_router())
+    app.include_router(create_renewal_workflow_query_router())
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
+    app.include_router(create_collector_schedule_router())
+    app.include_router(create_collector_cash_accountability_router())
+    app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())
     app.include_router(create_collection_api_router())
+    app.include_router(create_combined_collection_router())
     app.include_router(create_collection_correction_router())
     app.include_router(create_collection_void_router())
+    app.include_router(create_refund_due_router())
     app.include_router(create_remittance_router())
     app.include_router(create_cross_remittance_router())
     app.include_router(create_notification_router())

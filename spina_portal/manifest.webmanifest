@@ -1,0 +1,21 @@
+{
+  "name": "Spina",
+  "short_name": "Spina",
+  "description": "Secure Client, Employee, Collector, and Management workspace for Spina.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fcf8fa",
+  "theme_color": "#c72c73",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/spina-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

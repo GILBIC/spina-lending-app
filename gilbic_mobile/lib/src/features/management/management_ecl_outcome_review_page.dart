@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_outcome_review.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_outcome_review_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementEclOutcomeReviewPage extends StatefulWidget {
   const ManagementEclOutcomeReviewPage({
@@ -67,7 +68,9 @@ class _ManagementEclOutcomeReviewPageState
       if (mounted) setState(() => _error = error.message);
     } on Object {
       if (mounted) {
-        setState(() => _error = 'Historical outcome review could not be loaded.');
+        setState(
+          () => _error = 'Historical outcome review could not be loaded.',
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -83,7 +86,12 @@ class _ManagementEclOutcomeReviewPageState
       barrierDismissible: false,
       builder: (context) => _ReviewDialog(episode: episode),
     );
-    if (draft == null) return;
+    if (draft == null || !mounted) return;
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _eclReviewPresentation(episode, draft: draft),
+    );
+    if (!confirmed || !mounted) return;
 
     setState(() => _submitting = true);
     try {
@@ -108,9 +116,9 @@ class _ManagementEclOutcomeReviewPageState
       await _load(offset: _offset);
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
@@ -242,7 +250,7 @@ class _ManagementEclOutcomeReviewPageState
             child: Padding(
               padding: EdgeInsets.all(14),
               child: Text(
-                'Stage 5E.4 records reviewed historical default/non-default outcomes only. Renewal, archive, deletion, cash totals and arrears are evidence to inspect, not automatic labels. Loss, recovery, PD, LGD, ECL amount, opening-balance values and General Ledger posting remain outside this stage.',
+                "This historical credit-outcome review records only Management's reviewed default/non-default outcomes. Renewal, archive, deletion, cash totals and arrears are evidence to inspect, not automatic labels. Loss, recovery, PD, LGD, ECL amount, opening-balance values and General Ledger posting remain outside this review.",
               ),
             ),
           ),
@@ -296,7 +304,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Stage 5E.4 Review Progress',
+                    'Historical credit-outcome review progress',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
@@ -304,7 +312,10 @@ class _SummaryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            _Row(label: 'Historical episodes', value: '${summary.episodeCount}'),
+            _Row(
+              label: 'Historical episodes',
+              value: '${summary.episodeCount}',
+            ),
             _Row(
               label: 'Usable for outcome review',
               value: '${summary.structurallyUsableCount}',
@@ -326,7 +337,10 @@ class _SummaryCard extends StatelessWidget {
               label: 'Reviewed non-default',
               value: '${summary.reviewedNonDefaultCount}',
             ),
-            _Row(label: 'ECL included', value: summary.eclIncluded ? 'Yes' : 'No'),
+            _Row(
+              label: 'ECL included',
+              value: summary.eclIncluded ? 'Yes' : 'No',
+            ),
             _Row(
               label: 'ECL amount',
               value: summary.eclAmount == null
@@ -334,7 +348,7 @@ class _SummaryCard extends StatelessWidget {
                   : _money(summary.eclAmount!),
             ),
             _Row(
-              label: 'Ready to post',
+              label: 'Ready for evidence review',
               value: summary.readyToPost ? 'Yes' : 'No',
             ),
           ],
@@ -406,10 +420,10 @@ class _EpisodeCard extends StatelessWidget {
             episode.sourceBlocked
                 ? 'Source review'
                 : label == null
-                    ? 'Pending'
-                    : label
-                        ? 'Default'
-                        : 'Non-default',
+                ? 'Pending'
+                : label
+                ? 'Default'
+                : 'Non-default',
           ),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -453,9 +467,9 @@ class _EpisodeCard extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           if (episode.sourceBlocked)
-            _WarningBox(
-              text: episode.sourceQualityNote ??
-                  'This episode requires source review before any outcome can be labeled.',
+            ManagementReviewPanel(
+              review: _eclReviewPresentation(episode),
+              compact: true,
             )
           else if (episode.reviewed) ...[
             _ReviewHistory(episode: episode),
@@ -468,7 +482,9 @@ class _EpisodeCard extends StatelessWidget {
                 key: Key('review-outcome-${episode.historicalEpisodeId}'),
                 onPressed: canReview ? onReview : null,
                 icon: Icon(
-                  episode.reviewed ? Icons.edit_note : Icons.fact_check_outlined,
+                  episode.reviewed
+                      ? Icons.edit_note
+                      : Icons.fact_check_outlined,
                 ),
                 label: Text(
                   episode.reviewed ? 'Revise review' : 'Review outcome',
@@ -492,9 +508,7 @@ class _ReviewHistory extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -505,10 +519,7 @@ class _ReviewHistory extends StatelessWidget {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 6),
-          _Row(
-            label: 'Review version',
-            value: '${episode.reviewVersion ?? 1}',
-          ),
+          _Row(label: 'Review version', value: '${episode.reviewVersion ?? 1}'),
           _Row(
             label: 'Evidence basis',
             value: _status(episode.evidenceBasis ?? 'not_recorded'),
@@ -524,36 +535,6 @@ class _ReviewHistory extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(episode.reviewNote ?? 'No review note recorded.'),
-        ],
-      ),
-    );
-  }
-}
-
-class _WarningBox extends StatelessWidget {
-  const _WarningBox({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: colors.errorContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.warning_amber_outlined, color: colors.onErrorContainer),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text, style: TextStyle(color: colors.onErrorContainer)),
-          ),
         ],
       ),
     );
@@ -776,6 +757,78 @@ class _ReviewDraft {
   final String reviewNote;
 }
 
+ManagementReviewPresentation _eclReviewPresentation(
+  EclOutcomeReviewEpisode episode, {
+  _ReviewDraft? draft,
+}) {
+  final sourceBlocked = episode.sourceBlocked;
+  final sourceStatus =
+      plainManagementStatus(episode.sourceQualityStatus, const <String, String>{
+        'ready_for_outcome_labeling': 'Source data ready for outcome labeling',
+        'source_review_required': 'Source evidence needs review',
+      });
+  final outcomeStatus = plainManagementStatus(
+    episode.reviewStatus,
+    const <String, String>{
+      'outcome_review_required': 'Outcome review is pending',
+      'reviewed': 'An outcome review version already exists',
+      'source_review_required': 'Outcome labeling is blocked by source review',
+    },
+  );
+  return ManagementReviewPresentation.validated(
+    binding: ManagementMutationBinding.eclOutcomeReview,
+    recordLabel: 'Historical outcome episode',
+    recordValue:
+        '${_loanType(episode.loanType)} • Episode ${episode.episodeSequence}',
+    statusLabel: sourceStatus,
+    statusDetail: 'Outcome review: $outcomeStatus',
+    facts: <ManagementReviewFact>[
+      if (episode.outcomeEvidence?.trim().isNotEmpty == true)
+        ManagementReviewFact(
+          label: 'Lifecycle evidence',
+          value: _status(episode.outcomeEvidence!),
+        ),
+      if (draft != null) ...<ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Reviewed outcome',
+          value: draft.defaultLabel ? 'Default' : 'Non-default',
+        ),
+        ManagementReviewFact(
+          label: 'Evidence basis',
+          value: _status(draft.evidenceBasis),
+        ),
+        ManagementReviewFact(
+          label: 'Evidence reference',
+          value: draft.evidenceReference,
+        ),
+        ManagementReviewFact(label: 'Review note', value: draft.reviewNote),
+      ],
+    ],
+    warnings: sourceBlocked
+        ? <ManagementReviewWarning>[
+            ManagementReviewWarning(
+              severity: ManagementReviewWarningSeverity.blocker,
+              message:
+                  episode.sourceQualityNote ??
+                  'This episode requires source review before outcome labeling.',
+            ),
+          ]
+        : const <ManagementReviewWarning>[],
+    nextActionLabel: sourceBlocked
+        ? 'Resolve source evidence before labeling'
+        : 'Record historical outcome review',
+    consequence: sourceBlocked
+        ? 'No outcome label can be saved until source evidence is reviewed and the server returns the episode to the outcome queue.'
+        : 'A new immutable historical outcome-review version will be saved. '
+              'This does not calculate loss, recovery, PD, LGD or ECL and does not '
+              'post to the General Ledger.',
+    secondaryReferences: <ManagementReviewFact>[
+      ManagementReviewFact(label: 'Episode key', value: episode.episodeKey),
+    ],
+    actionEnabled: !sourceBlocked,
+  );
+}
+
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
 
@@ -825,19 +878,19 @@ class _Row extends StatelessWidget {
 }
 
 String _filterLabel(String value) => switch (value) {
-      'pending' => 'Pending',
-      'reviewed' => 'Reviewed',
-      'source_review' => 'Source review',
-      'all' => 'All',
-      _ => _status(value),
-    };
+  'pending' => 'Pending',
+  'reviewed' => 'Reviewed',
+  'source_review' => 'Source review',
+  'all' => 'All',
+  _ => _status(value),
+};
 
 String _loanType(String value) => switch (value.toLowerCase()) {
-      'regular' => 'Regular',
-      '7x7' => '7x7',
-      'seven_by_seven' => '7x7',
-      _ => _status(value),
-    };
+  'regular' => 'Regular',
+  '7x7' => '7x7',
+  'seven_by_seven' => '7x7',
+  _ => _status(value),
+};
 
 String _status(String value) => value
     .split('_')

@@ -9,8 +9,9 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
 
 void main() {
-  testWidgets('management tiles mirror exact backend permission boundaries',
-      (tester) async {
+  testWidgets('management tiles mirror exact backend permission boundaries', (
+    tester,
+  ) async {
     await _setLargeSurface(tester);
     const session = UserSession(
       userId: 'management-1',
@@ -19,10 +20,7 @@ void main() {
       role: AppRole.management,
       rawRole: 'Management',
       accessToken: 'management-token',
-      permissions: <String>[
-        'management.dashboard.view',
-        'accounting.view',
-      ],
+      permissions: <String>['management.dashboard.view', 'accounting.view'],
     );
 
     await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
@@ -41,10 +39,7 @@ void main() {
       find.byKey(const Key('management-opening-balance-journal')),
       findsOneWidget,
     );
-    expect(
-      find.byKey(const Key('management-general-journal')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('management-general-journal')), findsOneWidget);
     expect(
       find.byKey(const Key('management-financial-statements')),
       findsOneWidget,
@@ -62,37 +57,173 @@ void main() {
     );
   });
 
-  testWidgets('collector tiles separate route collection and remittance scopes',
-      (tester) async {
+  testWidgets(
+    'collector tiles separate route delegated work and remittance scopes',
+    (tester) async {
+      await _setLargeSurface(tester);
+      const session = UserSession(
+        userId: 'collector-1',
+        username: 'collector.one',
+        displayName: 'Collector One',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        accessToken: 'collector-token',
+        permissions: <String>[
+          'route.view',
+          'collection.create',
+          'delegated_area.view',
+        ],
+      );
+
+      await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('daily-route')), findsOneWidget);
+      expect(find.byKey(const Key('record-payment')), findsOneWidget);
+      expect(find.byKey(const Key('delegated-area-access')), findsOneWidget);
+      expect(find.byKey(const Key('other-area-payment')), findsOneWidget);
+      expect(find.byKey(const Key('payment-updates')), findsOneWidget);
+
+      expect(find.byKey(const Key('remittance')), findsNothing);
+      expect(
+        find.byKey(const Key('assigned-collector-remittance')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('remittance-notifications')), findsNothing);
+    },
+  );
+
+  testWidgets('Employee role uses the dedicated permission-scoped dashboard', (
+    tester,
+  ) async {
     await _setLargeSurface(tester);
     const session = UserSession(
-      userId: 'collector-1',
-      username: 'collector.one',
-      displayName: 'Collector One',
-      role: AppRole.collector,
-      rawRole: 'Collector',
-      accessToken: 'collector-token',
-      permissions: <String>['route.view', 'collection.create'],
+      userId: 'employee-1',
+      username: 'employee.one',
+      displayName: 'Employee One',
+      role: AppRole.employee,
+      rawRole: 'Employee',
+      accessToken: 'employee-token',
+      permissions: <String>['employee.portal.view', 'remittance.view'],
     );
 
     await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('daily-route')), findsOneWidget);
-    expect(find.byKey(const Key('record-payment')), findsOneWidget);
-    expect(find.byKey(const Key('other-area-payment')), findsOneWidget);
-    expect(find.byKey(const Key('payment-updates')), findsOneWidget);
-
-    expect(find.byKey(const Key('remittance')), findsNothing);
-    expect(
-      find.byKey(const Key('assigned-collector-remittance')),
-      findsNothing,
-    );
-    expect(find.byKey(const Key('remittance-notifications')), findsNothing);
+    expect(find.text('Employee Dashboard'), findsOneWidget);
+    expect(find.byKey(const Key('employee-section-workday')), findsOneWidget);
+    expect(find.byKey(const Key('employee-section-office')), findsOneWidget);
+    expect(find.byKey(const Key('employee-remittance')), findsOneWidget);
+    expect(find.byKey(const Key('daily-route')), findsNothing);
+    expect(find.byKey(const Key('management-staff-devices')), findsNothing);
   });
 
-  testWidgets('record payment requires both route view and collection create',
-      (tester) async {
+  for (final permission in <String>['account.manage', 'device.manage']) {
+    testWidgets('staff and devices is available with $permission alone', (
+      tester,
+    ) async {
+      await _setLargeSurface(tester);
+      final session = UserSession(
+        userId: 'management-1',
+        username: 'management.one',
+        displayName: 'Management One',
+        role: AppRole.management,
+        rawRole: 'Management',
+        accessToken: 'management-token',
+        permissions: <String>['management.dashboard.view', permission],
+      );
+
+      await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('management-staff-devices')), findsOneWidget);
+    });
+  }
+
+  testWidgets('staff and devices is hidden without either permission', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    const session = UserSession(
+      userId: 'management-1',
+      username: 'management.one',
+      displayName: 'Management One',
+      role: AppRole.management,
+      rawRole: 'Management',
+      accessToken: 'management-token',
+      permissions: <String>['management.dashboard.view'],
+    );
+
+    await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('management-staff-devices')), findsNothing);
+  });
+
+  testWidgets(
+    'staff and devices repeats its any-permission check at tap time',
+    (tester) async {
+      await _setLargeSurface(tester);
+      final permissions = <String>[
+        'management.dashboard.view',
+        'device.manage',
+      ];
+      final session = UserSession(
+        userId: 'management-1',
+        username: 'management.one',
+        displayName: 'Management One',
+        role: AppRole.management,
+        rawRole: 'Management',
+        accessToken: 'management-token',
+        permissions: permissions,
+      );
+
+      await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+      await tester.pumpAndSettle();
+
+      final launcher = find.byKey(const Key('management-staff-devices'));
+      expect(launcher, findsOneWidget);
+      permissions.remove('device.manage');
+      await tester.ensureVisible(launcher);
+      await tester.tap(launcher);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Your current server permissions do not allow Staff & devices.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'other-area work is hidden without delegated-area view permission',
+    (tester) async {
+      await _setLargeSurface(tester);
+      const session = UserSession(
+        userId: 'collector-1',
+        username: 'collector.one',
+        displayName: 'Collector One',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        accessToken: 'collector-token',
+        permissions: <String>['route.view', 'collection.create'],
+      );
+
+      await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('daily-route')), findsOneWidget);
+      expect(find.byKey(const Key('record-payment')), findsOneWidget);
+      expect(find.byKey(const Key('delegated-area-access')), findsNothing);
+      expect(find.byKey(const Key('other-area-payment')), findsNothing);
+    },
+  );
+
+  testWidgets('record payment requires both route view and collection create', (
+    tester,
+  ) async {
     await _setLargeSurface(tester);
     const session = UserSession(
       userId: 'collector-1',
@@ -109,12 +240,14 @@ void main() {
 
     expect(find.byKey(const Key('daily-route')), findsOneWidget);
     expect(find.byKey(const Key('record-payment')), findsNothing);
+    expect(find.byKey(const Key('delegated-area-access')), findsNothing);
     expect(find.byKey(const Key('other-area-payment')), findsNothing);
     expect(find.byKey(const Key('payment-updates')), findsOneWidget);
   });
 
-  testWidgets('tap-time permission recheck blocks a stale visible module',
-      (tester) async {
+  testWidgets('tap-time permission recheck blocks a stale visible module', (
+    tester,
+  ) async {
     await _setLargeSurface(tester);
     final permissions = <String>[
       'management.dashboard.view',
@@ -133,8 +266,9 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
     await tester.pumpAndSettle();
 
-    final accountingTile =
-        find.byKey(const Key('management-financial-accounting'));
+    final accountingTile = find.byKey(
+      const Key('management-financial-accounting'),
+    );
     expect(accountingTile, findsOneWidget);
 
     // Simulate a stale already-rendered shell. The tap path must re-check the

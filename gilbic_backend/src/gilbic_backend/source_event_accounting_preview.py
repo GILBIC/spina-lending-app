@@ -28,12 +28,28 @@ class CollectionSourceEvent:
     amount: Decimal
     is_voided: bool
     voided_at: datetime | None
+    cash_received_amount: Decimal | None = None
+    unallocated_amount: Decimal = ZERO
     journal_entry_id: UUID | None = None
     journal_status: str | None = None
     journal_entry_number: str | None = None
     reversal_entry_id: UUID | None = None
     reversal_status: str | None = None
     reversal_entry_number: str | None = None
+
+    @property
+    def receipt_cash_amount(self) -> Decimal:
+        """Actual custody cash represented by this receipt.
+
+        Older callers only supplied ``amount`` because receipt cash and loan
+        application were historically the same value. New receipt-first readers
+        pass ``cash_received_amount`` explicitly while ``amount`` is the portion
+        applied to the loan/accounting source event.
+        """
+
+        if self.cash_received_amount is None:
+            return self.amount
+        return self.cash_received_amount
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +76,8 @@ class CollectionAccountingPreview:
     accepted_at: datetime
     entry_type: str
     amount: Decimal
+    cash_received_amount: Decimal
+    unallocated_amount: Decimal
     is_voided: bool
     voided_at: datetime | None
     disposition: str
@@ -85,16 +103,22 @@ def build_collection_accounting_preview(
 ) -> CollectionAccountingPreview:
     """Classify one collection for future accounting without inventing entries.
 
+    Receipt custody and loan application are intentionally separate. ``event.amount``
+    is the amount already authorized to apply to the loan; ``receipt_cash_amount``
+    is the full physical/GCash receipt. Any unresolved cash blocks source-accounting
+    automation until an authorized allocation (and the corresponding accounting
+    treatment for unapplied cash) is established.
+
     The Stage 5D EIR engine carries loans in two accounting components: a loan
     component (1100 Regular or 1110 7x7) plus accrued effective interest (1120).
-    Cash is applied to accrued EIR first and then the loan component. Therefore
-    PAYMENT/ADV cannot safely become a journal line from the operational cash
-    amount alone. This preview proves source identity, cutover, void/reversal and
-    duplicate state, then blocks journal mapping as ``eir_allocation_required``
-    until an event-date EIR allocation layer is implemented and reconciled.
+    Applied cash is allocated to accrued EIR first and then the loan component.
+    This preview proves source identity, cutover, void/reversal and duplicate state,
+    then blocks journal mapping until protected EIR evidence is available.
     """
 
     source_key = collection_source_event_key(event.transaction_id)
+    receipt_cash = event.receipt_cash_amount
+    unallocated = event.unallocated_amount
     base = dict(
         transaction_id=event.transaction_id,
         source_event_key=source_key,
@@ -110,6 +134,8 @@ def build_collection_accounting_preview(
         accepted_at=event.accepted_at,
         entry_type=event.entry_type,
         amount=event.amount,
+        cash_received_amount=receipt_cash,
+        unallocated_amount=unallocated,
         is_voided=event.is_voided,
         voided_at=event.voided_at,
         existing_journal_entry_id=event.journal_entry_id,
@@ -137,12 +163,24 @@ def build_collection_accounting_preview(
             proposed_lines=(),
         )
 
-    if event.entry_type not in {"payment", "advance"} or event.amount <= ZERO:
+    if event.entry_type not in {"payment", "advance"} or receipt_cash <= ZERO:
         return CollectionAccountingPreview(
             **base,
             disposition="unsupported_event",
             posting_eligible=False,
             message="This source event is not supported for accounting automation and requires review.",
+            proposed_lines=(),
+        )
+
+    if event.amount < ZERO or unallocated < ZERO or event.amount + unallocated != receipt_cash:
+        return CollectionAccountingPreview(
+            **base,
+            disposition="receipt_application_mismatch",
+            posting_eligible=False,
+            message=(
+                "Receipt cash does not reconcile to the loan-applied plus unallocated amounts. "
+                "Accounting is blocked until the receipt application is reconciled."
+            ),
             proposed_lines=(),
         )
 
@@ -220,6 +258,27 @@ def build_collection_accounting_preview(
             proposed_lines=(),
         )
 
+    if unallocated > ZERO:
+        return CollectionAccountingPreview(
+            **base,
+            disposition="unallocated_cash_review",
+            posting_eligible=False,
+            message=(
+                "This receipt contains real cash that is still unallocated to a loan obligation. "
+                "Keep the full receipt in custody/remittance, but do not reduce the loan or create an automatic source journal for the unresolved amount. Management allocation review is required."
+            ),
+            proposed_lines=(),
+        )
+
+    if event.amount <= ZERO:
+        return CollectionAccountingPreview(
+            **base,
+            disposition="no_applied_loan_cash",
+            posting_eligible=False,
+            message="No part of this receipt is currently applied to the loan, so no loan source journal may be proposed.",
+            proposed_lines=(),
+        )
+
     if event.calculation_mode not in SUPPORTED_EIR_MODES:
         return CollectionAccountingPreview(
             **base,
@@ -259,8 +318,8 @@ def build_collection_accounting_preview(
         disposition="eir_allocation_required",
         posting_eligible=False,
         message=(
-            "The collection is an authoritative post-cutover cash source, but no journal lines are proposed yet. "
-            "The EIR carrying amount is split between the loan component and accrued effective interest; cash must be allocated to accrued EIR first and then principal/carrying amount using an event-date EIR schedule. Automatic source posting remains disabled."
+            "The receipt is an authoritative post-cutover cash source and its loan-applied amount is reconciled, but no journal lines are proposed yet. "
+            "The EIR carrying amount is split between the loan component and accrued effective interest; applied cash must be allocated to accrued EIR first and then principal/carrying amount using an event-date EIR schedule. Automatic source posting remains disabled."
         ),
         proposed_lines=(),
     )

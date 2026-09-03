@@ -21,9 +21,7 @@ class CollectorRoute {
       'collector_name': collectorName,
       'areas': areas,
       'expected_total': expectedTotal,
-      'entries': entries
-          .map((entry) => entry.toJson())
-          .toList(growable: false),
+      'entries': entries.map((entry) => entry.toJson()).toList(growable: false),
     };
   }
 
@@ -76,10 +74,124 @@ class CollectorRoute {
       areas: rawAreas.isEmpty ? derivedAreas : rawAreas,
       entries: entries,
       expectedTotal: expected?.toDouble() ??
-          entries.fold<double>(
-            0,
-            (total, entry) => total + entry.dailyAmount,
-          ),
+          entries.fold<double>(0, (total, entry) => total + entry.dailyAmount),
+    );
+  }
+}
+
+class CollectorRouteReceipt {
+  const CollectorRouteReceipt({
+    required this.transactionId,
+    required this.receiptNumber,
+    required this.amount,
+    required this.entryType,
+    required this.collectorUserId,
+    required this.collectorName,
+    required this.isLocked,
+    this.note = '',
+    this.coveredDates = const <DateTime>[],
+    this.acceptedAt,
+  });
+
+  final String transactionId;
+  final String receiptNumber;
+  final double amount;
+  final String entryType;
+  final String collectorUserId;
+  final String collectorName;
+  final bool isLocked;
+  final String note;
+  final List<DateTime> coveredDates;
+  final DateTime? acceptedAt;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'transaction_id': transactionId,
+        'receipt_number': receiptNumber,
+        'amount': amount,
+        'entry_type': entryType,
+        'collector_user_id': collectorUserId,
+        'collector_name': collectorName,
+        'is_locked': isLocked,
+        'note': note,
+        'covered_dates':
+            coveredDates.map((value) => value.toIso8601String()).toList(growable: false),
+        'accepted_at': acceptedAt?.toIso8601String(),
+      };
+
+  static CollectorRouteReceipt? fromPayload(Object? value) {
+    final data = stringMap(value);
+    if (data.isEmpty) return null;
+    final transactionId = firstNonEmptyString(<Object?>[
+      data['transaction_id'],
+      data['id'],
+    ]);
+    final receiptNumber = firstNonEmptyString(<Object?>[
+      data['receipt_number'],
+      data['receipt'],
+    ]);
+    if (transactionId == null || receiptNumber == null) return null;
+    return CollectorRouteReceipt(
+      transactionId: transactionId,
+      receiptNumber: receiptNumber,
+      amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,
+      entryType: firstNonEmptyString(<Object?>[data['entry_type']]) ?? 'payment',
+      collectorUserId:
+          firstNonEmptyString(<Object?>[data['collector_user_id']]) ?? '',
+      collectorName: firstNonEmptyString(<Object?>[
+            data['collector_name'],
+            data['recorded_by'],
+          ]) ??
+          'Collector',
+      isLocked: _boolValue(data['is_locked'], fallback: false),
+      note: firstNonEmptyString(<Object?>[data['note']]) ?? '',
+      coveredDates: _dateList(data['covered_dates']),
+      acceptedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['accepted_at']]) ?? '',
+      ),
+    );
+  }
+}
+
+class CollectorRouteRenewalBadge {
+  const CollectorRouteRenewalBadge({
+    required this.requestId,
+    required this.loanId,
+    required this.status,
+    required this.loanType,
+    required this.isSevenBySeven,
+    this.submittedAt,
+  });
+
+  final String requestId;
+  final String loanId;
+  final String status;
+  final String loanType;
+  final bool isSevenBySeven;
+  final DateTime? submittedAt;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'request_id': requestId,
+        'loan_id': loanId,
+        'status': status,
+        'loan_type': loanType,
+        'is_7x7': isSevenBySeven,
+        'submitted_at': submittedAt?.toIso8601String(),
+      };
+
+  static CollectorRouteRenewalBadge? fromPayload(Object? value) {
+    final data = stringMap(value);
+    final requestId = firstNonEmptyString(<Object?>[data['request_id']]);
+    final loanId = firstNonEmptyString(<Object?>[data['loan_id']]);
+    if (requestId == null || loanId == null) return null;
+    return CollectorRouteRenewalBadge(
+      requestId: requestId,
+      loanId: loanId,
+      status: firstNonEmptyString(<Object?>[data['status']]) ?? 'pending',
+      loanType: firstNonEmptyString(<Object?>[data['loan_type']]) ?? 'Loan',
+      isSevenBySeven: _boolValue(data['is_7x7'], fallback: false),
+      submittedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['submitted_at']]) ?? '',
+      ),
     );
   }
 }
@@ -131,6 +243,9 @@ class CollectorRouteEntry {
     this.todayAmount = 0,
     this.todayNote = '',
     this.todayCoveredDates = const <DateTime>[],
+    this.todayReceipts = const <CollectorRouteReceipt>[],
+    this.renewalRequested = false,
+    this.renewalRequests = const <CollectorRouteRenewalBadge>[],
   });
 
   final String id;
@@ -178,66 +293,69 @@ class CollectorRouteEntry {
   final double todayAmount;
   final String todayNote;
   final List<DateTime> todayCoveredDates;
+  final List<CollectorRouteReceipt> todayReceipts;
+  final bool renewalRequested;
+  final List<CollectorRouteRenewalBadge> renewalRequests;
 
-  Map<String, Object?> toJson() {
-    return <String, Object?>{
-      'id': id,
-      'client_id': clientId,
-      'loan_id': loanId,
-      'client_name': clientName,
-      'area': area,
-      'loan_type': loanType,
-      'daily_amount': dailyAmount,
-      'balance': balance,
-      'status': status,
-      'pass_count': passCount,
-      'last_payment_date': lastPaymentDate?.toIso8601String(),
-      'advance_until': advanceUntil?.toIso8601String(),
-      'covered_dates': coveredDates
-          .map((value) => value.toIso8601String())
-          .toList(growable: false),
-      'note': note,
-      'route_revision': routeRevision,
-      'can_collect_mobile': canCollectMobile,
-      'can_enter_payment': canEnterPayment,
-      'seven_by_seven_mobile_enabled': sevenBySevenMobileEnabled,
-      'collection_message': collectionMessage,
-      'contract_allocation_enabled': contractAllocationEnabled,
-      'contract_schedule_verified': contractScheduleVerified,
-      'contract_dpd_status': contractDpdStatus,
-      'contract_payment_frequency': contractPaymentFrequency,
-      'contract_reference': contractReference,
-      'contract_schedule_version': contractScheduleVersion,
-      'contract_grace_days': contractGraceDays,
-      'contract_balance_reconciled': contractBalanceReconciled,
-      'contract_schedule_ready': contractScheduleReady,
-      'contract_collection_ready': contractCollectionReady,
-      'contract_days_past_due': contractDaysPastDue,
-      'contract_today_scheduled_amount': contractTodayScheduledAmount,
-      'contract_today_unpaid_amount': contractTodayUnpaidAmount,
-      'contract_today_already_covered': contractTodayAlreadyCovered,
-      'contract_next_unpaid_date': contractNextUnpaidDate?.toIso8601String(),
-      'contract_next_unpaid_amount': contractNextUnpaidAmount,
-      'contract_readiness_message': contractReadinessMessage,
-      'processed_today': processedToday,
-      'today_entry_type': todayEntryType,
-      'today_collector_name': todayCollectorName,
-      'today_transaction_id': todayTransactionId,
-      'today_is_locked': todayIsLocked,
-      'can_edit_today': canEditToday,
-      'today_amount': todayAmount,
-      'today_note': todayNote,
-      'today_covered_dates': todayCoveredDates
-          .map((value) => value.toIso8601String())
-          .toList(growable: false),
-    };
-  }
+  Map<String, Object?> toJson() => <String, Object?>{
+        'id': id,
+        'client_id': clientId,
+        'loan_id': loanId,
+        'client_name': clientName,
+        'area': area,
+        'loan_type': loanType,
+        'daily_amount': dailyAmount,
+        'balance': balance,
+        'status': status,
+        'pass_count': passCount,
+        'last_payment_date': lastPaymentDate?.toIso8601String(),
+        'advance_until': advanceUntil?.toIso8601String(),
+        'covered_dates':
+            coveredDates.map((value) => value.toIso8601String()).toList(growable: false),
+        'note': note,
+        'route_revision': routeRevision,
+        'can_collect_mobile': canCollectMobile,
+        'can_enter_payment': canEnterPayment,
+        'seven_by_seven_mobile_enabled': sevenBySevenMobileEnabled,
+        'collection_message': collectionMessage,
+        'contract_allocation_enabled': contractAllocationEnabled,
+        'contract_schedule_verified': contractScheduleVerified,
+        'contract_dpd_status': contractDpdStatus,
+        'contract_payment_frequency': contractPaymentFrequency,
+        'contract_reference': contractReference,
+        'contract_schedule_version': contractScheduleVersion,
+        'contract_grace_days': contractGraceDays,
+        'contract_balance_reconciled': contractBalanceReconciled,
+        'contract_schedule_ready': contractScheduleReady,
+        'contract_collection_ready': contractCollectionReady,
+        'contract_days_past_due': contractDaysPastDue,
+        'contract_today_scheduled_amount': contractTodayScheduledAmount,
+        'contract_today_unpaid_amount': contractTodayUnpaidAmount,
+        'contract_today_already_covered': contractTodayAlreadyCovered,
+        'contract_next_unpaid_date': contractNextUnpaidDate?.toIso8601String(),
+        'contract_next_unpaid_amount': contractNextUnpaidAmount,
+        'contract_readiness_message': contractReadinessMessage,
+        'processed_today': processedToday,
+        'today_entry_type': todayEntryType,
+        'today_collector_name': todayCollectorName,
+        'today_transaction_id': todayTransactionId,
+        'today_is_locked': todayIsLocked,
+        'can_edit_today': canEditToday,
+        'today_amount': todayAmount,
+        'today_note': todayNote,
+        'today_covered_dates': todayCoveredDates
+            .map((value) => value.toIso8601String())
+            .toList(growable: false),
+        'today_receipts':
+            todayReceipts.map((receipt) => receipt.toJson()).toList(growable: false),
+        'renewal_requested': renewalRequested,
+        'renewal_requests':
+            renewalRequests.map((item) => item.toJson()).toList(growable: false),
+      };
 
   static CollectorRouteEntry? fromPayload(Object? value) {
     final data = stringMap(value);
-    if (data.isEmpty) {
-      return null;
-    }
+    if (data.isEmpty) return null;
     final client = stringMap(data['client']);
     final loan = stringMap(data['loan']);
     final clientName = firstNonEmptyString(<Object?>[
@@ -247,9 +365,7 @@ class CollectorRouteEntry {
       client['full_name'],
       client['name'],
     ]);
-    if (clientName == null) {
-      return null;
-    }
+    if (clientName == null) return null;
 
     final clientId = firstNonEmptyString(<Object?>[
           data['client_id'],
@@ -316,11 +432,7 @@ class CollectorRouteEntry {
           ])?.toInt() ??
           0,
       lastPaymentDate: DateTime.tryParse(
-        firstNonEmptyString(<Object?>[
-              data['last_payment_date'],
-              data['last_paid_at'],
-            ]) ??
-            '',
+        firstNonEmptyString(<Object?>[data['last_payment_date'], data['last_paid_at']]) ?? '',
       ),
       advanceUntil: DateTime.tryParse(
         firstNonEmptyString(<Object?>[
@@ -341,95 +453,52 @@ class CollectorRouteEntry {
         data['route_revision'],
         loan['route_revision'],
       ]),
-      canCollectMobile: _boolValue(
-        data['can_collect_mobile'],
-        fallback: true,
-      ),
-      canEnterPayment: _boolValue(
-        data['can_enter_payment'],
-        fallback: true,
-      ),
-      sevenBySevenMobileEnabled: _boolValue(
-        data['seven_by_seven_mobile_enabled'],
-        fallback: false,
-      ),
+      canCollectMobile: _boolValue(data['can_collect_mobile'], fallback: true),
+      canEnterPayment: _boolValue(data['can_enter_payment'], fallback: true),
+      sevenBySevenMobileEnabled:
+          _boolValue(data['seven_by_seven_mobile_enabled'], fallback: false),
       collectionMessage: firstNonEmptyString(<Object?>[
             data['collection_message'],
             data['status_message'],
           ]) ??
           '',
-      contractAllocationEnabled: _boolValue(
-        data['contract_allocation_enabled'],
-        fallback: false,
-      ),
-      contractScheduleVerified: _boolValue(
-        data['contract_schedule_verified'],
-        fallback: false,
-      ),
-      contractDpdStatus: firstNonEmptyString(<Object?>[
-            data['contract_dpd_status'],
-          ]) ??
-          'contract_schedule_required',
-      contractPaymentFrequency: firstNonEmptyString(<Object?>[
-            data['contract_payment_frequency'],
-          ]) ??
-          '',
-      contractReference: firstNonEmptyString(<Object?>[
-            data['contract_reference'],
-          ]) ??
-          '',
-      contractScheduleVersion: firstNumber(<Object?>[
-        data['contract_schedule_version'],
-      ])?.toInt(),
-      contractGraceDays: firstNumber(<Object?>[
-            data['contract_grace_days'],
-          ])?.toInt() ??
-          0,
-      contractBalanceReconciled: _boolValue(
-        data['contract_balance_reconciled'],
-        fallback: false,
-      ),
-      contractScheduleReady: _boolValue(
-        data['contract_schedule_ready'],
-        fallback: false,
-      ),
-      contractCollectionReady: _boolValue(
-        data['contract_collection_ready'],
-        fallback: false,
-      ),
-      contractDaysPastDue: firstNumber(<Object?>[
-        data['contract_days_past_due'],
-      ])?.toInt(),
-      contractTodayScheduledAmount: firstNumber(<Object?>[
-            data['contract_today_scheduled_amount'],
-          ])?.toDouble() ??
-          0,
-      contractTodayUnpaidAmount: firstNumber(<Object?>[
-            data['contract_today_unpaid_amount'],
-          ])?.toDouble() ??
-          0,
-      contractTodayAlreadyCovered: _boolValue(
-        data['contract_today_already_covered'],
-        fallback: false,
-      ),
+      contractAllocationEnabled:
+          _boolValue(data['contract_allocation_enabled'], fallback: false),
+      contractScheduleVerified:
+          _boolValue(data['contract_schedule_verified'], fallback: false),
+      contractDpdStatus:
+          firstNonEmptyString(<Object?>[data['contract_dpd_status']]) ??
+              'contract_schedule_required',
+      contractPaymentFrequency:
+          firstNonEmptyString(<Object?>[data['contract_payment_frequency']]) ?? '',
+      contractReference:
+          firstNonEmptyString(<Object?>[data['contract_reference']]) ?? '',
+      contractScheduleVersion:
+          firstNumber(<Object?>[data['contract_schedule_version']])?.toInt(),
+      contractGraceDays:
+          firstNumber(<Object?>[data['contract_grace_days']])?.toInt() ?? 0,
+      contractBalanceReconciled:
+          _boolValue(data['contract_balance_reconciled'], fallback: false),
+      contractScheduleReady:
+          _boolValue(data['contract_schedule_ready'], fallback: false),
+      contractCollectionReady:
+          _boolValue(data['contract_collection_ready'], fallback: false),
+      contractDaysPastDue:
+          firstNumber(<Object?>[data['contract_days_past_due']])?.toInt(),
+      contractTodayScheduledAmount:
+          firstNumber(<Object?>[data['contract_today_scheduled_amount']])?.toDouble() ?? 0,
+      contractTodayUnpaidAmount:
+          firstNumber(<Object?>[data['contract_today_unpaid_amount']])?.toDouble() ?? 0,
+      contractTodayAlreadyCovered:
+          _boolValue(data['contract_today_already_covered'], fallback: false),
       contractNextUnpaidDate: DateTime.tryParse(
-        firstNonEmptyString(<Object?>[
-              data['contract_next_unpaid_date'],
-            ]) ??
-            '',
+        firstNonEmptyString(<Object?>[data['contract_next_unpaid_date']]) ?? '',
       ),
-      contractNextUnpaidAmount: firstNumber(<Object?>[
-            data['contract_next_unpaid_amount'],
-          ])?.toDouble() ??
-          0,
-      contractReadinessMessage: firstNonEmptyString(<Object?>[
-            data['contract_readiness_message'],
-          ]) ??
-          '',
-      processedToday: _boolValue(
-        data['processed_today'],
-        fallback: false,
-      ),
+      contractNextUnpaidAmount:
+          firstNumber(<Object?>[data['contract_next_unpaid_amount']])?.toDouble() ?? 0,
+      contractReadinessMessage:
+          firstNonEmptyString(<Object?>[data['contract_readiness_message']]) ?? '',
+      processedToday: _boolValue(data['processed_today'], fallback: false),
       todayEntryType: firstNonEmptyString(<Object?>[
             data['today_entry_type'],
             data['entry_type_today'],
@@ -445,14 +514,8 @@ class CollectorRouteEntry {
         data['today_transaction_id'],
         data['transaction_id_today'],
       ]),
-      todayIsLocked: _boolValue(
-        data['today_is_locked'],
-        fallback: false,
-      ),
-      canEditToday: _boolValue(
-        data['can_edit_today'],
-        fallback: false,
-      ),
+      todayIsLocked: _boolValue(data['today_is_locked'], fallback: false),
+      canEditToday: _boolValue(data['can_edit_today'], fallback: false),
       todayAmount: firstNumber(<Object?>[
             data['today_amount'],
             data['recorded_amount_today'],
@@ -464,14 +527,31 @@ class CollectorRouteEntry {
           ]) ??
           '',
       todayCoveredDates: _dateList(data['today_covered_dates']),
+      todayReceipts: _receiptList(data['today_receipts']),
+      renewalRequested: _boolValue(data['renewal_requested'], fallback: false),
+      renewalRequests: _renewalList(data['renewal_requests']),
     );
   }
 }
 
+List<CollectorRouteReceipt> _receiptList(Object? value) {
+  if (value is! Iterable) return const <CollectorRouteReceipt>[];
+  return value
+      .map(CollectorRouteReceipt.fromPayload)
+      .whereType<CollectorRouteReceipt>()
+      .toList(growable: false);
+}
+
+List<CollectorRouteRenewalBadge> _renewalList(Object? value) {
+  if (value is! Iterable) return const <CollectorRouteRenewalBadge>[];
+  return value
+      .map(CollectorRouteRenewalBadge.fromPayload)
+      .whereType<CollectorRouteRenewalBadge>()
+      .toList(growable: false);
+}
+
 List<DateTime> _dateList(Object? value) {
-  if (value is! Iterable) {
-    return const <DateTime>[];
-  }
+  if (value is! Iterable) return const <DateTime>[];
   final dates = value
       .map((item) => DateTime.tryParse(item.toString()))
       .whereType<DateTime>()
@@ -482,9 +562,7 @@ List<DateTime> _dateList(Object? value) {
 }
 
 bool _boolValue(Object? value, {required bool fallback}) {
-  if (value is bool) {
-    return value;
-  }
+  if (value is bool) return value;
   final normalized = value?.toString().trim().toLowerCase();
   if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
     return true;

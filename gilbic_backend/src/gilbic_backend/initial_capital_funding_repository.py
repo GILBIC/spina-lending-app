@@ -52,6 +52,23 @@ class InitialCapitalFundingItem:
     automatic_source_posting: bool
 
 
+@dataclass(frozen=True, slots=True)
+class InitialCapitalFundingSummary:
+    evidence_count: int
+    evidence_ready_count: int
+    prepared_not_posted_count: int
+    posted_count: int
+    blocked_no_open_period_count: int
+    total_amount: Decimal
+    posted_amount: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class EligibleInitialCapitalCashAccount:
+    code: str
+    name: str
+
+
 class PostgresInitialCapitalFundingRepository:
     _COLUMNS = """
         evidence_id, funding_date, amount, cash_account_code, cash_account_name,
@@ -78,6 +95,61 @@ class PostgresInitialCapitalFundingRepository:
                 )
                 return tuple(
                     InitialCapitalFundingItem(**dict(row)) for row in cursor.fetchall()
+                )
+
+    def list_summary(self) -> InitialCapitalFundingSummary:
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        count(*)::integer AS evidence_count,
+                        count(*) FILTER (
+                            WHERE accounting_status = 'evidence_ready'
+                        )::integer AS evidence_ready_count,
+                        count(*) FILTER (
+                            WHERE accounting_status = 'prepared_not_posted'
+                        )::integer AS prepared_not_posted_count,
+                        count(*) FILTER (
+                            WHERE accounting_status = 'posted'
+                        )::integer AS posted_count,
+                        count(*) FILTER (
+                            WHERE accounting_status = 'blocked_no_open_period'
+                        )::integer AS blocked_no_open_period_count,
+                        coalesce(sum(amount), 0)::numeric(18,2) AS total_amount,
+                        coalesce(sum(amount) FILTER (
+                            WHERE accounting_status = 'posted'
+                        ), 0)::numeric(18,2) AS posted_amount
+                    FROM accounting.initial_capital_funding_queue
+                    """
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    raise InitialCapitalFundingBlocked(
+                        "Protected initial-capital summary returned no result."
+                    )
+                return InitialCapitalFundingSummary(**dict(row))
+
+    def list_eligible_cash_accounts(
+        self,
+    ) -> tuple[EligibleInitialCapitalCashAccount, ...]:
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    """
+                    SELECT code, name
+                    FROM accounting.accounts
+                    WHERE system_key IN ('cash_office', 'cash_bank_gcash')
+                      AND account_type = 'asset'
+                      AND normal_balance = 'debit'
+                      AND is_active
+                      AND is_posting
+                    ORDER BY code, id
+                    """
+                )
+                return tuple(
+                    EligibleInitialCapitalCashAccount(**dict(row))
+                    for row in cursor.fetchall()
                 )
 
     def get_item(self, evidence_id: UUID) -> InitialCapitalFundingItem:

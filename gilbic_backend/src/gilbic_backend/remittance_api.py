@@ -11,15 +11,21 @@ from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .remittance_repository import (
-    PostgresRemittanceRepository,
+    RefundDueRemittanceItemRecord,
     RemittanceAlreadyReceived,
     RemittanceEmpty,
     RemittanceError,
     RemittanceItemRecord,
     RemittanceNotFound,
     RemittanceRecipientInvalid,
-    RemittanceRecord,
     RemittanceSummaryRecord,
+)
+from .remittance_review_repository import (
+    PostgresReviewedRemittanceRepository,
+    RemittanceAlreadyRejected,
+    RemittanceRejected,
+    RemittanceRejectionReasonRequired,
+    RemittanceReviewRequired,
 )
 from .request_auth import authenticated_device_context
 
@@ -32,8 +38,20 @@ class RemittanceSubmissionBody(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-def remittance_repository_dependency() -> PostgresRemittanceRepository:
-    return PostgresRemittanceRepository()
+class RemittanceReviewBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    review_acknowledged: bool
+
+
+class RemittanceRejectionBody(RemittanceReviewBody):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    reason: str = Field(min_length=1, max_length=500)
+
+
+def remittance_repository_dependency() -> PostgresReviewedRemittanceRepository:
+    return PostgresReviewedRemittanceRepository()
 
 
 def _money(value: Decimal) -> str:
@@ -57,6 +75,25 @@ def _item_payload(item: RemittanceItemRecord) -> dict[str, object]:
     }
 
 
+def _refund_due_release_payload(
+    item: RefundDueRemittanceItemRecord,
+) -> dict[str, object]:
+    return {
+        "release_id": str(item.release_id),
+        "approval_id": str(item.approval_id),
+        "adjustment_id": str(item.adjustment_id),
+        "client_id": str(item.client_id),
+        "client_name": item.client_name,
+        "loan_id": str(item.loan_id),
+        "loan_type": item.loan_type,
+        "released_at": item.released_at.isoformat(),
+        "amount": _money(item.amount),
+        "evidence_reference": item.evidence_reference,
+        "evidence_digest": item.evidence_digest,
+        "cash_effect": "outflow",
+    }
+
+
 def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
     return {
         "collection_date": summary.collection_date.isoformat(),
@@ -69,10 +106,19 @@ def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
         "client_count": summary.client_count,
         "total_amount": _money(summary.total_amount),
         "items": [_item_payload(item) for item in summary.items],
+        "refund_due_release_count": summary.refund_due_release_count,
+        "refund_due_release_total": _money(summary.refund_due_release_total),
+        "refund_due_releases": [
+            _refund_due_release_payload(item) for item in summary.refund_due_releases
+        ],
     }
 
 
-def _record_payload(record: RemittanceRecord) -> dict[str, object]:
+def _record_payload(record) -> dict[str, object]:
+    reviewed_at = getattr(record, "reviewed_at", None)
+    reviewed_by_user_id = getattr(record, "reviewed_by_user_id", None)
+    rejected_at = getattr(record, "rejected_at", None)
+    rejected_by_user_id = getattr(record, "rejected_by_user_id", None)
     return {
         "remittance_id": str(record.remittance_id),
         "remittance_number": record.remittance_number,
@@ -91,16 +137,45 @@ def _record_payload(record: RemittanceRecord) -> dict[str, object]:
         "note": record.note,
         "submitted_at": record.submitted_at.isoformat(),
         "received_at": record.received_at.isoformat() if record.received_at else None,
+        "reviewed_at": reviewed_at.isoformat() if reviewed_at else None,
+        "reviewed_by_user_id": (
+            str(reviewed_by_user_id) if reviewed_by_user_id else None
+        ),
+        "rejected_at": rejected_at.isoformat() if rejected_at else None,
+        "rejected_by_user_id": (
+            str(rejected_by_user_id) if rejected_by_user_id else None
+        ),
+        "rejection_reason": getattr(record, "rejection_reason", ""),
         "items": [_item_payload(item) for item in record.items],
+        "refund_due_release_count": record.refund_due_release_count,
+        "refund_due_release_total": _money(record.refund_due_release_total),
+        "refund_due_releases": [
+            _refund_due_release_payload(item) for item in record.refund_due_releases
+        ],
     }
 
 
 def _raise_remittance_error(error: RemittanceError) -> None:
     if isinstance(error, RemittanceNotFound):
         status = 404
-    elif isinstance(error, (RemittanceEmpty, RemittanceAlreadyReceived)):
+    elif isinstance(
+        error,
+        (
+            RemittanceEmpty,
+            RemittanceAlreadyReceived,
+            RemittanceAlreadyRejected,
+            RemittanceRejected,
+        ),
+    ):
         status = 409
-    elif isinstance(error, RemittanceRecipientInvalid):
+    elif isinstance(
+        error,
+        (
+            RemittanceRecipientInvalid,
+            RemittanceReviewRequired,
+            RemittanceRejectionReasonRequired,
+        ),
+    ):
         status = 422
     else:
         status = 409
@@ -123,7 +198,7 @@ def create_remittance_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        remittances: PostgresRemittanceRepository = Depends(
+        remittances: PostgresReviewedRemittanceRepository = Depends(
             remittance_repository_dependency
         ),
     ) -> dict[str, object]:
@@ -159,7 +234,7 @@ def create_remittance_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        remittances: PostgresRemittanceRepository = Depends(
+        remittances: PostgresReviewedRemittanceRepository = Depends(
             remittance_repository_dependency
         ),
     ) -> dict[str, object]:
@@ -189,7 +264,7 @@ def create_remittance_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        remittances: PostgresRemittanceRepository = Depends(
+        remittances: PostgresReviewedRemittanceRepository = Depends(
             remittance_repository_dependency
         ),
     ) -> dict[str, object]:
@@ -219,7 +294,7 @@ def create_remittance_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        remittances: PostgresRemittanceRepository = Depends(
+        remittances: PostgresReviewedRemittanceRepository = Depends(
             remittance_repository_dependency
         ),
     ) -> dict[str, object]:
@@ -244,11 +319,12 @@ def create_remittance_router() -> APIRouter:
     )
     def receive(
         remittance_id: UUID,
+        body: RemittanceReviewBody,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        remittances: PostgresRemittanceRepository = Depends(
+        remittances: PostgresReviewedRemittanceRepository = Depends(
             remittance_repository_dependency
         ),
     ) -> dict[str, object]:
@@ -264,6 +340,42 @@ def create_remittance_router() -> APIRouter:
             record = remittances.confirm_received(
                 remittance_id=remittance_id,
                 recipient_user_id=actor.user_id,
+                review_acknowledged=body.review_acknowledged,
+            )
+        except RemittanceError as error:
+            _raise_remittance_error(error)
+        return {"success": True, "data": _record_payload(record)}
+
+    @router.post("/api/v1/remittances/{remittance_id}/reject")
+    @router.post(
+        "/api/mobile/v1/remittances/{remittance_id}/reject",
+        include_in_schema=False,
+    )
+    def reject(
+        remittance_id: UUID,
+        body: RemittanceRejectionBody,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        remittances: PostgresReviewedRemittanceRepository = Depends(
+            remittance_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="remittance.receive",
+            permission_error="Remittance receiving permission is required.",
+        )
+        try:
+            record = remittances.reject(
+                remittance_id=remittance_id,
+                recipient_user_id=actor.user_id,
+                reason=body.reason,
+                review_acknowledged=body.review_acknowledged,
             )
         except RemittanceError as error:
             _raise_remittance_error(error)

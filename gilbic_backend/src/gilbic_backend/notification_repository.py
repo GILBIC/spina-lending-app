@@ -43,10 +43,16 @@ class RemittanceNotificationRecord:
     handover_photo_version: int = 0
     handover_photo_content_type: str = ""
     handover_photo_uploaded_at: datetime | None = None
+    rejected_at: datetime | None = None
+    rejection_reason: str = ""
 
     @property
     def is_pending(self) -> bool:
         return self.status == "pending"
+
+    @property
+    def is_rejected(self) -> bool:
+        return self.status == "rejected"
 
     @property
     def has_handover_photo(self) -> bool:
@@ -70,7 +76,10 @@ class PostgresNotificationRepository:
                         notification.remittance_id,
                         notification.title,
                         notification.message,
-                        notification.status,
+                        case
+                            when rejection.remittance_id is not null then 'rejected'
+                            else notification.status
+                        end as status,
                         notification.created_at,
                         notification.read_at,
                         notification.accepted_at,
@@ -82,12 +91,16 @@ class PostgresNotificationRepository:
                         remittance.collection_date,
                         coalesce(photo.version, 0) as handover_photo_version,
                         coalesce(photo.content_type, '') as handover_photo_content_type,
-                        photo.uploaded_at as handover_photo_uploaded_at
+                        photo.uploaded_at as handover_photo_uploaded_at,
+                        rejection.rejected_at,
+                        coalesce(rejection.reason, '') as rejection_reason
                     from core.user_notifications notification
                     join lending.collection_remittances remittance
                       on remittance.id = notification.remittance_id
                     join core.users collector
                       on collector.id = remittance.collector_user_id
+                    left join lending.collection_remittance_rejections rejection
+                      on rejection.remittance_id = remittance.id
                     left join lateral (
                         select version, content_type, uploaded_at
                         from lending.remittance_handover_photos candidate
@@ -97,7 +110,11 @@ class PostgresNotificationRepository:
                     ) photo on true
                     where notification.recipient_user_id = %s
                     order by
-                        case when notification.status = 'pending' then 0 else 1 end,
+                        case
+                            when rejection.remittance_id is null
+                                 and notification.status = 'pending' then 0
+                            else 1
+                        end,
                         notification.created_at desc,
                         notification.id desc
                     """,
@@ -123,7 +140,10 @@ class PostgresNotificationRepository:
                         notification.remittance_id,
                         notification.title,
                         notification.message,
-                        notification.status,
+                        case
+                            when rejection.remittance_id is not null then 'rejected'
+                            else notification.status
+                        end as status,
                         notification.created_at,
                         notification.read_at,
                         notification.accepted_at,
@@ -135,12 +155,16 @@ class PostgresNotificationRepository:
                         remittance.collection_date,
                         coalesce(photo.version, 0) as handover_photo_version,
                         coalesce(photo.content_type, '') as handover_photo_content_type,
-                        photo.uploaded_at as handover_photo_uploaded_at
+                        photo.uploaded_at as handover_photo_uploaded_at,
+                        rejection.rejected_at,
+                        coalesce(rejection.reason, '') as rejection_reason
                     from core.user_notifications notification
                     join lending.collection_remittances remittance
                       on remittance.id = notification.remittance_id
                     join core.users collector
                       on collector.id = remittance.collector_user_id
+                    left join lending.collection_remittance_rejections rejection
+                      on rejection.remittance_id = remittance.id
                     left join lateral (
                         select version, content_type, uploaded_at
                         from lending.remittance_handover_photos candidate
@@ -215,4 +239,6 @@ class PostgresNotificationRepository:
                 row["handover_photo_content_type"] or ""
             ),
             handover_photo_uploaded_at=row["handover_photo_uploaded_at"],
+            rejected_at=row["rejected_at"],
+            rejection_reason=str(row["rejection_reason"] or ""),
         )

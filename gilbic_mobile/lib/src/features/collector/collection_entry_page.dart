@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 
 class CollectionEntryPage extends StatefulWidget {
   const CollectionEntryPage({
@@ -31,45 +32,60 @@ class CollectionEntryPage extends StatefulWidget {
 
 class _CollectionEntryPageState extends State<CollectionEntryPage> {
   late final TextEditingController _amountController;
-  late final TextEditingController _noteController;
+  late final TextEditingController _paymentNoteController;
+  late final TextEditingController _pastDueNoteController;
+  late final TextEditingController _promiseAmountController;
   late final DateTime _collectionDate;
   late DateTime _unableDate;
-  final List<DateTime> _coveredDates = <DateTime>[];
 
   CollectionEntryType _entryType = CollectionEntryType.payment;
+  PaymentAllocationIntent _paymentAllocationIntent =
+      PaymentAllocationIntent.scheduled;
   PaymentSubmissionDraft? _pendingDraft;
   PaymentSubmissionResult? _result;
   String? _errorMessage;
-  String? _selectedReason;
+  PastDueReasonCode? _selectedReason;
+  DateTime? _promisedPaymentDate;
+  bool _forcePastDueFollowup = false;
   bool _submitting = false;
 
-  bool get _isSevenBySeven =>
+  bool get _sevenBySevenBlocked =>
       _isSevenBySevenLoan(widget.entry.loanType) &&
       !widget.entry.sevenBySevenMobileEnabled;
+  bool get _isSevenBySeven => _isSevenBySevenLoan(widget.entry.loanType);
   bool get _isUnableToPay => _entryType == CollectionEntryType.pass;
 
-  List<DateTime> get _sortedCoveredDates {
-    final result = _coveredDates.map(_dateOnly).toSet().toList(growable: false)
-      ..sort((left, right) => left.compareTo(right));
-    return result;
-  }
-
-  int get _coveredDays => _sortedCoveredDates.length;
-
-  double get _suggestedAmount => widget.entry.dailyAmount * _coveredDays;
-
-  bool get _isSingleToday {
-    final dates = _sortedCoveredDates;
-    return dates.length == 1 && _sameDate(dates.single, _collectionDate);
-  }
-
-  CollectionEntryType get _submissionEntryType {
-    if (_isUnableToPay) {
-      return CollectionEntryType.pass;
+  double get _suggestedRequiredAmount {
+    if (widget.entry.contractCollectionReady &&
+        widget.entry.contractTodayUnpaidAmount > 0) {
+      return widget.entry.contractTodayUnpaidAmount;
     }
-    return _isSingleToday
-        ? CollectionEntryType.payment
-        : CollectionEntryType.advance;
+    return widget.entry.dailyAmount;
+  }
+
+  double? get _enteredAmount =>
+      double.tryParse(_amountController.text.replaceAll(',', '').trim());
+
+  bool get _localPartialPayment {
+    final amount = _enteredAmount;
+    return !_isUnableToPay &&
+        !_isSevenBySeven &&
+        amount != null &&
+        amount > 0 &&
+        _suggestedRequiredAmount > 0 &&
+        amount < _suggestedRequiredAmount;
+  }
+
+  bool get _showPastDueFollowup =>
+      _isUnableToPay ||
+      (!_isSevenBySeven && (_localPartialPayment || _forcePastDueFollowup));
+
+  DateTime get _followupDate => _isUnableToPay ? _unableDate : _collectionDate;
+
+  double get _estimatedPastDueRemainder {
+    if (_isUnableToPay) return _suggestedRequiredAmount;
+    final amount = _enteredAmount ?? 0;
+    return (_suggestedRequiredAmount - amount).clamp(0, double.infinity);
   }
 
   @override
@@ -77,19 +93,22 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     super.initState();
     _collectionDate = _dateOnly(widget.collectionDate ?? DateTime.now());
     _unableDate = _collectionDate;
-    _coveredDates.add(_collectionDate);
     _amountController = TextEditingController(
-      text: widget.entry.dailyAmount > 0
-          ? widget.entry.dailyAmount.toStringAsFixed(2)
+      text: _suggestedRequiredAmount > 0
+          ? _suggestedRequiredAmount.toStringAsFixed(2)
           : '',
     );
-    _noteController = TextEditingController();
+    _paymentNoteController = TextEditingController();
+    _pastDueNoteController = TextEditingController();
+    _promiseAmountController = TextEditingController();
   }
 
   @override
   void dispose() {
     _amountController.dispose();
-    _noteController.dispose();
+    _paymentNoteController.dispose();
+    _pastDueNoteController.dispose();
+    _promiseAmountController.dispose();
     super.dispose();
   }
 
@@ -109,148 +128,20 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   void _changeEntryType(CollectionEntryType type) {
     setState(() {
       _entryType = type;
+      _forcePastDueFollowup = false;
+      if (type == CollectionEntryType.pass) {
+        _paymentAllocationIntent = PaymentAllocationIntent.scheduled;
+      }
       _clearSubmissionState();
     });
   }
 
-  void _setCoveredDates(Iterable<DateTime> values) {
-    final normalized = values.map(_dateOnly).toSet().toList(growable: false)
-      ..sort((left, right) => left.compareTo(right));
+  void _changeAllocationIntent(PaymentAllocationIntent? intent) {
+    if (intent == null || _submitting) return;
     setState(() {
-      _coveredDates
-        ..clear()
-        ..addAll(normalized);
-      _amountController.text = _suggestedAmount.toStringAsFixed(2);
+      _paymentAllocationIntent = intent;
       _clearSubmissionState();
     });
-  }
-
-  void _toggleCoveredDate(DateTime value) {
-    final normalized = _dateOnly(value);
-    final updated = _sortedCoveredDates;
-    final index = updated.indexWhere((date) => _sameDate(date, normalized));
-    if (index >= 0) {
-      updated.removeAt(index);
-    } else {
-      updated.add(normalized);
-    }
-    _setCoveredDates(updated);
-  }
-
-  void _removeCoveredDate(DateTime value) {
-    _setCoveredDates(
-      _sortedCoveredDates.where((date) => !_sameDate(date, value)),
-    );
-  }
-
-  Future<void> _selectCoveredDate() async {
-    final existingDates = _sortedCoveredDates;
-    final firstDate = _dateOnly(
-      _collectionDate.subtract(const Duration(days: 365)),
-    );
-    final lastDate = _dateOnly(
-      _collectionDate.add(const Duration(days: 730)),
-    );
-    final initialDate = existingDates.isEmpty
-        ? _collectionDate
-        : existingDates.last;
-    final firstMonth = DateTime(firstDate.year, firstDate.month);
-    final lastMonth = DateTime(lastDate.year, lastDate.month);
-
-    final selectedDates = await showDialog<List<DateTime>>(
-      context: context,
-      builder: (dialogContext) {
-        final workingDates = existingDates.map(_dateOnly).toSet();
-        var visibleMonth = DateTime(initialDate.year, initialDate.month);
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final sortedDates = workingDates.toList(growable: false)
-              ..sort((left, right) => left.compareTo(right));
-            final canMoveBack = visibleMonth.isAfter(firstMonth);
-            final canMoveForward = visibleMonth.isBefore(lastMonth);
-
-            void toggleDate(DateTime value) {
-              final normalized = _dateOnly(value);
-              setDialogState(() {
-                if (workingDates.contains(normalized)) {
-                  workingDates.remove(normalized);
-                } else {
-                  workingDates.add(normalized);
-                }
-              });
-            }
-
-            void moveMonth(int offset) {
-              final candidate = DateTime(
-                visibleMonth.year,
-                visibleMonth.month + offset,
-              );
-              if (candidate.isBefore(firstMonth) ||
-                  candidate.isAfter(lastMonth)) {
-                return;
-              }
-              setDialogState(() => visibleMonth = candidate);
-            }
-
-            return AlertDialog(
-              title: const Text('Choose covered dates'),
-              content: SizedBox(
-                width: 380,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tap every date this payment covers. Selected dates stay circled until you press Done.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 8),
-                      _MultiSelectMonthCalendar(
-                        visibleMonth: visibleMonth,
-                        firstDate: firstDate,
-                        lastDate: lastDate,
-                        selectedDates: workingDates,
-                        onDateTapped: toggleDate,
-                        onPreviousMonth:
-                            canMoveBack ? () => moveMonth(-1) : null,
-                        onNextMonth:
-                            canMoveForward ? () => moveMonth(1) : null,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: workingDates.isEmpty
-                      ? null
-                      : () => setDialogState(workingDates.clear),
-                  child: const Text('Clear'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  key: const Key('confirm-covered-dates'),
-                  onPressed: workingDates.isEmpty
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(sortedDates),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (selectedDates == null || !mounted) {
-      return;
-    }
-    _setCoveredDates(selectedDates);
   }
 
   Future<void> _selectUnableDate() async {
@@ -261,46 +152,58 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       lastDate: _collectionDate,
       helpText: 'Date client could not pay',
     );
-    if (selected == null || !mounted) {
-      return;
-    }
+    if (selected == null || !mounted) return;
     setState(() {
       _unableDate = _dateOnly(selected);
+      if (_promisedPaymentDate != null &&
+          _promisedPaymentDate!.isBefore(_unableDate)) {
+        _promisedPaymentDate = null;
+      }
       _clearSubmissionState();
     });
   }
 
-  void _selectReason(String reason) {
+  Future<void> _selectPromisedPaymentDate() async {
+    final firstDate = _followupDate;
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _promisedPaymentDate ?? firstDate,
+      firstDate: firstDate,
+      lastDate: firstDate.add(const Duration(days: 365)),
+      helpText: 'Promised payment date',
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _promisedPaymentDate = _dateOnly(selected);
+      _clearSubmissionState();
+    });
+  }
+
+  void _selectReason(PastDueReasonCode reason) {
     setState(() {
       _selectedReason = reason;
-      if (reason == 'Other') {
-        _noteController.clear();
-      } else {
-        _noteController.text = reason;
+      if (reason != PastDueReasonCode.promisedToPayLater) {
+        _promisedPaymentDate = null;
+        _promiseAmountController.clear();
+      } else if (_promiseAmountController.text.trim().isEmpty &&
+          _estimatedPastDueRemainder > 0) {
+        _promiseAmountController.text = _estimatedPastDueRemainder
+            .toStringAsFixed(2);
       }
       _clearSubmissionState();
     });
   }
 
   Future<void> _submit() async {
-    if (_submitting || _isSevenBySeven) {
-      return;
-    }
+    if (_submitting || _sevenBySevenBlocked) return;
 
-    final amount = _isUnableToPay
-        ? null
-        : double.tryParse(_amountController.text.replaceAll(',', '').trim());
+    final amount = _isUnableToPay ? null : _enteredAmount;
     final localError = _validateForm(amount);
     if (localError != null) {
       setState(() {
         _errorMessage = localError;
         _result = null;
       });
-      return;
-    }
-
-    final confirmed = await _confirmSubmission(amount);
-    if (confirmed != true || !mounted) {
       return;
     }
 
@@ -314,37 +217,45 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       final draft = _pendingDraft ?? await _buildDraft(amount);
       _pendingDraft = draft;
       final result = await widget.repository.submit(widget.session, draft);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _result = result;
         _errorMessage = null;
         if (!result.isFinalSuccess) {
           _pendingDraft = null;
+          if (result.code == 'past_due_reason_required') {
+            _forcePastDueFollowup = true;
+            _errorMessage = result.message;
+          }
         }
       });
     } on SpinaApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
-        _errorMessage = error.message;
+        _errorMessage = collectorFailureMessage(
+          error,
+          task: CollectorFailureTask.recordCollection,
+        );
         _result = null;
+        if (error.code == 'extra_allocation_choice_required' ||
+            error.code == 'past_due_reason_required') {
+          _pendingDraft = null;
+        }
+        if (error.code == 'past_due_reason_required') {
+          _forcePastDueFollowup = true;
+        }
       });
-    } on Object {
-      if (!mounted) {
-        return;
-      }
+    } on Object catch (error) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage =
-            'The collection could not be completed. Retry the same entry.';
+        _errorMessage = collectorFailureMessage(
+          error,
+          task: CollectorFailureTask.recordCollection,
+        );
         _result = null;
       });
     } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -352,85 +263,86 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     if (!_isUnableToPay && (amount == null || amount <= 0)) {
       return 'Enter an amount greater than zero.';
     }
-    if (!_isUnableToPay && _coveredDates.isEmpty) {
-      return 'Choose at least one covered date.';
+    if (_showPastDueFollowup && _selectedReason == null) {
+      return 'Choose a Past Due reason.';
     }
-    if (_isUnableToPay && _noteController.text.trim().isEmpty) {
-      return 'Enter the reason the client could not pay.';
+    if (_showPastDueFollowup &&
+        _selectedReason == PastDueReasonCode.other &&
+        _pastDueNoteController.text.trim().isEmpty) {
+      return 'Enter a short explanation for Other.';
+    }
+    if (_showPastDueFollowup &&
+        _selectedReason == PastDueReasonCode.promisedToPayLater) {
+      if (_isSevenBySeven) {
+        return '7x7 promise tracking is not enabled yet.';
+      }
+      if (_promisedPaymentDate == null) {
+        return 'Choose the promised payment date.';
+      }
+      final promised = double.tryParse(
+        _promiseAmountController.text.replaceAll(',', '').trim(),
+      );
+      if (promised == null || promised <= 0) {
+        return 'Enter the promised amount.';
+      }
+      final estimated = _estimatedPastDueRemainder;
+      if (estimated > 0 && promised > estimated + 0.0001) {
+        return 'Promised amount cannot be more than the remaining Past Due amount.';
+      }
     }
     return null;
+  }
+
+  PastDueFollowupDraft? _buildPastDueFollowup() {
+    if (!_showPastDueFollowup || _selectedReason == null) return null;
+    final promised = _selectedReason == PastDueReasonCode.promisedToPayLater
+        ? double.tryParse(
+            _promiseAmountController.text.replaceAll(',', '').trim(),
+          )
+        : null;
+    return PastDueFollowupDraft(
+      reasonCode: _selectedReason!,
+      note: _pastDueNoteController.text.trim(),
+      promisedPaymentDate:
+          _selectedReason == PastDueReasonCode.promisedToPayLater
+          ? _promisedPaymentDate
+          : null,
+      promisedAmount: promised,
+    );
   }
 
   Future<PaymentSubmissionDraft> _buildDraft(double? amount) async {
     final identity = await widget.deviceIdentityProvider.load();
     final sequence = await widget.deviceSequence.next();
-    final submissionType = _submissionEntryType;
-    final selectedDates = _sortedCoveredDates;
     return PaymentSubmissionDraft(
       idempotencyKey: SecureIdempotencyKeyGenerator().generate(),
       routeEntryId: widget.entry.id,
       clientId: widget.entry.clientId,
       loanId: widget.entry.loanId,
-      collectionDate: _isUnableToPay ? _unableDate : _collectionDate,
-      entryType: submissionType,
+      collectionDate: _followupDate,
+      entryType: _isUnableToPay
+          ? CollectionEntryType.pass
+          : CollectionEntryType.payment,
       amount: amount,
-      advanceFrom: submissionType == CollectionEntryType.advance
-          ? selectedDates.first
-          : null,
-      advanceUntil: submissionType == CollectionEntryType.advance
-          ? selectedDates.last
-          : null,
+      // Transitional compatibility for non-contract legacy posting. Contract
+      // allocation ignores this date for PAYMENT; Collectors no longer choose it.
       coveredDates: _isUnableToPay
           ? const <DateTime>[]
-          : List<DateTime>.from(selectedDates),
+          : <DateTime>[_collectionDate],
       recordedAt: DateTime.now().toUtc(),
       deviceId: identity.installationId,
       deviceSequence: sequence,
-      note: _noteController.text.trim(),
+      note: _isUnableToPay ? '' : _paymentNoteController.text.trim(),
       routeRevision: widget.entry.routeRevision,
+      paymentAllocationIntent: _isSevenBySeven
+          ? PaymentAllocationIntent.scheduled
+          : _paymentAllocationIntent,
+      pastDueFollowup: _buildPastDueFollowup(),
     );
   }
 
-  Future<bool?> _confirmSubmission(double? amount) {
-    final amountText = amount == null ? null : _money(amount);
-    final message = _isUnableToPay
-        ? 'Record that ${widget.entry.clientName} could not pay on '
-            '${_date(_unableDate)}?\n\nReason: ${_noteController.text.trim()}'
-        : 'Save ${amountText ?? 'this payment'} for '
-            '${widget.entry.clientName}?\n\nCovered dates:\n${_coverageLabel()}';
-
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm collection entry'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('confirm-collection-entry'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _coverageLabel() =>
-      _sortedCoveredDates.map(_date).map((value) => '• $value').join('\n');
-
-  String _successMessage() {
-    if (_isUnableToPay) {
-      return 'Unable-to-pay reason saved.';
-    }
-    if (_submissionEntryType == CollectionEntryType.advance) {
-      return 'Covered-date payment saved.';
-    }
-    return 'Payment saved.';
-  }
+  String _successMessage() =>
+      _isUnableToPay ? 'Unable-to-pay reason saved.' : 'Payment saved.';
 
   @override
   Widget build(BuildContext context) {
@@ -438,11 +350,11 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       appBar: AppBar(title: const Text('Record Collection')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
           children: [
             _ClientSummary(entry: widget.entry),
-            const SizedBox(height: 16),
-            if (_isSevenBySeven)
+            const SizedBox(height: 12),
+            if (_sevenBySevenBlocked)
               const _SafetyNotice(
                 icon: Icons.lock_outline,
                 message:
@@ -467,7 +379,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                     ? null
                     : (selection) => _changeEntryType(selection.first),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               if (!_isUnableToPay) ...[
                 TextField(
                   key: const Key('collection-amount'),
@@ -480,104 +392,78 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                     labelText: 'Amount received',
                     prefixText: '₱ ',
                   ),
-                  onChanged: (_) => _invalidatePendingDraft(),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Covered dates',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Tap several dates in one calendar. Only the selected dates are covered.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Yesterday'),
-                      selected: _containsCoveredDate(
-                        _coveredDates,
-                        _collectionDate.subtract(const Duration(days: 1)),
-                      ),
-                      onSelected: _submitting
-                          ? null
-                          : (_) => _toggleCoveredDate(
-                                _collectionDate.subtract(
-                                  const Duration(days: 1),
-                                ),
-                              ),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Today'),
-                      selected: _containsCoveredDate(
-                        _coveredDates,
-                        _collectionDate,
-                      ),
-                      onSelected: _submitting
-                          ? null
-                          : (_) => _toggleCoveredDate(_collectionDate),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Tomorrow'),
-                      selected: _containsCoveredDate(
-                        _coveredDates,
-                        _collectionDate.add(const Duration(days: 1)),
-                      ),
-                      onSelected: _submitting
-                          ? null
-                          : (_) => _toggleCoveredDate(
-                                _collectionDate.add(
-                                  const Duration(days: 1),
-                                ),
-                              ),
-                    ),
-                    ActionChip(
-                      key: const Key('add-covered-date'),
-                      avatar: const Icon(Icons.calendar_month, size: 18),
-                      label: const Text('Open calendar'),
-                      onPressed: _submitting ? null : _selectCoveredDate,
-                    ),
-                  ],
+                  onChanged: (_) {
+                    setState(() {
+                      _forcePastDueFollowup = false;
+                      _clearSubmissionState();
+                    });
+                  },
                 ),
                 const SizedBox(height: 10),
-                if (_sortedCoveredDates.isEmpty)
-                  const _SafetyNotice(
-                    icon: Icons.calendar_month_outlined,
-                    message: 'No covered date selected.',
-                  )
-                else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final coveredDate in _sortedCoveredDates)
-                        InputChip(
-                          key: Key('covered-date-${_date(coveredDate)}'),
-                          label: Text(_date(coveredDate)),
-                          avatar: const Icon(
-                            Icons.event_available,
-                            size: 18,
-                          ),
-                          onDeleted: _submitting
-                              ? null
-                              : () => _removeCoveredDate(coveredDate),
+                Card(
+                  key: const Key('protected-allocation-card'),
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.account_tree_outlined, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Allocation',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
                         ),
-                    ],
+                        const SizedBox(height: 5),
+                        Text(
+                          _isSevenBySeven
+                              ? 'SPINA applies this payment using the protected 7x7 order.'
+                              : 'SPINA applies required cash automatically: oldest Past Due → Due Today.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (!_isSevenBySeven) ...[
+                          const SizedBox(height: 10),
+                          DropdownButtonFormField<PaymentAllocationIntent>(
+                            key: const Key('regular-extra-allocation-choice'),
+                            initialValue: _paymentAllocationIntent,
+                            decoration: const InputDecoration(
+                              labelText: 'If there is extra cash',
+                              helperText:
+                                  'Choose only when the borrower gives more than required.',
+                              isDense: true,
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: PaymentAllocationIntent.scheduled,
+                                child: Text('No extra / required only'),
+                              ),
+                              DropdownMenuItem(
+                                value: PaymentAllocationIntent.extraAsAdvance,
+                                child: Text('Advance'),
+                              ),
+                              DropdownMenuItem(
+                                value: PaymentAllocationIntent
+                                    .extraAsPrincipalReduction,
+                                child: Text('Principal Reduction'),
+                              ),
+                            ],
+                            onChanged: _submitting
+                                ? null
+                                : _changeAllocationIntent,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                const SizedBox(height: 8),
-                Text(
-                  '$_coveredDays selected day${_coveredDays == 1 ? '' : 's'} • '
-                  'Suggested amount ${_money(_suggestedAmount)}',
-                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 TextField(
                   key: const Key('collection-note'),
-                  controller: _noteController,
+                  controller: _paymentNoteController,
                   enabled: !_submitting,
                   maxLines: 2,
                   decoration: const InputDecoration(
@@ -593,65 +479,116 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   icon: const Icon(Icons.calendar_today),
                   label: Text('Unable to pay date: ${_date(_unableDate)}'),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Reason',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final reason in const [
-                      'No cash',
-                      'Not home',
-                      'Sick',
-                      'Emergency',
-                      'Will pay tomorrow',
-                      'Will pay double tomorrow',
-                      'Other',
-                    ])
-                      ChoiceChip(
-                        label: Text(reason),
-                        selected: _selectedReason == reason,
-                        onSelected: _submitting
-                            ? null
-                            : (_) => _selectReason(reason),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  key: const Key('collection-note'),
-                  controller: _noteController,
-                  enabled: !_submitting,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Reason client cannot pay (required)',
-                    alignLabelWithHint: true,
+              ],
+              if (_showPastDueFollowup) ...[
+                const SizedBox(height: 10),
+                Card(
+                  key: const Key('past-due-followup-card'),
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Past Due reason',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        if (!_isUnableToPay &&
+                            _estimatedPastDueRemainder > 0) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            'Remaining today: ${_money(_estimatedPastDueRemainder)}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 7,
+                          runSpacing: 7,
+                          children: [
+                            for (final reason in PastDueReasonCode.values)
+                              if (!_isSevenBySeven ||
+                                  reason !=
+                                      PastDueReasonCode.promisedToPayLater)
+                                ChoiceChip(
+                                  key: Key(
+                                    'past-due-reason-${reason.apiValue}',
+                                  ),
+                                  label: Text(reason.label),
+                                  selected: _selectedReason == reason,
+                                  onSelected: _submitting
+                                      ? null
+                                      : (_) => _selectReason(reason),
+                                ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          key: const Key('past-due-note'),
+                          controller: _pastDueNoteController,
+                          enabled: !_submitting,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            labelText:
+                                _selectedReason == PastDueReasonCode.other
+                                ? 'Short explanation (required)'
+                                : 'Past Due note (optional)',
+                            alignLabelWithHint: true,
+                          ),
+                          onChanged: (_) => _invalidatePendingDraft(),
+                        ),
+                        if (_selectedReason ==
+                            PastDueReasonCode.promisedToPayLater) ...[
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            key: const Key('promised-payment-date'),
+                            onPressed: _submitting
+                                ? null
+                                : _selectPromisedPaymentDate,
+                            icon: const Icon(Icons.event_outlined),
+                            label: Text(
+                              _promisedPaymentDate == null
+                                  ? 'Promised payment date'
+                                  : 'Promise: ${_date(_promisedPaymentDate!)}',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            key: const Key('promised-amount'),
+                            controller: _promiseAmountController,
+                            enabled: !_submitting,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Promised amount',
+                              prefixText: '₱ ',
+                              helperText: 'May be less than the full Past Due.',
+                            ),
+                            onChanged: (_) => _invalidatePendingDraft(),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  onChanged: (_) {
-                    setState(() {
-                      _selectedReason = null;
-                      _clearSubmissionState();
-                    });
-                  },
                 ),
               ],
-              const SizedBox(height: 16),
-              if (_errorMessage != null)
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 10),
                 _SafetyNotice(
                   icon: Icons.info_outline,
                   message: _errorMessage!,
                 ),
+              ],
               if (_result != null) ...[
+                const SizedBox(height: 10),
                 _ResultCard(
                   result: _result!,
                   successMessage: _successMessage(),
                 ),
-                const SizedBox(height: 12),
               ],
+              const SizedBox(height: 12),
               FilledButton.icon(
                 key: const Key('submit-collection-entry'),
                 onPressed: _submitting || _result?.isFinalSuccess == true
@@ -668,207 +605,24 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   _submitting
                       ? 'Saving...'
                       : _pendingDraft == null
-                          ? _submitLabel(
-                              unableToPay: _isUnableToPay,
-                              coveredMultipleDates: !_isSingleToday,
-                            )
-                          : 'Retry same entry',
+                      ? (_isUnableToPay
+                            ? 'Save unable-to-pay reason'
+                            : 'Save payment')
+                      : 'Retry same entry',
                 ),
               ),
               if (_result?.isFinalSuccess == true) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 OutlinedButton(
                   key: const Key('finish-collection-entry'),
                   onPressed: () => Navigator.of(context).pop(true),
                   child: const Text('Done and refresh route'),
                 ),
               ],
-              const SizedBox(height: 10),
-              Text(
-                'Official balance, receipt, exact covered dates, and acceptance time come from the SPINA server. Offline collection remains read-only.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
             ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MultiSelectMonthCalendar extends StatelessWidget {
-  const _MultiSelectMonthCalendar({
-    required this.visibleMonth,
-    required this.firstDate,
-    required this.lastDate,
-    required this.selectedDates,
-    required this.onDateTapped,
-    required this.onPreviousMonth,
-    required this.onNextMonth,
-  });
-
-  final DateTime visibleMonth;
-  final DateTime firstDate;
-  final DateTime lastDate;
-  final Set<DateTime> selectedDates;
-  final ValueChanged<DateTime> onDateTapped;
-  final VoidCallback? onPreviousMonth;
-  final VoidCallback? onNextMonth;
-
-  static const _monthNames = <String>[
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-
-  static const _weekdayLabels = <String>[
-    'S',
-    'M',
-    'T',
-    'W',
-    'T',
-    'F',
-    'S',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final monthStart = DateTime(visibleMonth.year, visibleMonth.month);
-    final leadingEmptyCells = monthStart.weekday % 7;
-    final daysInMonth =
-        DateTime(visibleMonth.year, visibleMonth.month + 1, 0).day;
-    final cellCount = ((leadingEmptyCells + daysInMonth + 6) ~/ 7) * 7;
-    final today = _dateOnly(DateTime.now());
-    final normalizedFirstDate = _dateOnly(firstDate);
-    final normalizedLastDate = _dateOnly(lastDate);
-
-    return Column(
-      key: const Key('covered-date-calendar'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${_monthNames[visibleMonth.month - 1]} ${visibleMonth.year}',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-            IconButton(
-              key: const Key('previous-covered-month'),
-              tooltip: 'Previous month',
-              onPressed: onPreviousMonth,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            IconButton(
-              key: const Key('next-covered-month'),
-              tooltip: 'Next month',
-              onPressed: onNextMonth,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            for (final label in _weekdayLabels)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        GridView.builder(
-          key: Key(
-            'covered-calendar-${visibleMonth.year}-${visibleMonth.month}',
-          ),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: cellCount,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            mainAxisExtent: 44,
-          ),
-          itemBuilder: (context, index) {
-            final dayNumber = index - leadingEmptyCells + 1;
-            if (dayNumber < 1 || dayNumber > daysInMonth) {
-              return const SizedBox.shrink();
-            }
-
-            final date = DateTime(
-              visibleMonth.year,
-              visibleMonth.month,
-              dayNumber,
-            );
-            final enabled = !date.isBefore(normalizedFirstDate) &&
-                !date.isAfter(normalizedLastDate);
-            final selected = selectedDates.contains(date);
-            final isToday = _sameDate(date, today);
-            final foreground = selected
-                ? scheme.onPrimary
-                : enabled
-                    ? scheme.onSurface
-                    : scheme.onSurface.withValues(alpha: 0.38);
-
-            return Semantics(
-              button: true,
-              enabled: enabled,
-              selected: selected,
-              label: '${_date(date)}${selected ? ', selected' : ''}',
-              child: InkResponse(
-                key: Key('covered-calendar-day-${_date(date)}'),
-                onTap: enabled ? () => onDateTapped(date) : null,
-                radius: 22,
-                child: Center(
-                  child: AnimatedContainer(
-                    key: selected
-                        ? Key('selected-covered-date-${_date(date)}')
-                        : null,
-                    duration: const Duration(milliseconds: 120),
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: selected ? scheme.primary : null,
-                      border: !selected && isToday
-                          ? Border.all(color: scheme.primary)
-                          : null,
-                    ),
-                    child: Text(
-                      '$dayNumber',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: foreground,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.normal,
-                          ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
     );
   }
 }
@@ -881,8 +635,9 @@ class _ClientSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(13),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -890,16 +645,24 @@ class _ClientSummary extends StatelessWidget {
               entry.clientName,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
-              [entry.area, entry.loanType]
-                  .where((value) => value.isNotEmpty)
-                  .join(' • '),
+              [
+                entry.area,
+                entry.loanType,
+              ].where((value) => value.isNotEmpty).join(' • '),
             ),
-            const Divider(height: 24),
-            Text('Daily amount: ${_money(entry.dailyAmount)}'),
-            Text('Server balance: ${_money(entry.balance)}'),
-            Text('Unable-to-pay count: ${entry.passCount}'),
+            const SizedBox(height: 7),
+            Wrap(
+              spacing: 14,
+              runSpacing: 3,
+              children: [
+                Text('Daily ${_money(entry.dailyAmount)}'),
+                Text('Balance ${_money(entry.balance)}'),
+                if (entry.passCount > 0)
+                  Text('Past Due events ${entry.passCount}'),
+              ],
+            ),
           ],
         ),
       ),
@@ -916,13 +679,14 @@ class _SafetyNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon),
-            const SizedBox(width: 10),
+            Icon(icon, size: 20),
+            const SizedBox(width: 8),
             Expanded(child: Text(message)),
           ],
         ),
@@ -932,10 +696,7 @@ class _SafetyNotice extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({
-    required this.result,
-    required this.successMessage,
-  });
+  const _ResultCard({required this.result, required this.successMessage});
 
   final PaymentSubmissionResult result;
   final String successMessage;
@@ -944,17 +705,16 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final success = result.isFinalSuccess;
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(
-                  success
-                      ? Icons.check_circle_outline
-                      : Icons.warning_amber,
+                  success ? Icons.check_circle_outline : Icons.warning_amber,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -966,19 +726,12 @@ class _ResultCard extends StatelessWidget {
               ],
             ),
             if (result.receiptNumber != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 5),
               Text('Receipt: ${result.receiptNumber}'),
             ],
-            if (result.officialBalance != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                'Official balance: ${_money(result.officialBalance!)}',
-              ),
-            ],
-            if (result.code != null && !success) ...[
-              const SizedBox(height: 2),
-              Text('Code: ${result.code}'),
-            ],
+            if (result.officialBalance != null)
+              Text('Official balance: ${_money(result.officialBalance!)}'),
+            if (result.code != null && !success) Text('Code: ${result.code}'),
           ],
         ),
       ),
@@ -991,29 +744,8 @@ bool _isSevenBySevenLoan(String value) {
   return normalized.contains('7x7') || normalized.contains('7×7');
 }
 
-String _submitLabel({
-  required bool unableToPay,
-  required bool coveredMultipleDates,
-}) {
-  if (unableToPay) {
-    return 'Save unable-to-pay reason';
-  }
-  if (coveredMultipleDates) {
-    return 'Save covered-date payment';
-  }
-  return 'Save payment';
-}
-
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
-
-bool _sameDate(DateTime first, DateTime second) =>
-    first.year == second.year &&
-    first.month == second.month &&
-    first.day == second.day;
-
-bool _containsCoveredDate(Iterable<DateTime> values, DateTime target) =>
-    values.any((value) => _sameDate(value, target));
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'

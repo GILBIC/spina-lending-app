@@ -28,11 +28,49 @@ void main() {
     expect(find.text('TEST-REG-001'), findsOneWidget);
     expect(find.text('Valid payments'), findsOneWidget);
     expect(find.text('₱50.00'), findsWidgets);
-    expect(find.text('Payment timeline'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('client-gcash-placeholder')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Direct GCash payment'), findsOneWidget);
+    expect(find.text('Coming soon through Xendit'), findsOneWidget);
     expect(
-      find.text('Receipt: GBC-20260806-00000010'),
+      find.text(
+        'This is a placeholder only. It cannot accept or post a payment yet.',
+      ),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('open-client-gcash-payment')), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text(
+        'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
+      ),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text(
+        'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
+
+    // The direct-GCash placeholder sits above the receipt timeline, so scroll
+    // the first lazy-built receipt into view before asserting timeline details.
+    await tester.scrollUntilVisible(
+      find.text('Payment timeline'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Payment timeline'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Receipt: GBC-20260806-00000010'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Receipt: GBC-20260806-00000010'), findsOneWidget);
     expect(find.text('Payment posted'), findsOneWidget);
 
     await tester.scrollUntilVisible(
@@ -40,10 +78,7 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(
-      find.text('Receipt: GBC-20260805-00000008'),
-      findsOneWidget,
-    );
+    expect(find.text('Receipt: GBC-20260805-00000008'), findsOneWidget);
     expect(find.text('Voided'), findsOneWidget);
     expect(
       find.text('This receipt was voided and does not reduce your balance.'),

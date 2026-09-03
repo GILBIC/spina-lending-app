@@ -1,0 +1,170 @@
+name: Spina Delivery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mvp/cross-platform-four-role
+    paths:
+      - "spina_portal/**"
+      - "spina_pc/**"
+      - "gilbic_mobile/**"
+      - "tools/build_portal.mjs"
+      - "tools/check_portal_modules.mjs"
+      - "package.json"
+      - ".github/workflows/spina-delivery.yml"
+      - "tests/test_delivery_workflow_contract.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-artifact-delivery-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SPINA_PORTAL_URL: https://spina-lending-app-git-mvp-cross-platform-four-role-gilbic1.vercel.app
+  FLUTTER_VERSION: 3.44.7
+
+jobs:
+  web-package:
+    name: Web package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test and build Web
+        run: |
+          npm test
+          npm run build
+      - name: Record Web address
+        run: printf '%s\n' "$SPINA_PORTAL_URL" > dist/SPINA-WEB-ADDRESS.txt
+      - name: Upload Web package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spina-Web
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-package:
+    name: Windows package
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Create Windows installer package
+        shell: pwsh
+        run: |
+          $Output = Join-Path $PWD "delivery/Spina-Windows"
+          New-Item -ItemType Directory -Path $Output -Force | Out-Null
+          Copy-Item "spina_pc/install_spina_pc.ps1" $Output
+          Copy-Item "spina_pc/uninstall_spina_pc.ps1" $Output
+          Copy-Item "spina_pc/README.md" $Output
+          @"
+          @echo off
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install_spina_pc.ps1" -PortalUrl "$env:SPINA_PORTAL_URL" -StartAfterInstall
+          "@ | Set-Content -LiteralPath (Join-Path $Output "Install Spina.cmd") -Encoding ascii
+          $Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $Output "install_spina_pc.ps1")).Hash.ToLowerInvariant()
+          "install_spina_pc.ps1  $Hash" | Set-Content -LiteralPath (Join-Path $Output "SHA256.txt") -Encoding ascii
+          Compress-Archive -Path "$Output/*" -DestinationPath "delivery/Spina-Windows.zip" -Force
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spina-Windows
+          path: delivery/Spina-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  android-package:
+    name: Android package
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install pinned Flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Verify Flutter
+        run: flutter --version
+      - name: Validate Spina Flutter source
+        working-directory: gilbic_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter config --no-analytics
+          flutter pub get
+          flutter analyze --fatal-infos
+          flutter test
+      - name: Generate isolated Android host
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="$RUNNER_TEMP/spina-android-host"
+          rm -rf "$HOST"
+          flutter create --platforms=android --org ph.spina --project-name gilbic_mobile "$HOST"
+          rm -rf "$HOST/lib"
+          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"
+          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$HOST/pubspec.yaml"
+          if [ -f "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.lock" ]; then
+            cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.lock" "$HOST/pubspec.lock"
+          fi
+          sed -i 's/android:label="gilbic_mobile"/android:label="Spina"/' "$HOST/android/app/src/main/AndroidManifest.xml"
+          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$HOST/android/gradle.properties"
+      - name: Build Android release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/spina-android-host"
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64,android-x64 --no-pub \
+            --dart-define=SPINA_API_BASE_URL="$SPINA_PORTAL_URL" \
+            --dart-define=GILBIC_API_BASE_URL="$SPINA_PORTAL_URL"
+      - name: Prepare and verify Android delivery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p delivery/Spina-Android
+          cp "$RUNNER_TEMP/spina-android-host/build/app/outputs/flutter-apk/app-release.apk" delivery/Spina-Android/Spina.apk
+          sha256sum delivery/Spina-Android/Spina.apk > delivery/Spina-Android/SHA256.txt
+          printf '%s\n' "$SPINA_PORTAL_URL" > delivery/Spina-Android/SERVER.txt
+          python - <<'PY'
+          import pathlib
+          import zipfile
+
+          path = pathlib.Path("delivery/Spina-Android/Spina.apk")
+          assert path.is_file() and path.stat().st_size > 0
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+          assert "lib/arm64-v8a/libflutter.so" in names
+          assert "lib/x86_64/libflutter.so" in names
+          print(f"Verified Spina APK: {path.stat().st_size} bytes")
+          PY
+      - name: Upload Android package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spina-Android
+          path: delivery/Spina-Android/
+          if-no-files-found: error
+          retention-days: 14

@@ -15,10 +15,10 @@ from .request_auth import authenticated_device_context
 from .v1_tax_adjustment_repository import (
     PostgresV1TaxAdjustmentRepository,
     V1TaxAdjustmentBlocked,
+    V1TaxAdjustmentCandidate,
     V1TaxAdjustmentError,
     V1TaxAdjustmentItem,
 )
-
 
 EVIDENCE_PERMISSION = "accounting.tax.adjustment_evidence.record"
 ADJUSTMENT_PREPARE_PERMISSION = "accounting.tax.adjustment.prepare"
@@ -77,7 +77,9 @@ class PostV1TaxAdjustmentRequest(StrictV1TaxAdjustmentRequest):
     @classmethod
     def exact_currency_cents(cls, value: Decimal) -> Decimal:
         if value != value.quantize(Decimal("0.01")):
-            raise ValueError("Expected tax adjustment amounts must use exact currency-cent precision.")
+            raise ValueError(
+                "Expected tax adjustment amounts must use exact currency-cent precision."
+            )
         return value
 
     @field_validator("expected_debit_account_code", "expected_credit_account_code")
@@ -113,34 +115,78 @@ def _item_payload(item: V1TaxAdjustmentItem) -> dict[str, object]:
         "evidence_digest": item.evidence_digest,
         "recorded_by_user_id": str(item.recorded_by_user_id),
         "recorded_at": item.recorded_at.isoformat(),
-        "settlement_posting_id": str(item.settlement_posting_id) if item.settlement_posting_id else None,
+        "settlement_posting_id": str(item.settlement_posting_id)
+        if item.settlement_posting_id
+        else None,
         "original_settlement_journal_entry_id": (
             str(item.original_settlement_journal_entry_id)
             if item.original_settlement_journal_entry_id
             else None
         ),
         "preparation_id": str(item.preparation_id) if item.preparation_id else None,
-        "journal_entry_id": str(item.journal_entry_id) if item.journal_entry_id else None,
+        "journal_entry_id": str(item.journal_entry_id)
+        if item.journal_entry_id
+        else None,
         "journal_status": item.journal_status,
         "entry_number": item.entry_number,
-        "fiscal_period_id": str(item.fiscal_period_id) if item.fiscal_period_id else None,
-        "debit_account_id": str(item.debit_account_id) if item.debit_account_id else None,
+        "fiscal_period_id": str(item.fiscal_period_id)
+        if item.fiscal_period_id
+        else None,
+        "debit_account_id": str(item.debit_account_id)
+        if item.debit_account_id
+        else None,
         "debit_account_code": item.debit_account_code,
         "debit_account_name": item.debit_account_name,
-        "credit_account_id": str(item.credit_account_id) if item.credit_account_id else None,
+        "credit_account_id": str(item.credit_account_id)
+        if item.credit_account_id
+        else None,
         "credit_account_code": item.credit_account_code,
         "credit_account_name": item.credit_account_name,
-        "prepared_by_user_id": str(item.prepared_by_user_id) if item.prepared_by_user_id else None,
+        "prepared_by_user_id": str(item.prepared_by_user_id)
+        if item.prepared_by_user_id
+        else None,
         "prepared_at": item.prepared_at.isoformat() if item.prepared_at else None,
-        "adjustment_posting_id": str(item.adjustment_posting_id) if item.adjustment_posting_id else None,
+        "adjustment_posting_id": str(item.adjustment_posting_id)
+        if item.adjustment_posting_id
+        else None,
         "confirmation_digest": item.confirmation_digest,
-        "posted_by_user_id": str(item.posted_by_user_id) if item.posted_by_user_id else None,
+        "posted_by_user_id": str(item.posted_by_user_id)
+        if item.posted_by_user_id
+        else None,
         "posted_at": item.posted_at.isoformat() if item.posted_at else None,
         "adjustment_status": item.adjustment_status,
         "adjustment_blocker": item.adjustment_blocker,
         "tax_settlement_enabled": item.tax_settlement_enabled,
         "tax_adjustment_reversal_enabled": item.tax_adjustment_reversal_enabled,
         "automatic_source_posting": item.automatic_source_posting,
+    }
+
+
+def _adjustment_candidate_payload(
+    item: V1TaxAdjustmentCandidate,
+) -> dict[str, object]:
+    return {
+        "adjustment_kind": item.adjustment_kind,
+        "tax_type": item.tax_type,
+        "tax_liability_posting_id": str(item.tax_liability_posting_id),
+        "original_evidence_id": str(item.original_evidence_id),
+        "original_evidence_version": item.original_evidence_version,
+        "replacement_evidence_id": str(item.replacement_evidence_id),
+        "replacement_evidence_version": item.replacement_evidence_version,
+        "source_id": str(item.source_id),
+        "loan_id": str(item.loan_id),
+        "client_id": str(item.client_id),
+        "original_tax_due": format(item.original_tax_due, ".2f"),
+        "replacement_tax_due": format(item.replacement_tax_due, ".2f"),
+        "adjustment_amount": format(item.adjustment_amount, ".2f"),
+        "original_evidence_digest": item.original_evidence_digest,
+        "replacement_evidence_digest": item.replacement_evidence_digest,
+        "fiscal_period_id": str(item.fiscal_period_id),
+        "fiscal_period_start": item.fiscal_period_start.isoformat(),
+        "fiscal_period_end": item.fiscal_period_end.isoformat(),
+        "settlement_posting_id": (
+            str(item.settlement_posting_id) if item.settlement_posting_id else None
+        ),
     }
 
 
@@ -207,6 +253,7 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_v1_tax_adjustment_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get("/api/mobile/v1/management/financial-accounting/tax/adjustments")
     @router.get("/api/v1/management/financial-accounting/tax/adjustments")
     def list_v1_tax_adjustments(
         adjustment_status: Literal[
@@ -238,11 +285,25 @@ def create_v1_tax_adjustment_router() -> APIRouter:
                         status=adjustment_status, limit=limit, offset=offset
                     )
                 ],
+                "adjustment_candidates": [
+                    _adjustment_candidate_payload(item)
+                    for item in tax.list_adjustment_candidates(
+                        limit=limit, offset=offset
+                    )
+                ],
                 "permissions": {
-                    "adjustment_evidence_record": EVIDENCE_PERMISSION in actor.permissions,
-                    "adjustment_prepare": ADJUSTMENT_PREPARE_PERMISSION in actor.permissions,
+                    "adjustment_evidence_record": EVIDENCE_PERMISSION
+                    in actor.permissions,
+                    "adjustment_prepare": ADJUSTMENT_PREPARE_PERMISSION
+                    in actor.permissions,
                     "adjustment_post": ADJUSTMENT_POST_PERMISSION in actor.permissions,
                 },
+                "adjustment_status": adjustment_status,
+                "limit": limit,
+                "offset": offset,
+                "tax_settlement_enabled": True,
+                "tax_adjustment_reversal_enabled": True,
+                "automatic_source_posting": False,
                 "notice": (
                     "V1 tax corrections never rewrite posted liability or settlement history. "
                     "An unpaid stale liability can be fully reversed only while its original fiscal period remains open. "
@@ -252,6 +313,10 @@ def create_v1_tax_adjustment_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/adjustments/evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/adjustments/evidence",
         status_code=status.HTTP_201_CREATED,
@@ -292,6 +357,9 @@ def create_v1_tax_adjustment_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/adjustments/{adjustment_evidence_id}/prepare"
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/adjustments/{adjustment_evidence_id}/prepare"
     )
     def prepare_v1_tax_adjustment(
@@ -312,7 +380,9 @@ def create_v1_tax_adjustment_router() -> APIRouter:
             accounts=accounts,
         )
         _require_permission(actor, ADJUSTMENT_PREPARE_PERMISSION)
-        _require_confirmation(body.confirm, "preparing a protected tax adjustment journal")
+        _require_confirmation(
+            body.confirm, "preparing a protected tax adjustment journal"
+        )
         try:
             tax.prepare(
                 adjustment_evidence_id=adjustment_evidence_id,
@@ -323,6 +393,9 @@ def create_v1_tax_adjustment_router() -> APIRouter:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/adjustments/{adjustment_evidence_id}/post"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/adjustments/{adjustment_evidence_id}/post"
     )
@@ -344,7 +417,9 @@ def create_v1_tax_adjustment_router() -> APIRouter:
             accounts=accounts,
         )
         _require_permission(actor, ADJUSTMENT_POST_PERMISSION)
-        _require_confirmation(body.confirm, "posting a protected tax adjustment journal")
+        _require_confirmation(
+            body.confirm, "posting a protected tax adjustment journal"
+        )
         try:
             tax.post(
                 adjustment_evidence_id=adjustment_evidence_id,

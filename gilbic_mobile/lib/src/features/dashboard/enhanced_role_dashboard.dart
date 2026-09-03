@@ -3,14 +3,15 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_alerts_audit_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.dart';
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
-import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
@@ -22,6 +23,10 @@ class EnhancedRoleDashboard extends StatelessWidget {
     required this.paymentSubmissionRepository,
     required this.deviceIdentityProvider,
     required this.collectionDeviceSequence,
+    this.managementDashboardOverviewRepository,
+    this.managementAlertsAuditRepository,
+    this.managementEmployeeActivityRepository,
+    this.clientLoanRepository,
     super.key,
   });
 
@@ -31,82 +36,12 @@ class EnhancedRoleDashboard extends StatelessWidget {
   final PaymentSubmissionRepository paymentSubmissionRepository;
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence collectionDeviceSequence;
-
-  void _openAccount(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => AccountSettingsPage(
-          session: session,
-          onSignOut: onSignOut,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      ),
-    );
-  }
-
-  void _openNotifications(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => NotificationCenterPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      ),
-    );
-  }
-
-  void _openOfflinePolicy(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => MobileOfflinePolicyPage(session: session),
-      ),
-    );
-  }
-
-  Widget _accountButton(BuildContext context) {
-    return Positioned(
-      right: 56,
-      top: 0,
-      child: SafeArea(
-        child: IconButton(
-          key: const Key('open-account-settings'),
-          tooltip: 'Profile & security',
-          onPressed: () => _openAccount(context),
-          icon: const Icon(Icons.account_circle_outlined),
-        ),
-      ),
-    );
-  }
-
-  Widget _notificationButton(BuildContext context) {
-    return Positioned(
-      right: 104,
-      top: 0,
-      child: SafeArea(
-        child: IconButton(
-          key: const Key('open-notification-center'),
-          tooltip: 'Notifications',
-          onPressed: () => _openNotifications(context),
-          icon: const Icon(Icons.notifications_outlined),
-        ),
-      ),
-    );
-  }
-
-  Widget _offlinePolicyButton(BuildContext context) {
-    return Positioned(
-      right: 152,
-      top: 0,
-      child: SafeArea(
-        child: IconButton(
-          key: const Key('open-offline-policy'),
-          tooltip: 'Offline & sync',
-          onPressed: () => _openOfflinePolicy(context),
-          icon: const Icon(Icons.cloud_off_outlined),
-        ),
-      ),
-    );
-  }
+  final ManagementDashboardOverviewRepository?
+  managementDashboardOverviewRepository;
+  final ManagementAlertsAuditRepository? managementAlertsAuditRepository;
+  final ManagementEmployeeActivityRepository?
+  managementEmployeeActivityRepository;
+  final ClientLoanRepository? clientLoanRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +53,20 @@ class EnhancedRoleDashboard extends StatelessWidget {
       );
     }
 
+    // Collector field work is ledger-first by design. Keep the familiar old
+    // route information hierarchy as the first screen after sign-in and move
+    // secondary tools to a compact field navigation bar.
+    if (session.role == AppRole.collector) {
+      return CollectorFieldHomePage(
+        session: session,
+        onSignOut: onSignOut,
+        collectorRouteLoader: collectorRouteLoader,
+        paymentSubmissionRepository: paymentSubmissionRepository,
+        deviceIdentityProvider: deviceIdentityProvider,
+        collectionDeviceSequence: collectionDeviceSequence,
+      );
+    }
+
     final dashboard = RoleDashboard(
       session: session,
       onSignOut: onSignOut,
@@ -125,132 +74,28 @@ class EnhancedRoleDashboard extends StatelessWidget {
       paymentSubmissionRepository: paymentSubmissionRepository,
       deviceIdentityProvider: deviceIdentityProvider,
       collectionDeviceSequence: collectionDeviceSequence,
+      managementDashboardOverviewRepository:
+          managementDashboardOverviewRepository,
+      managementAlertsAuditRepository: managementAlertsAuditRepository,
+      managementEmployeeActivityRepository:
+          managementEmployeeActivityRepository,
+      clientLoanRepository: clientLoanRepository,
     );
 
-    final layers = <Widget>[
-      dashboard,
-      _offlinePolicyButton(context),
-      _notificationButton(context),
-      _accountButton(context),
-    ];
-
-    if (session.role == AppRole.management) {
-      final canActivateContractCollection =
-          session.hasPermission('lending.contract_collection.activate');
-      final canReviewEcl = session.hasPermission('accounting.ecl.review');
-      final canViewLoanMeasurement = session.hasPermission('accounting.view');
-      final canManageOpeningWorkbook =
-          session.hasPermission('accounting.cutover.manage');
-      final hasEnhancedAction = canActivateContractCollection ||
-          canReviewEcl ||
-          canViewLoanMeasurement ||
-          canManageOpeningWorkbook;
-
-      if (hasEnhancedAction) {
-        layers.add(
-          Positioned(
-            right: 18,
-            bottom: 18,
-            child: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (canActivateContractCollection) ...[
-                    FloatingActionButton.extended(
-                      key: const Key('management-contract-collection-activation'),
-                      heroTag: 'management-contract-collection-activation',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                ManagementContractCollectionActivationPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.verified_user_outlined),
-                      label: const Text('Contract Collection'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (canReviewEcl) ...[
-                    FloatingActionButton.extended(
-                      key: const Key('management-ecl-outcome-review'),
-                      heroTag: 'management-ecl-outcome-review',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) => ManagementEclOutcomeReviewPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text('Outcome Review'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (canViewLoanMeasurement) ...[
-                    FloatingActionButton.extended(
-                      key: const Key('management-accounting-measurement'),
-                      heroTag: 'management-accounting-measurement',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                ManagementAccountingMeasurementPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.calculate_outlined),
-                      label: const Text('Loan Measurement'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (canManageOpeningWorkbook)
-                    FloatingActionButton.extended(
-                      key: const Key('management-opening-balance-workbook'),
-                      heroTag: 'management-opening-balance-workbook',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                ManagementOpeningBalanceWorkbookPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.table_view_outlined),
-                      label: const Text('Opening Workbook'),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-    }
-
-    return Stack(children: layers);
+    // Management, Employee, and Client each own a purpose-grouped command
+    // surface. Account, notification, offline-policy, and protected
+    // destinations live inside those hierarchies without duplicate overlays.
+    return dashboard;
   }
 }
 
 bool _hasDashboardAccess(UserSession session) {
   return switch (session.role) {
     AppRole.client => session.hasPermission('loan.self.view'),
-    AppRole.collector => session.hasAllPermissions(
-        const <String>['route.view', 'collection.create'],
-      ),
+    AppRole.collector => session.hasAllPermissions(const <String>[
+      'route.view',
+      'collection.create',
+    ]),
     AppRole.employee => session.hasPermission('employee.portal.view'),
     AppRole.management => session.hasPermission('management.dashboard.view'),
   };

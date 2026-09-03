@@ -453,11 +453,11 @@ def test_postgresql_renewal_cycles_are_isolated_and_restart_original_principal_b
             connection.rollback()
 
 
-def test_same_day_protected_source_ambiguity_is_not_silently_normalized_for_server() -> None:
+def test_same_day_protected_source_preserves_distinct_receipts_for_server() -> None:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
     case = b2_matrix.ParityCase(
-        name="postgres_same_day_ambiguity",
+        name="postgres_same_day_distinct_receipts",
         principal=Decimal("3000.00"),
         payment_start=date(2026, 8, 1),
         payments=(
@@ -487,20 +487,36 @@ def test_same_day_protected_source_ambiguity_is_not_silently_normalized_for_serv
             assert len(active) == 2
             assert {row[6] for row in active} == {2}
 
-            with pytest.raises(SevenBySevenAllocationError, match="strictly chronological"):
-                allocate_seven_by_seven_payments(
-                    original_principal=case.principal,
-                    daily_interest_per_1000="7.00",
-                    payment_start=case.payment_start,
-                    events=tuple(
-                        SevenBySevenCashEvent(
-                            event_id=str(row[0]),
-                            collection_date=row[1],
-                            amount=row[3],
-                        )
-                        for row in active
-                    ),
-                )
+            server = allocate_seven_by_seven_payments(
+                original_principal=case.principal,
+                daily_interest_per_1000="7.00",
+                payment_start=case.payment_start,
+                events=tuple(
+                    SevenBySevenCashEvent(
+                        event_id=str(row[0]),
+                        collection_date=row[1],
+                        amount=row[3],
+                    )
+                    for row in active
+                ),
+            )
+            desktop = allocate_x7_payments(
+                principal=case.principal,
+                payment_start=case.payment_start,
+                payments=case.payments,
+                as_of_date=case.payment_start,
+            )
+
+            assert [line.gap_days for line in server.allocations] == [1, 0]
+            assert server.total_interest_paid == Decimal("21.00")
+            assert server.total_principal_paid == Decimal("69.00")
+            assert server.closing_remaining_principal == Decimal("2931.00")
+            assert server.total_interest_paid == _money(desktop["interest_paid"])
+            assert server.total_principal_paid == _money(desktop["principal_paid"])
+            assert server.closing_remaining_principal == _money(
+                desktop["remaining_principal"]
+            )
+            assert _money(desktop["total_collected"]) == Decimal("90.00")
 
             assert connection.execute(
                 """

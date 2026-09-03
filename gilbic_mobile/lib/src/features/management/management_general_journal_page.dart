@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementGeneralJournalPage extends StatefulWidget {
   const ManagementGeneralJournalPage({
@@ -86,10 +87,19 @@ class _ManagementGeneralJournalPageState
       context: context,
       builder: (context) => _JournalDialog(
         title: 'Create manual journal draft',
-        accounts: widget.accounts.where((account) => account.isActive && account.isPosting).toList(),
+        accounts: widget.accounts
+            .where((account) => account.isActive && account.isPosting)
+            .toList(),
       ),
     );
     if (draft == null || !mounted) {
+      return;
+    }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _draftReview(draft: draft),
+    );
+    if (!confirmed || !mounted) {
       return;
     }
     await _runAction(() async {
@@ -110,11 +120,20 @@ class _ManagementGeneralJournalPageState
       context: context,
       builder: (context) => _JournalDialog(
         title: 'Edit manual journal draft',
-        accounts: widget.accounts.where((account) => account.isActive && account.isPosting).toList(),
+        accounts: widget.accounts
+            .where((account) => account.isActive && account.isPosting)
+            .toList(),
         entry: entry,
       ),
     );
     if (draft == null || !mounted) {
+      return;
+    }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _draftReview(draft: draft, entry: entry),
+    );
+    if (!confirmed || !mounted) {
       return;
     }
     await _runAction(() async {
@@ -132,27 +151,25 @@ class _ManagementGeneralJournalPageState
   }
 
   Future<void> _post(AccountingJournalEntry entry) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Post journal entry?'),
-        content: Text(
-          'Post ${entry.description}? Once posted, the journal and its lines become immutable. Corrections require a reversal.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('confirm-post-journal'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Post journal'),
-          ),
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.generalJournal,
+        recordLabel: 'Journal draft',
+        recordValue: entry.entryNumber ?? entry.entryId,
+        statusLabel: 'Draft — not posted',
+        statusDetail: entry.description,
+        facts: _entryFacts(entry),
+        nextActionLabel: 'Post journal',
+        consequence:
+            'The journal will be posted immutably to the General Ledger. '
+            'Corrections require a separate reversal with permanent audit evidence.',
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Entry ID', value: entry.entryId),
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
     await _runAction(() async {
@@ -167,27 +184,25 @@ class _ManagementGeneralJournalPageState
   }
 
   Future<void> _cancel(AccountingJournalEntry entry) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel journal draft?'),
-        content: const Text(
-          'The draft will be removed from the working journal, but a permanent cancellation audit snapshot will be retained.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep draft'),
-          ),
-          FilledButton(
-            key: const Key('confirm-cancel-journal'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Cancel draft'),
-          ),
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.generalJournal,
+        recordLabel: 'Journal draft',
+        recordValue: entry.entryNumber ?? entry.entryId,
+        statusLabel: 'Draft — not posted',
+        statusDetail: entry.description,
+        facts: _entryFacts(entry),
+        nextActionLabel: 'Cancel journal draft',
+        consequence:
+            'The draft will be cancelled while a permanent audit snapshot is '
+            'retained. No posted ledger balance will change.',
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Entry ID', value: entry.entryId),
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
     await _runAction(() async {
@@ -209,6 +224,40 @@ class _ManagementGeneralJournalPageState
     if (draft == null || !mounted) {
       return;
     }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.generalJournal,
+        recordLabel: 'Posted journal',
+        recordValue: entry.entryNumber ?? entry.entryId,
+        statusLabel: 'Posted — immutable',
+        statusDetail: entry.description,
+        facts: <ManagementReviewFact>[
+          ..._entryFacts(entry),
+          ManagementReviewFact(
+            label: 'Reversal posting date',
+            value: _date(draft.postingDate),
+          ),
+          ManagementReviewFact(
+            label: 'Reversal description',
+            value: draft.description,
+          ),
+        ],
+        nextActionLabel: 'Create reversal draft',
+        consequence:
+            'A separate unposted reversal draft will be created with debit and '
+            'credit lines swapped. It must be reviewed and posted separately.',
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Original entry ID',
+            value: entry.entryId,
+          ),
+        ],
+      ),
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
     await _runAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
       await _repository.createReversalDraft(
@@ -221,6 +270,77 @@ class _ManagementGeneralJournalPageState
       _snack('Reversal draft created. Review and post it separately.');
     });
   }
+
+  ManagementReviewPresentation _draftReview({
+    required _JournalDraft draft,
+    AccountingJournalEntry? entry,
+  }) {
+    final totalDebit = draft.lines.fold<double>(
+      0,
+      (total, line) => total + line.debit,
+    );
+    final totalCredit = draft.lines.fold<double>(
+      0,
+      (total, line) => total + line.credit,
+    );
+    return ManagementReviewPresentation.validated(
+      binding: ManagementMutationBinding.generalJournal,
+      recordLabel: entry == null
+          ? 'New manual journal'
+          : 'Manual journal draft',
+      recordValue: entry?.entryNumber ?? entry?.entryId ?? draft.description,
+      statusLabel: entry == null ? 'New unposted draft' : 'Draft — not posted',
+      statusDetail: draft.description,
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Posting date',
+          value: _date(draft.postingDate),
+        ),
+        ManagementReviewFact(
+          label: 'Entered debit total',
+          value: _money(totalDebit),
+        ),
+        ManagementReviewFact(
+          label: 'Entered credit total',
+          value: _money(totalCredit),
+        ),
+        ManagementReviewFact(
+          label: 'Journal lines',
+          value: '${draft.lines.length}',
+        ),
+      ],
+      nextActionLabel: entry == null
+          ? 'Create manual journal draft'
+          : 'Update manual journal draft',
+      consequence:
+          'The entered journal will be sent as an unposted draft. The backend '
+          'will revalidate balance and posting rules; no General Ledger balance '
+          'changes until separate review and posting.',
+      secondaryReferences: entry == null
+          ? const <ManagementReviewFact>[]
+          : <ManagementReviewFact>[
+              ManagementReviewFact(label: 'Entry ID', value: entry.entryId),
+            ],
+    );
+  }
+
+  List<ManagementReviewFact> _entryFacts(
+    AccountingJournalEntry entry,
+  ) => <ManagementReviewFact>[
+    ManagementReviewFact(
+      label: 'Posting date',
+      value: _date(entry.postingDate),
+    ),
+    ManagementReviewFact(label: 'Total debit', value: _money(entry.totalDebit)),
+    ManagementReviewFact(
+      label: 'Total credit',
+      value: _money(entry.totalCredit),
+    ),
+    ManagementReviewFact(
+      label: 'Journal lines',
+      value: '${entry.lines.length}',
+    ),
+  ];
 
   Future<void> _runAction(Future<void> Function() action) async {
     if (_actionBusy) {
@@ -243,7 +363,9 @@ class _ManagementGeneralJournalPageState
 
   void _snack(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -277,7 +399,10 @@ class _ManagementGeneralJournalPageState
       return const Center(child: CircularProgressIndicator());
     }
     if (_snapshot == null) {
-      return _ErrorPanel(message: _errorMessage ?? 'General Journal unavailable.', onRetry: _load);
+      return _ErrorPanel(
+        message: _errorMessage ?? 'General Journal unavailable.',
+        onRetry: _load,
+      );
     }
     final snapshot = _snapshot!;
     final entries = snapshot.entries;
@@ -311,14 +436,29 @@ class _ManagementGeneralJournalPageState
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 8),
-            Card(child: Padding(padding: const EdgeInsets.all(12), child: Text(_errorMessage!))),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(_errorMessage!),
+              ),
+            ),
           ],
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _CountCard(label: 'Journal entries', value: '${entries.length}')),
+              Expanded(
+                child: _CountCard(
+                  label: 'Journal entries',
+                  value: '${entries.length}',
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _CountCard(label: 'Posted / drafts', value: '$posted / $drafts')),
+              Expanded(
+                child: _CountCard(
+                  label: 'Posted / drafts',
+                  value: '$posted / $drafts',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -332,10 +472,15 @@ class _ManagementGeneralJournalPageState
             },
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Text('General Journal', style: Theme.of(context).textTheme.titleMedium),
-              const Spacer(),
+              Text(
+                'General Journal',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               Text('${entries.length} shown'),
             ],
           ),
@@ -344,7 +489,9 @@ class _ManagementGeneralJournalPageState
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Text('No journal entries yet. Create a balanced manual draft to test the protected journal workflow.'),
+                child: Text(
+                  'No journal entries yet. Create a balanced manual draft to test the protected journal workflow.',
+                ),
               ),
             )
           else
@@ -382,7 +529,8 @@ class _TrialBalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trial = trialBalance;
-    final activeLines = trial?.lines
+    final activeLines =
+        trial?.lines
             .where((line) => line.debitBalance != 0 || line.creditBalance != 0)
             .toList() ??
         const <AccountingTrialBalanceLine>[];
@@ -402,9 +550,15 @@ class _TrialBalanceCard extends StatelessWidget {
         children: [
           DropdownButtonFormField<String?>(
             initialValue: selectedPeriodId,
-            decoration: const InputDecoration(labelText: 'Trial balance period'),
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Trial balance period',
+            ),
             items: <DropdownMenuItem<String?>>[
-              const DropdownMenuItem<String?>(value: null, child: Text('All posted journals')),
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All posted journals'),
+              ),
               ...periods.map(
                 (period) => DropdownMenuItem<String?>(
                   value: period.periodId,
@@ -419,7 +573,12 @@ class _TrialBalanceCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(child: Text('Debit ${_money(trial.totalDebits)}')),
-                Expanded(child: Text('Credit ${_money(trial.totalCredits)}', textAlign: TextAlign.right)),
+                Expanded(
+                  child: Text(
+                    'Credit ${_money(trial.totalCredits)}',
+                    textAlign: TextAlign.right,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -478,7 +637,9 @@ class _JournalCard extends StatelessWidget {
       key: Key('journal-${entry.entryId}'),
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
-        leading: Icon(entry.isPosted ? Icons.verified_outlined : Icons.edit_note_outlined),
+        leading: Icon(
+          entry.isPosted ? Icons.verified_outlined : Icons.edit_note_outlined,
+        ),
         title: Text(entry.entryNumber ?? 'Draft journal'),
         subtitle: Text('${_date(entry.postingDate)} • ${entry.description}'),
         trailing: Chip(label: Text(entry.isPosted ? 'Posted' : 'Draft')),
@@ -489,7 +650,10 @@ class _JournalCard extends StatelessWidget {
           if (entry.postedByName != null)
             _JournalDetail(label: 'Posted by', value: entry.postedByName!),
           _JournalDetail(label: 'Total debit', value: _money(entry.totalDebit)),
-          _JournalDetail(label: 'Total credit', value: _money(entry.totalCredit)),
+          _JournalDetail(
+            label: 'Total credit',
+            value: _money(entry.totalCredit),
+          ),
           if (entry.reversalOfEntryId != null)
             const _JournalDetail(label: 'Type', value: 'Reversal draft'),
           const SizedBox(height: 8),
@@ -518,24 +682,28 @@ class _JournalCard extends StatelessWidget {
               children: [
                 if (entry.isDraft && entry.isManual)
                   OutlinedButton.icon(
+                    key: Key('edit-journal-${entry.entryId}'),
                     onPressed: busy ? null : onEdit,
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Edit'),
                   ),
                 if (entry.isDraft && entry.isManual)
                   OutlinedButton.icon(
+                    key: Key('cancel-journal-${entry.entryId}'),
                     onPressed: busy ? null : onCancel,
                     icon: const Icon(Icons.cancel_outlined),
                     label: const Text('Cancel draft'),
                   ),
                 if (entry.isDraft)
                   FilledButton.icon(
+                    key: Key('post-journal-${entry.entryId}'),
                     onPressed: busy ? null : onPost,
                     icon: const Icon(Icons.post_add_outlined),
                     label: const Text('Post'),
                   ),
                 if (entry.isPosted)
                   OutlinedButton.icon(
+                    key: Key('reverse-journal-${entry.entryId}'),
                     onPressed: busy ? null : onReverse,
                     icon: const Icon(Icons.undo_outlined),
                     label: const Text('Create reversal'),
@@ -575,19 +743,21 @@ class _JournalDialogState extends State<_JournalDialog> {
     super.initState();
     final entry = widget.entry;
     _postingDate = entry?.postingDate ?? DateTime.now();
-    _descriptionController = TextEditingController(text: entry?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: entry?.description ?? '',
+    );
     _lines = entry == null
         ? <_LineControllers>[_LineControllers(), _LineControllers()]
         : entry.lines
-            .map(
-              (line) => _LineControllers(
-                accountCode: line.accountCode,
-                description: line.description,
-                debit: line.debit,
-                credit: line.credit,
-              ),
-            )
-            .toList();
+              .map(
+                (line) => _LineControllers(
+                  accountCode: line.accountCode,
+                  description: line.description,
+                  debit: line.debit,
+                  credit: line.credit,
+                ),
+              )
+              .toList();
   }
 
   @override
@@ -619,13 +789,20 @@ class _JournalDialogState extends State<_JournalDialog> {
     for (final line in _lines) {
       final accountCode = line.accountCode;
       final lineDebit = double.tryParse(line.debitController.text.trim()) ?? 0;
-      final lineCredit = double.tryParse(line.creditController.text.trim()) ?? 0;
+      final lineCredit =
+          double.tryParse(line.creditController.text.trim()) ?? 0;
       if (accountCode == null || accountCode.isEmpty) {
-        setState(() => _validation = 'Choose an account for every journal line.');
+        setState(
+          () => _validation = 'Choose an account for every journal line.',
+        );
         return;
       }
-      if (!((lineDebit > 0 && lineCredit == 0) || (lineCredit > 0 && lineDebit == 0))) {
-        setState(() => _validation = 'Each line needs exactly one positive debit or credit.');
+      if (!((lineDebit > 0 && lineCredit == 0) ||
+          (lineCredit > 0 && lineDebit == 0))) {
+        setState(
+          () => _validation =
+              'Each line needs exactly one positive debit or credit.',
+        );
         return;
       }
       debit += lineDebit;
@@ -644,7 +821,9 @@ class _JournalDialogState extends State<_JournalDialog> {
       return;
     }
     if ((debit - credit).abs() > 0.005 || debit <= 0) {
-      setState(() => _validation = 'The journal must balance before it can be saved.');
+      setState(
+        () => _validation = 'The journal must balance before it can be saved.',
+      );
       return;
     }
     Navigator.of(context).pop(
@@ -668,6 +847,7 @@ class _JournalDialogState extends State<_JournalDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
+                key: const Key('journal-description'),
                 controller: _descriptionController,
                 maxLength: 240,
                 decoration: const InputDecoration(labelText: 'Description'),
@@ -718,8 +898,15 @@ class _JournalDialogState extends State<_JournalDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(key: const Key('save-manual-journal'), onPressed: _save, child: const Text('Save draft')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-manual-journal'),
+          onPressed: _save,
+          child: const Text('Save draft'),
+        ),
       ],
     );
   }
@@ -747,13 +934,20 @@ class _JournalLineEditor extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Line ${index + 1}', style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              'Line ${index + 1}',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const Spacer(),
             if (canRemove)
-              IconButton(onPressed: onRemove, icon: const Icon(Icons.remove_circle_outline)),
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
           ],
         ),
         DropdownButtonFormField<String>(
+          key: Key('journal-line-$index-account'),
           initialValue: line.accountCode,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'Account'),
@@ -761,7 +955,10 @@ class _JournalLineEditor extends StatelessWidget {
               .map(
                 (account) => DropdownMenuItem<String>(
                   value: account.code,
-                  child: Text('${account.code} • ${account.name}', overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    '${account.code} • ${account.name}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(growable: false),
@@ -769,22 +966,30 @@ class _JournalLineEditor extends StatelessWidget {
         ),
         TextField(
           controller: line.descriptionController,
-          decoration: const InputDecoration(labelText: 'Line description (optional)'),
+          decoration: const InputDecoration(
+            labelText: 'Line description (optional)',
+          ),
         ),
         Row(
           children: [
             Expanded(
               child: TextField(
+                key: Key('journal-line-$index-debit'),
                 controller: line.debitController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(labelText: 'Debit'),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
+                key: Key('journal-line-$index-credit'),
                 controller: line.creditController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(labelText: 'Credit'),
               ),
             ),
@@ -801,9 +1006,13 @@ class _LineControllers {
     String description = '',
     double debit = 0,
     double credit = 0,
-  })  : descriptionController = TextEditingController(text: description),
-        debitController = TextEditingController(text: debit == 0 ? '' : debit.toStringAsFixed(2)),
-        creditController = TextEditingController(text: credit == 0 ? '' : credit.toStringAsFixed(2));
+  }) : descriptionController = TextEditingController(text: description),
+       debitController = TextEditingController(
+         text: debit == 0 ? '' : debit.toStringAsFixed(2),
+       ),
+       creditController = TextEditingController(
+         text: credit == 0 ? '' : credit.toStringAsFixed(2),
+       );
 
   String? accountCode;
   final TextEditingController descriptionController;
@@ -835,7 +1044,8 @@ class _ReversalDialogState extends State<_ReversalDialog> {
     super.initState();
     _postingDate = DateTime.now();
     _descriptionController = TextEditingController(
-      text: 'Reversal of ${widget.entry.entryNumber ?? widget.entry.description}',
+      text:
+          'Reversal of ${widget.entry.entryNumber ?? widget.entry.description}',
     );
   }
 
@@ -849,35 +1059,43 @@ class _ReversalDialogState extends State<_ReversalDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Create reversal draft'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Reversal posting date'),
-            subtitle: Text(_date(_postingDate)),
-            onTap: () async {
-              final selected = await showDatePicker(
-                context: context,
-                initialDate: _postingDate,
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2100),
-              );
-              if (selected != null && mounted) {
-                setState(() => _postingDate = selected);
-              }
-            },
-          ),
-          TextField(
-            controller: _descriptionController,
-            maxLength: 240,
-            decoration: const InputDecoration(labelText: 'Description'),
-          ),
-          const Text('The reversal is created as a draft with debit and credit lines swapped. It must be reviewed and posted separately.'),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Reversal posting date'),
+              subtitle: Text(_date(_postingDate)),
+              onTap: () async {
+                final selected = await showDatePicker(
+                  context: context,
+                  initialDate: _postingDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
+                );
+                if (selected != null && mounted) {
+                  setState(() => _postingDate = selected);
+                }
+              },
+            ),
+            TextField(
+              controller: _descriptionController,
+              maxLength: 240,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
+            const Text(
+              'The reversal is created as a draft with debit and credit lines '
+              'swapped. It must be reviewed and posted separately.',
+            ),
+          ],
+        ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           key: const Key('create-reversal-draft'),
           onPressed: () {
@@ -886,7 +1104,10 @@ class _ReversalDialogState extends State<_ReversalDialog> {
               return;
             }
             Navigator.of(context).pop(
-              _ReversalDraft(postingDate: _postingDate, description: description),
+              _ReversalDraft(
+                postingDate: _postingDate,
+                description: description,
+              ),
             );
           },
           child: const Text('Create draft'),
@@ -972,11 +1193,19 @@ class _ErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try again')),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try again'),
+            ),
           ],
         ),
       ),

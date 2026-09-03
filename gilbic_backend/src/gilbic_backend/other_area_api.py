@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -43,12 +45,63 @@ def _payload(record: OtherAreaLoanRecord) -> dict[str, object]:
             else None
         ),
         "assigned_collector_name": record.assigned_collector_name,
+        "processed_today": record.processed_today,
+        "today_entry_type": record.today_entry_type,
+        "today_collector_user_id": (
+            str(record.today_collector_user_id)
+            if record.today_collector_user_id
+            else None
+        ),
+        "today_collector_name": record.today_collector_name,
+        "today_amount": _money(record.today_amount),
+        "today_is_locked": record.today_is_locked,
         "is_other_area": True,
     }
 
 
 def create_other_area_router() -> APIRouter:
     router = APIRouter(tags=["other area collections"])
+
+    @router.get("/api/v1/collector/delegated-area/work")
+    @router.get(
+        "/api/mobile/v1/collector/delegated-area/work",
+        include_in_schema=False,
+    )
+    def list_other_area_work(
+        work_date: date = Query(alias="date"),
+        assigned_collector_user_id: UUID | None = Query(default=None),
+        limit: int = Query(default=500, ge=1, le=1000),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        other_areas: PostgresOtherAreaRepository = Depends(
+            other_area_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="delegated_area.view",
+            permission_error="Delegated area access permission is required.",
+        )
+        if "collector" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Only an active Collector may view delegated other-area work.",
+            )
+        records = other_areas.list_work(
+            collector_user_id=actor.user_id,
+            collection_date=work_date,
+            assigned_collector_user_id=assigned_collector_user_id,
+            limit=limit,
+        )
+        return {
+            "success": True,
+            "data": [_payload(record) for record in records],
+        }
 
     @router.get("/api/v1/collector/other-area-clients/search")
     @router.get(
@@ -74,11 +127,23 @@ def create_other_area_router() -> APIRouter:
             permission="collection.create",
             permission_error="Collection permission is required.",
         )
-        records = other_areas.search(
-            collector_user_id=actor.user_id,
-            query=q,
-            limit=limit,
-        )
+        if "management" in actor.roles:
+            records = other_areas.search_management_direct(
+                management_user_id=actor.user_id,
+                query=q,
+                limit=limit,
+            )
+        elif "collector" in actor.roles:
+            records = other_areas.search(
+                collector_user_id=actor.user_id,
+                query=q,
+                limit=limit,
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Only Collector or Management accounts may search this payment path.",
+            )
         return {
             "success": True,
             "data": [_payload(record) for record in records],

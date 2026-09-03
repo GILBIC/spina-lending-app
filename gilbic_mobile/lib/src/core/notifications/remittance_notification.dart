@@ -17,6 +17,8 @@ class RemittanceNotification {
     required this.custodyMessage,
     this.readAt,
     this.acceptedAt,
+    this.rejectedAt,
+    this.rejectionReason = '',
     this.hasHandoverPhoto = false,
     this.handoverPhotoVersion = 0,
     this.handoverPhotoContentType = '',
@@ -38,6 +40,8 @@ class RemittanceNotification {
   final DateTime? createdAt;
   final DateTime? readAt;
   final DateTime? acceptedAt;
+  final DateTime? rejectedAt;
+  final String rejectionReason;
   final String custodyMessage;
   final bool hasHandoverPhoto;
   final int handoverPhotoVersion;
@@ -45,7 +49,9 @@ class RemittanceNotification {
   final DateTime? handoverPhotoUploadedAt;
   final String handoverPhotoUrl;
 
-  bool get isPending => status.trim().toLowerCase() == 'pending';
+  String get normalizedStatus => status.trim().toLowerCase();
+  bool get isPending => normalizedStatus == 'pending';
+  bool get isRejected => normalizedStatus == 'rejected';
 
   static RemittanceNotification? fromPayload(Object? value) {
     final data = stringMap(value);
@@ -90,10 +96,15 @@ class RemittanceNotification {
       acceptedAt: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['accepted_at']]) ?? '',
       ),
+      rejectedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['rejected_at']]) ?? '',
+      ),
+      rejectionReason:
+          firstNonEmptyString(<Object?>[data['rejection_reason']]) ?? '',
       custodyMessage: firstNonEmptyString(<Object?>[
             data['custody_message'],
           ]) ??
-          'Accept only after you physically receive the cash.',
+          'Review all payments before taking action on this remittance.',
       hasHandoverPhoto: _boolValue(data['has_handover_photo']),
       handoverPhotoVersion:
           firstNumber(<Object?>[data['handover_photo_version']])?.toInt() ?? 0,
@@ -141,7 +152,7 @@ class RemittanceAcceptanceResult {
         remittanceId == null ||
         remittanceNumber == null) {
       throw const SpinaApiException(
-        'The SPINA server returned an incomplete remittance acceptance.',
+        'The Gilbic server returned an incomplete remittance acceptance.',
         code: 'invalid_notification_response',
       );
     }

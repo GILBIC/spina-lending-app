@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
 import 'package:gilbic_mobile/src/features/auth/client_registration_page.dart';
-import 'package:gilbic_mobile/src/features/design/spina_design_preview_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class LoginPage extends StatefulWidget {
@@ -72,14 +70,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _openDesignPreview() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const SpinaDesignPreviewPage(),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final noticeMessage = widget.noticeMessage?.trim();
@@ -95,17 +85,17 @@ class _LoginPageState extends State<LoginPage> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const _SpinaBrandHeader(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 14),
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                        padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
                         child: AutofillGroup(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,14 +104,9 @@ class _LoginPageState extends State<LoginPage> {
                                 'Welcome back',
                                 style: Theme.of(context).textTheme.headlineSmall,
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Sign in to continue to your SPINA account.',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
                               if (noticeMessage != null &&
                                   noticeMessage.isNotEmpty) ...[
-                                const SizedBox(height: 18),
+                                const SizedBox(height: 14),
                                 Semantics(
                                   liveRegion: true,
                                   child: Container(
@@ -149,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                               ],
-                              const SizedBox(height: 22),
+                              const SizedBox(height: 16),
                               TextField(
                                 key: const Key('username-field'),
                                 controller: _usernameController,
@@ -166,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                                       Icon(Icons.person_outline_rounded),
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 12),
                               TextField(
                                 key: const Key('password-field'),
                                 controller: _passwordController,
@@ -238,7 +223,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                               ],
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 16),
                               FilledButton.icon(
                                 key: const Key('sign-in-button'),
                                 onPressed: _submitting ? null : _submit,
@@ -270,43 +255,11 @@ class _LoginPageState extends State<LoginPage> {
                                   label: const Text('Create client account'),
                                 ),
                               ],
-                              const SizedBox(height: 18),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.verified_user_outlined,
-                                    size: 18,
-                                    color: SpinaTheme.brandPinkDark,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Your role and access are protected by SPINA.',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 14),
-                      TextButton.icon(
-                        key: const Key('open-ca1-design-preview'),
-                        onPressed: _openDesignPreview,
-                        icon: const Icon(Icons.palette_outlined),
-                        label: const Text('Open CA1 UI review'),
-                      ),
-                      Text(
-                        'Review-only preview for the Android CA1 design pass.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -326,17 +279,17 @@ class _SpinaBrandHeader extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 68,
-          height: 68,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFFF0D6E1)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -345,27 +298,19 @@ class _SpinaBrandHeader extends StatelessWidget {
             'S',
             style: TextStyle(
               color: SpinaTheme.brandPinkDark,
-              fontSize: 30,
+              fontSize: 27,
               fontWeight: FontWeight.w900,
               letterSpacing: -1,
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
         Text(
           'SPINA',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: SpinaTheme.brandPinkDark,
                 letterSpacing: 1.4,
               ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          'Clear access. Confident control.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: SpinaTheme.inkMuted,
-              ),
-          textAlign: TextAlign.center,
         ),
       ],
     );

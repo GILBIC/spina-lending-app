@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/notifications/activity_notification.dart';
 import 'package:gilbic_mobile/src/core/notifications/activity_notification_repository.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 
 class ActivityNotificationsPage extends StatefulWidget {
   const ActivityNotificationsPage({
@@ -237,7 +238,7 @@ class _ActivityCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           '${notification.senderName} • '
-                          '${_dateTime(notification.createdAt)}',
+                          '${formatSpinaBusinessDateTime(notification.createdAt)}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -297,16 +298,4 @@ String _statusLabel(String type) {
     return 'Awaiting recipient acceptance';
   }
   return 'Payment posted';
-}
-
-String _dateTime(DateTime? value) {
-  if (value == null) {
-    return 'Unknown time';
-  }
-  final local = value.toLocal();
-  return '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}-'
-      '${local.day.toString().padLeft(2, '0')} '
-      '${local.hour.toString().padLeft(2, '0')}:'
-      '${local.minute.toString().padLeft(2, '0')}';
 }

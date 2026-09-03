@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 API = (
     ROOT / "src" / "gilbic_backend" / "v1_tax_additional_amendment_api.py"
@@ -18,7 +17,7 @@ def test_additional_amendment_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_v1_tax_additional_amendment_router" in MAIN
     assert "app.include_router(create_v1_tax_additional_amendment_router())" in MAIN
-    assert "/api/mobile/" not in API
+    assert '"/api/mobile/v1/management/financial-accounting/tax/additional-amendments"' in API
 
 
 def test_additional_amendment_api_has_action_specific_permissions_and_confirmation() -> None:
@@ -46,6 +45,7 @@ def test_additional_amendment_api_exposes_exact_retained_evidence_lifecycle() ->
         '"/api/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/post-settlement"',
     ):
         assert route in API
+        assert route.replace('/api/v1/', '/api/mobile/v1/') in API
     for field in (
         "tax_return_id",
         "tax_liability_posting_id",
@@ -65,6 +65,56 @@ def test_additional_amendment_api_exposes_exact_retained_evidence_lifecycle() ->
         assert field in API
     assert "amended_return" in API
     assert "additional_assessment" in API
+
+
+def test_additional_amendment_read_contract_exposes_server_derived_candidates() -> None:
+    for field in (
+        '"amendment_candidates"',
+        '"amendment_status": amendment_status',
+        '"limit": limit',
+        '"offset": offset',
+        '"tax_additional_amendment_enabled": True',
+        '"tax_additional_settlement_enabled": True',
+        '"tax_refund_credit_realization_enabled": False',
+        '"automatic_source_posting": False',
+    ):
+        assert field in API
+    assert "list_amendment_candidates" in API
+    for field in (
+        "tax_return_id",
+        "tax_liability_posting_id",
+        "original_evidence_id",
+        "replacement_evidence_id",
+        "original_declared_tax_due",
+        "revised_declared_tax_due",
+        "additional_tax_due",
+        "payment_basis",
+        "payment_required_amount",
+        "filing_date",
+        "recognition_date",
+        "original_fiscal_period_id",
+        "original_fiscal_period_start",
+        "original_fiscal_period_end",
+    ):
+        assert field in API
+
+
+def test_additional_amendment_candidates_are_exact_read_only_relationships() -> None:
+    for fragment in (
+        "class V1TaxAdditionalAmendmentCandidate",
+        "accounting.v1_tax_return_liability_items",
+        "accounting.v1_tax_return_evidence",
+        "original.accounting_status = 'posted_adjustment_review_required'",
+        "replacement.evidence_status = 'evidence_ready'",
+        "replacement.accounting_status = 'evidence_ready'",
+        "replacement.tax_due > original.tax_due",
+        "period.status = 'open'",
+        "accounting.v1_tax_adjustment_evidence",
+        "accounting.v1_tax_additional_amendment_evidence",
+        "payment.id IS NULL",
+        "settlement_journal.status = 'posted'",
+    ):
+        assert fragment in REPOSITORY
     assert "cash_office" in API and "cash_bank_gcash" in API
 
 

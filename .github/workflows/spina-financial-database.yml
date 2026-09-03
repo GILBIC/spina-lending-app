@@ -1,0 +1,289 @@
+name: SPINA Financial & Database Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: spina-financial-database-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  financial-database:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.actor == github.repository_owner &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login == github.repository_owner)
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: cmd
+        run: |
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
+
+      - name: Create shared isolated verifier environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-financial-database-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          echo FINANCIAL_VENV=%VENV%>>"%GITHUB_ENV%"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" -e ".\gilbic_backend[test]" || exit /b 1
+
+      - name: Compile consolidated disposable validators
+        shell: cmd
+        run: |
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_7x7_source_event_accounting_preview_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_combined_collection_renewal_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_delegated_area_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_initial_capital_funding_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_period_close_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_0099_remittance_capacity_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_0102_remittance_review_disposable_postgres_validation.py || exit /b 1
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m py_compile tools\run_v1_tax_evidence_disposable_postgres_validation.py || exit /b 1
+
+      # These are the PR-safe portions that used to live inside workflows named
+      # "live verifier". They inspect committed controls only. No live/protected
+      # database URL or local .env file is supplied by this workflow.
+      - name: Verify protected ECL and tax controls statically
+        shell: cmd
+        run: |
+          "%FINANCIAL_VENV%\Scripts\python.exe" -m pytest -q ^
+            gilbic_backend\tests\test_ecl_credit_risk_labels_migration.py ^
+            gilbic_backend\tests\test_ecl_forward_looking_evidence_migration.py ^
+            gilbic_backend\tests\test_ecl_read_only_measurement_migration.py ^
+            gilbic_backend\tests\test_ecl_allowance_posting_migration.py ^
+            gilbic_backend\tests\test_ecl_allowance_posting_queue_migration.py ^
+            gilbic_backend\tests\test_ecl_a5_migration.py ^
+            gilbic_backend\tests\test_ecl_a5_accounting_api_contract.py ^
+            gilbic_backend\tests\test_v1_tax_live_verifier_contract.py || exit /b 1
+
+      - name: Run isolated disposable PostgreSQL validations
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $python = Join-Path $env:FINANCIAL_VENV 'Scripts\python.exe'
+          if (-not (Test-Path -LiteralPath $python)) {
+            throw "Financial verifier Python was not found at $python"
+          }
+
+          $pgBin = $null
+          $initdbCommand = Get-Command initdb.exe -ErrorAction SilentlyContinue
+          if ($initdbCommand) {
+            $pgBin = Split-Path -Parent $initdbCommand.Source
+          }
+          if (-not $pgBin) {
+            foreach ($root in @('C:\Program Files\PostgreSQL', 'C:\Program Files (x86)\PostgreSQL')) {
+              if (-not (Test-Path -LiteralPath $root)) { continue }
+              $candidate = Get-ChildItem $root -Directory |
+                ForEach-Object { Join-Path $_.FullName 'bin' } |
+                Where-Object {
+                  (Test-Path (Join-Path $_ 'initdb.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_ctl.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_isready.exe'))
+                } | Select-Object -First 1
+              if ($candidate) { $pgBin = $candidate; break }
+            }
+          }
+          if (-not $pgBin) {
+            throw 'No local PostgreSQL binaries were found. Refusing to use any remote database.'
+          }
+
+          $initdb = Join-Path $pgBin 'initdb.exe'
+          $pgCtl = Join-Path $pgBin 'pg_ctl.exe'
+          $pgReady = Join-Path $pgBin 'pg_isready.exe'
+          $rootBase = [System.IO.Path]::GetFullPath(
+            (Join-Path $env:RUNNER_TEMP '..\spina-financial-database-clusters')
+          ).TrimEnd('\')
+          New-Item -ItemType Directory -Force -Path $rootBase | Out-Null
+
+          $cases = @(
+            @{
+              Slug = '7x7-source-event'
+              Name = '7x7 source-event, parity and mobile acceptance'
+              Port = 55451
+              User = 'x7preview'
+              DatabaseEnv = 'X7PREVIEW_DATABASE_URL'
+              Script = 'tools\run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
+              Args = @('--database-url-env', 'X7PREVIEW_DATABASE_URL')
+            },
+            @{
+              Slug = 'combined-renewal'
+              Name = 'Combined Pay + renewal'
+              Port = 55500
+              User = 'combinedrenewal'
+              DatabaseEnv = 'COMBINED_RENEWAL_DATABASE_URL'
+              Script = 'tools\run_combined_collection_renewal_disposable_postgres_validation.py'
+              Args = @()
+            },
+            @{
+              Slug = 'delegated-area'
+              Name = 'Delegated area'
+              Port = 55498
+              User = 'delegatedarea'
+              DatabaseEnv = 'DELEGATE_DATABASE_URL'
+              Script = 'tools\run_delegated_area_disposable_postgres_validation.py'
+              Args = @('--database-url-env', 'DELEGATE_DATABASE_URL')
+            },
+            @{
+              Slug = 'initial-capital'
+              Name = 'Initial capital funding'
+              Port = 55481
+              User = 'initialcapital'
+              DatabaseEnv = 'CAPITAL_DATABASE_URL'
+              Script = 'tools\run_initial_capital_funding_disposable_postgres_validation.py'
+              Args = @('--database-url-env', 'CAPITAL_DATABASE_URL')
+            },
+            @{
+              Slug = 'period-close'
+              Name = 'Period close'
+              Port = 55491
+              User = 'periodclose'
+              DatabaseEnv = 'CLOSE_DATABASE_URL'
+              Script = 'tools\run_period_close_disposable_postgres_validation.py'
+              Args = @('--database-url-env', 'CLOSE_DATABASE_URL')
+            },
+            @{
+              Slug = 'remittance-capacity'
+              Name = 'Remittance capacity'
+              Port = 55499
+              User = 'remittancecap'
+              DatabaseEnv = 'REMIT_CAP_DATABASE_URL'
+              Script = 'tools\run_0099_remittance_capacity_disposable_postgres_validation.py'
+              Args = @('--database-url-env', 'REMIT_CAP_DATABASE_URL')
+            },
+            @{
+              Slug = 'remittance-review'
+              Name = 'Remittance review'
+              Port = 55502
+              User = 'remittancereview'
+              DatabaseEnv = 'REMIT_REVIEW_DATABASE_URL'
+              Script = 'tools\run_0102_remittance_review_disposable_postgres_validation.py'
+              Args = @()
+            },
+            @{
+              Slug = 'v1-tax-evidence'
+              Name = 'V1 tax evidence'
+              Port = 55482
+              User = 'v1tax'
+              DatabaseEnv = 'TAX_DATABASE_URL'
+              Script = 'tools\run_v1_tax_evidence_disposable_postgres_validation.py'
+              Args = @('--database-url-env', 'TAX_DATABASE_URL')
+            }
+          )
+
+          foreach ($case in $cases) {
+            Write-Host "==== $($case.Name) ===="
+            $clusterBase = Join-Path $rootBase $case.Slug
+            New-Item -ItemType Directory -Force -Path $clusterBase | Out-Null
+
+            # Reap only clusters carrying our ownership marker. Never touch any
+            # unrelated PostgreSQL data directory or service on the runner.
+            Get-ChildItem $clusterBase -Directory -Filter 'run-*' -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                $marker = Join-Path $_.FullName 'cluster-owned.marker'
+                $orphanData = Join-Path $_.FullName 'pgdata'
+                if (-not (Test-Path -LiteralPath $marker) -or -not (Test-Path -LiteralPath $orphanData)) {
+                  return
+                }
+                & $pgCtl -D $orphanData status 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                  & $pgCtl -D $orphanData -m immediate -w stop
+                  if ($LASTEXITCODE -ne 0) {
+                    throw "Failed to stop owned orphan cluster at $orphanData"
+                  }
+                }
+                elseif ($LASTEXITCODE -ne 3) {
+                  throw "Could not verify owned orphan cluster state at $orphanData"
+                }
+                Remove-Item -LiteralPath $_.FullName -Recurse -Force
+              }
+
+            $runRoot = Join-Path $clusterBase ("run-{0}-{1}" -f $env:GITHUB_RUN_ID, $env:GITHUB_RUN_ATTEMPT)
+            $pgData = Join-Path $runRoot 'pgdata'
+            $pgLog = Join-Path $runRoot 'postgres.log'
+            $marker = Join-Path $runRoot 'cluster-owned.marker'
+            $started = $false
+
+            try {
+              if (Test-Path -LiteralPath $runRoot) {
+                Remove-Item -LiteralPath $runRoot -Recurse -Force
+              }
+              New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
+
+              $probe = New-Object System.Net.Sockets.TcpClient
+              try {
+                $probe.Connect('127.0.0.1', [int]$case.Port)
+                throw "Reserved disposable test port $($case.Port) is already in use."
+              }
+              catch [System.Net.Sockets.SocketException] { }
+              finally { $probe.Dispose() }
+
+              & $initdb -D $pgData -U $case.User --auth=trust --encoding=UTF8 --no-locale
+              if ($LASTEXITCODE -ne 0) { throw "initdb failed for $($case.Name)." }
+              "run_id=$env:GITHUB_RUN_ID`ncase=$($case.Slug)`npgdata=$pgData" |
+                Set-Content -Path $marker -Encoding ascii
+
+              & $pgCtl -D $pgData -l $pgLog -o "-p $($case.Port) -h 127.0.0.1" -w start
+              if ($LASTEXITCODE -ne 0) { throw "Temporary PostgreSQL cluster failed to start for $($case.Name)." }
+              $started = $true
+
+              & $pgReady -h 127.0.0.1 -p $case.Port -U $case.User -d postgres
+              if ($LASTEXITCODE -ne 0) { throw "Temporary PostgreSQL cluster is not ready for $($case.Name)." }
+
+              $databaseUrl = "postgresql://$($case.User)@127.0.0.1:$($case.Port)/postgres?sslmode=disable"
+              [Environment]::SetEnvironmentVariable($case.DatabaseEnv, $databaseUrl, 'Process')
+
+              $arguments = @($case.Script) + @($case.Args)
+              & $python @arguments
+              if ($LASTEXITCODE -ne 0) {
+                throw "$($case.Name) disposable PostgreSQL validation failed with exit code $LASTEXITCODE."
+              }
+            }
+            finally {
+              [Environment]::SetEnvironmentVariable($case.DatabaseEnv, $null, 'Process')
+              if (Test-Path -LiteralPath $pgData) {
+                & $pgCtl -D $pgData status 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                  & $pgCtl -D $pgData -m fast -w stop
+                  if ($LASTEXITCODE -ne 0) {
+                    & $pgCtl -D $pgData -m immediate -w stop
+                  }
+                }
+              }
+              if (Test-Path -LiteralPath $runRoot) {
+                Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction Continue
+              }
+              if (Test-Path -LiteralPath $runRoot) {
+                throw "Temporary financial validation directory was not removed: $runRoot"
+              }
+            }
+          }
+
+      - name: Require a clean committed tree
+        if: always()
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1

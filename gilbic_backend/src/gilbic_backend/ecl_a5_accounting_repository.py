@@ -52,6 +52,14 @@ class EclA5Action:
     writeoff_id: UUID | None
     recovery_transaction_id: UUID | None
     recovery_amount: Decimal | None
+    recovery_candidate_transaction_id: UUID | None
+    recovery_candidate_amount: Decimal | None
+    recovery_candidate_collection_date: date | None
+    posting_date: date | None
+    fiscal_period_id: UUID | None
+    credit_loss_expense_account_id: UUID | None
+    allowance_account_id: UUID | None
+    cash_account_id: UUID | None
     a5_status: str
     protected_a5_accounting_enabled: bool
     automatic_source_posting: bool
@@ -60,17 +68,94 @@ class EclA5Action:
 class PostgresEclA5AccountingRepository:
     """Protected Management repository for Master #296 A5 accounting actions."""
 
+    _ACTION_SOURCE = """
+        WITH action_source AS (
+            SELECT
+                queue.*,
+                candidate.id AS recovery_candidate_transaction_id,
+                candidate.amount AS recovery_candidate_amount,
+                candidate.collection_date AS recovery_candidate_collection_date,
+                CASE
+                    WHEN queue.a5_status = 'written_off' AND candidate.id IS NOT NULL
+                        THEN 'recovery_review_required'
+                    ELSE queue.a5_status
+                END AS action_status
+            FROM accounting.ecl_a5_action_queue queue
+            LEFT JOIN accounting.ecl_accounting_writeoffs writeoff
+              ON writeoff.id = queue.writeoff_id
+            LEFT JOIN LATERAL (
+                SELECT
+                    transaction_row.id,
+                    transaction_row.amount,
+                    transaction_row.collection_date
+                FROM lending.collection_transactions transaction_row
+                WHERE transaction_row.loan_id = queue.loan_id
+                  AND writeoff.id IS NOT NULL
+                  AND NOT transaction_row.is_voided
+                  AND transaction_row.amount > 0
+                  AND transaction_row.entry_type IN ('payment', 'advance')
+                  AND transaction_row.accepted_at IS NOT NULL
+                  AND transaction_row.accepted_at > writeoff.posted_at
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM accounting.regular_journal_posting_entries posted
+                      WHERE posted.transaction_id = transaction_row.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM accounting.seven_by_seven_journal_postings posted
+                      WHERE posted.transaction_id = transaction_row.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM accounting.ecl_post_writeoff_recovery_review_provenance reviewed
+                      WHERE reviewed.recovery_transaction_id = transaction_row.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM accounting.ecl_post_writeoff_recoveries posted_recovery
+                      WHERE posted_recovery.recovery_transaction_id = transaction_row.id
+                  )
+                ORDER BY transaction_row.accepted_at, transaction_row.id
+                LIMIT 1
+            ) candidate ON true
+        ), action_coordinates AS (
+            SELECT
+                action_source.*,
+                CASE action_status
+                    WHEN 'remeasurement_required' THEN measurement_date
+                    WHEN 'writeoff_ready' THEN current_date
+                    WHEN 'post_writeoff_recovery_ready' THEN reviewed_recovery.collection_date
+                    ELSE NULL
+                END AS posting_date
+            FROM action_source
+            LEFT JOIN lending.collection_transactions reviewed_recovery
+              ON reviewed_recovery.id = action_source.recovery_transaction_id
+        )
+    """
+
     _QUEUE_COLUMNS = """
-        loan_id, loan_number, loan_status, calculation_mode,
-        credit_risk_review_id, stage_label, default_label,
-        write_off_label, recovery_label, measurement_id,
-        measurement_version, measurement_date, calculation_digest,
-        measurement_status, authoritative_ecl_amount,
-        current_allowance_balance, loan_receivable_account_id,
-        loan_receivable_system_key, accrued_interest_account_id,
-        loan_component, accrued_interest_component, gross_carrying_amount,
-        writeoff_id, recovery_transaction_id, recovery_amount,
-        a5_status, protected_a5_accounting_enabled, automatic_source_posting
+        action.loan_id, action.loan_number, action.loan_status,
+        action.calculation_mode, action.credit_risk_review_id,
+        action.stage_label, action.default_label, action.write_off_label,
+        action.recovery_label, action.measurement_id,
+        action.measurement_version, action.measurement_date,
+        action.calculation_digest, action.measurement_status,
+        action.authoritative_ecl_amount, action.current_allowance_balance,
+        action.loan_receivable_account_id,
+        action.loan_receivable_system_key,
+        action.accrued_interest_account_id, action.loan_component,
+        action.accrued_interest_component, action.gross_carrying_amount,
+        action.writeoff_id, action.recovery_transaction_id,
+        action.recovery_amount, action.recovery_candidate_transaction_id,
+        action.recovery_candidate_amount,
+        action.recovery_candidate_collection_date, action.posting_date,
+        period.id AS fiscal_period_id,
+        expense_account.id AS credit_loss_expense_account_id,
+        allowance_account.id AS allowance_account_id,
+        cash_account.id AS cash_account_id, action.action_status AS a5_status,
+        action.protected_a5_accounting_enabled,
+        action.automatic_source_posting
     """
 
     def list_actions(
@@ -82,19 +167,48 @@ class PostgresEclA5AccountingRepository:
     ) -> tuple[EclA5Action, ...]:
         where_clause = {
             "all": "true",
-            "remeasurement_required": "a5_status = 'remeasurement_required'",
-            "allowance_current": "a5_status = 'allowance_current'",
-            "writeoff_ready": "a5_status = 'writeoff_ready'",
-            "written_off": "a5_status = 'written_off'",
-            "post_writeoff_recovery_ready": "a5_status = 'post_writeoff_recovery_ready'",
-            "blocked": "a5_status = 'blocked'",
+            "remeasurement_required": "action.action_status = 'remeasurement_required'",
+            "allowance_current": "action.action_status = 'allowance_current'",
+            "writeoff_ready": "action.action_status = 'writeoff_ready'",
+            "written_off": "action.action_status = 'written_off'",
+            "recovery_review_required": "action.action_status = 'recovery_review_required'",
+            "post_writeoff_recovery_ready": "action.action_status = 'post_writeoff_recovery_ready'",
+            "blocked": "action.action_status = 'blocked'",
         }.get(status)
         if where_clause is None:
             raise ValueError("Unsupported A5 accounting status filter.")
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
-                    f"SELECT {self._QUEUE_COLUMNS} FROM accounting.ecl_a5_action_queue WHERE {where_clause} ORDER BY loan_number, loan_id LIMIT %s OFFSET %s",
+                    f"""
+                    {self._ACTION_SOURCE}
+                    SELECT {self._QUEUE_COLUMNS}
+                    FROM action_coordinates action
+                    LEFT JOIN accounting.fiscal_periods period
+                      ON period.status = 'open'
+                     AND action.posting_date BETWEEN period.start_date AND period.end_date
+                    LEFT JOIN accounting.accounts expense_account
+                      ON expense_account.system_key = 'credit_loss_expense'
+                     AND expense_account.code = '5000'
+                     AND expense_account.account_type = 'expense'
+                     AND expense_account.normal_balance = 'debit'
+                     AND expense_account.is_active AND expense_account.is_posting
+                    LEFT JOIN accounting.accounts allowance_account
+                      ON allowance_account.system_key = 'allowance_expected_credit_loss'
+                     AND allowance_account.code = '1190'
+                     AND allowance_account.account_type = 'asset'
+                     AND allowance_account.normal_balance = 'credit'
+                     AND allowance_account.is_active AND allowance_account.is_posting
+                    LEFT JOIN accounting.accounts cash_account
+                      ON cash_account.system_key = 'cash_collector_custody'
+                     AND cash_account.code = '1020'
+                     AND cash_account.account_type = 'asset'
+                     AND cash_account.normal_balance = 'debit'
+                     AND cash_account.is_active AND cash_account.is_posting
+                    WHERE {where_clause}
+                    ORDER BY action.loan_number, action.loan_id
+                    LIMIT %s OFFSET %s
+                    """,
                     (limit, offset),
                 )
                 return tuple(EclA5Action(**dict(row)) for row in cursor.fetchall())
@@ -106,7 +220,24 @@ class PostgresEclA5AccountingRepository:
                 row = cursor.fetchone()
                 if row is None:
                     raise EclA5AccountingError("A5 accounting summary is unavailable.")
-                return dict(row)
+                result = dict(row)
+                cursor.execute(
+                    f"""
+                    {self._ACTION_SOURCE}
+                    SELECT count(*)::bigint AS recovery_review_required_count
+                    FROM action_source action
+                    WHERE action.action_status = 'recovery_review_required'
+                    """
+                )
+                recovery_row = cursor.fetchone()
+                if recovery_row is None:
+                    raise EclA5AccountingError(
+                        "A5 recovery-review summary is unavailable."
+                    )
+                result["recovery_review_required_count"] = recovery_row[
+                    "recovery_review_required_count"
+                ]
+                return result
 
     def post_remeasurement(
         self,

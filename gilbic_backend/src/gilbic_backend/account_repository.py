@@ -34,6 +34,10 @@ class DeviceNotRegistered(AccountError):
     code = "device_not_registered"
 
 
+class DeviceApprovalRequired(AccountError):
+    code = "device_approval_required"
+
+
 class DeviceRevoked(AccountError):
     code = "device_revoked"
 
@@ -183,6 +187,7 @@ class PostgresAccountRepository:
         platform: str | None,
         app_version: str | None,
     ) -> AccountContext:
+        approval_required = False
         with open_connection() as connection:
             with connection.transaction():
                 with connection.cursor() as cursor:
@@ -197,6 +202,12 @@ class PostgresAccountRepository:
                                 join core.roles r on r.id = ur.role_id
                                 where ur.user_id = u.id and r.code = 'client'
                             ) as is_client,
+                            exists (
+                                select 1
+                                from core.user_roles ur
+                                join core.roles r on r.id = ur.role_id
+                                where ur.user_id = u.id and r.code = 'collector'
+                            ) as is_collector,
                             coalesce((
                                 select crr.status
                                 from core.client_registration_requests crr
@@ -211,7 +222,13 @@ class PostgresAccountRepository:
                     row = cursor.fetchone()
                     if not row:
                         raise AccountNotFound("Gilbic profile is not linked to this login.")
-                    user_id, account_status, is_client, registration_status = row
+                    (
+                        user_id,
+                        account_status,
+                        is_client,
+                        is_collector,
+                        registration_status,
+                    ) = row
                     if account_status in {"inactive", "locked"}:
                         raise AccountDisabled("This Gilbic account is not active.")
                     if (
@@ -247,26 +264,51 @@ class PostgresAccountRepository:
                         device = cursor.fetchone()
                         if device and device[1] == "revoked":
                             raise DeviceRevoked("This device has been revoked.")
+                        approval_required = (
+                            is_collector
+                            and normalized_platform in {"android", "ios"}
+                            and (device is None or device[1] == "pending")
+                        )
                         if device:
                             registered_device_id = device[0]
-                            cursor.execute(
-                                """
-                                update core.devices
-                                set platform = %s,
-                                    app_version = %s,
-                                    status = 'active',
-                                    last_seen_at = now()
-                                where id = %s
-                                """,
-                                (normalized_platform, app_version, registered_device_id),
-                            )
+                            if approval_required:
+                                cursor.execute(
+                                    """
+                                    update core.devices
+                                    set platform = %s,
+                                        app_version = %s,
+                                        last_seen_at = now()
+                                    where id = %s
+                                    """,
+                                    (
+                                        normalized_platform,
+                                        app_version,
+                                        registered_device_id,
+                                    ),
+                                )
+                            else:
+                                cursor.execute(
+                                    """
+                                    update core.devices
+                                    set platform = %s,
+                                        app_version = %s,
+                                        status = 'active',
+                                        last_seen_at = now()
+                                    where id = %s
+                                    """,
+                                    (
+                                        normalized_platform,
+                                        app_version,
+                                        registered_device_id,
+                                    ),
+                                )
                         else:
                             cursor.execute(
                                 """
                                 insert into core.devices (
                                     user_id, device_identifier_hash, platform,
                                     app_version, status, last_seen_at
-                                ) values (%s, %s, %s, %s, 'active', now())
+                                ) values (%s, %s, %s, %s, %s, now())
                                 returning id
                                 """,
                                 (
@@ -274,24 +316,30 @@ class PostgresAccountRepository:
                                     identifier_hash,
                                     normalized_platform,
                                     app_version,
+                                    "pending" if approval_required else "active",
                                 ),
                             )
                             registered_device_id = cursor.fetchone()[0]
                         registered = True
 
-                context = self._load_context(connection, auth_user_id)
-                return AccountContext(
-                    user_id=context.user_id,
-                    auth_user_id=context.auth_user_id,
-                    username=context.username,
-                    email=context.email,
-                    full_name=context.full_name,
-                    status=context.status,
-                    roles=context.roles,
-                    permissions=context.permissions,
-                    device_registered=registered,
-                    registered_device_id=registered_device_id,
+            if approval_required:
+                raise DeviceApprovalRequired(
+                    "This Collector device is awaiting Management approval."
                 )
+
+            context = self._load_context(connection, auth_user_id)
+            return AccountContext(
+                user_id=context.user_id,
+                auth_user_id=context.auth_user_id,
+                username=context.username,
+                email=context.email,
+                full_name=context.full_name,
+                status=context.status,
+                roles=context.roles,
+                permissions=context.permissions,
+                device_registered=registered,
+                registered_device_id=registered_device_id,
+            )
 
     def get_context(self, auth_user_id: UUID) -> AccountContext:
         with open_connection() as connection:
@@ -330,6 +378,10 @@ class PostgresAccountRepository:
                     if not device:
                         raise DeviceNotRegistered(
                             "This device is not registered. Sign in again on this device."
+                        )
+                    if device[1] == "pending":
+                        raise DeviceApprovalRequired(
+                            "This Collector device is awaiting Management approval."
                         )
                     if device[1] != "active":
                         raise DeviceRevoked("This device has been revoked.")

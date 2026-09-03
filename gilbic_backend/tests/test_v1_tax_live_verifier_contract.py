@@ -6,7 +6,7 @@ VERIFIER = (ROOT / "tools" / "apply_v1_tax_accounting_migrations.py").read_text(
     encoding="utf-8"
 )
 WORKFLOW = (
-    ROOT / ".github" / "workflows" / "v1-tax-accounting-live-verifier.yml"
+    ROOT / ".github" / "workflows" / "spina-protected-maintenance.yml"
 ).read_text(encoding="utf-8")
 LOWER = VERIFIER.lower()
 
@@ -100,14 +100,20 @@ def test_live_verifier_never_calls_business_record_prepare_or_post_functions() -
         assert forbidden not in LOWER
 
 
-def test_live_workflow_is_pr_static_and_push_live_on_approved_runner_only() -> None:
+def test_live_workflow_is_manual_only_and_requires_explicit_protected_authorization() -> None:
     workflow_lower = WORKFLOW.lower()
-    assert "pull_request:" in WORKFLOW
-    assert "push:" in WORKFLOW
-    assert "branches: [main]" in WORKFLOW
-    assert "test_v1_tax_live_verifier_contract.py" in WORKFLOW
+    assert "workflow_dispatch:" in WORKFLOW
+    assert "pull_request:" not in WORKFLOW
+    assert "push:" not in WORKFLOW
+    assert "v1-tax-accounting" in WORKFLOW
+    assert "confirm_protected_live_database" in WORKFLOW
+    assert 'if not "${{ github.ref }}"=="refs/heads/main" exit /b 1' in workflow_lower
+    assert (
+        'if not "${{ inputs.confirm_protected_live_database }}"=="true" exit /b 1'
+        in workflow_lower
+    )
+    assert "if: inputs.operation == 'v1-tax-accounting'" in WORKFLOW
     assert "apply_v1_tax_accounting_migrations.py" in WORKFLOW
-    assert "if: github.event_name == 'push'" in WORKFLOW
     assert "$env:runner_name -ne 'spina-windows'" in workflow_lower
     assert "c:\\github\\spina-lending-app-clean\\.env" in workflow_lower
     assert "c:\\spina_online\\spina_backend\\.env" in workflow_lower

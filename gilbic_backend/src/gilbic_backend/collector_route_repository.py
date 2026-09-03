@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -12,6 +12,20 @@ from .database import open_connection
 
 MONEY = Decimal("0.01")
 CONTRACT_ALLOCATION_SETTING = "mobile_contract_schedule_allocation_enabled"
+
+
+@dataclass(frozen=True, slots=True)
+class CollectorRouteReceiptRecord:
+    transaction_id: UUID
+    receipt_number: str
+    amount: Decimal
+    entry_type: str
+    collector_user_id: UUID
+    collector_name: str
+    is_locked: bool
+    note: str = ""
+    covered_dates: tuple[date, ...] = ()
+    accepted_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +73,11 @@ class CollectorRouteEntryRecord:
     today_amount: Decimal = Decimal("0.00")
     today_note: str = ""
     today_covered_dates: tuple[date, ...] = ()
+    today_receipts: tuple[CollectorRouteReceiptRecord, ...] = ()
     covered_dates: tuple[date, ...] = ()
+    active_promise_date: date | None = None
+    active_promise_remaining_amount: Decimal = Decimal("0.00")
+    active_promise_status: str = ""
 
     @property
     def route_revision(self) -> str:
@@ -80,6 +98,22 @@ class CollectorRouteEntryRecord:
         if self.contract_allocation_enabled:
             return self.contract_collection_ready
         return True
+
+    @property
+    def active_promise_message(self) -> str:
+        if self.active_promise_date is None:
+            return ""
+        status = self.active_promise_status.strip().replace("_", " ").title() or "Pending"
+        return (
+            f"Promise: {self.active_promise_date.isoformat()} · "
+            f"₱{self.active_promise_remaining_amount:,.2f} remaining · {status}."
+        )
+
+    def _with_active_promise(self, message: str) -> str:
+        reminder = self.active_promise_message
+        if not reminder:
+            return message
+        return f"{message} {reminder}".strip()
 
     @property
     def contract_readiness_message(self) -> str:
@@ -137,17 +171,23 @@ class CollectorRouteEntryRecord:
     def collection_message(self) -> str:
         if self.processed_today:
             if self.today_is_locked:
-                return "Today's collection is already included in a remittance and is locked."
-            return "Today's collection has already been recorded."
+                return self._with_active_promise(
+                    "Today's collection is already included in a remittance and is locked."
+                )
+            return self._with_active_promise("Today's collection has already been recorded.")
         if not self.is_reconciled:
-            return "Checking this loan against SPINA records."
+            return self._with_active_promise("Checking this loan against SPINA records.")
         if not self.mobile_collections_enabled:
-            return "Use the SPINA desktop app for this loan type."
+            return self._with_active_promise("Use the SPINA desktop app for this loan type.")
         if self.mobile_balance_mode != "direct_remaining_balance":
-            return "Unable-to-pay is available, but payments still use SPINA desktop."
+            return self._with_active_promise(
+                "Unable-to-pay is available, but payments still use SPINA desktop."
+            )
         if self.contract_allocation_enabled and not self.contract_collection_ready:
-            return self.contract_readiness_message
-        return f"Ready for mobile collection. {self.contract_readiness_message}"
+            return self._with_active_promise(self.contract_readiness_message)
+        return self._with_active_promise(
+            f"Ready for mobile collection. {self.contract_readiness_message}"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,8 +202,100 @@ class CollectorRouteRecord:
         return sum((entry.daily_amount for entry in self.entries), start=Decimal("0"))
 
 
+def _date_value(value: object) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value)[:10])
+
+
+def _datetime_value(value: object | None) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+
+
+def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    receipts: list[CollectorRouteReceiptRecord] = []
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        transaction_id = raw.get("transaction_id")
+        receipt_number = str(raw.get("receipt_number") or "").strip()
+        collector_user_id = raw.get("collector_user_id")
+        if transaction_id is None or collector_user_id is None or not receipt_number:
+            continue
+        covered_raw = raw.get("covered_dates")
+        covered_dates = tuple(
+            _date_value(item)
+            for item in covered_raw
+        ) if isinstance(covered_raw, (list, tuple)) else ()
+        receipts.append(
+            CollectorRouteReceiptRecord(
+                transaction_id=UUID(str(transaction_id)),
+                receipt_number=receipt_number,
+                amount=Decimal(str(raw.get("amount") or 0)).quantize(MONEY),
+                entry_type=str(raw.get("entry_type") or "payment"),
+                collector_user_id=UUID(str(collector_user_id)),
+                collector_name=str(raw.get("collector_name") or "Collector"),
+                is_locked=bool(raw.get("is_locked")),
+                note=str(raw.get("note") or ""),
+                covered_dates=covered_dates,
+                accepted_at=_datetime_value(raw.get("accepted_at")),
+            )
+        )
+    return tuple(receipts)
+
+
 class PostgresCollectorRouteRepository:
     """Read the live route for one authenticated collector."""
+
+    @staticmethod
+    def _active_promise_summaries(
+        connection,
+        *,
+        client_ids: tuple[UUID, ...],
+    ) -> dict[tuple[UUID, UUID], tuple[date, Decimal, str]]:
+        if not client_ids:
+            return {}
+        with connection.cursor() as cursor:
+            cursor.execute("select to_regclass('lending.payment_promises')")
+            table_row = cursor.fetchone()
+            if table_row is None or table_row[0] is None:
+                return {}
+
+        with connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                select distinct on (promise.client_id)
+                    promise.client_id,
+                    promise.loan_id,
+                    promise.promised_for_date,
+                    promise.remaining_promised_amount,
+                    promise.status
+                from lending.payment_promises promise
+                where promise.client_id = any(%s::uuid[])
+                  and promise.status = 'pending'
+                  and promise.remaining_promised_amount > 0
+                order by promise.client_id, promise.created_at desc, promise.id desc
+                """,
+                (list(client_ids),),
+            )
+            rows = cursor.fetchall()
+
+        return {
+            (row["client_id"], row["loan_id"]): (
+                row["promised_for_date"],
+                Decimal(row["remaining_promised_amount"]).quantize(MONEY),
+                str(row["status"] or "pending"),
+            )
+            for row in rows
+        }
 
     def get_today_route(
         self,
@@ -248,7 +380,7 @@ class PostgresCollectorRouteRepository:
                             as contract_today_scheduled_amount,
                         coalesce(contract_today.unpaid_amount, 0)::numeric(18,2)
                             as contract_today_unpaid_amount,
-                        contract_next.due_date as contract_next_unpaid_date,
+                        contract_next.effective_due_date as contract_next_unpaid_date,
                         coalesce(contract_next.unpaid_amount, 0)::numeric(18,2)
                             as contract_next_unpaid_amount,
                         today.entry_type is not null as processed_today,
@@ -256,15 +388,34 @@ class PostgresCollectorRouteRepository:
                         coalesce(today.collector_name, '') as today_collector_name,
                         today.transaction_id as today_transaction_id,
                         today.collector_user_id as today_collector_user_id,
+                        today.assigned_collector_user_id as today_assigned_collector_user_id,
+                        coalesce(today.collection_origin, '') as today_collection_origin,
                         coalesce(today.is_locked, false) as today_is_locked,
                         coalesce(today.amount, 0) as today_amount,
                         coalesce(today.note, '') as today_note,
                         coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
+                        coalesce(today.receipts, '[]'::jsonb) as today_receipts,
                         coalesce(coverage.covered_dates, ARRAY[]::date[]) as covered_dates
-                    from lending.collector_area_assignments a
-                    join lending.clients c
-                      on lower(btrim(c.area)) = lower(btrim(a.area))
-                     and c.status = 'active'
+                    from lending.clients c
+                    join lateral (
+                        select
+                            assignment.area as assignment_area,
+                            assignment.sort_order
+                        from lending.collector_area_assignments assignment
+                        where assignment.collector_user_id = %s
+                          and assignment.is_active = true
+                          and lending.area_path_contains(
+                              assignment.area,
+                              coalesce(c.area, ''),
+                              true
+                          )
+                        order by
+                            char_length(lending.normalize_area_path(assignment.area)) desc,
+                            assignment.sort_order,
+                            lower(lending.normalize_area_path(assignment.area)),
+                            assignment.id
+                        limit 1
+                    ) route_assignment on true
                     join lending.loans l
                       on l.client_id = c.id
                      and l.status = 'active'
@@ -295,6 +446,8 @@ class PostgresCollectorRouteRepository:
                             t.amount,
                             t.note,
                             t.collector_user_id,
+                            t.assigned_collector_user_id,
+                            t.collection_origin,
                             t.is_locked,
                             coalesce(
                                 array(
@@ -309,7 +462,42 @@ class PostgresCollectorRouteRepository:
                                 nullif(btrim(u.full_name), ''),
                                 nullif(btrim(u.username), ''),
                                 'Collector'
-                            ) as collector_name
+                            ) as collector_name,
+                            coalesce((
+                                select jsonb_agg(
+                                    jsonb_build_object(
+                                        'transaction_id', receipt.id,
+                                        'receipt_number', receipt.receipt_number,
+                                        'amount', receipt.amount,
+                                        'entry_type', receipt.entry_type,
+                                        'collector_user_id', receipt.collector_user_id,
+                                        'collector_name', coalesce(
+                                            nullif(btrim(receipt_user.full_name), ''),
+                                            nullif(btrim(receipt_user.username), ''),
+                                            'Collector'
+                                        ),
+                                        'is_locked', receipt.is_locked,
+                                        'note', receipt.note,
+                                        'accepted_at', receipt.accepted_at,
+                                        'covered_dates', coalesce((
+                                            select jsonb_agg(
+                                                receipt_date.covered_date
+                                                order by receipt_date.covered_date
+                                            )
+                                            from lending.collection_covered_dates receipt_date
+                                            where receipt_date.transaction_id = receipt.id
+                                        ), '[]'::jsonb)
+                                    )
+                                    order by receipt.accepted_at, receipt.id
+                                )
+                                from lending.collection_transactions receipt
+                                left join core.users receipt_user
+                                  on receipt_user.id = receipt.collector_user_id
+                                where receipt.loan_id = l.id
+                                  and receipt.collection_date = t.collection_date
+                                  and receipt.is_voided = false
+                                  and receipt.entry_type in ('payment', 'advance')
+                            ), '[]'::jsonb) as receipts
                         from lending.collection_transactions t
                         left join core.users u
                           on u.id = t.collector_user_id
@@ -329,7 +517,7 @@ class PostgresCollectorRouteRepository:
                                 - coalesce(applied.allocated_amount, 0),
                                 0
                             )), 0)::numeric(18,2) as unpaid_amount
-                        from lending.loan_contract_installments installment
+                        from lending.loan_contract_installments_operational installment
                         left join lateral (
                             select coalesce(sum(allocation.amount_applied) filter (
                                 where transaction.is_voided = false
@@ -340,16 +528,16 @@ class PostgresCollectorRouteRepository:
                             where allocation.installment_id = installment.id
                         ) applied on true
                         where installment.schedule_id = assessment.schedule_id
-                          and installment.due_date = %s
+                          and installment.effective_due_date = %s
                     ) contract_today on true
                     left join lateral (
                         select
-                            balance.due_date,
+                            balance.effective_due_date,
                             sum(balance.remaining_amount)::numeric(18,2) as unpaid_amount
                         from (
                             select
                                 installment.id,
-                                installment.due_date,
+                                installment.effective_due_date,
                                 greatest(
                                     installment.contractual_amount
                                     - coalesce(sum(allocation.amount_applied) filter (
@@ -357,7 +545,7 @@ class PostgresCollectorRouteRepository:
                                     ), 0),
                                     0
                                 )::numeric(18,2) as remaining_amount
-                            from lending.loan_contract_installments installment
+                            from lending.loan_contract_installments_operational installment
                             left join lending.loan_installment_payment_allocations allocation
                               on allocation.installment_id = installment.id
                             left join lending.collection_transactions transaction
@@ -365,25 +553,28 @@ class PostgresCollectorRouteRepository:
                             where installment.schedule_id = assessment.schedule_id
                             group by
                                 installment.id,
-                                installment.due_date,
+                                installment.effective_due_date,
                                 installment.contractual_amount
                         ) balance
                         where balance.remaining_amount > 0
-                        group by balance.due_date
-                        order by balance.due_date
+                        group by balance.effective_due_date
+                        order by balance.effective_due_date
                         limit 1
                     ) contract_next on true
-                    where a.collector_user_id = %s
-                      and a.is_active = true
+                    where c.status = 'active'
+                      and lending.collector_area_owner(coalesce(c.area, '')) = %s
                       and coalesce(s.remaining_balance, l.principal) > 0
                     order by
-                        a.sort_order,
+                        route_assignment.sort_order,
+                        lower(lending.normalize_area_path(route_assignment.assignment_area)),
+                        lower(coalesce(c.area, '')),
                         lower(c.full_name),
                         l.date_released,
                         l.id
                     """,
                     (
                         CONTRACT_ALLOCATION_SETTING,
+                        collector_user_id,
                         route_date,
                         route_date,
                         route_date,
@@ -392,6 +583,11 @@ class PostgresCollectorRouteRepository:
                     ),
                 )
                 rows = cursor.fetchall()
+
+            active_promises = self._active_promise_summaries(
+                connection,
+                client_ids=tuple({row["client_id"] for row in rows}),
+            )
 
         entries: list[CollectorRouteEntryRecord] = []
         for row in rows:
@@ -424,6 +620,7 @@ class PostgresCollectorRouteRepository:
             today_scheduled = Decimal(row["contract_today_scheduled_amount"]).quantize(MONEY)
             today_unpaid = Decimal(row["contract_today_unpaid_amount"]).quantize(MONEY)
             today_has_installment = int(row["contract_today_installment_count"]) > 0
+            active_promise = active_promises.get((row["client_id"], row["loan_id"]))
 
             entries.append(
                 CollectorRouteEntryRecord(
@@ -482,13 +679,27 @@ class PostgresCollectorRouteRepository:
                     today_is_locked=bool(row["today_is_locked"]),
                     can_edit_today=(
                         row["today_transaction_id"] is not None
-                        and row["today_collector_user_id"] == collector_user_id
                         and not bool(row["today_is_locked"])
+                        and (
+                            row["today_collector_user_id"] == collector_user_id
+                            or (
+                                str(row["today_collection_origin"] or "")
+                                == "cross_collector"
+                                and row["today_assigned_collector_user_id"]
+                                == collector_user_id
+                            )
+                        )
                     ),
                     today_amount=Decimal(row["today_amount"]),
                     today_note=str(row["today_note"] or ""),
                     today_covered_dates=tuple(row["today_covered_dates"] or ()),
+                    today_receipts=_receipt_records(row.get("today_receipts")),
                     covered_dates=tuple(row["covered_dates"] or ()),
+                    active_promise_date=(active_promise[0] if active_promise else None),
+                    active_promise_remaining_amount=(
+                        active_promise[1] if active_promise else Decimal("0.00")
+                    ),
+                    active_promise_status=(active_promise[2] if active_promise else ""),
                 )
             )
 

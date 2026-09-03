@@ -1,0 +1,254 @@
+name: SPINA Security & Compliance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: spina-security-compliance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-compliance:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 40
+
+    steps:
+      - name: Install pinned MinGit for deterministic history scanning
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '2.55.0.5'
+          $expectedSha256 = '56d7b226b7693196cfc71fef26568f536c4a021ab6c37ff2db4287bed908e96e'
+          $archive = Join-Path $env:RUNNER_TEMP "mingit-$version-windows-x64.zip"
+          $toolDir = Join-Path $env:RUNNER_TEMP "mingit-$version"
+          $url = "https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/MinGit-$version-64-bit.zip"
+          if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
+          if (Test-Path -LiteralPath $toolDir) { Remove-Item -LiteralPath $toolDir -Recurse -Force }
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha256 -ne $expectedSha256) {
+            throw "MinGit archive checksum mismatch: expected $expectedSha256, got $actualSha256"
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $toolDir -Force
+          $gitDir = Join-Path $toolDir 'cmd'
+          $gitExe = Join-Path $gitDir 'git.exe'
+          if (-not (Test-Path -LiteralPath $gitExe)) {
+            throw "Pinned MinGit executable was not found after extraction."
+          }
+          & $gitExe version
+          if ($LASTEXITCODE -ne 0) { throw "Pinned MinGit executable failed its version check." }
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $gitDir
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "MINGIT_GIT_EXE=$gitExe"
+
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create isolated security environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-security-ci-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          echo SECURITY_VENV=%VENV%>>"%GITHUB_ENV%"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+
+      - name: Install security and control-test dependencies
+        shell: cmd
+        run: |
+          "%SECURITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "bandit>=1.8,<2" "pip-audit>=2.8,<3" || exit /b 1
+          "%SECURITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" -e ".\gilbic_backend[test]" || exit /b 1
+          if not exist security-artifacts mkdir security-artifacts
+
+      # Findings are baselined first; scanner/runtime errors above the normal findings exit code fail closed.
+      - name: Bandit security baseline
+        id: bandit
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          & "$env:SECURITY_VENV\Scripts\bandit.exe" -r gilbic_backend\src spina_backend_mobile\src -f json -o security-artifacts\bandit.json
+          $code = $LASTEXITCODE
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "exit_code=$code"
+          if ($code -gt 1) {
+            Write-Error "Bandit scanner/runtime failure with exit code $code."
+            exit $code
+          }
+          exit 0
+
+      - name: Dependency vulnerability baseline
+        id: pip_audit
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          & "$env:SECURITY_VENV\Scripts\pip-audit.exe" --local --skip-editable -f json -o security-artifacts\pip-audit.json
+          $code = $LASTEXITCODE
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "exit_code=$code"
+          if ($code -gt 1) {
+            Write-Error "pip-audit scanner/runtime failure with exit code $code."
+            exit $code
+          }
+          exit 0
+
+      - name: Install pinned Gitleaks scanner
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '8.30.1'
+          $expectedSha256 = 'd29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e'
+          $archive = Join-Path $env:RUNNER_TEMP "gitleaks-$version-windows-x64.zip"
+          $toolDir = Join-Path $env:RUNNER_TEMP "gitleaks-$version"
+          $url = "https://github.com/gitleaks/gitleaks/releases/download/v$version/gitleaks_${version}_windows_x64.zip"
+          if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
+          if (Test-Path -LiteralPath $toolDir) { Remove-Item -LiteralPath $toolDir -Recurse -Force }
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha256 -ne $expectedSha256) {
+            throw "Gitleaks archive checksum mismatch: expected $expectedSha256, got $actualSha256"
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $toolDir -Force
+          $exe = Join-Path $toolDir 'gitleaks.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw "Pinned Gitleaks executable was not found after extraction." }
+          & $exe version
+          if ($LASTEXITCODE -ne 0) { throw "Pinned Gitleaks executable failed its version check." }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "GITLEAKS_EXE=$exe"
+
+      - name: Gitleaks secret baseline
+        id: gitleaks
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $workspace = (Resolve-Path -LiteralPath $env:GITHUB_WORKSPACE).Path
+          Set-Location -LiteralPath $workspace
+
+          $gitExe = $env:MINGIT_GIT_EXE
+          if (
+            [string]::IsNullOrWhiteSpace($gitExe) -or
+            -not [System.IO.Path]::IsPathRooted($gitExe) -or
+            -not (Test-Path -LiteralPath $gitExe)
+          ) {
+            throw "Pinned MinGit is unavailable to the Gitleaks history scan: $gitExe"
+          }
+          $gitDir = Split-Path -Parent $gitExe
+          $safePathEntries = [System.Collections.Generic.List[string]]::new()
+          $safePathEntries.Add($gitDir) | Out-Null
+          foreach ($entry in ($env:PATH -split ';')) {
+            if (
+              -not [string]::IsNullOrWhiteSpace($entry) -and
+              [System.IO.Path]::IsPathRooted($entry) -and
+              -not $safePathEntries.Contains($entry)
+            ) {
+              $safePathEntries.Add($entry) | Out-Null
+            }
+          }
+          $env:PATH = $safePathEntries -join ';'
+          $env:NoDefaultCurrentDirectoryInExePath = '1'
+
+          & $gitExe -C $workspace rev-parse --is-inside-work-tree | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Gitleaks refused: the checked-out workspace is not a valid Git work tree."
+          }
+
+          $artifactDir = Join-Path $workspace 'security-artifacts'
+          New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+          $log = Join-Path $artifactDir 'gitleaks-redacted.txt'
+          $report = Join-Path $artifactDir 'gitleaks-redacted.json'
+          foreach ($path in ($log, $report)) {
+            if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
+          }
+
+          $ErrorActionPreference = 'Continue'
+          & $env:GITLEAKS_EXE git --redact=100 --verbose --no-banner --report-format json --report-path $report $workspace *> $log
+          $code = $LASTEXITCODE
+          $ErrorActionPreference = 'Stop'
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "exit_code=$code"
+          if (Test-Path -LiteralPath $log) {
+            Get-Content -LiteralPath $log
+          }
+
+          if ($code -eq 0) {
+            exit 0
+          }
+          if ($code -ne 1) {
+            throw "Gitleaks scanner/runtime failure with exit code $code."
+          }
+          if (-not (Test-Path -LiteralPath $report)) {
+            throw "Gitleaks returned exit code 1 without a findings report; treating it as a scanner/runtime failure."
+          }
+
+          $rawReport = Get-Content -LiteralPath $report -Raw
+          if ([string]::IsNullOrWhiteSpace($rawReport)) {
+            throw "Gitleaks returned exit code 1 with an empty findings report; treating it as a scanner/runtime failure."
+          }
+          try {
+            $findings = $rawReport | ConvertFrom-Json -ErrorAction Stop
+          } catch {
+            throw "Gitleaks returned exit code 1 with an invalid findings report; treating it as a scanner/runtime failure."
+          }
+          $findingCount = @($findings).Count
+          if ($findingCount -lt 1) {
+            throw "Gitleaks returned exit code 1 without a parsed finding; treating it as a scanner/runtime failure."
+          }
+
+          Write-Warning "Gitleaks reported $findingCount fully redacted baseline finding(s)."
+          exit 0
+
+      - name: Run authentication and protected-control tests
+        shell: cmd
+        env:
+          GILBIC_TEST_DATABASE_URL: ""
+        run: |
+          "%SECURITY_VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests\test_auth_client.py gilbic_backend\tests\test_v1_tax_live_verifier_contract.py gilbic_backend\tests\test_unified_ci_live_verifier_ownership.py || exit /b 1
+          "%SECURITY_VENV%\Scripts\python.exe" -m pytest -q spina_backend_mobile\tests\test_service.py -k "rejects_unregistered_device or rejects_mismatched_transaction_headers" || exit /b 1
+
+      - name: Write security and compliance summary
+        if: always()
+        shell: cmd
+        env:
+          BANDIT_EXIT: ${{ steps.bandit.outputs.exit_code }}
+          PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
+          GITLEAKS_EXIT: ${{ steps.gitleaks.outputs.exit_code }}
+        run: |
+          if not exist security-artifacts mkdir security-artifacts
+          echo ## SPINA Security ^& Compliance>security-artifacts\summary.md
+          echo.>>security-artifacts\summary.md
+          echo Security findings are baselined while scanner/runtime errors, authentication, and protected-operation control tests remain blocking.>>security-artifacts\summary.md
+          echo.>>security-artifacts\summary.md
+          echo - Bandit exit: %BANDIT_EXIT%>>security-artifacts\summary.md
+          echo - pip-audit exit: %PIP_AUDIT_EXIT%>>security-artifacts\summary.md
+          echo - Gitleaks exit: %GITLEAKS_EXIT%>>security-artifacts\summary.md
+          type security-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
+
+      - name: Persist full security reports on runner
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\persist_ci_report.py --source security-artifacts --root "C:\SPINA_CI_REPORTS" --lane security-compliance --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --run-id "${{ github.run_id }}" --workflow-name "SPINA Security & Compliance" --keep 50
+
+      - name: Print security deep review
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\render_ci_deep_review.py --root "C:\SPINA_CI_REPORTS" --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --lane security-compliance
+
+      - name: Upload security baseline reports
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-security-${{ github.event.pull_request.head.sha || github.sha }}
+          path: security-artifacts
+          if-no-files-found: warn
+          retention-days: 14

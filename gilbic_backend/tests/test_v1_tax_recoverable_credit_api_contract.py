@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 API = (ROOT / "src" / "gilbic_backend" / "v1_tax_recoverable_credit_api.py").read_text(
     encoding="utf-8"
@@ -8,6 +7,7 @@ API = (ROOT / "src" / "gilbic_backend" / "v1_tax_recoverable_credit_api.py").rea
 REPOSITORY = (
     ROOT / "src" / "gilbic_backend" / "v1_tax_recoverable_credit_repository.py"
 ).read_text(encoding="utf-8")
+COMPACT_REPOSITORY = " ".join(REPOSITORY.split())
 MAIN = (ROOT / "src" / "gilbic_backend" / "main.py").read_text(encoding="utf-8")
 
 
@@ -18,10 +18,15 @@ def test_recoverable_credit_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_v1_tax_recoverable_credit_router" in MAIN
     assert "app.include_router(create_v1_tax_recoverable_credit_router())" in MAIN
-    assert "/api/mobile/" not in API
+    assert (
+        '"/api/mobile/v1/management/financial-accounting/tax/recoverable-credits"'
+        in API
+    )
 
 
-def test_recoverable_credit_api_has_action_specific_permissions_and_confirmation() -> None:
+def test_recoverable_credit_api_has_action_specific_permissions_and_confirmation() -> (
+    None
+):
     for permission in (
         'EVIDENCE_PERMISSION = "accounting.tax.recoverable_credit_evidence.record"',
         'CREDIT_PREPARE_PERMISSION = "accounting.tax.recoverable_credit.prepare"',
@@ -32,7 +37,9 @@ def test_recoverable_credit_api_has_action_specific_permissions_and_confirmation
     assert "_require_confirmation" in API
 
 
-def test_recoverable_credit_api_exposes_exact_full_only_target_return_coordinates() -> None:
+def test_recoverable_credit_api_exposes_exact_full_only_target_return_coordinates() -> (
+    None
+):
     for route in (
         '"/api/v1/management/financial-accounting/tax/recoverable-credits"',
         '"/api/v1/management/financial-accounting/tax/recoverable-credits/evidence"',
@@ -40,6 +47,7 @@ def test_recoverable_credit_api_exposes_exact_full_only_target_return_coordinate
         '"/api/v1/management/financial-accounting/tax/recoverable-credits/{credit_evidence_id}/post"',
     ):
         assert route in API
+        assert route.replace("/api/v1/", "/api/mobile/v1/") in API
     for field in (
         "adjustment_posting_id",
         "target_tax_return_id",
@@ -55,12 +63,19 @@ def test_recoverable_credit_api_exposes_exact_full_only_target_return_coordinate
         "expected_fiscal_period_id",
     ):
         assert field in API
-    assert "credit_amount:" not in API.split("class RecordV1TaxRecoverableCreditEvidenceRequest", 1)[1].split("class Prepare", 1)[0]
+    assert (
+        "credit_amount:"
+        not in API.split("class RecordV1TaxRecoverableCreditEvidenceRequest", 1)[
+            1
+        ].split("class Prepare", 1)[0]
+    )
     assert "mixed cash-plus-credit" in API.lower()
     assert "partial recoverable realization remain disabled" in API.lower()
 
 
-def test_recoverable_credit_repository_calls_only_protected_database_functions() -> None:
+def test_recoverable_credit_repository_calls_only_protected_database_functions() -> (
+    None
+):
     for function in (
         "accounting.record_v1_tax_recoverable_credit_evidence",
         "accounting.prepare_v1_tax_recoverable_credit_journal",
@@ -71,3 +86,41 @@ def test_recoverable_credit_repository_calls_only_protected_database_functions()
     assert "accounting.v1_tax_recoverable_credit_summary" in REPOSITORY
     assert "insert into accounting.journal_entries" not in REPOSITORY.lower()
     assert "accounting.post_journal_entry" not in REPOSITORY
+
+
+def test_recoverable_credit_read_contract_exposes_exact_server_candidates() -> None:
+    for token in (
+        "class V1TaxRecoverableCreditCandidate",
+        "list_credit_candidates",
+        '"credit_candidates"',
+        '"credit_status": credit_status',
+        '"limit": limit',
+        '"offset": offset',
+        '"tax_recoverable_refund_realization_enabled": True',
+        '"tax_recoverable_credit_application_enabled": True',
+        '"partial_tax_recoverable_realization_enabled": False',
+        '"automatic_source_posting": False',
+    ):
+        assert token in API or token in REPOSITORY
+
+
+def test_credit_candidates_are_exact_unpaid_same_tax_type_relationships() -> None:
+    for token in (
+        "target_return.tax_type = adjustment.tax_type",
+        "target_return.declared_tax_due = adjustment_posting.confirmed_adjustment_amount",
+        "liability.exact_count = liability.item_count",
+        "liability.item_total = target_return.declared_tax_due",
+        "FROM accounting.v1_tax_payment_evidence",
+        "FROM accounting.v1_tax_settlement_preparations",
+        "FROM accounting.v1_tax_settlement_postings",
+        "FROM accounting.v1_tax_additional_amendment_evidence",
+        "FROM accounting.v1_tax_recoverable_refund_evidence",
+        "FROM accounting.v1_tax_recoverable_credit_evidence",
+    ):
+        assert token in COMPACT_REPOSITORY
+    assert (
+        "INSERT "
+        not in REPOSITORY.split("def list_credit_candidates", 1)[1].split(
+            "def list_items", 1
+        )[0]
+    )

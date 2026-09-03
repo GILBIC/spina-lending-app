@@ -87,20 +87,74 @@ void main() {
     expect(mismatchedBounds.validate(), contains('earliest selected date'));
   });
 
-  test('unable-to-pay entries cannot contain money or covered dates', () {
+  test('unable-to-pay requires structured Past Due reason', () {
     final passWithAmount = _draft(
       entryType: CollectionEntryType.pass,
       amount: 200,
+      pastDueFollowup: const PastDueFollowupDraft(
+        reasonCode: PastDueReasonCode.noCash,
+      ),
     );
     final passWithDate = _draft(
       entryType: CollectionEntryType.pass,
       coveredDates: <DateTime>[DateTime(2026, 7, 31)],
+      pastDueFollowup: const PastDueFollowupDraft(
+        reasonCode: PastDueReasonCode.noCash,
+      ),
     );
-    final validPass = _draft(entryType: CollectionEntryType.pass);
+    final missingReason = _draft(entryType: CollectionEntryType.pass);
+    final validPass = _draft(
+      entryType: CollectionEntryType.pass,
+      pastDueFollowup: const PastDueFollowupDraft(
+        reasonCode: PastDueReasonCode.noCash,
+        note: 'No cash available today',
+      ),
+    );
 
     expect(passWithAmount.validate(), contains('cannot contain'));
     expect(passWithDate.validate(), contains('cannot contain'));
+    expect(missingReason.validate(), contains('Past Due reason'));
     expect(validPass.validate(), isNull);
+    expect(
+      validPass.toJson()['past_due_followup'],
+      <String, Object?>{
+        'reason_code': 'no_cash',
+        'note': 'No cash available today',
+        'promised_payment_date': null,
+        'promised_amount': null,
+      },
+    );
+  });
+
+  test('promise follow-up requires date and supports a partial promised amount', () {
+    final missingDate = _draft(
+      entryType: CollectionEntryType.pass,
+      pastDueFollowup: const PastDueFollowupDraft(
+        reasonCode: PastDueReasonCode.promisedToPayLater,
+        promisedAmount: 100,
+      ),
+    );
+    final promised = _draft(
+      entryType: CollectionEntryType.pass,
+      pastDueFollowup: PastDueFollowupDraft(
+        reasonCode: PastDueReasonCode.promisedToPayLater,
+        note: 'After salary',
+        promisedPaymentDate: DateTime(2026, 8, 2),
+        promisedAmount: 100,
+      ),
+    );
+
+    expect(missingDate.validate(), contains('promised payment date'));
+    expect(promised.validate(), isNull);
+    expect(
+      promised.toJson()['past_due_followup'],
+      <String, Object?>{
+        'reason_code': 'promised_to_pay_later',
+        'note': 'After salary',
+        'promised_payment_date': '2026-08-02',
+        'promised_amount': 100,
+      },
+    );
   });
 
   test('parses duplicate server receipts as a final success', () {
@@ -133,6 +187,7 @@ PaymentSubmissionDraft _draft({
   DateTime? advanceFrom,
   DateTime? advanceUntil,
   List<DateTime> coveredDates = const <DateTime>[],
+  PastDueFollowupDraft? pastDueFollowup,
 }) {
   return PaymentSubmissionDraft(
     idempotencyKey: 'transaction-1',
@@ -150,5 +205,6 @@ PaymentSubmissionDraft _draft({
     deviceSequence: 12,
     note: 'Client paid at home',
     routeRevision: 'route-v3',
+    pastDueFollowup: pastDueFollowup,
   );
 }

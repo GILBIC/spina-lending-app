@@ -15,10 +15,10 @@ from .request_auth import authenticated_device_context
 from .v1_tax_recoverable_credit_repository import (
     PostgresV1TaxRecoverableCreditRepository,
     V1TaxRecoverableCreditBlocked,
+    V1TaxRecoverableCreditCandidate,
     V1TaxRecoverableCreditError,
     V1TaxRecoverableCreditItem,
 )
-
 
 EVIDENCE_PERMISSION = "accounting.tax.recoverable_credit_evidence.record"
 CREDIT_PREPARE_PERMISSION = "accounting.tax.recoverable_credit.prepare"
@@ -44,7 +44,9 @@ class RecordV1TaxRecoverableCreditEvidenceRequest(StrictV1TaxRecoverableCreditRe
     def normalize_text(cls, value: str) -> str:
         normalized = " ".join(value.split())
         if not normalized:
-            raise ValueError("Required Tax Recoverable credit evidence text cannot be blank.")
+            raise ValueError(
+                "Required Tax Recoverable credit evidence text cannot be blank."
+            )
         return normalized
 
 
@@ -66,11 +68,15 @@ class PostV1TaxRecoverableCreditRequest(StrictV1TaxRecoverableCreditRequest):
     @classmethod
     def exact_currency_cents(cls, value: Decimal) -> Decimal:
         if value != value.quantize(Decimal("0.01")):
-            raise ValueError("Expected Tax Recoverable credit amount must use exact currency-cent precision.")
+            raise ValueError(
+                "Expected Tax Recoverable credit amount must use exact currency-cent precision."
+            )
         return value
 
 
-def v1_tax_recoverable_credit_repository_dependency() -> PostgresV1TaxRecoverableCreditRepository:
+def v1_tax_recoverable_credit_repository_dependency() -> (
+    PostgresV1TaxRecoverableCreditRepository
+):
     return PostgresV1TaxRecoverableCreditRepository()
 
 
@@ -98,23 +104,37 @@ def _item_payload(item: V1TaxRecoverableCreditItem) -> dict[str, object]:
         "recorded_by_user_id": str(item.recorded_by_user_id),
         "recorded_at": item.recorded_at.isoformat(),
         "preparation_id": str(item.preparation_id) if item.preparation_id else None,
-        "journal_entry_id": str(item.journal_entry_id) if item.journal_entry_id else None,
+        "journal_entry_id": str(item.journal_entry_id)
+        if item.journal_entry_id
+        else None,
         "journal_status": item.journal_status,
         "entry_number": item.entry_number,
-        "fiscal_period_id": str(item.fiscal_period_id) if item.fiscal_period_id else None,
-        "tax_payable_account_id": str(item.tax_payable_account_id) if item.tax_payable_account_id else None,
+        "fiscal_period_id": str(item.fiscal_period_id)
+        if item.fiscal_period_id
+        else None,
+        "tax_payable_account_id": str(item.tax_payable_account_id)
+        if item.tax_payable_account_id
+        else None,
         "tax_payable_account_code": item.tax_payable_account_code,
         "tax_payable_account_name": item.tax_payable_account_name,
         "tax_recoverable_account_id": (
-            str(item.tax_recoverable_account_id) if item.tax_recoverable_account_id else None
+            str(item.tax_recoverable_account_id)
+            if item.tax_recoverable_account_id
+            else None
         ),
         "tax_recoverable_account_code": item.tax_recoverable_account_code,
         "tax_recoverable_account_name": item.tax_recoverable_account_name,
-        "prepared_by_user_id": str(item.prepared_by_user_id) if item.prepared_by_user_id else None,
+        "prepared_by_user_id": str(item.prepared_by_user_id)
+        if item.prepared_by_user_id
+        else None,
         "prepared_at": item.prepared_at.isoformat() if item.prepared_at else None,
-        "credit_posting_id": str(item.credit_posting_id) if item.credit_posting_id else None,
+        "credit_posting_id": str(item.credit_posting_id)
+        if item.credit_posting_id
+        else None,
         "confirmation_digest": item.confirmation_digest,
-        "posted_by_user_id": str(item.posted_by_user_id) if item.posted_by_user_id else None,
+        "posted_by_user_id": str(item.posted_by_user_id)
+        if item.posted_by_user_id
+        else None,
         "posted_at": item.posted_at.isoformat() if item.posted_at else None,
         "credit_status": item.credit_status,
         "credit_blocker": item.credit_blocker,
@@ -122,6 +142,29 @@ def _item_payload(item: V1TaxRecoverableCreditItem) -> dict[str, object]:
         "tax_recoverable_credit_application_enabled": item.tax_recoverable_credit_application_enabled,
         "partial_tax_recoverable_realization_enabled": item.partial_tax_recoverable_realization_enabled,
         "automatic_source_posting": item.automatic_source_posting,
+    }
+
+
+def _candidate_payload(item: V1TaxRecoverableCreditCandidate) -> dict[str, object]:
+    return {
+        "adjustment_posting_id": str(item.adjustment_posting_id),
+        "adjustment_evidence_id": str(item.adjustment_evidence_id),
+        "tax_type": item.tax_type,
+        "source_id": str(item.source_id),
+        "loan_id": str(item.loan_id),
+        "client_id": str(item.client_id),
+        "credit_amount": format(item.credit_amount, ".2f"),
+        "target_tax_return_id": str(item.target_tax_return_id),
+        "target_return_period_start": item.target_return_period_start.isoformat(),
+        "target_return_period_end": item.target_return_period_end.isoformat(),
+        "target_filing_date": item.target_filing_date.isoformat(),
+        "target_declared_tax_due": format(item.target_declared_tax_due, ".2f"),
+        "target_return_reference": item.target_return_reference,
+        "target_return_evidence_digest": item.target_return_evidence_digest,
+        "minimum_application_date": item.minimum_application_date.isoformat(),
+        "adjustment_evidence_digest": item.adjustment_evidence_digest,
+        "entry_number": item.entry_number,
+        "fiscal_period_id": str(item.fiscal_period_id),
     }
 
 
@@ -188,9 +231,14 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_v1_tax_recoverable_credit_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/tax/recoverable-credits"
+    )
     @router.get("/api/v1/management/financial-accounting/tax/recoverable-credits")
     def list_v1_tax_recoverable_credits(
-        credit_status: Literal["all", "ready", "prepared", "applied", "blocked"] = Query(default="all"),
+        credit_status: Literal[
+            "all", "ready", "prepared", "applied", "blocked"
+        ] = Query(default="all"),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
         authorization: str | None = Header(default=None, alias="Authorization"),
@@ -213,13 +261,26 @@ def create_v1_tax_recoverable_credit_router() -> APIRouter:
                 "summary": _summary_payload(tax.summary()),
                 "items": [
                     _item_payload(item)
-                    for item in tax.list_items(status=credit_status, limit=limit, offset=offset)
+                    for item in tax.list_items(
+                        status=credit_status, limit=limit, offset=offset
+                    )
+                ],
+                "credit_candidates": [
+                    _candidate_payload(item)
+                    for item in tax.list_credit_candidates(limit=limit, offset=offset)
                 ],
                 "permissions": {
                     "credit_evidence_record": EVIDENCE_PERMISSION in actor.permissions,
                     "credit_prepare": CREDIT_PREPARE_PERMISSION in actor.permissions,
                     "credit_post": CREDIT_POST_PERMISSION in actor.permissions,
                 },
+                "credit_status": credit_status,
+                "limit": limit,
+                "offset": offset,
+                "tax_recoverable_refund_realization_enabled": True,
+                "tax_recoverable_credit_application_enabled": True,
+                "partial_tax_recoverable_realization_enabled": False,
+                "automatic_source_posting": False,
                 "notice": (
                     "V1 tax-credit application requires separate retained legal authority/application evidence for an exact posted 1130 Tax Recoverable and one exact unpaid same-tax-type retained tax return. "
                     "The protected database derives the full credit amount and requires it to equal the target return due, then posts only Dr 2100 Tax Payables / Cr 1130 Tax Recoverable. "
@@ -228,6 +289,10 @@ def create_v1_tax_recoverable_credit_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/recoverable-credits/evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/recoverable-credits/evidence",
         status_code=status.HTTP_201_CREATED,
@@ -267,6 +332,9 @@ def create_v1_tax_recoverable_credit_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/recoverable-credits/{credit_evidence_id}/prepare"
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/recoverable-credits/{credit_evidence_id}/prepare"
     )
     def prepare_v1_tax_recoverable_credit(
@@ -287,14 +355,21 @@ def create_v1_tax_recoverable_credit_router() -> APIRouter:
             accounts=accounts,
         )
         _require_permission(actor, CREDIT_PREPARE_PERMISSION)
-        _require_confirmation(body.confirm, "preparing a protected Tax Recoverable credit journal")
+        _require_confirmation(
+            body.confirm, "preparing a protected Tax Recoverable credit journal"
+        )
         try:
-            tax.prepare(credit_evidence_id=credit_evidence_id, actor_user_id=actor.user_id)
+            tax.prepare(
+                credit_evidence_id=credit_evidence_id, actor_user_id=actor.user_id
+            )
             item = tax.get_item(credit_evidence_id)
         except V1TaxRecoverableCreditError as error:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/recoverable-credits/{credit_evidence_id}/post"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/recoverable-credits/{credit_evidence_id}/post"
     )
@@ -316,7 +391,9 @@ def create_v1_tax_recoverable_credit_router() -> APIRouter:
             accounts=accounts,
         )
         _require_permission(actor, CREDIT_POST_PERMISSION)
-        _require_confirmation(body.confirm, "posting a protected Tax Recoverable credit journal")
+        _require_confirmation(
+            body.confirm, "posting a protected Tax Recoverable credit journal"
+        )
         try:
             tax.post(
                 credit_evidence_id=credit_evidence_id,

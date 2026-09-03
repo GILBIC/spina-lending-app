@@ -1,0 +1,137 @@
+name: SPINA Code Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: spina-code-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 50
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: cmd
+        run: |
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
+
+      - name: Validate local-report review tooling
+        shell: cmd
+        run: |
+          python -m py_compile tools\persist_ci_report.py tools\render_ci_deep_review.py || exit /b 1
+
+      - name: Create isolated quality environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-code-quality-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          echo QUALITY_VENV=%VENV%>>"%GITHUB_ENV%"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+
+      - name: Install quality and test dependencies
+        shell: cmd
+        run: |
+          "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "ruff>=0.11,<1" "pyright>=1.1,<2" "pytest-cov>=6,<8" || exit /b 1
+          "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile[test]" -e ".\gilbic_backend[test]" || exit /b 1
+          if not exist quality-artifacts mkdir quality-artifacts
+
+      # Baseline mode reports existing maintainability findings without making them blockers yet.
+      # Tool/runtime failures still fail the job.
+      - name: Ruff lint baseline
+        id: ruff_lint
+        shell: cmd
+        run: |
+          "%QUALITY_VENV%\Scripts\ruff.exe" check gilbic_backend\src gilbic_backend\tests spina_backend_mobile\src spina_backend_mobile\tests --output-format json --output-file quality-artifacts\ruff.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 exit /b %CODE%
+          exit /b 0
+
+      - name: Ruff format baseline
+        id: ruff_format
+        shell: cmd
+        run: |
+          "%QUALITY_VENV%\Scripts\ruff.exe" format --check gilbic_backend\src gilbic_backend\tests spina_backend_mobile\src spina_backend_mobile\tests > quality-artifacts\ruff-format.txt 2>&1
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 type quality-artifacts\ruff-format.txt & exit /b %CODE%
+          exit /b 0
+
+      - name: Pyright typed-code baseline
+        id: pyright
+        shell: cmd
+        run: |
+          "%QUALITY_VENV%\Scripts\pyright.exe" --outputjson gilbic_backend\src\gilbic_backend spina_backend_mobile\src\spina_mobile_collections > quality-artifacts\pyright.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 type quality-artifacts\pyright.json & exit /b %CODE%
+          exit /b 0
+
+      - name: Run backend tests with coverage
+        shell: cmd
+        env:
+          GILBIC_TEST_DATABASE_URL: ""
+        run: |
+          "%QUALITY_VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests spina_backend_mobile\tests --cov=gilbic_backend --cov=spina_mobile_collections --cov-report=term-missing --cov-report=xml:quality-artifacts\coverage.xml --cov-report=json:quality-artifacts\coverage.json || exit /b 1
+
+      - name: Write code-quality summary
+        if: always()
+        shell: cmd
+        env:
+          RUFF_LINT_EXIT: ${{ steps.ruff_lint.outputs.exit_code }}
+          RUFF_FORMAT_EXIT: ${{ steps.ruff_format.outputs.exit_code }}
+          PYRIGHT_EXIT: ${{ steps.pyright.outputs.exit_code }}
+        run: |
+          if not exist quality-artifacts mkdir quality-artifacts
+          echo ## SPINA Code Quality>quality-artifacts\summary.md
+          echo.>>quality-artifacts\summary.md
+          echo Maintainability checks are in baseline mode while existing technical debt is measured and reduced.>>quality-artifacts\summary.md
+          echo.>>quality-artifacts\summary.md
+          echo - Ruff lint exit: %RUFF_LINT_EXIT%>>quality-artifacts\summary.md
+          echo - Ruff format exit: %RUFF_FORMAT_EXIT%>>quality-artifacts\summary.md
+          echo - Pyright exit: %PYRIGHT_EXIT%>>quality-artifacts\summary.md
+          type quality-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
+
+      - name: Persist full code-quality reports on runner
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\persist_ci_report.py --source quality-artifacts --root "C:\SPINA_CI_REPORTS" --lane code-quality --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --run-id "${{ github.run_id }}" --workflow-name "SPINA Code Quality" --keep 50
+
+      - name: Print code-quality deep review
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\render_ci_deep_review.py --root "C:\SPINA_CI_REPORTS" --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --lane code-quality
+
+      - name: Upload code-quality reports
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-code-quality-${{ github.event.pull_request.head.sha || github.sha }}
+          path: quality-artifacts
+          if-no-files-found: warn
+          retention-days: 14

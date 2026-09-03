@@ -8,6 +8,12 @@ import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:http/http.dart' as http;
 
 abstract interface class CrossRemittanceRepository {
+  Future<List<CrossCollectionStatus>> loadCollectionHistory(
+    UserSession session, {
+    required String deviceId,
+    DateTime? collectionDate,
+  });
+
   Future<List<CrossRemittanceTarget>> loadTargets(
     UserSession session, {
     required String deviceId,
@@ -18,6 +24,8 @@ abstract interface class CrossRemittanceRepository {
     UserSession session, {
     required String deviceId,
     required String recipientUserId,
+    CrossRemittanceRecipientCapacity recipientCapacity =
+        CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
   });
 
@@ -25,6 +33,8 @@ abstract interface class CrossRemittanceRepository {
     UserSession session, {
     required String deviceId,
     required String recipientUserId,
+    CrossRemittanceRecipientCapacity recipientCapacity =
+        CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
     String note,
   });
@@ -35,6 +45,35 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
       : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  @override
+  Future<List<CrossCollectionStatus>> loadCollectionHistory(
+    UserSession session, {
+    required String deviceId,
+    DateTime? collectionDate,
+  }) async {
+    final base = ApiConfig.endpoint(
+      '/api/mobile/v1/collector/cross-remittances/history',
+    );
+    final data = await _request(
+      session,
+      deviceId: deviceId,
+      method: 'GET',
+      uri: base.replace(
+        queryParameters: <String, String>{
+          'limit': '500',
+          if (collectionDate != null) 'collection_date': _date(collectionDate),
+        },
+      ),
+    );
+    if (data is! Iterable) {
+      return const <CrossCollectionStatus>[];
+    }
+    return data
+        .map(CrossCollectionStatus.fromPayload)
+        .whereType<CrossCollectionStatus>()
+        .toList(growable: false);
+  }
 
   @override
   Future<List<CrossRemittanceTarget>> loadTargets(
@@ -69,6 +108,8 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
     UserSession session, {
     required String deviceId,
     required String recipientUserId,
+    CrossRemittanceRecipientCapacity recipientCapacity =
+        CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
   }) async {
     final base = ApiConfig.endpoint(
@@ -81,6 +122,7 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
       uri: base.replace(
         queryParameters: <String, String>{
           'recipient_user_id': recipientUserId,
+          'recipient_capacity': recipientCapacity.apiValue,
           'collection_date': _date(collectionDate),
         },
       ),
@@ -93,6 +135,8 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
     UserSession session, {
     required String deviceId,
     required String recipientUserId,
+    CrossRemittanceRecipientCapacity recipientCapacity =
+        CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
     String note = '',
   }) async {
@@ -105,6 +149,7 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
       ),
       body: <String, Object?>{
         'recipient_user_id': recipientUserId,
+        'recipient_capacity': recipientCapacity.apiValue,
         'collection_date': _date(collectionDate),
         'note': note.trim(),
       },
@@ -112,7 +157,7 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
     final record = RemittanceRecord.fromPayload(data);
     if (record == null) {
       throw const SpinaApiException(
-        'The SPINA server returned an incomplete assigned-collector remittance.',
+        'The SPINA server returned an incomplete other-area remittance.',
         code: 'invalid_cross_remittance_response',
       );
     }
@@ -144,7 +189,7 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
           : await _client.get(uri, headers: headers);
     } on Exception {
       throw const SpinaApiException(
-        'The assigned-collector remittance could not reach SPINA.',
+        'The other-area remittance could not reach SPINA.',
         code: 'network_unavailable',
       );
     }
@@ -154,7 +199,7 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
       payload = decodeJsonObject(response.body);
     } on Object {
       throw SpinaApiException(
-        'The SPINA server returned unreadable assigned-remittance data.',
+        'The SPINA server returned unreadable other-area remittance data.',
         statusCode: response.statusCode,
         code: 'invalid_server_response',
       );

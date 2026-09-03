@@ -18,7 +18,20 @@ def test_v1_tax_liability_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_v1_tax_liability_router" in MAIN
     assert "app.include_router(create_v1_tax_liability_router())" in MAIN
-    assert "/api/mobile/" not in API
+
+
+def test_v1_tax_liability_mobile_aliases_reuse_the_same_handlers() -> None:
+    for route in (
+        '"/api/mobile/v1/management/financial-accounting/tax/liabilities"',
+        '"/api/mobile/v1/management/financial-accounting/tax/liabilities/{tax_type}/{evidence_id}/prepare"',
+        '"/api/mobile/v1/management/financial-accounting/tax/liabilities/{tax_type}/{evidence_id}/post"',
+    ):
+        assert route in API
+
+
+def test_v1_tax_liability_read_model_returns_exact_page_coordinates() -> None:
+    for field in ('"accounting_status"', '"limit"', '"offset"'):
+        assert field in API
 
 
 def test_v1_tax_liability_api_uses_action_specific_permissions_and_confirmation() -> None:

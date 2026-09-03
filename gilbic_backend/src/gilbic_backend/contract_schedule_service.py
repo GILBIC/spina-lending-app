@@ -49,6 +49,11 @@ def store_contract_schedule(
     Existing active schedules are never silently replaced. A restructure or
     renewal must explicitly request supersession so the old schedule remains
     preserved as evidence.
+
+    Component-bearing installments are inserted with their principal/interest
+    components in the same immutable row creation. Verified schedule rows are
+    protected from UPDATE after insertion, so component initialization must not
+    depend on a follow-up mutation.
     """
 
     reference = contract_reference.strip()
@@ -127,21 +132,31 @@ def store_contract_schedule(
     schedule_id = cursor.fetchone()[0]
 
     for installment in installments:
+        principal_component = getattr(installment, "principal_component", None)
+        interest_component = getattr(installment, "interest_component", None)
+        if (principal_component is None) != (interest_component is None):
+            raise ContractScheduleConflict(
+                "Contractual principal and interest components must be supplied together."
+            )
         cursor.execute(
             """
             insert into lending.loan_contract_installments (
                 schedule_id,
                 installment_number,
                 due_date,
-                contractual_amount
+                contractual_amount,
+                principal_component,
+                interest_component
             )
-            values (%s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s)
             """,
             (
                 schedule_id,
                 installment.installment_number,
                 installment.due_date,
                 installment.contractual_amount,
+                principal_component,
+                interest_component,
             ),
         )
     return schedule_id
@@ -153,19 +168,30 @@ def allocate_collection_transaction(
     transaction_id: UUID,
     explicit_covered_dates: Sequence[date] = (),
 ) -> tuple[AllocationInstruction, ...]:
-    """Apply one accepted cash transaction to its contractual installments.
+    """Apply one accepted receipt's applied cash to contractual installments.
+
+    ``collection_transactions.amount`` is custody cash. Only ``applied_amount``
+    may consume signed-contract installment capacity. This keeps a legitimate
+    second receipt auditable even when some or all of its cash remains
+    unallocated for later review.
 
     The collection transaction and its loan are locked before planning, so two
-    concurrent payments for the same loan cannot both consume the same unpaid
-    installment. Re-running a fully allocated transaction is idempotent.
-    Partial pre-existing allocations are treated as a conflict rather than
-    guessed or silently repaired. Allocations belonging to a voided collection
-    remain immutable evidence but no longer consume installment capacity.
+    concurrent receipts for the same loan cannot both consume the same unpaid
+    installment. Re-running a fully allocated transaction is idempotent. Partial
+    pre-existing installment rows are treated as a conflict rather than guessed
+    or silently repaired. Allocations belonging to a voided collection remain
+    immutable evidence but no longer consume installment capacity.
     """
 
     cursor.execute(
         """
-        select loan_id, amount, entry_type, is_voided
+        select
+            loan_id,
+            applied_amount,
+            amount,
+            unallocated_amount,
+            entry_type,
+            is_voided
         from lending.collection_transactions
         where id = %s
         for update
@@ -176,7 +202,14 @@ def allocate_collection_transaction(
     if transaction is None:
         raise ContractScheduleNotReady("The collection transaction does not exist.")
 
-    loan_id, transaction_amount, entry_type, is_voided = transaction
+    (
+        loan_id,
+        applied_amount,
+        cash_received_amount,
+        unallocated_amount,
+        entry_type,
+        is_voided,
+    ) = transaction
     if bool(is_voided):
         raise ContractPaymentAllocationConflict(
             "A voided collection transaction cannot be contract-allocated."
@@ -184,6 +217,18 @@ def allocate_collection_transaction(
     if str(entry_type) not in {"payment", "advance"}:
         raise ContractPaymentAllocationConflict(
             "Only payment and advance transactions can be allocated to installments."
+        )
+
+    applied = Decimal(applied_amount)
+    cash_received = Decimal(cash_received_amount)
+    unresolved = Decimal(unallocated_amount)
+    if applied < Decimal("0.00") or unresolved < Decimal("0.00"):
+        raise ContractPaymentAllocationConflict(
+            "Receipt application amounts are invalid. Management review is required."
+        )
+    if applied + unresolved != cash_received:
+        raise ContractPaymentAllocationConflict(
+            "Receipt cash does not reconcile to applied plus unallocated amounts."
         )
 
     # Serialize all automatic allocation planning for this loan. This prevents
@@ -201,21 +246,21 @@ def allocate_collection_transaction(
         select
             allocation.installment_id,
             installment.installment_number,
-            installment.due_date,
+            installment.effective_due_date,
             allocation.amount_applied,
             allocation.allocation_basis
         from lending.loan_installment_payment_allocations allocation
-        join lending.loan_contract_installments installment
+        join lending.loan_contract_installments_operational installment
           on installment.id = allocation.installment_id
         where allocation.transaction_id = %s
-        order by installment.due_date, installment.installment_number
+        order by installment.effective_due_date, installment.installment_number
         """,
         (transaction_id,),
     )
     existing_rows = cursor.fetchall()
     if existing_rows:
         existing_total = sum((Decimal(row[3]) for row in existing_rows), Decimal("0.00"))
-        if existing_total != Decimal(transaction_amount):
+        if existing_total != applied:
             raise ContractPaymentAllocationConflict(
                 "This transaction has incomplete pre-existing installment allocations."
             )
@@ -229,6 +274,9 @@ def allocate_collection_transaction(
             )
             for row in existing_rows
         )
+
+    if applied == Decimal("0.00"):
+        return ()
 
     cursor.execute(
         """
@@ -250,12 +298,12 @@ def allocate_collection_transaction(
         select
             installment.id,
             installment.installment_number,
-            installment.due_date,
+            installment.effective_due_date,
             installment.contractual_amount,
             coalesce(sum(allocation.amount_applied) filter (
                 where allocation_transaction.is_voided = false
             ), 0)::numeric(18,2) as allocated_amount
-        from lending.loan_contract_installments installment
+        from lending.loan_contract_installments_operational installment
         left join lending.loan_installment_payment_allocations allocation
           on allocation.installment_id = installment.id
         left join lending.collection_transactions allocation_transaction
@@ -264,9 +312,9 @@ def allocate_collection_transaction(
         group by
             installment.id,
             installment.installment_number,
-            installment.due_date,
+            installment.effective_due_date,
             installment.contractual_amount
-        order by installment.due_date, installment.installment_number
+        order by installment.effective_due_date, installment.installment_number
         """,
         (schedule_id,),
     )
@@ -283,7 +331,7 @@ def allocate_collection_transaction(
 
     try:
         plan = plan_payment_allocation(
-            transaction_amount=Decimal(transaction_amount),
+            transaction_amount=applied,
             installments=outstanding,
             explicit_covered_dates=explicit_covered_dates,
         )

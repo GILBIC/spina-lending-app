@@ -13,9 +13,16 @@ from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
     CollectionEntryType,
+    PaymentAllocationIntent,
     PostedCollection,
 )
 from spina_mobile_collections.service import CollectionConflict, CollectionRejected
+
+from .receipt_application import (
+    ReceiptApplicationError,
+    ReceiptApplicationPlan,
+    plan_receipt_application,
+)
 
 
 MONEY = Decimal("0.01")
@@ -28,8 +35,15 @@ class PostgresCollectionPostingBridge:
     The idempotency executor opens and owns the PostgreSQL transaction. This
     bridge locks the loan and device sequence, validates route ownership, updates
     the authoritative collection state, creates an immutable transaction and
-    receipt, records exact covered dates and an audit event, and returns the
-    replayable result. Any exception rolls every write back together.
+    receipt, records covered-date evidence where legacy behavior still requires
+    it, writes an audit event, and returns the replayable result.
+
+    ``collection_transactions.amount`` is the real custody receipt. A normal
+    PAYMENT may apply cash to required obligations without the Collector choosing
+    dates. Cash that exceeds the required amount is never silently treated as
+    Principal Reduction: the borrower must explicitly choose Advance or Principal
+    Reduction. Explicit legacy ADV continues to use its existing covered-date
+    contract until that historical path is fully retired.
     """
 
     def post_collection(
@@ -163,11 +177,17 @@ class PostgresCollectionPostingBridge:
                     code="route_revision_changed",
                 )
 
-            amount = self._money(command.amount or Decimal("0"))
+            cash_amount = self._money(command.amount or Decimal("0"))
+            applied_amount = Decimal("0.00")
+            unallocated_amount = Decimal("0.00")
+            principal_extra_amount = Decimal("0.00")
+            advance_extra_amount = Decimal("0.00")
+            allocation_state = "not_applicable"
             pass_count_after = int(loan["pass_count"])
             last_payment_date: date | None = loan["last_payment_date"]
             advance_until_after: date | None = loan["advance_until"]
             official_balance = previous_balance
+            dates_to_mark_covered: tuple[date, ...] = ()
 
             if command.entry_type is CollectionEntryType.PASS:
                 self._apply_pass_rules(
@@ -184,32 +204,91 @@ class PostgresCollectionPostingBridge:
                         "collection. Please use the SPINA desktop app.",
                         code="loan_calculation_not_ready",
                     )
-                if amount > previous_balance:
-                    raise CollectionRejected(
-                        "The amount is higher than the remaining balance. Refresh the "
-                        "route and check the payment.",
-                        code="amount_exceeds_balance",
+
+                if command.entry_type is CollectionEntryType.PAYMENT:
+                    scheduled_remaining = self._scheduled_payment_remaining(
+                        cursor,
+                        loan=loan,
+                        command=command,
                     )
-                self._verify_covered_dates_available(
-                    cursor,
-                    loan_id=loan_id,
-                    covered_dates=covered_dates,
-                )
-                official_balance = self._money(previous_balance - amount)
-                pass_count_after = 0
-                last_payment_date = command.collection_date
-                if command.entry_type is CollectionEntryType.ADVANCE:
+                    scheduled_target = min(previous_balance, scheduled_remaining)
+                    intent = command.payment_allocation_intent
+                    explicit_advance = intent is PaymentAllocationIntent.EXTRA_AS_ADVANCE
+                    explicit_principal_reduction = (
+                        intent is PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+                    )
+                    explicit_extra_choice = explicit_advance or explicit_principal_reduction
+                    genuine_extra = self._money(
+                        max(Decimal("0.00"), cash_amount - scheduled_target)
+                    )
+                    if genuine_extra > Decimal("0.00") and not explicit_extra_choice:
+                        raise CollectionRejected(
+                            "Payment includes extra cash after required payment. Choose Advance or Principal Reduction.",
+                            code="extra_allocation_choice_required",
+                        )
+
+                    maximum_immediately_applicable = (
+                        previous_balance if explicit_extra_choice else scheduled_target
+                    )
+                    if explicit_advance:
+                        receipt_intent = "extra_as_advance"
+                    elif explicit_principal_reduction:
+                        receipt_intent = "extra_as_principal_reduction"
+                    else:
+                        receipt_intent = "scheduled"
+                    plan = self._plan_receipt_application(
+                        cash_amount=cash_amount,
+                        maximum_immediately_applicable=maximum_immediately_applicable,
+                        allocation_intent=receipt_intent,
+                    )
+                    applied_amount = plan.applied_amount
+                    unallocated_amount = plan.unallocated_amount
+                    allocation_state = plan.allocation_state
+                    applied_extra = self._money(
+                        max(Decimal("0.00"), applied_amount - scheduled_target)
+                    )
+                    if explicit_principal_reduction:
+                        principal_extra_amount = applied_extra
+                    elif explicit_advance:
+                        advance_extra_amount = applied_extra
+                    if (
+                        covered_dates
+                        and scheduled_target > Decimal("0.00")
+                        and applied_amount >= scheduled_target
+                    ):
+                        dates_to_mark_covered = covered_dates
+                else:
                     if not covered_dates:
                         raise CollectionRejected(
                             "Choose at least one covered date.",
                             code="covered_date_required",
                         )
-                    latest_selected = covered_dates[-1]
-                    advance_until_after = max(
-                        date_value
-                        for date_value in (loan["advance_until"], latest_selected)
-                        if date_value is not None
+                    self._verify_covered_dates_available(
+                        cursor,
+                        loan_id=loan_id,
+                        covered_dates=covered_dates,
                     )
+                    plan = self._plan_receipt_application(
+                        cash_amount=cash_amount,
+                        maximum_immediately_applicable=previous_balance,
+                        allocation_intent="advance",
+                    )
+                    applied_amount = plan.applied_amount
+                    unallocated_amount = plan.unallocated_amount
+                    allocation_state = plan.allocation_state
+                    dates_to_mark_covered = covered_dates
+
+                official_balance = self._money(previous_balance - applied_amount)
+                if applied_amount > Decimal("0.00"):
+                    pass_count_after = 0
+                    last_payment_date = command.collection_date
+                    if command.entry_type is CollectionEntryType.ADVANCE:
+                        latest_selected = covered_dates[-1]
+                        advance_until_after = max(
+                            date_value
+                            for date_value in (loan["advance_until"], latest_selected)
+                            if date_value is not None
+                        )
 
             note_after = command.note.strip() or str(loan["note"] or "")
             next_version = int(loan["state_version"]) + 1
@@ -265,7 +344,15 @@ class PostgresCollectionPostingBridge:
                 "mobile_balance_mode": str(settings.get("mobile_balance_mode") or ""),
                 "state_version_before": int(loan["state_version"]),
                 "state_version_after": next_version,
-                "covered_dates": [value.isoformat() for value in covered_dates],
+                "covered_dates": [value.isoformat() for value in dates_to_mark_covered],
+                "payment_allocation_intent": command.payment_allocation_intent.value,
+                "cash_received_amount": str(cash_amount),
+                "applied_amount": str(applied_amount),
+                "unallocated_amount": str(unallocated_amount),
+                "principal_extra_amount": str(principal_extra_amount),
+                "advance_extra_amount": str(advance_extra_amount),
+                "non_advance_excess_policy": "explicit_borrower_choice",
+                "allocation_state": allocation_state,
             }
             cursor.execute(
                 """
@@ -280,6 +367,9 @@ class PostgresCollectionPostingBridge:
                     collection_date,
                     entry_type,
                     amount,
+                    applied_amount,
+                    unallocated_amount,
+                    allocation_state,
                     advance_from,
                     advance_until,
                     recorded_at,
@@ -296,7 +386,7 @@ class PostgresCollectionPostingBridge:
                 ) values (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s
+                    %s, %s, %s, %s, %s, %s
                 )
                 """,
                 (
@@ -309,7 +399,10 @@ class PostgresCollectionPostingBridge:
                     route_entry_id,
                     command.collection_date,
                     command.entry_type.value,
-                    amount,
+                    cash_amount,
+                    applied_amount,
+                    unallocated_amount,
+                    allocation_state,
                     command.advance_from,
                     command.advance_until,
                     command.recorded_at,
@@ -325,7 +418,7 @@ class PostgresCollectionPostingBridge:
                     Jsonb(details),
                 ),
             )
-            for covered_date in covered_dates:
+            for covered_date in dates_to_mark_covered:
                 cursor.execute(
                     """
                     insert into lending.collection_covered_dates (
@@ -356,10 +449,20 @@ class PostgresCollectionPostingBridge:
                             "client_id": str(client_id),
                             "idempotency_key": str(command.idempotency_key),
                             "receipt_number": receipt_number,
-                            "amount": str(amount),
+                            "amount": str(cash_amount),
+                            "cash_received_amount": str(cash_amount),
+                            "applied_amount": str(applied_amount),
+                            "unallocated_amount": str(unallocated_amount),
+                            "principal_extra_amount": str(principal_extra_amount),
+                            "advance_extra_amount": str(advance_extra_amount),
+                            "non_advance_excess_policy": "explicit_borrower_choice",
+                            "allocation_state": allocation_state,
+                            "payment_allocation_intent": (
+                                command.payment_allocation_intent.value
+                            ),
                             "official_balance": str(official_balance),
                             "covered_dates": [
-                                value.isoformat() for value in covered_dates
+                                value.isoformat() for value in dates_to_mark_covered
                             ],
                         }
                     ),
@@ -373,7 +476,10 @@ class PostgresCollectionPostingBridge:
             official_balance=official_balance,
             accepted_at=accepted_at,
             route_revision=next_revision,
-            message=self._success_message(command.entry_type),
+            message=self._success_message(
+                command.entry_type,
+                unallocated_amount=unallocated_amount,
+            ),
         )
 
     @staticmethod
@@ -418,6 +524,71 @@ class PostgresCollectionPostingBridge:
                 for offset in range(days + 1)
             )
         return ()
+
+    def _scheduled_payment_remaining(
+        self,
+        cursor: Any,
+        *,
+        loan: dict[str, Any],
+        command: CollectionCommand,
+    ) -> Decimal:
+        """Return the legacy scheduled amount still eligible on this date.
+
+        A completed covered-date claim means today's legacy obligation is already
+        satisfied. Otherwise aggregate distinct partial PAYMENT receipts by their
+        *applied* amount so a second real receipt can finish the same day without
+        being treated as a duplicate. Contract-aware subclasses replace this with
+        signed-installment truth.
+        """
+
+        cursor.execute(
+            """
+            select 1
+            from lending.collection_covered_dates
+            where loan_id = %s and covered_date = %s
+            limit 1
+            """,
+            (loan["loan_id"], command.collection_date),
+        )
+        if cursor.fetchone():
+            return Decimal("0.00")
+
+        cursor.execute(
+            """
+            select coalesce(sum(applied_amount), 0)::numeric(18,2) as applied_amount
+            from lending.collection_transactions
+            where loan_id = %s
+              and collection_date = %s
+              and entry_type = 'payment'
+              and is_voided = false
+            """,
+            (loan["loan_id"], command.collection_date),
+        )
+        row = cursor.fetchone()
+        already_applied = self._money(
+            row["applied_amount"] if row and row["applied_amount"] is not None else 0
+        )
+        scheduled = self._money(loan["daily_amount"])
+        return max(Decimal("0.00"), self._money(scheduled - already_applied))
+
+    @staticmethod
+    def _plan_receipt_application(
+        *,
+        cash_amount: Decimal,
+        maximum_immediately_applicable: Decimal,
+        allocation_intent: str,
+    ) -> ReceiptApplicationPlan:
+        try:
+            return plan_receipt_application(
+                cash_received_amount=cash_amount,
+                maximum_immediately_applicable=maximum_immediately_applicable,
+                allocation_intent=allocation_intent,  # type: ignore[arg-type]
+            )
+        except ReceiptApplicationError as error:
+            raise CollectionRejected(
+                str(error),
+                code="receipt_application_invalid",
+            ) from error
 
     @staticmethod
     def _lock_device_sequence(
@@ -609,7 +780,15 @@ class PostgresCollectionPostingBridge:
         return f"GBC-{collection_date:%Y%m%d}-{sequence:08d}"
 
     @staticmethod
-    def _success_message(entry_type: CollectionEntryType) -> str:
+    def _success_message(
+        entry_type: CollectionEntryType,
+        *,
+        unallocated_amount: Decimal = Decimal("0.00"),
+    ) -> str:
+        if unallocated_amount > Decimal("0.00"):
+            return (
+                f"Payment saved. {unallocated_amount:.2f} is unallocated and needs review."
+            )
         if entry_type is CollectionEntryType.ADVANCE:
             return "Covered-date payment saved."
         if entry_type is CollectionEntryType.PASS:

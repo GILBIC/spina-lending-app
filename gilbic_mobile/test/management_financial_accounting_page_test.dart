@@ -3,11 +3,84 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_a5_accounting.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_a5_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/initial_capital_funding.dart';
+import 'package:gilbic_mobile/src/core/management/initial_capital_funding_repository.dart';
+import 'package:gilbic_mobile/src/core/management/period_close.dart';
+import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_initial_capital_funding_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_tax_accounting_page.dart';
 
 void main() {
+  testWidgets('Management guidance hides obsolete backend stage labels', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeAccountingRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Stage 5B'), findsNothing);
+    expect(
+      find.byKey(const Key('financial-accounting-management-guidance')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Official amounts come from protected server records',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Detailed cutover loan evidence starts collapsed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeAccountingRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cutover = find.byKey(
+      const Key('financial-accounting-cutover-readiness'),
+    );
+    await tester.scrollUntilVisible(
+      cutover,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Accounting Cutover Readiness'), findsOneWidget);
+    expect(find.text('7x7 validated base contract schedule'), findsNothing);
+
+    await tester.tap(find.text('Accounting Cutover Readiness'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('7x7 validated base contract schedule'), findsOneWidget);
+  });
+
   testWidgets('Management sees accounting cutover readiness and worksheet', (
     tester,
   ) async {
@@ -54,6 +127,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Accounting Cutover Readiness'), findsOneWidget);
     expect(find.text('7 / 7 loan sources ready'), findsOneWidget);
+    await tester.tap(find.text('Accounting Cutover Readiness'));
+    await tester.pumpAndSettle();
     expect(find.text('Opening balances required'), findsOneWidget);
     expect(find.text('3 validated'), findsOneWidget);
     expect(find.text('7x7 validated base contract schedule'), findsOneWidget);
@@ -81,7 +156,9 @@ void main() {
     expect(find.text('₱19,550.00'), findsWidgets);
     expect(find.text('Disabled'), findsWidgets);
 
-    final periods = find.byKey(const Key('financial-accounting-fiscal-periods'));
+    final periods = find.byKey(
+      const Key('financial-accounting-fiscal-periods'),
+    );
     await tester.scrollUntilVisible(
       periods,
       500,
@@ -94,7 +171,9 @@ void main() {
     expect(find.text('Send to review'), findsOneWidget);
     expect(find.byKey(const Key('create-accounting-period')), findsOneWidget);
 
-    final chart = find.byKey(const Key('financial-accounting-chart-of-accounts'));
+    final chart = find.byKey(
+      const Key('financial-accounting-chart-of-accounts'),
+    );
     await tester.scrollUntilVisible(
       chart,
       500,
@@ -119,10 +198,7 @@ void main() {
     expect(find.text('7x7'), findsOneWidget);
     expect(find.text('₱7.00 / ₱1,000'), findsOneWidget);
     expect(find.text('Disabled'), findsWidgets);
-    expect(
-      find.textContaining('Cash release = new principal'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Cash release = new principal'), findsOneWidget);
   });
 
   testWidgets('Management can move an open period to review', (tester) async {
@@ -149,16 +225,203 @@ void main() {
     await tester.tap(reviewButton);
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('management-review-fiscal-period')),
+      findsOneWidget,
+    );
+    expect(find.text('Change period to Review'), findsWidgets);
+    expect(
+      find.text(
+        'The period will move to Management review and the server will apply '
+        'review-state restrictions. Posted journals remain unchanged.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.lastStatus, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-fiscal-period')));
+    await tester.pumpAndSettle();
+    expect(repository.lastStatus, isNull);
+
+    await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-fiscal-period')));
+    await tester.pumpAndSettle();
+
     expect(repository.lastStatus, 'review');
     expect(find.text('Review'), findsWidgets);
-    expect(find.text('Close period'), findsOneWidget);
+    expect(find.text('Close period'), findsNothing);
     expect(find.text('Reopen'), findsOneWidget);
   });
 
-  testWidgets('Closing a review period requires visible confirmation', (
+  testWidgets('Formal close launcher replaces rejected direct status close', (
     tester,
   ) async {
     final repository = _FakeAccountingRepository(initialStatus: 'review');
+    final periodCloseRepository = _FakePeriodCloseRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          periodCloseRepository: periodCloseRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('period-close-period-aug-2026')), findsNothing);
+    final formalClose = find.byKey(const Key('formal-period-close'));
+    await tester.scrollUntilVisible(
+      formalClose,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(formalClose);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementPeriodClosePage), findsOneWidget);
+    expect(find.text('Formal Period Close'), findsOneWidget);
+    expect(periodCloseRepository.loadCalls, 1);
+    expect(repository.lastStatus, isNull);
+  });
+
+  testWidgets('Initial ECL launcher opens the protected server queue', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    final eclRepository = _FakeEclAllowancePostingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          eclAllowanceRepository: eclRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('initial-ecl-allowance'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementEclAllowancePostingPage), findsOneWidget);
+    expect(find.text('Initial ECL Allowance'), findsOneWidget);
+    expect(eclRepository.loadCalls, 1);
+  });
+
+  testWidgets('ECL adjustments launcher opens the protected A5 queue', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    final a5Repository = _FakeEclA5AccountingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          eclA5Repository: a5Repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('ecl-adjustments'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementEclA5AccountingPage), findsOneWidget);
+    expect(find.text('ECL Adjustments'), findsOneWidget);
+    expect(a5Repository.loadCalls, 1);
+  });
+
+  testWidgets('Initial capital launcher opens the protected funding queue', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    final initialCapitalRepository = _FakeInitialCapitalFundingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          initialCapitalRepository: initialCapitalRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('initial-capital-funding'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementInitialCapitalFundingPage), findsOneWidget);
+    expect(find.text('Initial Capital Funding'), findsOneWidget);
+    expect(initialCapitalRepository.loadCalls, 1);
+  });
+
+  testWidgets('Tax Accounting launcher opens the protected tax workbench', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('tax-accounting'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementTaxAccountingPage), findsOneWidget);
+    expect(find.text('Tax Accounting'), findsOneWidget);
+    expect(find.text('Tax evidence'), findsOneWidget);
+    expect(find.text('Tax liabilities'), findsOneWidget);
+  });
+
+  testWidgets('Creating a fiscal period is reviewed before repository write', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -171,26 +434,57 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final closeButton = find.byKey(const Key('period-close-period-aug-2026'));
+    final create = find.byKey(const Key('create-accounting-period'));
     await tester.scrollUntilVisible(
-      closeButton,
+      create,
       600,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.tap(create);
     await tester.pumpAndSettle();
-    await tester.tap(closeButton);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Close accounting period?'), findsOneWidget);
-    expect(find.byKey(const Key('confirm-close-accounting-period')), findsOneWidget);
-    expect(repository.lastStatus, isNull);
-
-    await tester.tap(find.byKey(const Key('confirm-close-accounting-period')));
+    await tester.enterText(
+      find.byKey(const Key('accounting-period-label')),
+      'Reviewed Test Period',
+    );
+    await tester.tap(find.byKey(const Key('save-accounting-period')));
     await tester.pumpAndSettle();
 
-    expect(repository.lastStatus, 'closed');
-    expect(repository.lastConfirmClose, isTrue);
-    expect(find.text('Closed'), findsWidgets);
+    expect(
+      find.byKey(const Key('management-review-fiscal-period')),
+      findsOneWidget,
+    );
+    expect(find.text('Create fiscal period'), findsWidgets);
+    expect(
+      find.text(
+        'A new open fiscal period will be created. This does not post a journal '
+        'or change any account balance.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.createdLabel, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-fiscal-period')));
+    await tester.pumpAndSettle();
+    expect(repository.createdLabel, isNull);
+
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('accounting-period-label')),
+      'Reviewed Test Period',
+    );
+    await tester.tap(find.byKey(const Key('save-accounting-period')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-fiscal-period')));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdLabel, 'Reviewed Test Period');
+    expect(repository.createdStartDate, isNotNull);
+    expect(repository.createdEndDate, isNotNull);
+    expect(
+      repository.createdEndDate!.isBefore(repository.createdStartDate!),
+      isFalse,
+    );
   });
 }
 
@@ -213,13 +507,270 @@ DeviceIdentityProvider _deviceIdentityProvider() {
   );
 }
 
+class _FakePeriodCloseRepository implements PeriodCloseRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<PeriodCloseOverview> load(
+    UserSession session, {
+    required String deviceId,
+    String status = 'all',
+  }) async {
+    loadCalls += 1;
+    return const PeriodCloseOverview(
+      summary: PeriodCloseSummary(
+        periodCount: 0,
+        readyForReviewCount: 0,
+        readyToPrepareCount: 0,
+        preparedCount: 0,
+        protectedClosedCount: 0,
+        blockedCount: 0,
+        closedNetIncomeTotal: '0.00',
+        protectedPeriodCloseEnabled: true,
+        retainedEarningsCloseEnabled: true,
+        closedPeriodPostingProtectionEnabled: true,
+        periodReopenEnabled: false,
+        automaticSourcePosting: false,
+      ),
+      items: <PeriodCloseItem>[],
+      permissions: PeriodClosePermissions(
+        closePrepare: false,
+        closePost: false,
+      ),
+      notice: 'No formal close is ready.',
+    );
+  }
+
+  @override
+  Future<PeriodCloseItem> prepare(
+    UserSession session, {
+    required String deviceId,
+    required String fiscalPeriodId,
+  }) {
+    throw UnsupportedError('No test period is ready to prepare.');
+  }
+
+  @override
+  Future<PeriodCloseItem> post(
+    UserSession session, {
+    required String deviceId,
+    required PeriodCloseItem item,
+    required String confirmationToken,
+  }) {
+    throw UnsupportedError('No test period is ready to post.');
+  }
+}
+
+class _FakeEclAllowancePostingRepository
+    implements EclAllowancePostingRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<EclAllowancePostingOverview> load(
+    UserSession session, {
+    required String deviceId,
+    String status = 'all',
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    loadCalls += 1;
+    return EclAllowancePostingOverview(
+      summary: const EclAllowancePostingSummary(
+        loanCount: 0,
+        measurementNotAuthoritativeCount: 0,
+        noAllowanceRequiredCount: 0,
+        preparationRequiredCount: 0,
+        postingReadyCount: 0,
+        postedCurrentCount: 0,
+        a5RemeasurementRequiredCount: 0,
+        postingAuditIncompleteCount: 0,
+        preparationBlockedCount: 0,
+        protectedAllowanceBalanceTotal: '0.00',
+        account1190PostingEnabled: true,
+        automaticSourcePosting: false,
+      ),
+      items: const <EclAllowancePostingItem>[],
+      permissions: const EclAllowancePostingPermissions(
+        prepare: false,
+        post: false,
+      ),
+      notice: 'No initial allowance actions are ready.',
+      filter: status,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<EclAllowanceActionReceipt> prepare(
+    UserSession session, {
+    required String deviceId,
+    required EclAllowancePostingItem item,
+    required String reviewToken,
+  }) {
+    throw UnsupportedError('No test item is ready to prepare.');
+  }
+
+  @override
+  Future<EclAllowanceActionReceipt> post(
+    UserSession session, {
+    required String deviceId,
+    required EclAllowancePostingItem item,
+    required String reviewToken,
+  }) {
+    throw UnsupportedError('No test item is ready to post.');
+  }
+}
+
+class _FakeEclA5AccountingRepository implements EclA5AccountingRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<EclA5Overview> load(
+    UserSession session, {
+    required String deviceId,
+    String status = 'all',
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    loadCalls += 1;
+    return EclA5Overview(
+      summary: const EclA5Summary(
+        loanCount: 0,
+        remeasurementRequiredCount: 0,
+        allowanceCurrentCount: 0,
+        writeoffReadyCount: 0,
+        writtenOffCount: 0,
+        recoveryReviewRequiredCount: 0,
+        recoveryReadyCount: 0,
+        blockedCount: 0,
+        remeasurementPostingCount: 0,
+        writeoffPostingCount: 0,
+        postWriteoffRecoveryCount: 0,
+        protectedA5AccountingEnabled: true,
+        automaticSourcePosting: false,
+      ),
+      items: const <EclA5ActionItem>[],
+      permissions: const EclA5Permissions(
+        remeasurementPost: false,
+        writeoffPost: false,
+        recoveryReview: false,
+        recoveryPost: false,
+      ),
+      notice: 'No protected A5 actions are ready.',
+      filter: status,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<EclA5ActionReceipt> postRemeasurement(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+  }) => throw UnsupportedError('No test item is ready.');
+
+  @override
+  Future<EclA5ActionReceipt> postFullWriteoff(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+  }) => throw UnsupportedError('No test item is ready.');
+
+  @override
+  Future<EclA5ActionReceipt> reviewRecovery(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+    required String evidenceReference,
+    required String reviewNote,
+  }) => throw UnsupportedError('No test item is ready.');
+
+  @override
+  Future<EclA5ActionReceipt> postRecovery(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+  }) => throw UnsupportedError('No test item is ready.');
+}
+
+class _FakeInitialCapitalFundingRepository
+    implements InitialCapitalFundingRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<InitialCapitalFundingOverview> load(
+    UserSession session, {
+    required String deviceId,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    loadCalls += 1;
+    return InitialCapitalFundingOverview(
+      items: const <InitialCapitalFundingItem>[],
+      summary: const InitialCapitalFundingSummary(
+        evidenceCount: 0,
+        evidenceReadyCount: 0,
+        preparedNotPostedCount: 0,
+        postedCount: 0,
+        blockedNoOpenPeriodCount: 0,
+        totalAmount: '0.00',
+        postedAmount: '0.00',
+      ),
+      cashAccounts: const <InitialCapitalCashAccount>[],
+      permissions: const InitialCapitalFundingPermissions(
+        evidenceRecord: false,
+        prepare: false,
+        post: false,
+      ),
+      limit: limit,
+      offset: offset,
+      protectedInitialCapitalFundingEnabled: true,
+      syntheticOpeningBalanceRequired: false,
+      automaticSourcePosting: false,
+      notice: 'Exact retained funding evidence is required.',
+    );
+  }
+
+  @override
+  Future<InitialCapitalFundingItem> recordEvidence(
+    UserSession session, {
+    required String deviceId,
+    required InitialCapitalEvidenceDraft draft,
+    required String idempotencyKey,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InitialCapitalFundingItem> prepare(
+    UserSession session, {
+    required String deviceId,
+    required InitialCapitalFundingItem item,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InitialCapitalFundingItem> post(
+    UserSession session, {
+    required String deviceId,
+    required InitialCapitalFundingItem item,
+    required String confirmationToken,
+  }) => throw UnimplementedError();
+}
+
 class _FakeAccountingRepository implements FinancialAccountingRepository {
   _FakeAccountingRepository({String initialStatus = 'open'})
-      : _status = initialStatus;
+    : _status = initialStatus;
 
   String? deviceId;
   String? lastStatus;
   bool? lastConfirmClose;
+  String? createdLabel;
+  DateTime? createdStartDate;
+  DateTime? createdEndDate;
   String _status;
 
   @override
@@ -427,6 +978,9 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
     required DateTime endDate,
   }) async {
     this.deviceId = deviceId;
+    createdLabel = label;
+    createdStartDate = startDate;
+    createdEndDate = endDate;
     return AccountingFiscalPeriod(
       periodId: 'created-period',
       label: label,

@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/remittance_handover_photo_page.dart';
 
 class CollectorRemittancePage extends StatefulWidget {
@@ -82,18 +83,27 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
             !recipients.any(
               (recipient) => recipient.userId == _selectedRecipientId,
             )) {
-          _selectedRecipientId =
-              recipients.isEmpty ? null : recipients.first.userId;
+          _selectedRecipientId = recipients.isEmpty
+              ? null
+              : recipients.first.userId;
         }
       });
     } on SpinaApiException catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = error.message);
+        setState(() {
+          _errorMessage = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.loadRemittance,
+          );
+        });
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'The remittance summary could not be loaded.';
+          _errorMessage = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.loadRemittance,
+          );
         });
       }
     } finally {
@@ -171,12 +181,20 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = error.message);
+        setState(() {
+          _errorMessage = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.submitRemittance,
+          );
+        });
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'The remittance could not be submitted.';
+          _errorMessage = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.submitRemittance,
+          );
         });
       }
     } finally {
@@ -203,12 +221,12 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         child: _loading && _summary == null
             ? const Center(child: CircularProgressIndicator())
             : _submitted != null
-                ? _SubmittedRemittance(
-                    record: _submitted!,
-                    session: widget.session,
-                    deviceIdentityProvider: widget.deviceIdentityProvider,
-                  )
-                : _buildReview(context),
+            ? _SubmittedRemittance(
+                record: _submitted!,
+                session: widget.session,
+                deviceIdentityProvider: widget.deviceIdentityProvider,
+              )
+            : _buildReview(context),
       ),
     );
   }
@@ -287,7 +305,8 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         const SizedBox(height: 16),
         FilledButton.icon(
           key: const Key('submit-remittance'),
-          onPressed: _submitting ||
+          onPressed:
+              _submitting ||
                   summary.items.isEmpty ||
                   _selectedRecipientId == null
               ? null
@@ -337,9 +356,9 @@ class _SummaryCard extends StatelessWidget {
             const Divider(height: 24),
             Text(
               'Cash to remit: ${_money(summary.totalAmount)}',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -379,9 +398,9 @@ class _RemittanceItemTile extends StatelessWidget {
         ),
         trailing: Text(
           unable ? '₱0.00' : _money(item.amount),
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -449,9 +468,7 @@ class _SubmittedRemittance extends StatelessWidget {
                 Text('Total: ${_money(record.summary.totalAmount)}'),
                 Text('Clients: ${record.summary.clientCount}'),
                 Text('Entries: ${record.summary.transactionCount}'),
-                Text(
-                  'Status: Waiting for ${record.recipientName} to accept',
-                ),
+                Text('Status: Waiting for ${record.recipientName} to accept'),
               ],
             ),
           ),

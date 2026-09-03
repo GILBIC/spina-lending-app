@@ -13,8 +13,9 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 void main() {
-  testWidgets('opens compact ledger and expands collector audit details',
-      (tester) async {
+  testWidgets('opens Daily Collection client ledger and expands audit details', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       GilbicApp(
         sessionStore: MemorySessionStore(),
@@ -29,42 +30,58 @@ void main() {
       find.byKey(const Key('username-field')),
       'collector.one',
     );
-    await tester.enterText(
-      find.byKey(const Key('password-field')),
-      'secret',
-    );
+    await tester.enterText(find.byKey(const Key('password-field')), 'secret');
     await tester.tap(find.byKey(const Key('sign-in-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Collector Dashboard'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('daily-route')));
-    await tester.pumpAndSettle();
+    // CA4 is Daily-Collection-first: authenticated Collectors land directly on
+    // the Management-approved one-client-row field ledger. The fixed field-cash
+    // header intentionally consumes part of the phone viewport, so scroll the
+    // route before asserting below-the-fold ledger content.
+    expect(find.text('Daily Collection'), findsOneWidget);
+    expect(find.textContaining('Online route'), findsOneWidget);
 
-    expect(find.text('Daily Route'), findsOneWidget);
-    expect(find.text('Online route'), findsOneWidget);
-    expect(find.text('AREA: CARDONA'), findsOneWidget);
+    final routeList = find.byType(ListView);
+    final areaHeader = find.text('AREA: CARDONA');
+    await tester.dragUntilVisible(areaHeader, routeList, const Offset(0, -160));
+    expect(areaHeader, findsOneWidget);
+
+    final clientRow = find.byKey(const Key('route-client-client-1'));
+    await tester.dragUntilVisible(clientRow, routeList, const Offset(0, -120));
+    // dragUntilVisible only guarantees that some part of the target is visible.
+    // Keep the row clear of the persistent bottom navigation before tapping it.
+    await tester.drag(routeList, const Offset(0, -140));
+    await tester.pumpAndSettle();
     expect(find.text('Ana Client'), findsOneWidget);
-    expect(find.text('Regular'), findsOneWidget);
-    expect(find.text('7x7'), findsOneWidget);
-    expect(find.text('Recorded by: Collector Two'), findsNothing);
+    expect(find.text('CLIENT / STATUS'), findsOneWidget);
+    expect(find.text('REG'), findsOneWidget);
+    expect(find.text('TODAY'), findsOneWidget);
+    expect(
+      find.text('Latest receipt recorded by: Collector Two'),
+      findsNothing,
+    );
 
-    await tester.tap(find.byKey(const Key('route-client-client-1')));
+    await tester.tap(clientRow);
     await tester.pumpAndSettle();
 
-    expect(find.text('Recorded by: Collector Two'), findsOneWidget);
-    expect(find.text('Entry note: Paid at the route'), findsOneWidget);
-
-    final footer = find.textContaining('Tap a client to show notes');
-    await tester.dragUntilVisible(
-      footer,
-      find.byType(ListView),
-      const Offset(0, -250),
+    expect(find.text('Regular'), findsOneWidget);
+    expect(
+      find.text('Latest receipt recorded by: Collector Two'),
+      findsOneWidget,
     );
-    expect(footer, findsOneWidget);
+    expect(find.text('Latest receipt note: Paid at the route'), findsOneWidget);
+
+    // The explanatory ledger footer was deliberately removed to keep the
+    // Collector screen compact; expanding a client must not bring it back.
+    expect(
+      find.textContaining('One client stays on one Daily Collection row'),
+      findsNothing,
+    );
   });
 
-  testWidgets('restored session adopts current server access scope',
-      (tester) async {
+  testWidgets('restored session adopts current server access scope', (
+    tester,
+  ) async {
     final store = MemorySessionStore();
     await store.write(_session);
     final validated = UserSession(
@@ -89,69 +106,76 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Employee Dashboard'), findsOneWidget);
-    expect(find.text('Collector Dashboard'), findsNothing);
+    expect(find.text('Daily Collection'), findsNothing);
     final persisted = await store.read();
     expect(persisted?.role, AppRole.employee);
     expect(persisted?.permissions, <String>['employee.portal.view']);
   });
 
-  testWidgets('server permission removal fails closed before collector navigation',
-      (tester) async {
-    final store = MemorySessionStore();
-    const restricted = UserSession(
-      userId: 'collector-1',
-      username: 'collector.one',
-      displayName: 'Test Collector',
-      role: AppRole.collector,
-      rawRole: 'Collector',
-      accessToken: 'restricted-token',
-      permissions: <String>['route.view'],
-    );
-    await store.write(restricted);
+  testWidgets(
+    'server permission removal fails closed before collector navigation',
+    (tester) async {
+      final store = MemorySessionStore();
+      const restricted = UserSession(
+        userId: 'collector-1',
+        username: 'collector.one',
+        displayName: 'Test Collector',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        accessToken: 'restricted-token',
+        permissions: <String>['route.view'],
+      );
+      await store.write(restricted);
 
-    await tester.pumpWidget(
-      GilbicApp(
-        sessionStore: store,
-        authRepository: _ValidatingAuthRepository(
-          onValidate: (_) async => restricted,
-        ),
-        collectorRouteCache: MemoryCollectorRouteCache(),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('dashboard-permission-denied')), findsOneWidget);
-    expect(find.text('Collector Dashboard'), findsNothing);
-    expect(find.byKey(const Key('daily-route')), findsNothing);
-    expect((await store.read())?.permissions, <String>['route.view']);
-  });
-
-  testWidgets('revoked restored device is signed out and local session removed',
-      (tester) async {
-    final store = MemorySessionStore();
-    await store.write(_session);
-
-    await tester.pumpWidget(
-      GilbicApp(
-        sessionStore: store,
-        authRepository: _ValidatingAuthRepository(
-          onValidate: (_) async => throw const SpinaApiException(
-            'This device has been revoked.',
-            statusCode: 403,
+      await tester.pumpWidget(
+        GilbicApp(
+          sessionStore: store,
+          authRepository: _ValidatingAuthRepository(
+            onValidate: (_) async => restricted,
           ),
+          collectorRouteCache: MemoryCollectorRouteCache(),
         ),
-        collectorRouteCache: MemoryCollectorRouteCache(),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
-    expect(find.text('Collector Dashboard'), findsNothing);
-    expect(await store.read(), isNull);
-  });
+      expect(
+        find.byKey(const Key('dashboard-permission-denied')),
+        findsOneWidget,
+      );
+      expect(find.text('Daily Collection'), findsNothing);
+      expect((await store.read())?.permissions, <String>['route.view']);
+    },
+  );
 
-  testWidgets('temporary validation outage preserves valid offline session',
-      (tester) async {
+  testWidgets(
+    'revoked restored device is signed out and local session removed',
+    (tester) async {
+      final store = MemorySessionStore();
+      await store.write(_session);
+
+      await tester.pumpWidget(
+        GilbicApp(
+          sessionStore: store,
+          authRepository: _ValidatingAuthRepository(
+            onValidate: (_) async => throw const SpinaApiException(
+              'This device has been revoked.',
+              statusCode: 403,
+            ),
+          ),
+          collectorRouteCache: MemoryCollectorRouteCache(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
+      expect(find.text('Daily Collection'), findsNothing);
+      expect(await store.read(), isNull);
+    },
+  );
+
+  testWidgets('temporary validation outage preserves valid offline session', (
+    tester,
+  ) async {
     final store = MemorySessionStore();
     await store.write(_session);
 
@@ -163,12 +187,13 @@ void main() {
             'Gilbic could not reach the SPINA server.',
           ),
         ),
+        collectorRouteRepository: _FakeCollectorRouteRepository(),
         collectorRouteCache: MemoryCollectorRouteCache(),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Collector Dashboard'), findsOneWidget);
+    expect(find.text('Daily Collection'), findsOneWidget);
     expect(await store.read(), isNotNull);
   });
 
@@ -183,9 +208,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Offline copy'), findsOneWidget);
+    expect(find.textContaining('July 31, 2026 • Offline copy'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
-    expect(find.textContaining('Offline copy shown'), findsOneWidget);
+    expect(find.text('Offline copy — read-only'), findsOneWidget);
+    expect(
+      find.textContaining('no payment is accepted or queued'),
+      findsOneWidget,
+    );
   });
 }
 
@@ -247,7 +276,8 @@ class _OfflineRouteLoader implements CollectorRouteLoader {
       route: _route(),
       syncedAt: DateTime.utc(2026, 7, 31, 4, 30),
       isFromCache: true,
-      warning: 'Offline copy shown because the SPINA server could not be reached.',
+      warning:
+          'Offline copy shown because the SPINA server could not be reached.',
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
@@ -25,6 +26,7 @@ class GilbicApp extends StatefulWidget {
     this.paymentSubmissionRepository,
     this.deviceIdentityProvider,
     this.collectionDeviceSequence,
+    this.clientLoanRepository,
     super.key,
   });
 
@@ -36,6 +38,7 @@ class GilbicApp extends StatefulWidget {
   final PaymentSubmissionRepository? paymentSubmissionRepository;
   final DeviceIdentityProvider? deviceIdentityProvider;
   final CollectionDeviceSequence? collectionDeviceSequence;
+  final ClientLoanRepository? clientLoanRepository;
 
   @override
   State<GilbicApp> createState() => _GilbicAppState();
@@ -498,6 +501,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
                           _paymentSubmissionRepository,
                       deviceIdentityProvider: _deviceIdentityProvider,
                       collectionDeviceSequence: _collectionDeviceSequence,
+                      clientLoanRepository: widget.clientLoanRepository,
                     ),
     );
   }

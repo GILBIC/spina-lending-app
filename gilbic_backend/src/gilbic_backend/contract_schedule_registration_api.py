@@ -25,7 +25,12 @@ from .contract_schedule_registration_repository import (
     PostgresContractScheduleRegistrationRepository,
     VerifiedContractScheduleRegistration,
 )
+from .contract_schedule_registration_service import VerifiedScheduleInstallment
 from .request_auth import authenticated_device_context
+from .seven_by_seven_signed_schedule import (
+    SevenBySevenSignedScheduleError,
+    generate_signed_seven_by_seven_schedule,
+)
 
 
 class StrictContractScheduleRequest(BaseModel):
@@ -51,10 +56,11 @@ class ContractScheduleTermsRequest(StrictContractScheduleRequest):
     contract_signed_date: date
     effective_from: date
     grace_days: int = Field(default=0, ge=0, le=3650)
-    contractual_total: Decimal = Field(gt=0)
+    contractual_total: Decimal | None = Field(default=None, gt=0)
     first_due_date: date | None = None
     installment_count: int | None = Field(default=None, ge=1, le=5000)
     regular_installment_amount: Decimal | None = Field(default=None, gt=0)
+    agreed_daily_payment: Decimal | None = Field(default=None, gt=0)
     semi_monthly_days: tuple[int, int] = (15, 30)
     custom_installments: list[CustomContractInstallmentRequest] = Field(
         default_factory=list,
@@ -120,6 +126,8 @@ def _loan_context_payload(context: ContractScheduleLoanContext) -> dict[str, obj
         "client_code": context.client_code,
         "client_name": context.client_name,
         "loan_type_name": context.loan_type_name,
+        "calculation_mode": context.calculation_mode,
+        "daily_interest_per_1000": _decimal(context.daily_interest_per_1000),
         "principal": _decimal(context.principal),
         "daily_amount": _decimal(context.daily_amount),
         "date_released": context.date_released.isoformat(),
@@ -134,11 +142,15 @@ def _loan_context_payload(context: ContractScheduleLoanContext) -> dict[str, obj
     }
 
 
-def _installment_payload(installment: ContractInstallment) -> dict[str, object]:
+def _installment_payload(installment: VerifiedScheduleInstallment) -> dict[str, object]:
+    principal_component = getattr(installment, "principal_component", None)
+    interest_component = getattr(installment, "interest_component", None)
     return {
         "installment_number": installment.installment_number,
         "due_date": installment.due_date.isoformat(),
         "contractual_amount": _decimal(installment.contractual_amount),
+        "principal_component": _optional_decimal(principal_component),
+        "interest_component": _optional_decimal(interest_component),
     }
 
 
@@ -175,40 +187,94 @@ def _registration_payload(
     }
 
 
+def _invalid_terms(code: str, message: str) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail={"code": code, "message": message},
+    )
+
+
 def _generate_verified_terms(
     body: ContractScheduleTermsRequest,
-) -> tuple[ContractInstallment, ...]:
-    custom_rows = tuple(
-        (item.due_date, item.amount) for item in body.custom_installments
-    )
-    try:
-        installments = generate_contract_installments(
-            payment_frequency=body.payment_frequency,
-            contractual_total=body.contractual_total,
-            first_due_date=body.first_due_date,
-            installment_count=body.installment_count,
-            regular_installment_amount=body.regular_installment_amount,
-            semi_monthly_days=body.semi_monthly_days,
-            custom_installments=custom_rows,
+    context: ContractScheduleLoanContext,
+) -> tuple[VerifiedScheduleInstallment, ...]:
+    if context.calculation_mode == "seven_by_seven":
+        if body.payment_frequency != "daily":
+            raise _invalid_terms(
+                "invalid_7x7_payment_frequency",
+                "A signed 7x7 schedule must use daily contractual payment rows.",
+            )
+        if body.first_due_date is None:
+            raise _invalid_terms(
+                "missing_7x7_first_due_date",
+                "The first signed 7x7 payment date is required.",
+            )
+        if body.agreed_daily_payment is None:
+            raise _invalid_terms(
+                "missing_7x7_agreed_daily_payment",
+                "The borrower/Management-agreed 7x7 daily payment is required.",
+            )
+        if (
+            body.installment_count is not None
+            or body.regular_installment_amount is not None
+            or body.custom_installments
+        ):
+            raise _invalid_terms(
+                "conflicting_7x7_schedule_terms",
+                "7x7 installment count and row amounts are derived from the signed agreed daily payment; do not also supply generic schedule rows.",
+            )
+        try:
+            signed_rows = generate_signed_seven_by_seven_schedule(
+                original_principal=context.principal,
+                agreed_daily_payment=body.agreed_daily_payment,
+                daily_interest_per_1000=context.daily_interest_per_1000,
+                first_due_date=body.first_due_date,
+            )
+        except SevenBySevenSignedScheduleError as error:
+            raise _invalid_terms("invalid_7x7_signed_schedule_terms", str(error)) from error
+
+        derived_total = sum(
+            (row.contractual_amount for row in signed_rows),
+            Decimal("0.00"),
         )
-    except ContractScheduleError as error:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "invalid_contract_schedule_terms",
-                "message": str(error),
-            },
-        ) from error
+        if body.contractual_total is not None and body.contractual_total != derived_total:
+            raise _invalid_terms(
+                "7x7_contractual_total_mismatch",
+                "The supplied contractual total does not match the signed 7x7 daily-payment schedule derived from the authoritative loan principal and interest rate.",
+            )
+        installments: tuple[VerifiedScheduleInstallment, ...] = signed_rows
+    else:
+        if body.agreed_daily_payment is not None:
+            raise _invalid_terms(
+                "agreed_daily_payment_not_applicable",
+                "agreed_daily_payment is only valid for seven_by_seven loans.",
+            )
+        if body.contractual_total is None:
+            raise _invalid_terms(
+                "missing_contractual_total",
+                "Contractual total is required for this signed schedule.",
+            )
+        custom_rows = tuple(
+            (item.due_date, item.amount) for item in body.custom_installments
+        )
+        try:
+            generic_rows = generate_contract_installments(
+                payment_frequency=body.payment_frequency,
+                contractual_total=body.contractual_total,
+                first_due_date=body.first_due_date,
+                installment_count=body.installment_count,
+                regular_installment_amount=body.regular_installment_amount,
+                semi_monthly_days=body.semi_monthly_days,
+                custom_installments=custom_rows,
+            )
+        except ContractScheduleError as error:
+            raise _invalid_terms("invalid_contract_schedule_terms", str(error)) from error
+        installments = generic_rows
 
     if installments[0].due_date < body.effective_from:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "invalid_contract_schedule_effective_date",
-                "message": (
-                    "The first contractual due date cannot be before the schedule effective date."
-                ),
-            },
+        raise _invalid_terms(
+            "invalid_contract_schedule_effective_date",
+            "The first contractual due date cannot be before the schedule effective date.",
         )
     return installments
 
@@ -265,7 +331,7 @@ def create_contract_schedule_registration_router() -> APIRouter:
             context = registrations.load_loan_context(loan_id=body.loan_id)
         except ContractScheduleRegistrationError as error:
             raise _registration_exception(error) from error
-        installments = _generate_verified_terms(body)
+        installments = _generate_verified_terms(body, context)
         contractual_total = sum(
             (item.contractual_amount for item in installments),
             Decimal("0.00"),
@@ -280,6 +346,7 @@ def create_contract_schedule_registration_router() -> APIRouter:
                     "contract_signed_date": body.contract_signed_date.isoformat(),
                     "effective_from": body.effective_from.isoformat(),
                     "grace_days": body.grace_days,
+                    "agreed_daily_payment": _optional_decimal(body.agreed_daily_payment),
                     "installment_count": len(installments),
                     "contractual_total": _decimal(contractual_total),
                     "first_due_date": installments[0].due_date.isoformat(),
@@ -337,7 +404,11 @@ def create_contract_schedule_registration_router() -> APIRouter:
                 },
             )
 
-        installments = _generate_verified_terms(body)
+        try:
+            context = registrations.load_loan_context(loan_id=body.loan_id)
+        except ContractScheduleRegistrationError as error:
+            raise _registration_exception(error) from error
+        installments = _generate_verified_terms(body, context)
         try:
             registration = registrations.register_schedule(
                 loan_id=body.loan_id,

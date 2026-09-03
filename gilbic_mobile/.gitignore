@@ -30,3 +30,4 @@ DerivedData/
 .env
 .env.*
 !.env.example
+.flutter-plugins-dependencies

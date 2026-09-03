@@ -16,6 +16,7 @@ from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.collector_route_api import (
     PHILIPPINES_TIMEZONE,
     _entry_payload,
+    collector_route_renewal_repository_dependency,
     collector_route_repository_dependency,
 )
 from gilbic_backend.collector_route_repository import (
@@ -149,14 +150,33 @@ class FakeRoutes:
         )
 
 
+class FakeRenewals:
+    def __init__(self) -> None:
+        self.request: tuple[UUID, tuple[UUID, ...]] | None = None
+
+    def get_for_clients(
+        self,
+        *,
+        collector_user_id: UUID,
+        client_ids,
+    ):
+        ids = tuple(client_ids)
+        self.request = (collector_user_id, ids)
+        return {}
+
+
 def client_with_fakes() -> tuple[TestClient, FakeAccounts, FakeRoutes]:
     auth = FakeAuthClient()
     accounts = FakeAccounts()
     routes = FakeRoutes()
+    renewals = FakeRenewals()
     app = create_app()
     app.dependency_overrides[auth_client_dependency] = lambda: auth
     app.dependency_overrides[account_repository_dependency] = lambda: accounts
     app.dependency_overrides[collector_route_repository_dependency] = lambda: routes
+    app.dependency_overrides[collector_route_renewal_repository_dependency] = (
+        lambda: renewals
+    )
     return TestClient(app), accounts, routes
 
 
@@ -236,6 +256,8 @@ def test_collector_receives_only_server_assigned_route() -> None:
                 "2026-08-02",
                 "2026-08-03",
             ],
+            "renewal_requested": False,
+            "renewal_requests": [],
         }
     ]
     assert accounts.seen_device == "gilbic-installation-one"

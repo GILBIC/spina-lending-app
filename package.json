@@ -1,0 +1,15 @@
+{
+  "name": "spina-cross-platform-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check:portal": "node tools/check_portal_modules.mjs",
+    "test:portal": "node --test spina_portal/tests/*.test.mjs",
+    "test": "npm run check:portal && npm run test:portal",
+    "build": "npm run test && node tools/build_portal.mjs"
+  }
+}

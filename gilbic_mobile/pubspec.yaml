@@ -15,6 +15,7 @@ dependencies:
   package_info_plus: ^10.2.1
   path: ^1.9.1
   sqflite_sqlcipher: ^3.4.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

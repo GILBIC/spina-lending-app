@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SPINA">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b12668"/>
+      <stop offset="1" stop-color="#e65f99"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="126" fill="#fff5f9"/>
+  <path d="M132 172c0-66 55-108 135-108 59 0 107 19 143 56l-57 67c-28-25-56-37-88-37-35 0-55 10-55 28 0 22 28 27 73 36 78 15 125 47 125 116 0 75-63 118-153 118-70 0-130-24-171-70l62-66c31 33 68 50 111 50 40 0 66-11 66-31 0-22-29-28-79-38-70-14-112-45-112-121Z" fill="url(#g)"/>
+  <circle cx="405" cy="105" r="26" fill="#c72c73" opacity=".24"/>
+</svg>

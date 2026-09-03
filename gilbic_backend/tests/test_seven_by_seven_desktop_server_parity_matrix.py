@@ -41,16 +41,9 @@ def _effective_server_events(
     payment_start: date,
     as_of_date: date,
 ) -> tuple[SevenBySevenCashEvent, ...]:
-    """Apply the Desktop one-effective-positive-payment-per-date input boundary.
+    """Preserve every distinct positive receipt in authoritative date/input order."""
 
-    The Desktop helper ignores non-positive/out-of-window rows and lets the latest
-    positive row for a calendar date win. The production server allocator itself
-    deliberately accepts only canonical, strictly chronological events and fails
-    closed on duplicate dates. This test adapter therefore models the already-
-    protected source normalization boundary rather than weakening the allocator.
-    """
-
-    by_date: dict[date, tuple[int, Mapping[str, Any]]] = {}
+    eligible: list[tuple[date, int, Mapping[str, Any]]] = []
     for index, payment in enumerate(payments, start=1):
         payment_date = payment.get("date")
         amount = _money(payment.get("payment", payment.get("amount", 0)))
@@ -60,7 +53,7 @@ def _effective_server_events(
             continue
         if payment_date < payment_start or payment_date > as_of_date:
             continue
-        by_date[payment_date] = (index, payment)
+        eligible.append((payment_date, index, payment))
 
     return tuple(
         SevenBySevenCashEvent(
@@ -68,7 +61,10 @@ def _effective_server_events(
             collection_date=payment_date,
             amount=_money(payment.get("payment", payment.get("amount", 0))),
         )
-        for payment_date, (index, payment) in sorted(by_date.items())
+        for payment_date, index, payment in sorted(
+            eligible,
+            key=lambda item: (item[0], item[1]),
+        )
     )
 
 
@@ -237,14 +233,14 @@ def test_synthetic_desktop_server_parity_matrix(case: ParityCase) -> None:
     _assert_case_parity(case)
 
 
-def test_latest_positive_payment_per_date_is_canonicalized_before_server_allocation() -> None:
+def test_distinct_same_day_receipts_are_preserved_in_authoritative_order() -> None:
     case = ParityCase(
-        name="desktop_latest_positive_same_day_source_normalization",
+        name="distinct_same_day_receipts",
         principal=Decimal("3000.00"),
         payment_start=date(2026, 8, 1),
         payments=(
-            {"event_id": "superseded", "date": date(2026, 8, 1), "payment": "10.00"},
-            {"event_id": "effective", "date": date(2026, 8, 1), "payment": "50.00"},
+            {"event_id": "first", "date": date(2026, 8, 1), "payment": "10.00"},
+            {"event_id": "second", "date": date(2026, 8, 1), "payment": "50.00"},
             {"event_id": "ignored-zero", "date": date(2026, 8, 2), "payment": "0.00"},
             {"event_id": "next", "date": date(2026, 8, 3), "payment": "42.00"},
         ),
@@ -256,8 +252,12 @@ def test_latest_positive_payment_per_date_is_canonicalized_before_server_allocat
         payment_start=case.payment_start,
         as_of_date=date(2026, 8, 3),
     )
-    assert [event.event_id for event in events] == ["effective", "next"]
-    assert [event.amount for event in events] == [Decimal("50.00"), Decimal("42.00")]
+    assert [event.event_id for event in events] == ["first", "second", "next"]
+    assert [event.amount for event in events] == [
+        Decimal("10.00"),
+        Decimal("50.00"),
+        Decimal("42.00"),
+    ]
 
 
 def test_renewal_boundary_starts_a_new_independent_original_principal_cycle() -> None:

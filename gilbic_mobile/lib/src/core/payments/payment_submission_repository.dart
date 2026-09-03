@@ -83,8 +83,24 @@ class SpinaPaymentSubmissionRepository
     }
 
     if (response.statusCode == 400 || response.statusCode == 422) {
+      final rejected = <String, dynamic>{
+        ...stringMap(payload.containsKey('data') ? payload['data'] : payload),
+      };
+      final detailMessage = _validationDetailMessage(payload['detail']);
+      if (firstNonEmptyString(<Object?>[rejected['message']]) == null &&
+          detailMessage != null) {
+        rejected['message'] = detailMessage;
+      }
+      final error = stringMap(payload['error']);
+      if (firstNonEmptyString(<Object?>[rejected['code']]) == null) {
+        rejected['code'] = firstNonEmptyString(<Object?>[
+          error['code'],
+          payload['code'],
+          detailMessage == null ? null : 'request_validation_failed',
+        ]);
+      }
       return PaymentSubmissionResult.fromPayload(
-        payload.containsKey('data') ? payload['data'] : payload,
+        rejected,
         idempotencyKey: draft.idempotencyKey,
         fallbackDisposition: PaymentSubmissionDisposition.rejected,
       );
@@ -112,4 +128,28 @@ class SpinaPaymentSubmissionRepository
       );
     }
   }
+}
+
+String? _validationDetailMessage(Object? detail) {
+  if (detail is String && detail.trim().isNotEmpty) {
+    return detail.trim();
+  }
+  if (detail is! List || detail.isEmpty) {
+    return null;
+  }
+
+  final first = stringMap(detail.first);
+  final message = firstNonEmptyString(<Object?>[first['msg'], first['message']]);
+  if (message == null) {
+    return null;
+  }
+
+  final location = first['loc'];
+  if (location is List && location.isNotEmpty) {
+    final field = location.last.toString().trim();
+    if (field.isNotEmpty && field != 'body') {
+      return 'Payment request issue for $field: $message';
+    }
+  }
+  return 'Payment request issue: $message';
 }

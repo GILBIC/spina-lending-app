@@ -4,6 +4,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification_repository.dart';
+import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
+import 'package:gilbic_mobile/src/features/remittance/remittance_history_page.dart';
 import 'package:gilbic_mobile/src/features/remittance/remittance_photo_viewer_page.dart';
 
 class RemittanceNotificationsPage extends StatefulWidget {
@@ -11,12 +13,14 @@ class RemittanceNotificationsPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.remittanceRepository,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final RemittanceNotificationRepository? repository;
+  final RemittanceRepository? remittanceRepository;
 
   @override
   State<RemittanceNotificationsPage> createState() =>
@@ -30,7 +34,6 @@ class _RemittanceNotificationsPageState
       const <RemittanceNotification>[];
   String? _deviceId;
   String? _errorMessage;
-  String? _acceptingId;
   bool _loading = true;
 
   @override
@@ -91,94 +94,24 @@ class _RemittanceNotificationsPageState
         _replace(updated);
       }
     } on Object {
-      // Reading the notification is best-effort. Acceptance still performs a
-      // fresh server-side ownership and custody check.
+      // Reading is best-effort. Full remittance review still performs fresh
+      // server-side recipient and custody checks before any financial action.
     }
   }
 
-  Future<void> _accept(RemittanceNotification notification) async {
-    final deviceId = _deviceId;
-    if (deviceId == null ||
-        _acceptingId != null ||
-        !notification.isPending ||
-        !widget.session.hasPermission('remittance.receive')) {
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Accept Remittance?'),
-        content: Text(
-          'Collector: ${notification.collectorName}\n'
-          'Amount: ${_money(notification.totalAmount)}\n'
-          'Remittance: ${notification.remittanceNumber}\n\n'
-          '${notification.hasHandoverPhoto ? 'A handover photo is attached for review.\n\n' : ''}'
-          'Accept only after the cash is physically in your possession. '
-          'After acceptance, the system records that this money is now under your custody.',
+  Future<void> _openReview(RemittanceNotification notification) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => RemittanceHistoryPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.remittanceRepository,
+          focusRemittanceId: notification.remittanceId,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not received yet'),
-          ),
-          FilledButton(
-            key: Key('accept-remittance-${notification.notificationId}'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Accept Remittance'),
-          ),
-        ],
       ),
     );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _acceptingId = notification.notificationId;
-      _errorMessage = null;
-    });
-    try {
-      final result = await _repository.acceptRemittance(
-        widget.session,
-        deviceId: deviceId,
-        notificationId: notification.notificationId,
-      );
-      if (!mounted) {
-        return;
-      }
-      _replace(result.notification);
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Remittance Accepted'),
-          content: Text(
-            '${result.remittanceNumber}\n'
-            '${_money(notification.totalAmount)}\n\n'
-            '${result.custodyMessage}',
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      );
-    } on SpinaApiException catch (error) {
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
-      }
-    } on Object {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'The remittance could not be accepted.';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _acceptingId = null);
-      }
+    if (mounted) {
+      await _load();
     }
   }
 
@@ -213,12 +146,12 @@ class _RemittanceNotificationsPageState
       appBar: AppBar(
         title: Text(
           pendingCount > 0
-              ? 'Notifications ($pendingCount)'
-              : 'Notifications',
+              ? 'Remittance requests ($pendingCount)'
+              : 'Remittance requests',
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh notifications',
+            tooltip: 'Refresh remittance requests',
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -254,11 +187,9 @@ class _RemittanceNotificationsPageState
                           notification: notification,
                           session: widget.session,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
-                          accepting:
-                              _acceptingId == notification.notificationId,
                           canReceiveRemittance: canReceiveRemittance,
                           onOpened: () => _markRead(notification),
-                          onAccept: () => _accept(notification),
+                          onReview: () => _openReview(notification),
                         ),
                   ],
                 ),
@@ -273,19 +204,17 @@ class _NotificationCard extends StatelessWidget {
     required this.notification,
     required this.session,
     required this.deviceIdentityProvider,
-    required this.accepting,
     required this.canReceiveRemittance,
     required this.onOpened,
-    required this.onAccept,
+    required this.onReview,
   });
 
   final RemittanceNotification notification;
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
-  final bool accepting;
   final bool canReceiveRemittance;
   final VoidCallback onOpened;
-  final VoidCallback onAccept;
+  final VoidCallback onReview;
 
   Future<void> _openPhoto(BuildContext context) async {
     await Navigator.of(context).push<void>(
@@ -302,6 +231,17 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stateText = notification.isPending
+        ? 'Action required — review full handover'
+        : notification.isRejected
+            ? 'Rejected — cash stayed with sender'
+            : 'Accepted — money under your custody';
+    final stateIcon = notification.isPending
+        ? Icons.notifications_active
+        : notification.isRejected
+            ? Icons.cancel_outlined
+            : Icons.verified;
+
     return Card(
       child: ExpansionTile(
         key: Key('notification-${notification.notificationId}'),
@@ -310,11 +250,7 @@ class _NotificationCard extends StatelessWidget {
             onOpened();
           }
         },
-        leading: Icon(
-          notification.isPending
-              ? Icons.notifications_active
-              : Icons.verified,
-        ),
+        leading: Icon(stateIcon),
         title: Row(
           children: [
             Expanded(child: Text(notification.title)),
@@ -324,8 +260,7 @@ class _NotificationCard extends StatelessWidget {
         ),
         subtitle: Text(
           '${notification.collectorName} • '
-          '${_money(notification.totalAmount)}\n'
-          '${notification.isPending ? 'Action required' : 'Accepted — money under your custody'}',
+          '${_money(notification.totalAmount)}\n$stateText',
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
@@ -365,8 +300,17 @@ class _NotificationCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          if (notification.isPending &&
-              notification.custodyMessage.trim().isNotEmpty) ...[
+          if (notification.isRejected && notification.rejectionReason.isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Reason: ${notification.rejectionReason}',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (notification.custodyMessage.trim().isNotEmpty) ...[
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -381,19 +325,11 @@ class _NotificationCard extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 key: Key(
-                  'open-accept-remittance-${notification.notificationId}',
+                  'review-remittance-notification-${notification.notificationId}',
                 ),
-                onPressed: accepting ? null : onAccept,
-                icon: accepting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.payments_outlined),
-                label: Text(
-                  accepting ? 'Accepting...' : 'Accept Remittance',
-                ),
+                onPressed: onReview,
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('Review full remittance'),
               ),
             )
           else if (notification.isPending)
@@ -404,11 +340,15 @@ class _NotificationCard extends StatelessWidget {
               ),
             )
           else
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                notification.custodyMessage,
-                style: Theme.of(context).textTheme.titleSmall,
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: Key(
+                  'open-remittance-history-${notification.notificationId}',
+                ),
+                onPressed: onReview,
+                icon: const Icon(Icons.history),
+                label: const Text('Open saved handover'),
               ),
             ),
         ],

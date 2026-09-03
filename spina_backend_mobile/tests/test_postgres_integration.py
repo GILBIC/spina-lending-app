@@ -58,6 +58,13 @@ class IntegrationBridge:
             official_balance=Decimal("4600.00"),
             accepted_at=datetime.now(timezone.utc),
             route_revision="route-v4",
+            result_metadata={
+                "extra_principal_adjustment_id": (
+                    "69f168bf-9998-4d30-8134-43995332b3ba"
+                ),
+                "principal_reduction": "200.00",
+                "refund_due": "0.00",
+            },
         )
 
 
@@ -156,6 +163,10 @@ def test_postgresql_serializes_concurrent_duplicate_submissions() -> None:
         assert {item.posted.receipt_number for item in outcomes if item.posted} == {
             "TEST-00000001"
         }
+        assert {
+            item.response_payload()["result"]["extra_principal_adjustment_id"]
+            for item in outcomes
+        } == {"69f168bf-9998-4d30-8134-43995332b3ba"}
 
         with connection_factory() as connection:
             posting_count = connection.execute(

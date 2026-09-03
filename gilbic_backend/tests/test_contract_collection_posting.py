@@ -9,6 +9,9 @@ from uuid import UUID
 import pytest
 
 from gilbic_backend.collection_correction_repository import CollectionCorrectionInvalid
+from gilbic_backend.concurrent_receipt_collection_posting import (
+    ConcurrentReceiptSafeCollectionPostingBridge,
+)
 from gilbic_backend.contract_collection_correction import (
     ContractSafeCollectionCorrectionRepository,
 )
@@ -19,6 +22,9 @@ from gilbic_backend.contract_collection_posting import (
 )
 from gilbic_backend.per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
+)
+from gilbic_backend.seven_by_seven_collection_posting import (
+    SevenBySevenAwarePerLoanContractCollectionPostingBridge,
 )
 from spina_mobile_collections.contracts import (
     ActorContext,
@@ -161,10 +167,11 @@ def contract_gate() -> ContractCollectionGate:
 
 
 def test_stage5e46b_live_collection_api_preserves_per_loan_contract_bridge() -> None:
-    assert "SevenBySevenAwarePerLoanContractCollectionPostingBridge" in COLLECTION_API
-    assert (
-        "posting_bridge=SevenBySevenAwarePerLoanContractCollectionPostingBridge()"
-        in COLLECTION_API
+    assert "ConcurrentReceiptSafeCollectionPostingBridge" in COLLECTION_API
+    assert "posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge()" in COLLECTION_API
+    assert issubclass(
+        ConcurrentReceiptSafeCollectionPostingBridge,
+        SevenBySevenAwarePerLoanContractCollectionPostingBridge,
     )
     assert "PerLoanContractAwareCrossCollectorCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
     assert "class SevenBySevenAwarePerLoanContractCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
@@ -312,12 +319,12 @@ def test_stage5e44_advance_requires_exact_dates_and_full_selected_amount() -> No
     selected = (date(2026, 8, 9), date(2026, 8, 16))
     rows = (
         {
-            "due_date": selected[0],
+            "effective_due_date": selected[0],
             "contractual_amount": Decimal("90.00"),
             "allocated_amount": Decimal("0.00"),
         },
         {
-            "due_date": selected[1],
+            "effective_due_date": selected[1],
             "contractual_amount": Decimal("90.00"),
             "allocated_amount": Decimal("0.00"),
         },
@@ -400,5 +407,6 @@ def test_stage5e44_contract_controlled_corrections_require_void_and_repost(
             covered_dates=(date(2026, 8, 9),),
             note="",
             reason="wrong amount",
+            expected_route_revision=f"loan:{LOAN_ID}:v1",
         )
     assert "Void the unremitted receipt" in str(caught.value)

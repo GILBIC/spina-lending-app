@@ -49,6 +49,9 @@ def _event_payload(event: CollectionAccountingPreview) -> dict[str, object]:
         "accepted_at": event.accepted_at.isoformat(),
         "entry_type": event.entry_type,
         "amount": _money(event.amount),
+        "applied_amount": _money(event.amount),
+        "cash_received_amount": _money(event.cash_received_amount),
+        "unallocated_amount": _money(event.unallocated_amount),
         "is_voided": event.is_voided,
         "voided_at": event.voided_at.isoformat() if event.voided_at else None,
         "disposition": event.disposition,
@@ -89,10 +92,12 @@ def _pack_payload(pack: SourceEventAccountingPreviewPack) -> dict[str, object]:
         "events": [_event_payload(event) for event in pack.events],
         "notice": (
             "Read-only source-event accounting classification. No journal draft or posted entry is created. "
-            "PAYMENT and ADV identify authoritative cash sources, but journal lines remain blocked until "
-            "event-date EIR allocation can split cash between accrued effective interest and the loan component. "
-            "PASS is non-cash. Voided collections require no entry when never accounted, or a controlled reversal "
-            "when a source journal had already posted. Automatic source posting remains disabled."
+            "Receipt cash/custody is shown separately from the amount applied to the loan. Unallocated cash "
+            "stays in custody/remittance and blocks automatic loan source accounting until Management resolves "
+            "its allocation. Applied PAYMENT and ADV amounts still require event-date EIR allocation between "
+            "accrued effective interest and the loan component. PASS is non-cash. Voided collections require "
+            "no entry when never accounted, or a controlled reversal when a source journal had already posted. "
+            "Automatic source posting remains disabled."
         ),
     }
 

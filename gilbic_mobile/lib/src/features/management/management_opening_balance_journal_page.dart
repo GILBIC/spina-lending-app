@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/management/opening_balance_journal_reposi
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook.dart';
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementOpeningBalanceJournalPage extends StatefulWidget {
   const ManagementOpeningBalanceJournalPage({
@@ -90,28 +91,11 @@ class _ManagementOpeningBalanceJournalPageState
     if (workbookId == null || journal == null || !journal.canPrepare || _busy) {
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Prepare opening journal draft?'),
-        content: const Text(
-          'This copies the fully reviewed workbook into one protected system journal draft. '
-          'It does not post to the General Ledger and automatic source posting remains disabled.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('confirm-opening-journal-draft'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Prepare Draft'),
-          ),
-        ],
-      ),
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _openingJournalReview(journal, preparing: true, hasPermission: true),
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _busy = true);
     try {
@@ -128,20 +112,24 @@ class _ManagementOpeningBalanceJournalPageState
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Protected opening-balance journal draft prepared. Nothing was posted.'),
+            content: Text(
+              'Protected opening-balance journal draft prepared. Nothing was posted.',
+            ),
           ),
         );
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Opening journal draft preparation failed.')),
+          const SnackBar(
+            content: Text('Opening journal draft preparation failed.'),
+          ),
         );
       }
     } finally {
@@ -161,31 +149,11 @@ class _ManagementOpeningBalanceJournalPageState
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Post opening balances to General Ledger?'),
-        content: Text(
-          'You are about to post the protected opening-balance journal.\n\n'
-          'Debit: ${_moneyExact(journal.totalDebitExact)}\n'
-          'Credit: ${_moneyExact(journal.totalCreditExact)}\n\n'
-          'The server will revalidate the workbook, journal, accounting period, accounts, and source readiness before posting. '
-          'The posted entry becomes immutable; corrections require a controlled reversal. Automatic source posting remains disabled.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('confirm-post-opening-journal'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Post Opening Balance'),
-          ),
-        ],
-      ),
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _openingJournalReview(journal, preparing: false, hasPermission: true),
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _busy = true);
     try {
@@ -213,14 +181,18 @@ class _ManagementOpeningBalanceJournalPageState
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Opening-balance posting failed. Nothing was changed.')),
+          const SnackBar(
+            content: Text(
+              'Opening-balance posting failed. Nothing was changed.',
+            ),
+          ),
         );
       }
     } finally {
@@ -258,7 +230,8 @@ class _ManagementOpeningBalanceJournalPageState
       return _MessagePanel(
         icon: Icons.table_view_outlined,
         title: 'Opening workbook required',
-        message: 'Initialize and verify the Opening Balance Workbook before preparing a journal draft.',
+        message:
+            'Initialize and verify the Opening Balance Workbook before preparing a journal draft.',
         onRefresh: _load,
       );
     }
@@ -298,7 +271,10 @@ class _ManagementOpeningBalanceJournalPageState
           ),
           if (_error != null) ...[
             const SizedBox(height: 10),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ],
           const SizedBox(height: 12),
           Card(
@@ -340,8 +316,8 @@ class _ManagementOpeningBalanceJournalPageState
                     journal.isPosted
                         ? 'Posted'
                         : journal.openingBalancePostingEnabled
-                            ? 'Protected / explicit only'
-                            : 'Disabled',
+                        ? 'Protected / explicit only'
+                        : 'Disabled',
                   ),
                   _DetailRow('Automatic source posting', 'Disabled'),
                 ],
@@ -355,14 +331,30 @@ class _ManagementOpeningBalanceJournalPageState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Preparation gate', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Preparation gate',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   Text(_preparationGateMessage(journal, canPreparePermission)),
+                  if (!journal.draftPrepared &&
+                      !(journal.canPrepare && canPreparePermission)) ...[
+                    const SizedBox(height: 12),
+                    ManagementReviewPanel(
+                      review: _openingJournalReview(
+                        journal,
+                        preparing: true,
+                        hasPermission: canPreparePermission,
+                      ),
+                      compact: true,
+                    ),
+                  ],
                   if (!journal.draftPrepared) ...[
                     const SizedBox(height: 12),
                     FilledButton.icon(
                       key: const Key('prepare-opening-journal-draft'),
-                      onPressed: journal.canPrepare && canPreparePermission && !_busy
+                      onPressed:
+                          journal.canPrepare && canPreparePermission && !_busy
                           ? _prepareDraft
                           : null,
                       icon: const Icon(Icons.description_outlined),
@@ -387,9 +379,25 @@ class _ManagementOpeningBalanceJournalPageState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Posting gate', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Posting gate',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   Text(_postingGateMessage(journal, canPostPermission)),
+                  if (journal.draftPrepared &&
+                      !journal.isPosted &&
+                      !(journal.canPost && canPostPermission)) ...[
+                    const SizedBox(height: 12),
+                    ManagementReviewPanel(
+                      review: _openingJournalReview(
+                        journal,
+                        preparing: false,
+                        hasPermission: canPostPermission,
+                      ),
+                      compact: true,
+                    ),
+                  ],
                   if (!journal.isPosted) ...[
                     const SizedBox(height: 12),
                     FilledButton.icon(
@@ -398,7 +406,9 @@ class _ManagementOpeningBalanceJournalPageState
                           ? _postJournal
                           : null,
                       icon: const Icon(Icons.account_balance_outlined),
-                      label: Text(_busy ? 'Posting…' : 'Post to General Ledger'),
+                      label: Text(
+                        _busy ? 'Posting…' : 'Post to General Ledger',
+                      ),
                     ),
                   ],
                 ],
@@ -409,6 +419,82 @@ class _ManagementOpeningBalanceJournalPageState
       ),
     );
   }
+}
+
+ManagementReviewPresentation _openingJournalReview(
+  OpeningBalanceJournalDraftStatus journal, {
+  required bool preparing,
+  required bool hasPermission,
+}) {
+  final actionEnabled = preparing
+      ? journal.canPrepare && hasPermission
+      : journal.canPost && hasPermission;
+  final blocker = actionEnabled
+      ? null
+      : !hasPermission
+      ? preparing
+            ? 'The current session does not have opening-balance preparation permission.'
+            : 'The current session does not have opening-balance posting permission.'
+      : preparing
+      ? journal.preparationBlocker ??
+            'Opening-balance journal preparation requirements are not complete.'
+      : journal.postingBlocker ??
+            'Protected opening-balance posting requirements are not complete.';
+  return ManagementReviewPresentation.validated(
+    binding: ManagementMutationBinding.openingJournal,
+    recordLabel: preparing
+        ? 'Opening balance workbook'
+        : 'Opening balance journal draft',
+    recordValue: preparing
+        ? '${_date(journal.cutoverDate)} • ${journal.workbookId}'
+        : '${journal.journalEntryId ?? 'Draft not prepared'} • ${_date(journal.cutoverDate)}',
+    statusLabel: preparing
+        ? plainManagementStatus(journal.workbookStatus, const <String, String>{
+            'draft': 'Workbook is still Draft',
+            'review_ready': 'Workbook is Review Ready',
+          })
+        : plainManagementStatus(journal.journalStatus, const <String, String>{
+            'draft': 'Journal draft is prepared and unposted',
+            'posted': 'Journal is posted and immutable',
+          }),
+    facts: <ManagementReviewFact>[
+      ManagementReviewFact(
+        label: 'Cutover date',
+        value: _date(journal.cutoverDate),
+      ),
+      if (!preparing) ...<ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Journal lines',
+          value: '${journal.journalLineCount}',
+        ),
+        ManagementReviewFact(
+          label: 'Total debit',
+          value: _moneyExact(journal.totalDebitExact),
+        ),
+        ManagementReviewFact(
+          label: 'Total credit',
+          value: _moneyExact(journal.totalCreditExact),
+        ),
+      ],
+    ],
+    warnings: blocker == null
+        ? const <ManagementReviewWarning>[]
+        : <ManagementReviewWarning>[
+            ManagementReviewWarning(
+              severity: ManagementReviewWarningSeverity.blocker,
+              message: blocker,
+            ),
+          ],
+    nextActionLabel: preparing
+        ? 'Prepare opening journal draft'
+        : 'Post opening balance journal',
+    consequence: preparing
+        ? 'A separate protected opening journal draft will be prepared from the '
+              'reviewed workbook. Nothing will be posted to the General Ledger.'
+        : 'The opening balance journal will be posted immutably to the General '
+              'Ledger. Corrections require protected reversal evidence.',
+    actionEnabled: actionEnabled,
+  );
 }
 
 String _journalStateLabel(OpeningBalanceJournalDraftStatus journal) {
@@ -425,7 +511,8 @@ String _preparationGateMessage(
     return 'Preparation complete. The draft remains protected from normal General Journal editing.';
   }
   if (!journal.preparationReady) {
-    final blocker = journal.preparationBlocker ??
+    final blocker =
+        journal.preparationBlocker ??
         'Opening-balance journal preparation requirements are not complete.';
     return 'Blocked: $blocker';
   }
@@ -469,7 +556,10 @@ class _DetailRow extends StatelessWidget {
         children: [
           SizedBox(width: 150, child: Text(label)),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -530,7 +620,11 @@ class _ErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),

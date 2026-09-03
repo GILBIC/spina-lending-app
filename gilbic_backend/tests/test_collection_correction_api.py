@@ -114,6 +114,7 @@ def test_original_collector_can_correct_exact_unremitted_dates() -> None:
             "covered_dates": ["2026-08-02", "2026-08-04"],
             "note": "Correct selected dates",
             "reason": "Wrong date tapped",
+            "expected_route_revision": f"loan:{LOAN_ID}:v1",
         },
     )
 
@@ -126,6 +127,7 @@ def test_original_collector_can_correct_exact_unremitted_dates() -> None:
     assert corrections.request is not None
     assert corrections.request["actor_user_id"] == COLLECTOR_USER_ID
     assert corrections.request["reason"] == "Wrong date tapped"
+    assert corrections.request["expected_route_revision"] == f"loan:{LOAN_ID}:v1"
 
 
 def test_remitted_collection_correction_returns_conflict() -> None:
@@ -143,6 +145,7 @@ def test_remitted_collection_correction_returns_conflict() -> None:
             "covered_dates": ["2026-08-02"],
             "note": "",
             "reason": "Wrong amount",
+            "expected_route_revision": f"loan:{LOAN_ID}:v1",
         },
     )
 

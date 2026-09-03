@@ -18,7 +18,24 @@ def test_v1_tax_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_v1_tax_evidence_router" in MAIN
     assert "app.include_router(create_v1_tax_evidence_router())" in MAIN
-    assert "/api/mobile/" not in API
+
+
+def test_v1_tax_evidence_mobile_aliases_reuse_the_same_handlers() -> None:
+    for route in (
+        '"/api/mobile/v1/management/financial-accounting/tax"',
+        '"/api/mobile/v1/management/financial-accounting/tax/rules"',
+        '"/api/mobile/v1/management/financial-accounting/tax/dst-evidence"',
+        '"/api/mobile/v1/management/financial-accounting/tax/percentage-evidence"',
+    ):
+        assert route in API
+
+
+def test_v1_tax_evidence_read_model_returns_exact_page_coordinates() -> None:
+    for field in ('"readiness"', '"limit"', '"offset"'):
+        assert field in API
+    assert '"evidence_backed_tax_readiness_enabled"' in API
+    assert '"tax_posting_enabled"' in API
+    assert '"automatic_source_posting"' in API
 
 
 def test_v1_tax_api_uses_action_specific_permissions_and_explicit_confirmation() -> None:

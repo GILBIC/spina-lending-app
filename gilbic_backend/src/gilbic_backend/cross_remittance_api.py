@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -10,7 +11,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .cross_collection_status_repository import (
+    CrossCollectionStatusRecord,
+    PostgresCrossCollectionStatusRepository,
+)
 from .cross_remittance_repository import (
+    ASSIGNED_COLLECTOR_CAPACITY,
+    MANAGEMENT_CAPACITY,
     CrossRemittanceTargetRecord,
     PostgresCrossRemittanceRepository,
 )
@@ -25,10 +32,14 @@ from .remittance_repository import (
 from .request_auth import authenticated_device_context
 
 
+CrossRemittanceRecipientCapacity = Literal["assigned_collector", "management"]
+
+
 class CrossRemittanceSubmissionBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     recipient_user_id: UUID
+    recipient_capacity: CrossRemittanceRecipientCapacity = ASSIGNED_COLLECTOR_CAPACITY
     collection_date: date
     note: str = Field(default="", max_length=500)
 
@@ -37,18 +48,71 @@ def cross_remittance_repository_dependency() -> PostgresCrossRemittanceRepositor
     return PostgresCrossRemittanceRepository()
 
 
+def cross_collection_status_repository_dependency() -> PostgresCrossCollectionStatusRepository:
+    return PostgresCrossCollectionStatusRepository()
+
+
 def _money(value: Decimal) -> str:
     return format(value.quantize(Decimal("0.01")), "f")
+
+
+def _capacity_label(recipient_capacity: str) -> str:
+    if recipient_capacity == MANAGEMENT_CAPACITY:
+        return "Management"
+    return "Assigned Collector"
 
 
 def _target_payload(record: CrossRemittanceTargetRecord) -> dict[str, object]:
     return {
         "recipient_user_id": str(record.recipient_user_id),
         "recipient_name": record.recipient_name,
-        "role_name": "Assigned Collector",
+        "recipient_capacity": record.recipient_capacity,
+        "role_name": _capacity_label(record.recipient_capacity),
         "transaction_count": record.transaction_count,
         "client_count": record.client_count,
         "total_amount": _money(record.total_amount),
+    }
+
+
+def _cross_collection_status_payload(
+    record: CrossCollectionStatusRecord,
+) -> dict[str, object]:
+    return {
+        "transaction_id": str(record.transaction_id),
+        "receipt_number": record.receipt_number,
+        "client_id": str(record.client_id),
+        "client_name": record.client_name,
+        "loan_id": str(record.loan_id),
+        "loan_type": record.loan_type,
+        "area": record.area,
+        "assigned_collector_user_id": (
+            str(record.assigned_collector_user_id)
+            if record.assigned_collector_user_id
+            else None
+        ),
+        "assigned_collector_name": record.assigned_collector_name,
+        "collection_date": record.collection_date.isoformat(),
+        "entry_type": record.entry_type,
+        "amount": _money(record.amount),
+        "accepted_at": record.accepted_at.isoformat(),
+        "is_locked": record.is_locked,
+        "remittance_id": (
+            str(record.remittance_id) if record.remittance_id else None
+        ),
+        "remittance_number": record.remittance_number,
+        "custody_status": record.custody_status,
+        "remittance_recipient_user_id": (
+            str(record.remittance_recipient_user_id)
+            if record.remittance_recipient_user_id
+            else None
+        ),
+        "remittance_recipient_name": record.remittance_recipient_name,
+        "submitted_at": (
+            record.submitted_at.isoformat() if record.submitted_at else None
+        ),
+        "received_at": (
+            record.received_at.isoformat() if record.received_at else None
+        ),
     }
 
 
@@ -84,7 +148,12 @@ def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
     }
 
 
-def _record_payload(record: RemittanceRecord) -> dict[str, object]:
+def _record_payload(
+    record: RemittanceRecord,
+    *,
+    recipient_capacity: str,
+) -> dict[str, object]:
+    role_label = _capacity_label(recipient_capacity)
     return {
         "remittance_id": str(record.remittance_id),
         "remittance_number": record.remittance_number,
@@ -92,7 +161,8 @@ def _record_payload(record: RemittanceRecord) -> dict[str, object]:
         "collector_name": record.collector_name,
         "recipient_user_id": str(record.recipient_user_id),
         "recipient_name": record.recipient_name,
-        "recipient_role": "Assigned Collector",
+        "recipient_capacity": recipient_capacity,
+        "recipient_role": role_label,
         "collection_date": record.collection_date.isoformat(),
         "status": record.status,
         "transaction_count": record.transaction_count,
@@ -106,9 +176,8 @@ def _record_payload(record: RemittanceRecord) -> dict[str, object]:
         "received_at": record.received_at.isoformat() if record.received_at else None,
         "items": [_item_payload(item) for item in record.items],
         "acceptance_message": (
-            "The assigned collector must review and accept this remittance. "
-            "Acceptance copies the payment into their route view without creating "
-            "another transaction."
+            f"The selected {role_label} recipient must review and accept this remittance. "
+            "Acceptance transfers cash custody without creating another payment transaction."
         ),
     }
 
@@ -125,6 +194,45 @@ def _raise_error(error: RemittanceError) -> None:
 
 def create_cross_remittance_router() -> APIRouter:
     router = APIRouter(tags=["cross collector remittances"])
+
+    @router.get("/api/v1/collector/cross-remittances/history")
+    @router.get(
+        "/api/mobile/v1/collector/cross-remittances/history",
+        include_in_schema=False,
+    )
+    def collection_history(
+        collection_date: date | None = Query(default=None),
+        limit: int = Query(default=500, ge=1, le=1000),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        statuses: PostgresCrossCollectionStatusRepository = Depends(
+            cross_collection_status_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="remittance.view",
+            permission_error="Remittance viewing permission is required.",
+        )
+        if "collector" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Only an active Collector may view their other-area collections.",
+            )
+        records = statuses.list_for_collector(
+            collector_user_id=actor.user_id,
+            collection_date=collection_date,
+            limit=limit,
+        )
+        return {
+            "success": True,
+            "data": [_cross_collection_status_payload(record) for record in records],
+        }
 
     @router.get("/api/v1/collector/cross-remittances/targets")
     @router.get(
@@ -165,6 +273,9 @@ def create_cross_remittance_router() -> APIRouter:
     )
     def preview(
         recipient_user_id: UUID = Query(),
+        recipient_capacity: CrossRemittanceRecipientCapacity = Query(
+            default=ASSIGNED_COLLECTOR_CAPACITY
+        ),
         collection_date: date = Query(),
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
@@ -186,6 +297,7 @@ def create_cross_remittance_router() -> APIRouter:
             summary = remittances.preview(
                 collector_user_id=actor.user_id,
                 recipient_user_id=recipient_user_id,
+                recipient_capacity=recipient_capacity,
                 collection_date=collection_date,
             )
         except RemittanceError as error:
@@ -220,11 +332,18 @@ def create_cross_remittance_router() -> APIRouter:
             record = remittances.submit(
                 collector_user_id=actor.user_id,
                 recipient_user_id=body.recipient_user_id,
+                recipient_capacity=body.recipient_capacity,
                 collection_date=body.collection_date,
                 note=body.note,
             )
         except RemittanceError as error:
             _raise_error(error)
-        return {"success": True, "data": _record_payload(record)}
+        return {
+            "success": True,
+            "data": _record_payload(
+                record,
+                recipient_capacity=body.recipient_capacity,
+            ),
+        }
 
     return router

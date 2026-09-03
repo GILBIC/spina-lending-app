@@ -1,14 +1,24 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .collector_route_cross_status_repository import (
+    CollectorRouteCrossStatusRecord,
+    PostgresCollectorRouteCrossStatusRepository,
+)
+from .collector_route_renewal_repository import (
+    CollectorRouteRenewalBadgeRecord,
+    PostgresCollectorRouteRenewalRepository,
+)
 from .collector_route_repository import (
     CollectorRouteEntryRecord,
+    CollectorRouteReceiptRecord,
     CollectorRouteRecord,
     PostgresCollectorRouteRepository,
 )
@@ -25,18 +35,165 @@ def collector_route_repository_dependency() -> PostgresCollectorRouteRepository:
     return SevenBySevenGatedPostgresCollectorRouteRepository()
 
 
+def collector_route_cross_status_repository_dependency(
+) -> PostgresCollectorRouteCrossStatusRepository:
+    return PostgresCollectorRouteCrossStatusRepository()
+
+
+def collector_route_renewal_repository_dependency(
+) -> PostgresCollectorRouteRenewalRepository:
+    return PostgresCollectorRouteRenewalRepository()
+
+
 def _is_seven_by_seven_loan_type(value: str) -> bool:
     normalized = value.lower().replace(" ", "")
     return "7x7" in normalized or "7×7" in normalized
 
 
-def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
+def _receipt_payload(receipt: CollectorRouteReceiptRecord) -> dict[str, object]:
+    return {
+        "transaction_id": str(receipt.transaction_id),
+        "receipt_number": receipt.receipt_number,
+        "amount": str(receipt.amount),
+        "entry_type": receipt.entry_type,
+        "collector_user_id": str(receipt.collector_user_id),
+        "collector_name": receipt.collector_name,
+        "is_locked": receipt.is_locked,
+        "note": receipt.note,
+        "covered_dates": [value.isoformat() for value in receipt.covered_dates],
+        "accepted_at": receipt.accepted_at.isoformat() if receipt.accepted_at else None,
+    }
+
+
+def _cross_collection_message(
+    entry: CollectorRouteEntryRecord,
+    status: CollectorRouteCrossStatusRecord,
+) -> str:
+    recorder = status.recorder_name or entry.today_collector_name or "Collector"
+    origin = status.collection_origin.strip().lower()
+    if origin == "management_direct":
+        return (
+            f"Recorded by: {recorder}. This was a direct Management collection; "
+            "the assigned Collector route is read-only for this receipt."
+        )
+    if origin != "cross_collector":
+        return (
+            f"Recorded by: {recorder}. This receipt was created by another "
+            "authorized account and is read-only from this route."
+        )
+
+    if status.custody_status == "no_cash":
+        if status.remittance_number:
+            return (
+                f"Recorded by: {recorder}. No cash custody applies to this "
+                f"unable-to-pay entry. Remittance {status.remittance_number} is "
+                f"{_remittance_state_label(status)}."
+            )
+        return (
+            f"Recorded by: {recorder}. No cash custody applies to this "
+            "unable-to-pay entry. It is not yet remitted."
+        )
+
+    if status.custody_status == "accepted":
+        holder = status.cash_holder_name or status.remittance_recipient_name
+        remittance = (
+            f" Remittance {status.remittance_number} was accepted."
+            if status.remittance_number
+            else " Remittance was accepted."
+        )
+        return (
+            f"Recorded by: {recorder}. Cash with: {holder or 'remittance recipient'}."
+            f"{remittance}"
+        )
+
+    if status.custody_status == "awaiting_acceptance":
+        recipient = status.remittance_recipient_name or "the remittance recipient"
+        remittance = (
+            f"Remittance {status.remittance_number}"
+            if status.remittance_number
+            else "Remittance"
+        )
+        return (
+            f"Recorded by: {recorder}. Cash with: "
+            f"{status.cash_holder_name or recorder}. {remittance} is awaiting "
+            f"acceptance by {recipient}."
+        )
+
+    return (
+        f"Recorded by: {recorder}. Cash with: "
+        f"{status.cash_holder_name or recorder}. Not yet remitted."
+    )
+
+
+def _cross_status_suffix(status: CollectorRouteCrossStatusRecord) -> str:
+    if status.custody_status == "no_cash":
+        return "No cash"
+    if status.custody_status == "accepted":
+        holder = status.cash_holder_name or status.remittance_recipient_name
+        return f"Cash with: {holder or 'recipient'} • Accepted"
+    if status.custody_status == "awaiting_acceptance":
+        holder = status.cash_holder_name or status.recorder_name or "Collector"
+        return f"Cash with: {holder} • Awaiting acceptance"
+    holder = status.cash_holder_name or status.recorder_name or "Collector"
+    return f"Cash with: {holder} • Not yet remitted"
+
+
+def _remittance_state_label(status: CollectorRouteCrossStatusRecord) -> str:
+    if status.custody_status == "accepted":
+        return "accepted"
+    if status.custody_status == "awaiting_acceptance":
+        return "awaiting acceptance"
+    return "not yet remitted"
+
+
+def _renewal_payload(
+    record: CollectorRouteRenewalBadgeRecord,
+) -> dict[str, object]:
+    return {
+        "request_id": str(record.request_id),
+        "loan_id": str(record.loan_id),
+        "status": record.status,
+        "loan_type": record.loan_type,
+        "is_7x7": record.is_seven_by_seven,
+        "submitted_at": record.submitted_at.isoformat(),
+    }
+
+
+def _entry_payload(
+    entry: CollectorRouteEntryRecord,
+    *,
+    route_owner_user_id: UUID | None = None,
+    cross_status: CollectorRouteCrossStatusRecord | None = None,
+    renewal_requests: tuple[dict[str, object], ...] = (),
+) -> dict[str, object]:
     seven_by_seven_mobile_enabled = (
         _is_seven_by_seven_loan_type(entry.loan_type)
         and entry.can_collect_mobile
         and entry.can_enter_payment
     )
-    return {
+    recorded_by_other = (
+        route_owner_user_id is not None
+        and entry.processed_today
+        and entry.today_collector_user_id is not None
+        and entry.today_collector_user_id != route_owner_user_id
+    )
+    display_status = entry.status
+    collection_message = entry.collection_message
+    if recorded_by_other:
+        display_status = (
+            f"{entry.status} • Recorded by: "
+            f"{entry.today_collector_name or 'another authorized collector'}"
+        )
+        if cross_status is not None:
+            display_status = f"{display_status} • {_cross_status_suffix(cross_status)}"
+            collection_message = _cross_collection_message(entry, cross_status)
+        else:
+            collection_message = (
+                f"Recorded by: {entry.today_collector_name or 'another authorized account'}. "
+                "This receipt is read-only from the assigned Collector route."
+            )
+
+    payload: dict[str, object] = {
         "route_entry_id": str(entry.route_entry_id),
         "client_id": str(entry.client_id),
         "loan_id": str(entry.loan_id),
@@ -51,13 +208,13 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         ),
         "advance_until": entry.advance_until.isoformat() if entry.advance_until else None,
         "covered_dates": [value.isoformat() for value in entry.covered_dates],
-        "status": entry.status,
+        "status": display_status,
         "note": entry.note,
         "route_revision": entry.route_revision,
         "can_collect_mobile": entry.can_collect_mobile,
         "can_enter_payment": entry.can_enter_payment,
         "seven_by_seven_mobile_enabled": seven_by_seven_mobile_enabled,
-        "collection_message": entry.collection_message,
+        "collection_message": collection_message,
         "contract_allocation_enabled": entry.contract_allocation_enabled,
         "contract_schedule_verified": entry.contract_schedule_verified,
         "contract_dpd_status": entry.contract_dpd_status,
@@ -86,22 +243,79 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
             str(entry.today_transaction_id) if entry.today_transaction_id else None
         ),
         "today_is_locked": entry.today_is_locked,
-        "can_edit_today": entry.can_edit_today,
+        "can_edit_today": (
+            entry.can_edit_today
+            if route_owner_user_id is None
+            else (
+                entry.can_edit_today
+                and entry.today_collector_user_id == route_owner_user_id
+            )
+        ),
         "today_amount": str(entry.today_amount),
         "today_note": entry.today_note,
         "today_covered_dates": [
             value.isoformat() for value in entry.today_covered_dates
         ],
+        "renewal_requested": bool(renewal_requests),
+        "renewal_requests": list(renewal_requests),
     }
+    if recorded_by_other:
+        payload.update(
+            {
+                "today_collector_user_id": str(entry.today_collector_user_id),
+                "today_recorded_by_other_user": True,
+                "today_collection_origin": (
+                    cross_status.collection_origin if cross_status else ""
+                ),
+                "today_custody_status": (
+                    cross_status.custody_status if cross_status else ""
+                ),
+                "today_cash_holder_name": (
+                    cross_status.cash_holder_name if cross_status else ""
+                ),
+                "today_remittance_number": (
+                    cross_status.remittance_number if cross_status else ""
+                ),
+                "today_remittance_recipient_name": (
+                    cross_status.remittance_recipient_name if cross_status else ""
+                ),
+            }
+        )
+    if entry.today_receipts:
+        payload["today_receipts"] = [
+            _receipt_payload(receipt) for receipt in entry.today_receipts
+        ]
+    return payload
 
 
-def _route_payload(route: CollectorRouteRecord) -> dict[str, object]:
+def _route_payload(
+    route: CollectorRouteRecord,
+    *,
+    route_owner_user_id: UUID,
+    cross_statuses: dict[UUID, CollectorRouteCrossStatusRecord],
+    renewals_by_client: dict[UUID, tuple[CollectorRouteRenewalBadgeRecord, ...]],
+) -> dict[str, object]:
     return {
         "route_date": route.route_date.isoformat(),
         "collector_name": route.collector_name,
         "areas": list(route.areas),
         "expected_total": str(route.expected_total),
-        "entries": [_entry_payload(entry) for entry in route.entries],
+        "entries": [
+            _entry_payload(
+                entry,
+                route_owner_user_id=route_owner_user_id,
+                cross_status=(
+                    cross_statuses.get(entry.today_transaction_id)
+                    if entry.today_transaction_id
+                    else None
+                ),
+                renewal_requests=tuple(
+                    _renewal_payload(record)
+                    for record in renewals_by_client.get(entry.client_id, ())
+                ),
+            )
+            for entry in route.entries
+        ],
     }
 
 
@@ -121,6 +335,12 @@ def create_collector_route_router() -> APIRouter:
         routes: PostgresCollectorRouteRepository = Depends(
             collector_route_repository_dependency
         ),
+        cross_statuses: PostgresCollectorRouteCrossStatusRepository = Depends(
+            collector_route_cross_status_repository_dependency
+        ),
+        renewals: PostgresCollectorRouteRenewalRepository = Depends(
+            collector_route_renewal_repository_dependency
+        ),
     ) -> dict[str, object]:
         actor = authenticated_device_context(
             authorization=authorization,
@@ -135,6 +355,31 @@ def create_collector_route_router() -> APIRouter:
             collector_name=actor.full_name,
             route_date=datetime.now(PHILIPPINES_TIMEZONE).date(),
         )
-        return {"success": True, "data": _route_payload(route)}
+        transaction_ids = tuple(
+            entry.today_transaction_id
+            for entry in route.entries
+            if entry.today_transaction_id is not None
+            and entry.today_collector_user_id is not None
+            and entry.today_collector_user_id != actor.user_id
+        )
+        status_by_transaction = (
+            cross_statuses.get_for_transactions(transaction_ids=transaction_ids)
+            if transaction_ids
+            else {}
+        )
+        client_ids = tuple(dict.fromkeys(entry.client_id for entry in route.entries))
+        renewals_by_client = renewals.get_for_clients(
+            collector_user_id=actor.user_id,
+            client_ids=client_ids,
+        )
+        return {
+            "success": True,
+            "data": _route_payload(
+                route,
+                route_owner_user_id=actor.user_id,
+                cross_statuses=status_by_transaction,
+                renewals_by_client=renewals_by_client,
+            ),
+        }
 
     return router

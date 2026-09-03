@@ -5,11 +5,12 @@ from spina_mobile_collections.service import CollectionSubmissionService
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
-from .database import connect_database
-from .request_auth import authenticated_device_context
-from .seven_by_seven_collection_posting import (
-    SevenBySevenAwarePerLoanContractCollectionPostingBridge,
+from .concurrent_receipt_collection_posting import (
+    ConcurrentReceiptSafeCollectionPostingBridge,
 )
+from .database import connect_database
+from .past_due_followup_api import create_past_due_followup_router
+from .request_auth import authenticated_device_context
 
 from fastapi import Depends, Header, HTTPException
 from spina_mobile_collections.contracts import ActorContext
@@ -47,13 +48,15 @@ def collection_actor_dependency(
 def collection_service_dependency() -> CollectionSubmissionService:
     executor = PostgresCollectionExecutor(
         connection_factory=connect_database,
-        posting_bridge=SevenBySevenAwarePerLoanContractCollectionPostingBridge(),
+        posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge(),
     )
     return CollectionSubmissionService(executor)
 
 
 def create_collection_api_router():
-    return create_collection_router(
+    router = create_collection_router(
         get_actor=collection_actor_dependency,
         get_service=collection_service_dependency,
     )
+    router.include_router(create_past_due_followup_router())
+    return router

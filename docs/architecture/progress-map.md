@@ -4,6 +4,8 @@
 
 This file is retained only as a historical architecture/progress reference.
 
+**Supersession notice — 2026-08-29:** the statement below that Client, Employee, and Management native mobile expansion was deferred to V1.1+ is historical release-scope context, not the current product architecture. The approved direction now requires functional Management/Employee capability parity across Desktop and mobile through shared FastAPI contracts and server-derived permissions. Release sequencing and completion still remain governed by Issue #296 and separately approved scope; this archived file is not a live tracker.
+
 ## Authoritative roadmap
 
 GitHub Issue **#296 — SPINA V1 Final Master Plan — Release, Legal Go-Live, First Close** is now the **only authoritative V1 roadmap and completion checklist**.
@@ -25,6 +27,8 @@ The final V1 plan in Issue #296 now fixes:
 ## Historical architecture material
 
 The detailed modularization waves, old PR milestones and earlier product status remain available in Git history and the relevant merged PRs/issues. They should be consulted for provenance only, not for current prioritization.
+
+New Client Fund, renewal fund, and smart client capacity are intended future server-authoritative modules. They are not implemented or calculated by the current live Management overview, and this archive does not assign them a release date.
 
 ## Tracking rule
 

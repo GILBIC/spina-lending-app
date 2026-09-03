@@ -15,14 +15,14 @@ def test_unified_ci_keeps_exact_pr_validation_reuse_fail_closed() -> None:
     assert "Run backend and database tests" in WORKFLOW
     assert "Run Flutter tests" in WORKFLOW
     assert (
-        "Dedicated financial slice workflows own required live database verification; "
-        "unified CI does not rerun completed live financial migrations."
+        "Financial/database validation is owned by the separate "
+        "SPINA Financial and Database workflow."
     ) in WORKFLOW
 
 
 def test_completed_financial_live_verifiers_are_not_automatic_main_push_steps() -> None:
-    # The tools remain compilable historical utilities, but unified CI must not invoke
-    # their live migration commands. Dedicated financial workflows own live DB proof.
+    # The tools remain compilable historical utilities, but Core CI must not invoke
+    # their live migration commands. Protected live maintenance stays separately gated.
     for step_name in (
         "Protected opening-balance journal draft verification",
         "Protected opening-balance journal posting verification",

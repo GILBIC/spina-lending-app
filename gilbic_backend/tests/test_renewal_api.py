@@ -116,7 +116,9 @@ class FakeRenewals:
                     loan_type_name="Regular",
                     calculation_mode="fixed_daily",
                     principal=Decimal("5000.00"),
+                    contractual_total=Decimal("6000.00"),
                     remaining_balance=Decimal("4900.00"),
+                    paid_amount=Decimal("100.00"),
                     daily_amount=Decimal("50.00"),
                     date_released=date(2026, 8, 1),
                     due_date=date(2026, 11, 29),
@@ -198,7 +200,7 @@ def test_client_can_view_renewal_portal() -> None:
     data = response.json()["data"]
     assert data["client"]["client_code"] == "TEST-REG-001"
     assert data["loans"][0]["eligible"] is True
-    assert data["loans"][0]["paid_percent"] == "2.0"
+    assert data["loans"][0]["paid_percent"] == "1.7"
     assert data["requests"][0]["status"] == "pending"
     assert renewals.portal_user_id == CLIENT_USER_ID
 

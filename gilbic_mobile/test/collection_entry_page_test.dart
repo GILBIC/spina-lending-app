@@ -35,21 +35,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('200.00'), findsOneWidget);
-    expect(find.text('Covered dates'), findsOneWidget);
+    expect(find.byKey(const Key('protected-allocation-card')), findsOneWidget);
+    expect(find.text('Covered dates'), findsNothing);
+    expect(find.byKey(const Key('add-covered-date')), findsNothing);
 
     final submitButton = find.byKey(const Key('submit-collection-entry'));
     expect(submitButton, findsOneWidget);
     await tester.tap(submitButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
-    await tester.pumpAndSettle();
 
     expect(find.text('Retry same entry'), findsOneWidget);
-    expect(find.textContaining('could not reach'), findsOneWidget);
+    expect(
+      find.text(
+        'Gilbic could not confirm this collection. Check your connection, then use Retry for the same entry.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.drafts, hasLength(1));
 
     await tester.tap(submitButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
 
     expect(find.text('Payment saved.'), findsOneWidget);
@@ -65,7 +69,101 @@ void main() {
     expect(repository.drafts.last.deviceSequence, 1);
   });
 
-  testWidgets('covered-date calendar keeps every selected date circled', (
+  testWidgets('stale detailed entry tells the Collector how to recover', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionEntryPage(
+          session: _session,
+          entry: _regularEntry,
+          repository: const _FailureRepository(
+            SpinaApiException(
+              'Internal route revision conflict.',
+              statusCode: 409,
+              code: 'route_revision_changed',
+            ),
+          ),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          collectionDate: DateTime(2026, 8, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'This route changed after you opened it. Refresh the route, review the client, then try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Internal route revision conflict.'), findsNothing);
+  });
+
+  testWidgets(
+    'regular payment uses simple allocation choice instead of dates',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      final repository = _CaptureRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectionEntryPage(
+            session: _session,
+            entry: _regularEntry,
+            repository: repository,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+            collectionDate: DateTime(2026, 8, 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Covered dates'), findsNothing);
+      expect(find.text('Yesterday'), findsNothing);
+      expect(find.text('Today'), findsNothing);
+      expect(find.text('Tomorrow'), findsNothing);
+      expect(find.text('Open calendar'), findsNothing);
+      expect(find.textContaining('oldest Past Due'), findsOneWidget);
+      expect(
+        find.byKey(const Key('regular-extra-allocation-choice')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('regular-extra-allocation-choice')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Advance').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
+
+      expect(repository.drafts, hasLength(1));
+      expect(
+        repository.drafts.single.paymentAllocationIntent,
+        PaymentAllocationIntent.extraAsAdvance,
+      );
+      expect(repository.drafts.single.entryType, CollectionEntryType.payment);
+      expect(repository.drafts.single.coveredDates, <DateTime>[
+        DateTime(2026, 8, 1),
+      ]);
+    },
+  );
+
+  testWidgets('unable to pay uses approved Past Due reason vocabulary', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
@@ -78,7 +176,7 @@ void main() {
         home: CollectionEntryPage(
           session: _session,
           entry: _regularEntry,
-          repository: _RetryRepository(),
+          repository: _CaptureRepository(),
           deviceIdentityProvider: _deviceIdentityProvider(),
           deviceSequence: MemoryCollectionDeviceSequence(),
           collectionDate: DateTime(2026, 8, 1),
@@ -87,67 +185,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-covered-date')));
+    await tester.tap(find.text('Unable to pay'));
     await tester.pumpAndSettle();
 
-    final dialog = find.byType(AlertDialog);
-    expect(find.text('Choose covered dates'), findsOneWidget);
-    expect(find.byType(CalendarDatePicker), findsNothing);
-    expect(find.byKey(const Key('covered-date-calendar')), findsOneWidget);
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-01')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: dialog,
-        matching: find.textContaining('selected day'),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('calendar-selected-2026-08-01')),
-      findsNothing,
-    );
-
-    await tester.tap(
-      find.byKey(const Key('covered-calendar-day-2026-08-02')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-01')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-02')),
-      findsOneWidget,
-    );
-
-    await tester.tap(
-      find.byKey(const Key('covered-calendar-day-2026-08-03')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-01')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-02')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-03')),
-      findsOneWidget,
-    );
-    expect(find.text('Choose covered dates'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('confirm-covered-dates')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('2026-08-01'), findsOneWidget);
-    expect(find.text('2026-08-02'), findsOneWidget);
-    expect(find.text('2026-08-03'), findsOneWidget);
-    expect(find.text('600.00'), findsOneWidget);
+    expect(find.text('Past Due reason'), findsOneWidget);
+    expect(find.text('No cash'), findsOneWidget);
+    expect(find.text('Client absent'), findsOneWidget);
+    expect(find.text('Business slow'), findsOneWidget);
+    expect(find.text('Sick/Hospital'), findsOneWidget);
+    expect(find.text('Emergency'), findsOneWidget);
+    expect(find.text('Promised to pay later'), findsOneWidget);
+    expect(find.text('Other'), findsOneWidget);
+    expect(find.text('Not home'), findsNothing);
+    expect(find.text('Will pay double tomorrow'), findsNothing);
   });
 
   testWidgets('7x7 collection stays disabled without explicit server gate', (
@@ -185,60 +235,69 @@ void main() {
     expect(find.byKey(const Key('submit-collection-entry')), findsNothing);
   });
 
-  testWidgets('explicit server-enabled 7x7 can submit through the Android form', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1400));
-    addTearDown(() async {
-      await tester.binding.setSurfaceSize(null);
-    });
+  testWidgets(
+    'explicit server-enabled 7x7 can submit through the Android form',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
 
-    final repository = _RetryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CollectionEntryPage(
-          session: _session,
-          entry: const CollectorRouteEntry(
-            id: 'entry-7x7-enabled',
-            clientId: 'client-7x7-enabled',
-            loanId: 'loan-7x7-enabled',
-            clientName: 'Enabled Seven Client',
-            area: 'Cardona',
-            loanType: '7x7',
-            dailyAmount: 35,
-            balance: 5000,
-            status: 'Pending',
-            passCount: 0,
-            routeRevision: 'loan:loan-7x7-enabled:v0',
-            canCollectMobile: true,
-            canEnterPayment: true,
-            sevenBySevenMobileEnabled: true,
+      final repository = _RetryRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectionEntryPage(
+            session: _session,
+            entry: const CollectorRouteEntry(
+              id: 'entry-7x7-enabled',
+              clientId: 'client-7x7-enabled',
+              loanId: 'loan-7x7-enabled',
+              clientName: 'Enabled Seven Client',
+              area: 'Cardona',
+              loanType: '7x7',
+              dailyAmount: 35,
+              balance: 5000,
+              status: 'Pending',
+              passCount: 0,
+              routeRevision: 'loan:loan-7x7-enabled:v0',
+              canCollectMobile: true,
+              canEnterPayment: true,
+              sevenBySevenMobileEnabled: true,
+            ),
+            repository: repository,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+            collectionDate: DateTime(2026, 8, 1),
           ),
-          repository: repository,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          deviceSequence: MemoryCollectionDeviceSequence(),
-          collectionDate: DateTime(2026, 8, 1),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('7x7 mobile collection is disabled'), findsNothing);
-    expect(find.byKey(const Key('collection-amount')), findsOneWidget);
-    expect(find.byKey(const Key('submit-collection-entry')), findsOneWidget);
+      expect(
+        find.textContaining('7x7 mobile collection is disabled'),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('collection-amount')), findsOneWidget);
+      expect(find.byKey(const Key('submit-collection-entry')), findsOneWidget);
+      expect(
+        find.byKey(const Key('regular-extra-allocation-choice')),
+        findsNothing,
+      );
 
-    await tester.tap(find.byKey(const Key('submit-collection-entry')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
 
-    expect(repository.drafts, hasLength(1));
-    expect(repository.drafts.single.entryType, CollectionEntryType.payment);
-    expect(repository.drafts.single.amount, 35);
-    expect(repository.drafts.single.coveredDates, hasLength(1));
-    expect(repository.drafts.single.routeRevision, 'loan:loan-7x7-enabled:v0');
-    expect(find.text('Retry same entry'), findsOneWidget);
-  });
+      expect(repository.drafts, hasLength(1));
+      expect(repository.drafts.single.entryType, CollectionEntryType.payment);
+      expect(repository.drafts.single.amount, 35);
+      expect(repository.drafts.single.coveredDates, hasLength(1));
+      expect(
+        repository.drafts.single.routeRevision,
+        'loan:loan-7x7-enabled:v0',
+      );
+      expect(find.text('Retry same entry'), findsOneWidget);
+    },
+  );
 }
 
 const UserSession _session = UserSession(
@@ -296,5 +355,38 @@ class _RetryRepository implements PaymentSubmissionRepository {
       receiptNumber: 'R-1001',
       officialBalance: 4600,
     );
+  }
+}
+
+class _CaptureRepository implements PaymentSubmissionRepository {
+  final List<PaymentSubmissionDraft> drafts = <PaymentSubmissionDraft>[];
+
+  @override
+  Future<PaymentSubmissionResult> submit(
+    UserSession session,
+    PaymentSubmissionDraft draft,
+  ) async {
+    drafts.add(draft);
+    return PaymentSubmissionResult(
+      disposition: PaymentSubmissionDisposition.accepted,
+      idempotencyKey: draft.idempotencyKey,
+      message: 'Payment saved',
+      receiptNumber: 'R-2001',
+      officialBalance: 4600,
+    );
+  }
+}
+
+class _FailureRepository implements PaymentSubmissionRepository {
+  const _FailureRepository(this.error);
+
+  final SpinaApiException error;
+
+  @override
+  Future<PaymentSubmissionResult> submit(
+    UserSession session,
+    PaymentSubmissionDraft draft,
+  ) {
+    throw error;
   }
 }

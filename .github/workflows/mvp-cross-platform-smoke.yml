@@ -1,0 +1,186 @@
+name: SPINA Web, PC & Android Delivery
+
+on:
+  push:
+    branches:
+      - mvp/cross-platform-four-role
+  pull_request:
+    paths:
+      - "api/**"
+      - "spina_portal/**"
+      - "spina_pc/**"
+      - "gilbic_mobile/**"
+      - "gilbic_backend/sql/0109_mvp_private_schema_barrier.sql"
+      - "gilbic_backend/tests/test_mvp_private_schema_barrier.py"
+      - "tools/run_mvp_private_schema_barrier_validation.py"
+      - "tools/build_portal.mjs"
+      - "tools/check_portal_modules.mjs"
+      - "tests/test_vercel_entrypoint.py"
+      - "tests/test_platform_bootstrap_contract.py"
+      - "requirements.txt"
+      - "vercel.json"
+      - "package.json"
+      - ".github/workflows/mvp-cross-platform-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
+            requirements.txt
+      - name: Install backend packages
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install -e ./spina_backend_mobile -e './gilbic_backend[test]'
+      - name: Run API and platform contracts
+        env:
+          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
+        run: >-
+          python -m pytest -q
+          tests/test_vercel_entrypoint.py
+          tests/test_platform_bootstrap_contract.py
+          gilbic_backend/tests/test_mvp_private_schema_barrier.py
+
+  portal-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check and test portal modules
+        run: npm test
+      - name: Build deployable Web application
+        run: npm run build
+      - name: Verify static output boundary
+        shell: bash
+        run: |
+          test -f dist/index.html
+          test -f dist/assets/app.js
+          test -f dist/manifest.webmanifest
+          test ! -d dist/tests
+          if grep -R -E "GILBIC_(DATABASE_URL|SUPABASE_SECRET_KEY)|service_role|postgresql://" dist; then
+            echo "Public portal output contains a forbidden backend secret pattern."
+            exit 1
+          fi
+
+  android-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install Flutter 3.44.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          FLUTTER_ROOT="$RUNNER_TEMP/flutter-3.44.7"
+          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "$FLUTTER_ROOT"
+          echo "$FLUTTER_ROOT/bin" >> "$GITHUB_PATH"
+      - name: Validate Spina Flutter source
+        working-directory: gilbic_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze --fatal-infos
+          flutter test
+      - name: Build Android install package
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="$RUNNER_TEMP/spina-android-host"
+          OUT="$GITHUB_WORKSPACE/gilbic_mobile/build/app/outputs/flutter-apk"
+          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile "$HOST"
+          rm -rf "$HOST/lib"
+          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"
+          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$HOST/pubspec.yaml"
+          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$HOST/android/gradle.properties"
+          cd "$HOST"
+          flutter pub get
+          flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub
+          mkdir -p "$OUT"
+          cp build/app/outputs/flutter-apk/app-debug.apk "$OUT/Spina-Android-internal.apk"
+      - name: Verify Android package
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import zipfile
+
+          path = pathlib.Path('gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk')
+          assert path.is_file() and path.stat().st_size > 0
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+          assert 'lib/arm64-v8a/libflutter.so' in names
+          assert 'lib/x86_64/libflutter.so' in names
+          print(f'APK bytes: {path.stat().st_size}')
+          print(f'SHA-256: {hashlib.sha256(path.read_bytes()).hexdigest()}')
+          PY
+      - name: Upload Android install package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spina-Android-internal-${{ github.event.pull_request.head.sha || github.sha }}
+          path: gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  private-schema-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: spina_mvp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install PostgreSQL validator dependency
+        run: python -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4"
+      - name: Prove current and future private-schema denial
+        env:
+          SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
+          GILBIC_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/spina_mvp_test
+        run: python tools/run_mvp_private_schema_barrier_validation.py

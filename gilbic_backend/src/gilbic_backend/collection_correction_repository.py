@@ -9,6 +9,10 @@ from uuid import UUID, uuid4
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from .collection_correction_authority import (
+    collector_may_correct_unremitted,
+    correction_revision_is_current,
+)
 from .database import open_connection
 
 
@@ -68,6 +72,7 @@ class PostgresCollectionCorrectionRepository:
         covered_dates: tuple[date, ...],
         note: str,
         reason: str,
+        expected_route_revision: str,
     ) -> CollectionCorrectionRecord:
         normalized_type = entry_type.strip().lower()
         if normalized_type not in {"payment", "advance", "pass"}:
@@ -108,13 +113,30 @@ class PostgresCollectionCorrectionRepository:
                         raise CollectionCorrectionNotFound(
                             "The collection entry was not found."
                         )
-                    if transaction["collector_user_id"] != actor_user_id:
+                    if not collector_may_correct_unremitted(
+                        actor_user_id=actor_user_id,
+                        recorder_user_id=transaction["collector_user_id"],
+                        assigned_collector_user_id=transaction.get(
+                            "assigned_collector_user_id"
+                        ),
+                        collection_origin=str(
+                            transaction.get("collection_origin") or ""
+                        ),
+                    ):
                         raise CollectionCorrectionForbidden(
-                            "Only the collector who recorded this entry may correct it."
+                            "Only the original collector or assigned collector may correct this unlocked cross-area entry."
                         )
                     if transaction["is_locked"] or transaction["remittance_id"] is not None:
                         raise CollectionCorrectionLocked(
                             "This entry is already included in a remittance and cannot be edited."
+                        )
+                    if not correction_revision_is_current(
+                        expected_route_revision=expected_route_revision,
+                        loan_id=transaction["loan_id"],
+                        state_version=int(transaction["state_version"]),
+                    ):
+                        raise CollectionCorrectionConflict(
+                            "This collection changed after you opened it. Refresh before correcting it."
                         )
 
                     details = (
@@ -240,15 +262,11 @@ class PostgresCollectionCorrectionRepository:
                             """,
                             (transaction_id, transaction["loan_id"], covered_date),
                         )
-                    cursor.execute(
-                        """
-                        select max(covered_date) as latest_covered_date
-                        from lending.collection_covered_dates
-                        where loan_id = %s
-                        """,
-                        (transaction["loan_id"],),
+                    advance_until_after = self._corrected_advance_until_after(
+                        entry_type=normalized_type,
+                        advance_until_before=before_state["advance_until_before"],
+                        selected_dates=selected_dates,
                     )
-                    advance_until_after = cursor.fetchone()["latest_covered_date"]
 
                     edited_at = datetime.now(timezone.utc)
                     edit_version = int(transaction["edit_version"]) + 1
@@ -430,6 +448,23 @@ class PostgresCollectionCorrectionRepository:
             route_revision=route_revision,
             edited_at=edited_at,
         )
+
+    @staticmethod
+    def _corrected_advance_until_after(
+        *,
+        entry_type: str,
+        advance_until_before: date | None,
+        selected_dates: tuple[date, ...],
+    ) -> date | None:
+        # advance_until represents ADV coverage only. A PASS or normal payment
+        # correction must preserve the previous ADV state even when ordinary
+        # payment covered dates exist later on the same loan.
+        if entry_type != "advance":
+            return advance_until_before
+        latest_selected = selected_dates[-1]
+        if advance_until_before is None:
+            return latest_selected
+        return max(advance_until_before, latest_selected)
 
     @staticmethod
     def _money(value: Decimal | int | str) -> Decimal:

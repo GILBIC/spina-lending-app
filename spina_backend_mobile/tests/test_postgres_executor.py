@@ -17,6 +17,11 @@ from spina_mobile_collections.postgres import PostgresCollectionExecutor
 from spina_mobile_collections.service import CollectionRejected
 
 KEY = UUID("6cb93829-dccd-4d43-a25c-a1f31859cc1b")
+EXTRA_PRINCIPAL_RESULT = {
+    "extra_principal_adjustment_id": "69f168bf-9998-4d30-8134-43995332b3ba",
+    "principal_reduction": "1000.00",
+    "refund_due": "200.00",
+}
 
 
 class FakeCursor:
@@ -188,6 +193,104 @@ def test_replays_existing_result_without_calling_bridge() -> None:
     assert outcome.posted.receipt_number == "OR-00009001"
     assert bridge.calls == 0
     assert connection.committed is True
+
+
+def test_replays_exact_protected_result_metadata_without_calling_bridge() -> None:
+    connection = FakeConnection(
+        {
+            "collector_account_id": "collector-7",
+            "registered_device_id": "collector-phone-15",
+            "canonical_request_hash": "a" * 64,
+            "server_transaction_id": "collection-9001",
+            "receipt_number": "OR-00009001",
+            "official_balance": Decimal("4600.00"),
+            "accepted_at": datetime(2026, 7, 31, 5, 16, tzinfo=timezone.utc),
+            "route_revision": "route-v4",
+            "result_payload": {
+                "status": "accepted",
+                "duplicate": False,
+                "client_transaction_id": str(KEY),
+                "transaction_id": "collection-9001",
+                "receipt_number": "OR-00009001",
+                "official_balance": "4600.00",
+                "accepted_at": "2026-07-31T05:16:00.000000Z",
+                "route_revision": "route-v4",
+                "message": "Payment saved.",
+                "result": EXTRA_PRINCIPAL_RESULT,
+            },
+        }
+    )
+    bridge = AcceptingBridge()
+    executor = PostgresCollectionExecutor(
+        connection_factory=lambda: connection,
+        posting_bridge=bridge,
+    )
+
+    outcome = executor.execute(
+        actor=actor(),
+        command=command(),
+        canonical_payload=command().canonical_payload(),
+        request_hash="a" * 64,
+    )
+
+    assert outcome.status is CollectionStatus.DUPLICATE
+    assert outcome.response_payload()["result"] == EXTRA_PRINCIPAL_RESULT
+    assert bridge.calls == 0
+
+
+def test_accepted_response_includes_protected_result_metadata() -> None:
+    posted = PostedCollection(
+        server_transaction_id="collection-9001",
+        receipt_number="OR-00009001",
+        official_balance=Decimal("4600.00"),
+        accepted_at=datetime(2026, 7, 31, 5, 16, tzinfo=timezone.utc),
+        route_revision="route-v4",
+        result_metadata=EXTRA_PRINCIPAL_RESULT,
+    )
+
+    payload = posted.response_payload(idempotency_key=KEY, duplicate=False)
+
+    assert payload["result"] == EXTRA_PRINCIPAL_RESULT
+
+
+def test_rejects_stored_result_metadata_when_receipt_identity_does_not_match() -> None:
+    connection = FakeConnection(
+        {
+            "collector_account_id": "collector-7",
+            "registered_device_id": "collector-phone-15",
+            "canonical_request_hash": "a" * 64,
+            "server_transaction_id": "collection-9001",
+            "receipt_number": "OR-00009001",
+            "official_balance": Decimal("4600.00"),
+            "accepted_at": datetime(2026, 7, 31, 5, 16, tzinfo=timezone.utc),
+            "route_revision": "route-v4",
+            "result_payload": {
+                "client_transaction_id": str(KEY),
+                "transaction_id": "collection-tampered",
+                "receipt_number": "OR-00009001",
+                "official_balance": "4600.00",
+                "accepted_at": "2026-07-31T05:16:00.000000Z",
+                "route_revision": "route-v4",
+                "result": EXTRA_PRINCIPAL_RESULT,
+            },
+        }
+    )
+    bridge = AcceptingBridge()
+    executor = PostgresCollectionExecutor(
+        connection_factory=lambda: connection,
+        posting_bridge=bridge,
+    )
+
+    outcome = executor.execute(
+        actor=actor(),
+        command=command(),
+        canonical_payload=command().canonical_payload(),
+        request_hash="a" * 64,
+    )
+
+    assert outcome.status is CollectionStatus.CONFLICT
+    assert outcome.code == "idempotency_result_mismatch"
+    assert bridge.calls == 0
 
 
 def test_changed_request_hash_returns_conflict_without_posting() -> None:

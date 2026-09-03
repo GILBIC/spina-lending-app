@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook.dart';
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementOpeningBalanceWorkbookPage extends StatefulWidget {
   const ManagementOpeningBalanceWorkbookPage({
@@ -33,8 +34,7 @@ class _ManagementOpeningBalanceWorkbookPageState
   @override
   void initState() {
     super.initState();
-    _repository =
-        widget.repository ?? SpinaOpeningBalanceWorkbookRepository();
+    _repository = widget.repository ?? SpinaOpeningBalanceWorkbookRepository();
     _load();
   }
 
@@ -81,6 +81,36 @@ class _ManagementOpeningBalanceWorkbookPageState
     if (selected == null || !mounted) {
       return;
     }
+    final workbook = _workbook;
+    if (workbook == null) {
+      return;
+    }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.openingWorkbook,
+        recordLabel: 'Opening balance workbook',
+        recordValue: 'Cutover date ${_date(selected)}',
+        statusLabel: 'Not initialized; source references are read-only',
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Workbook lines',
+            value: '${workbook.summary.lineCount}',
+          ),
+          ManagementReviewFact(
+            label: 'Source references',
+            value: '${workbook.summary.sourceReferenceCount}',
+          ),
+        ],
+        nextActionLabel: 'Initialize opening workbook',
+        consequence:
+            'The workbook will snapshot approved source references for the selected '
+            'cutover date. It will not create or post a journal.',
+      ),
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
     await _runAction(
       () async {
         final identity = await widget.deviceIdentityProvider.load();
@@ -90,7 +120,8 @@ class _ManagementOpeningBalanceWorkbookPageState
           cutoverDate: selected,
         );
       },
-      successMessage: 'Opening-balance workbook initialized for ${_date(selected)}.',
+      successMessage:
+          'Opening-balance workbook initialized for ${_date(selected)}.',
     );
   }
 
@@ -103,22 +134,67 @@ class _ManagementOpeningBalanceWorkbookPageState
     if (draft == null || workbookId == null || !mounted) {
       return;
     }
-    await _runAction(
-      () async {
-        final identity = await widget.deviceIdentityProvider.load();
-        return _repository.updateLine(
-          widget.session,
-          deviceId: identity.installationId,
-          workbookId: workbookId,
-          accountCode: line.accountCode,
-          debit: draft.debit,
-          credit: draft.credit,
-          verificationStatus: draft.verificationStatus,
-          evidenceNote: draft.evidenceNote,
-        );
-      },
-      successMessage: '${line.accountCode} ${line.accountName} saved.',
+    final amount = draft.debit != null
+        ? 'Debit ${_money(draft.debit!)}'
+        : draft.credit != null
+        ? 'Credit ${_money(draft.credit!)}'
+        : 'Explicit zero or blank amount';
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.openingWorkbook,
+        recordLabel: 'Opening workbook line',
+        recordValue: '${line.accountCode} • ${line.accountName}',
+        statusLabel: plainManagementStatus(
+          line.verificationStatus,
+          const <String, String>{
+            'pending': 'Pending evidence verification',
+            'verified': 'Verified from recorded evidence',
+          },
+        ),
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Source reference',
+            value: line.sourceReferenceAmount == null
+                ? 'Not provided'
+                : _money(line.sourceReferenceAmount!),
+          ),
+          ManagementReviewFact(label: 'Proposed amount', value: amount),
+          ManagementReviewFact(
+            label: 'Next verification status',
+            value: _statusLabel(draft.verificationStatus),
+          ),
+          if (draft.evidenceNote?.trim().isNotEmpty == true)
+            ManagementReviewFact(
+              label: 'Evidence note',
+              value: draft.evidenceNote!,
+            ),
+        ],
+        nextActionLabel: 'Save opening workbook line',
+        consequence:
+            'The workbook line and its evidence status will be saved. No opening '
+            'balance or General Ledger entry will be posted.',
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Workbook ID', value: workbookId),
+        ],
+      ),
     );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    await _runAction(() async {
+      final identity = await widget.deviceIdentityProvider.load();
+      return _repository.updateLine(
+        widget.session,
+        deviceId: identity.installationId,
+        workbookId: workbookId,
+        accountCode: line.accountCode,
+        debit: draft.debit,
+        credit: draft.credit,
+        verificationStatus: draft.verificationStatus,
+        evidenceNote: draft.evidenceNote,
+      );
+    }, successMessage: '${line.accountCode} ${line.accountName} saved.');
   }
 
   Future<void> _editPolicy() async {
@@ -137,19 +213,45 @@ class _ManagementOpeningBalanceWorkbookPageState
     if (draft == null || !mounted) {
       return;
     }
-    await _runAction(
-      () async {
-        final identity = await widget.deviceIdentityProvider.load();
-        return _repository.updatePolicy(
-          widget.session,
-          deviceId: identity.installationId,
-          workbookId: workbookId,
-          confirmed: draft.confirmed,
-          policyNote: draft.note,
-        );
-      },
-      successMessage: 'Cutover P&L migration policy saved.',
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.openingWorkbook,
+        recordLabel: 'Opening workbook policy',
+        recordValue: 'Profit and loss migration policy',
+        statusLabel: workbook.summary.profitLossPolicyConfirmed
+            ? 'Policy is confirmed'
+            : 'Policy is pending approval evidence',
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Next confirmation state',
+            value: draft.confirmed ? 'Confirmed' : 'Not confirmed',
+          ),
+          if (draft.note?.trim().isNotEmpty == true)
+            ManagementReviewFact(label: 'Policy note', value: draft.note!),
+        ],
+        nextActionLabel: 'Save opening workbook policy',
+        consequence:
+            'The workbook policy evidence will be saved. No opening balance or '
+            'General Ledger entry will be posted.',
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Workbook ID', value: workbookId),
+        ],
+      ),
     );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    await _runAction(() async {
+      final identity = await widget.deviceIdentityProvider.load();
+      return _repository.updatePolicy(
+        widget.session,
+        deviceId: identity.installationId,
+        workbookId: workbookId,
+        confirmed: draft.confirmed,
+        policyNote: draft.note,
+      );
+    }, successMessage: 'Cutover P&L migration policy saved.');
   }
 
   Future<void> _changeStatus(String targetStatus) async {
@@ -158,31 +260,46 @@ class _ManagementOpeningBalanceWorkbookPageState
     if (workbook == null || workbookId == null) {
       return;
     }
-    if (targetStatus == 'review_ready') {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Mark workbook review ready?'),
-          content: const Text(
-            'The workbook will become read-only until Management reopens it to Draft. '
-            'This does not create or post an opening journal.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const Key('confirm-opening-workbook-review-ready'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Mark review ready'),
-            ),
-          ],
+    final targetLabel = targetStatus == 'review_ready'
+        ? 'Review Ready'
+        : 'Draft';
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        binding: ManagementMutationBinding.openingWorkbook,
+        recordLabel: 'Opening balance workbook',
+        recordValue: '${_date(workbook.summary.cutoverDate!)} • $workbookId',
+        statusLabel: plainManagementStatus(
+          workbook.summary.status,
+          const <String, String>{
+            'draft': 'Draft and editable under Management controls',
+            'review_ready': 'Review Ready and read-only',
+          },
         ),
-      );
-      if (confirmed != true || !mounted) {
-        return;
-      }
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Verified lines',
+            value: '${workbook.summary.verifiedLineCount}',
+          ),
+          ManagementReviewFact(
+            label: 'Pending lines',
+            value: '${workbook.summary.pendingLineCount}',
+          ),
+          ManagementReviewFact(label: 'Next status', value: targetLabel),
+        ],
+        nextActionLabel: 'Change workbook to $targetLabel',
+        consequence: targetStatus == 'review_ready'
+            ? 'Only the workbook workflow state will change to Review Ready. '
+                  'Journal preparation and posting remain separate protected actions.'
+            : 'Only the workbook workflow state will return to Draft. No journal '
+                  'will be prepared or posted.',
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Workbook ID', value: workbookId),
+        ],
+      ),
+    );
+    if (!confirmed || !mounted) {
+      return;
     }
     await _runAction(
       () async {
@@ -215,20 +332,22 @@ class _ManagementOpeningBalanceWorkbookPageState
           _workbook = workbook;
           _errorMessage = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(successMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(successMessage)));
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Opening-balance workbook action failed.')),
+          const SnackBar(
+            content: Text('Opening-balance workbook action failed.'),
+          ),
         );
       }
     } finally {
@@ -319,10 +438,15 @@ class _ManagementOpeningBalanceWorkbookPageState
             ),
           ],
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Text('Balance-sheet lines', style: Theme.of(context).textTheme.titleMedium),
-              const Spacer(),
+              Text(
+                'Balance-sheet lines',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               Text('${workbook.lines.length} accounts'),
             ],
           ),
@@ -409,7 +533,10 @@ class _InitializeWorkbookCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Workbook not initialized', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Workbook not initialized',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             Text(
               '$lineCount balance-sheet lines are available, with $sourceReferenceCount source references. Initializing snapshots these references at the selected cutover date; it does not post to the General Ledger.',
@@ -460,15 +587,36 @@ class _WorkbookSummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             _DetailRow(
               label: 'Cutover date',
-              value: summary.cutoverDate == null ? 'Not set' : _date(summary.cutoverDate!),
+              value: summary.cutoverDate == null
+                  ? 'Not set'
+                  : _date(summary.cutoverDate!),
             ),
-            _DetailRow(label: 'Verified / pending', value: '${summary.verifiedLineCount} / ${summary.pendingLineCount}'),
+            _DetailRow(
+              label: 'Verified / pending',
+              value:
+                  '${summary.verifiedLineCount} / ${summary.pendingLineCount}',
+            ),
             _DetailRow(label: 'Debit total', value: _money(summary.totalDebit)),
-            _DetailRow(label: 'Credit total', value: _money(summary.totalCredit)),
-            _DetailRow(label: 'Variance', value: _money(summary.balanceVariance)),
-            _DetailRow(label: 'Balanced', value: summary.worksheetBalanced ? 'Yes' : 'No'),
-            _DetailRow(label: 'Ready for review', value: summary.readyForReview ? 'Yes' : 'No'),
-            _DetailRow(label: 'Ready to post', value: summary.readyToPost ? 'Yes' : 'No'),
+            _DetailRow(
+              label: 'Credit total',
+              value: _money(summary.totalCredit),
+            ),
+            _DetailRow(
+              label: 'Variance',
+              value: _money(summary.balanceVariance),
+            ),
+            _DetailRow(
+              label: 'Balanced',
+              value: summary.worksheetBalanced ? 'Yes' : 'No',
+            ),
+            _DetailRow(
+              label: 'Ready for review',
+              value: summary.readyForReview ? 'Yes' : 'No',
+            ),
+            _DetailRow(
+              label: 'Ready to post',
+              value: summary.readyToPost ? 'Yes' : 'No',
+            ),
           ],
         ),
       ),
@@ -505,7 +653,9 @@ class _CutoverPolicyCard extends StatelessWidget {
                   ),
                 ),
                 Chip(
-                  label: Text(summary.profitLossPolicyConfirmed ? 'Confirmed' : 'Pending'),
+                  label: Text(
+                    summary.profitLossPolicyConfirmed ? 'Confirmed' : 'Pending',
+                  ),
                 ),
               ],
             ),
@@ -546,8 +696,8 @@ class _WorkbookLineCard extends StatelessWidget {
     final proposed = line.proposedDebit != null
         ? 'Dr ${_money(line.proposedDebit!)}'
         : line.proposedCredit != null
-            ? 'Cr ${_money(line.proposedCredit!)}'
-            : 'Not entered';
+        ? 'Cr ${_money(line.proposedCredit!)}'
+        : 'Not entered';
     return Card(
       key: Key('opening-workbook-line-${line.accountCode}'),
       child: Padding(
@@ -581,7 +731,10 @@ class _WorkbookLineCard extends StatelessWidget {
                   ? 'Not set'
                   : _money(line.sourceReferenceAmount!),
             ),
-            _DetailRow(label: 'Requirement', value: _statusLabel(line.requirementType)),
+            _DetailRow(
+              label: 'Requirement',
+              value: _statusLabel(line.requirementType),
+            ),
             _DetailRow(label: 'Opening amount', value: proposed),
             if (line.evidenceNote != null)
               _DetailRow(label: 'Evidence note', value: line.evidenceNote!),
@@ -630,7 +783,9 @@ class _EditOpeningBalanceLineDialogState
     _creditController = TextEditingController(
       text: widget.line.proposedCredit?.toStringAsFixed(2) ?? '',
     );
-    _noteController = TextEditingController(text: widget.line.evidenceNote ?? '');
+    _noteController = TextEditingController(
+      text: widget.line.evidenceNote ?? '',
+    );
     _verificationStatus = widget.line.verificationStatus;
   }
 
@@ -665,7 +820,10 @@ class _EditOpeningBalanceLineDialogState
     }
     final note = _noteController.text.trim();
     if (_verificationStatus == 'verified' && debit == null && credit == null) {
-      setState(() => _error = 'Verified lines require an explicit amount, including zero.');
+      setState(
+        () => _error =
+            'Verified lines require an explicit amount, including zero.',
+      );
       return;
     }
     if (_verificationStatus == 'verified' && note.length < 3) {
@@ -700,21 +858,27 @@ class _EditOpeningBalanceLineDialogState
             TextField(
               key: const Key('opening-line-debit'),
               controller: _debitController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(labelText: 'Debit'),
             ),
             const SizedBox(height: 8),
             TextField(
               key: const Key('opening-line-credit'),
               controller: _creditController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(labelText: 'Credit'),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               key: const Key('opening-line-verification-status'),
               initialValue: _verificationStatus,
-              decoration: const InputDecoration(labelText: 'Verification status'),
+              decoration: const InputDecoration(
+                labelText: 'Verification status',
+              ),
               items: const [
                 DropdownMenuItem(value: 'pending', child: Text('Pending')),
                 DropdownMenuItem(value: 'verified', child: Text('Verified')),
@@ -760,10 +924,7 @@ class _EditOpeningBalanceLineDialogState
 }
 
 class _EditCutoverPolicyDialog extends StatefulWidget {
-  const _EditCutoverPolicyDialog({
-    required this.confirmed,
-    required this.note,
-  });
+  const _EditCutoverPolicyDialog({required this.confirmed, required this.note});
 
   final bool confirmed;
   final String? note;
@@ -798,10 +959,7 @@ class _EditCutoverPolicyDialogState extends State<_EditCutoverPolicyDialog> {
       return;
     }
     Navigator.of(context).pop(
-      _PolicyEditDraft(
-        confirmed: _confirmed,
-        note: note.isEmpty ? null : note,
-      ),
+      _PolicyEditDraft(confirmed: _confirmed, note: note.isEmpty ? null : note),
     );
   }
 
@@ -817,11 +975,12 @@ class _EditCutoverPolicyDialogState extends State<_EditCutoverPolicyDialog> {
               key: const Key('opening-policy-note'),
               controller: _controller,
               maxLength: 1000,
-              minLines: 3,
-              maxLines: 6,
+              minLines: 2,
+              maxLines: 4,
               decoration: const InputDecoration(
                 labelText: 'Approved conversion policy note',
-                hintText: 'Record the approved treatment; do not guess a policy.',
+                hintText:
+                    'Record the approved treatment; do not guess a policy.',
               ),
             ),
             SwitchListTile(
@@ -830,7 +989,9 @@ class _EditCutoverPolicyDialogState extends State<_EditCutoverPolicyDialog> {
               value: _confirmed,
               onChanged: (value) => setState(() => _confirmed = value),
               title: const Text('Policy confirmed'),
-              subtitle: const Text('Only confirm after the conversion treatment is approved.'),
+              subtitle: const Text(
+                'Only confirm after the conversion treatment is approved.',
+              ),
             ),
             if (_error != null)
               Text(
@@ -870,10 +1031,7 @@ class _LineEditDraft {
 }
 
 class _PolicyEditDraft {
-  const _PolicyEditDraft({
-    required this.confirmed,
-    required this.note,
-  });
+  const _PolicyEditDraft({required this.confirmed, required this.note});
 
   final bool confirmed;
   final String? note;
@@ -894,12 +1052,7 @@ class _DetailRow extends StatelessWidget {
         children: [
           Expanded(child: Text(label)),
           const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-            ),
-          ),
+          Flexible(child: Text(value, textAlign: TextAlign.end)),
         ],
       ),
     );
@@ -941,11 +1094,12 @@ String _statusLabel(String value) {
     'reconciliation_required' => 'Reconciliation',
     'calculation_required' => 'Accounting calculation',
     'assessment_required' => 'Assessment',
-    _ => value
-        .split('_')
-        .where((part) => part.isNotEmpty)
-        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' '),
+    _ =>
+      value
+          .split('_')
+          .where((part) => part.isNotEmpty)
+          .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+          .join(' '),
   };
 }
 

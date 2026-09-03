@@ -35,6 +35,7 @@ class ContractSafeCollectionCorrectionRepository(
         covered_dates: tuple[date, ...],
         note: str,
         reason: str,
+        expected_route_revision: str,
     ) -> CollectionCorrectionRecord:
         if self._is_contract_controlled(transaction_id=transaction_id):
             raise CollectionCorrectionInvalid(
@@ -50,6 +51,7 @@ class ContractSafeCollectionCorrectionRepository(
             covered_dates=covered_dates,
             note=note,
             reason=reason,
+            expected_route_revision=expected_route_revision,
         )
 
     @staticmethod

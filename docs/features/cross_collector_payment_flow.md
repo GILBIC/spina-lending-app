@@ -1,8 +1,10 @@
-# Cross-collector payment and notification flow
+# Cross-route Collector payment, custody and notification flow
 
 ## Purpose
 
-Make covered-date entry faster and let an authorized collector receive a payment from a client outside that collector's assigned area without losing assignment ownership, accountability, or audit history.
+Allow any authorized Collector to receive and post a protected payment for an active client outside that Collector's permanent route while preserving route ownership, recorder identity, cash accountability, custody history, receipts, corrections and audit evidence.
+
+A convenience grant from the assigned Collector may surface clients/areas in **Other-Area Work**, but it is not required to search or post a cross-route payment.
 
 ## Covered-date calendar
 
@@ -11,99 +13,189 @@ Make covered-date entry faster and let an authorized collector receive a payment
 - Multiple non-contiguous dates may be selected in the same dialog.
 - Already-covered dates are visible and disabled.
 - The selected-date count and suggested amount update immediately.
-- Saving still sends the exact selected dates; dates between selections are not automatically covered.
+- Saving sends the exact selected dates; dates between selections are not automatically covered.
+- One receipt may cover several scheduled dates, but it remains one physical cash receipt and must be remitted only once.
 
 ## Assignment ownership
 
-- Every active area has an assigned collector.
-- The assigned collector remains the route owner for clients in that area.
-- The assigned collector may correct eligible unlocked entries for that route.
-- Another collector may post a payment only through the explicit **Other-area payment** flow.
-- The posting collector is always retained as the original recorder in the immutable audit history.
-- Cross-area posting never silently changes the client's assigned area or assigned collector.
+- Every assigned area keeps its permanent assigned Collector.
+- Another Collector may search and post an eligible cross-route payment through **Other Area Payment** without first receiving a delegated grant.
+- A convenience grant only places selected clients/areas directly in **Other-Area Work**.
+- Cross-route posting never silently changes the client's assigned area or assigned Collector.
+- The posting Collector is permanently retained as the original recorder.
+- The permanent assigned Collector's Daily Route must reflect the official transaction after refresh with recorder attribution so a duplicate client visit is not encouraged.
 
-## Cross-collector payment posting
+## Minimum cross-route client visibility
 
-When another collector receives the client's payment:
+A visiting Collector may see only information needed to identify the client, verify the active loan and safely perform the current collection. Cross-route collection access does not automatically expose unrestricted historical/profile information.
 
-1. The collector searches for the client outside the daily assigned route.
-2. The app clearly labels the client as belonging to another collector/area.
-3. The collector records the amount and exact covered dates.
-4. The server stores both:
-   - `recorded_by_user_id`: the collector who physically received and posted the payment;
-   - `assigned_collector_user_id`: the collector who owns the client's area at posting time.
-5. The assigned collector receives a notification containing client, amount, covered dates, receipt number, and recorder name.
-6. The client receives a payment-posted notification containing amount, covered dates, receipt number, and recorder name.
+Expanded sensitive access beyond the collection-relevant view is Management-only, scoped, time-limited, revocable and audited.
 
-## Remittance destinations and custody
+## Cross-route payment posting
 
-### Remitted to the assigned collector
+When another Collector receives the client's payment:
 
-- A cross-area collector may remit the affected payment to the client's assigned collector.
-- The assigned collector receives a review notification.
-- Acceptance performs a one-tap **Adopt into my route** action.
-- Adoption does not create a duplicate payment and does not rewrite the original recorder.
-- The payment becomes visible in the assigned collector's route/history with the original recorder attribution.
-- Cash custody transfers to the assigned collector only after acceptance.
+1. The Collector searches for the client outside the permanent Daily Route, or opens the client from an approved convenience list.
+2. The app clearly identifies the permanent assigned Collector/area.
+3. The Collector records the amount and exact covered dates/payment type.
+4. The server enforces every normal non-route financial safeguard: active account/device, collection permission, active client/loan, reconciled state, feature gates, current revision where required, chronological safety, allocation rules and idempotency.
+5. Permanent route ownership itself is not a posting gate for another authorized Collector.
+6. The server stores both the original recorder and assigned-Collector attribution.
+7. The assigned Collector's Daily Route reflects the official result with full recorder/payment detail.
+8. The linked client receives the official payment notification/receipt detail.
+9. The collecting Collector's cash accountability increases immediately.
 
-### Remitted to Management
+## Correction authority
 
-- The payment transaction is permanently locked when included in the submitted remittance.
-- After Management accepts the remittance, cash custody belongs to Management.
-- The assigned collector may view the payment and its audit trail but cannot change, delete, copy, or replace it.
-- This locks only the payment transaction. It does not freeze the entire client profile or unrelated future collections.
+Before remittance/lock, only the **original Collector recorder** may correct their own eligible transaction.
 
-### Payment received directly by Management
+A pre-remittance correction requires a lightweight reason. The client is notified about the correction. The system permanently preserves what changed, who changed it, when and why.
 
-- The record is marked `management_direct`.
-- It is immutable to collectors from creation.
-- The assigned collector receives a read-only notification.
-- The client receives a payment-posted notification showing that Management recorded the payment.
+The assigned Collector may review the cross-route transaction on their Daily Route but does not gain edit authority merely because they own that route.
+
+Once the payment is included in a remittance/handoff submission, the Collector correction path is locked. After remittance, correction is Management-only and must preserve the original transaction plus linked correction/reversal/audit evidence.
+
+## Cash responsibility
+
+The person who physically receives the cash is initially responsible for that cash.
+
+- **Own-route collection:** must ultimately be remitted to Management.
+- **Cross-route collection:** may be remitted directly to Management or handed to the client's permanent assigned Collector.
+
+Every accepted Pay immediately updates the collecting Collector's live cash accountability.
+
+The Collector home cash summary keeps one authoritative **Cash held** total and separates the source into **My assigned areas** and **Different collectors**. Cross-route cash is additionally grouped under the permanent assigned Collector so the collecting Collector can see exactly whose route cash is in hand.
+
+## Cross-route handoff to assigned Collector
+
+A cross-route collecting Collector may send one itemized cash handoff to the assigned Collector.
+
+Rules:
+
+- one handoff may bundle several cross-route client payments only when they all belong to the same assigned Collector;
+- different assigned Collectors require separate handoffs;
+- Gilbic calculates the handoff total from the included payments; the total is not manually editable;
+- the sender reviews a server-calculated summary containing total cash, client count, payment count, receipts, covered dates and individual amounts before submission;
+- while the handoff is a draft, the collecting Collector may add/remove eligible items;
+- once sent and **Pending**, included items are locked from Collector edits;
+- the receiving Collector must open the complete itemized client/payment list before taking action;
+- the receiving Collector confirms **I reviewed all payments** once for the complete list; individual per-client checkboxes are not required;
+- the server requires that review acknowledgement before either acceptance or rejection;
+- acceptance is **full amount only**; no partial acceptance;
+- custody transfers only when the assigned Collector accepts;
+- if rejected, a reason is required and full cash responsibility stays with the original collecting Collector;
+- the rejected handover and its original item snapshot remain permanently saved;
+- rejection unlocks the unchanged underlying payments so a corrected handover may be resent without rewriting the client-payment records;
+- original recorder identity never changes.
+
+Once the assigned Collector accepts the cross-route cash, that cash becomes part of the assigned Collector's own amount to remit to Management.
+
+## Received Remittance History
+
+The receiving Collector keeps a permanent **Received Remittance History** so cash from different field Collectors can be reconciled quickly.
+
+History retains all three states:
+
+- **Pending** — offered cash still awaiting the selected recipient's review/decision;
+- **Accepted** — cash physically received and now under the receiving Collector's custody;
+- **Rejected** — handover declined, with the required rejection reason and cash responsibility remaining with the sender.
+
+Each saved record contains:
+
+- unique remittance reference;
+- Collector who handed over the cash;
+- selected recipient;
+- submitted date/time and acceptance/rejection time where applicable;
+- total amount;
+- client and payment counts;
+- full itemized client/payment list, receipt references, payment types and covered dates;
+- handover note and rejection reason where applicable.
+
+Accepted and rejected records are read-only permanent audit evidence. Notifications do not provide a shortcut acceptance button: a pending notification opens the focused full remittance review first.
+
+## Remittance to Management
+
+For cash still held by a Collector:
+
+- the system derives the amount from authoritative recorded collections and accepted handoffs;
+- the Collector does not invent a separate amount that can hide recorded cash;
+- when the Collector sends the remittance, included transactions are locked from Collector editing;
+- the Collector cannot cancel or edit an **Awaiting Management Acceptance** remittance;
+- an authorized Management cash receiver reviews the Daily Route/itemized remittance and physically counts the cash;
+- Management either **Accepts** or **Rejects with required reason**;
+- cash responsibility clears only after Management accepts;
+- shortages are not tolerated and must be rejected;
+- accepted overages are recorded separately as **Cash Over — Pending Identification** under Management custody.
+
+A Collector may remit during the day more than once, but every cash amount recorded in Gilbic remains in accountability until it is accepted by Management or validly transferred through a cross-route handoff.
+
+## Remittance confirmation and history
+
+When Management accepts a remittance, Gilbic creates a permanent in-app confirmation containing:
+
+- unique remittance reference;
+- Collector;
+- total expected/accepted cash;
+- included collection/handoff items;
+- authorized Management receiver;
+- submission and acceptance timestamps.
+
+The confirmation is read-only after acceptance. A separate PDF is not required. Remittance history includes pending, accepted and rejected records; rejected records show the required rejection reason and preserve the original item snapshot for any later resubmission linkage.
+
+## Cash Over
+
+If Management counts more cash than the system expected:
+
+- the normal expected remittance may still be accepted;
+- the Collector's expected cash responsibility clears;
+- the excess moves into **Cash Over — Pending Identification** under Management custody;
+- it remains linked to the original Collector/remittance for traceability but does not make the Collector appear short;
+- only Management may resolve/assign the overage, with reason and audit trail;
+- unidentified Cash Over remains pending until genuinely resolved and is never forced into a client account or income category.
+
+If Management later proves a Cash Over was a real client payment that was never recorded, Gilbic creates a **new linked client-payment record** rather than rewriting the accepted remittance. Use the actual original collection date/time only when reliably known; never guess. Preserve the later Management-entry timestamp and notify the client.
 
 ## Client notifications
 
-A linked client account receives server-generated notifications for:
+A linked client should be able to verify each posted payment with enough detail, including amount, payment type/covered dates, official receipt/reference, recorder and updated balance.
 
-1. **Payment posted**
-   - amount;
-   - exact covered dates;
-   - official receipt number;
-   - who recorded it;
-   - remaining balance.
+The client is also notified when an eligible Collector or Management correction changes a payment result.
 
-2. **Payment remitted**
-   - remittance number;
-   - who remitted it;
-   - intended recipient (assigned collector or Management);
-   - status `awaiting acceptance`.
+Internal Management-only notes remain private; client-facing correction notifications use a client-safe reason/category.
 
-3. **Remittance accepted**
-   - who accepted custody;
-   - acceptance timestamp;
-   - final custody label.
+## Assigned Collector visibility
 
-Notifications are in-app records generated inside the same PostgreSQL transaction as the official action. Failure to create the required notification must roll back the payment/remittance action rather than leaving inconsistent status.
+When another Collector handles a client, the permanent assigned Collector should see the full transaction detail on the Daily Route, including:
 
-## Edit and correction matrix
+- amount;
+- official receipt/reference;
+- Regular/7x7/ADV or other entry type;
+- exact covered dates where applicable;
+- original recorder;
+- correction state;
+- custody/remittance state.
 
-| Situation | Original recorder | Assigned collector | Management |
-|---|---:|---:|---:|
-| Assigned collector's own unlocked entry | Correct before remittance | Correct before remittance | Audited adjustment only |
-| Cross-area entry before remittance | Correct own entry before remittance | Review only | Audited adjustment only |
-| Cross-area entry accepted by assigned collector | Read-only | Adopted read-only official entry | Audited adjustment only |
-| Entry submitted/accepted by Management | Read-only | Read-only | Audited adjustment only |
-| Management-direct payment | No collector edit | Read-only | Audited adjustment only |
+Management does not require a separate notification for every ordinary cross-route payment because Management can review every Collector's Daily Route and audit records before remittance.
 
-No correction may erase the original recorder, receipt, previous snapshot, covered dates, remittance path, or custody history.
+## Audit and deletion rules
+
+Financial history is never hard-deleted merely because an entry was mistaken, corrected, rejected or cancelled.
+
+Every financial action preserves actor, approved device, server timestamp, client/loan link, receipt/reference and linked correction/custody/remittance history. Audit logs are non-editable/non-deletable. Corrective actions add linked records/status rather than erasing history.
+
+## Duplicate protection
+
+All financial writes use server-side idempotency. Double taps, retries or uncertain network responses must never create duplicate payments/handoffs/remittances. When the phone loses the response after Pay, it first checks the server for the existing transaction before allowing a retry.
 
 ## Required implementation layers
 
-- PostgreSQL migration for assignment snapshots, cross-area flags, adoption/custody fields, and generic payment activity notifications.
-- Backend search endpoint for eligible other-area clients.
-- Backend authorization and correction rules.
-- Backend transactional notifications at posting, remittance submission, and acceptance.
-- Flutter multi-select calendar dialog.
-- Flutter other-area client search and warning screen.
-- Flutter assigned-collector review/adopt action.
-- Flutter client notification presentation.
-- Backend and Flutter tests for every edit/custody branch.
+- PostgreSQL assignment snapshots, cross-route flags, custody/remittance fields and activity notifications.
+- Backend open cross-route search for Collectors with normal collection permission.
+- Backend posting bridge that relaxes only the permanent-route ownership gate while preserving every other collection safeguard.
+- Original-recorder-only pre-remittance correction authority.
+- Assigned-route reflection with recorder/payment/custody attribution.
+- Full-acceptance bundled cross-route handoff and Management remittance custody controls.
+- Permanent recipient review/rejection evidence and itemized received-remittance history.
+- Client and assigned-Collector notifications/views.
+- Flutter Other Area Payment search plus optional convenience-list browsing.
+- Backend/Flutter tests for posting, correction, handoff, remittance, custody, review/rejection and duplicate-protection branches.

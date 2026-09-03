@@ -7,17 +7,28 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from psycopg.types.json import Jsonb
-
+from gilbic_backend.contract_schedule_registration_service import (
+    register_verified_contract_schedule,
+)
 from gilbic_backend.seven_by_seven_collection_posting import (
     SEVEN_BY_SEVEN_MOBILE_SETTING,
     SevenBySevenAwarePerLoanContractCollectionPostingBridge,
 )
+from gilbic_backend.seven_by_seven_extra_principal_reconciliation import (
+    ExtraPrincipalReconciliationError,
+)
+from gilbic_backend.seven_by_seven_signed_schedule import (
+    generate_signed_seven_by_seven_schedule,
+)
+from psycopg.types.json import Jsonb
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
     CollectionEntryType,
     CollectionStatus,
+    PastDueFollowupInput,
+    PastDueReasonCode,
+    PaymentAllocationIntent,
 )
 from spina_mobile_collections.postgres import PostgresCollectionExecutor
 from spina_mobile_collections.service import (
@@ -25,7 +36,6 @@ from spina_mobile_collections.service import (
     CollectionSubmissionService,
     SubmissionHeaders,
 )
-
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -188,6 +198,8 @@ def _command(
     route_version: int = 0,
     covered_dates: tuple[date, ...] = (),
     note: str = "",
+    past_due_followup: PastDueFollowupInput | None = None,
+    payment_allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED,
 ) -> CollectionCommand:
     actual_key = key or uuid4()
     actual_date = collection_date or case.payment_start
@@ -200,15 +212,48 @@ def _command(
         collection_date=actual_date,
         entry_type=entry_type,
         amount=Decimal(amount) if amount is not None else None,
-        advance_from=(selected[0] if entry_type is CollectionEntryType.ADVANCE else None),
-        advance_until=(selected[-1] if entry_type is CollectionEntryType.ADVANCE else None),
+        advance_from=(
+            selected[0] if entry_type is CollectionEntryType.ADVANCE else None
+        ),
+        advance_until=(
+            selected[-1] if entry_type is CollectionEntryType.ADVANCE else None
+        ),
         covered_dates=selected,
-        recorded_at=datetime.combine(actual_date, datetime.min.time(), tzinfo=timezone.utc),
+        recorded_at=datetime.combine(
+            actual_date, datetime.min.time(), tzinfo=timezone.utc
+        ),
         device_id=case.installation_id,
         device_sequence=device_sequence,
         note=note,
         route_revision=f"loan:{case.loan_id}:v{route_version}",
+        past_due_followup=past_due_followup,
+        payment_allocation_intent=payment_allocation_intent,
     )
+
+
+def _register_verified_schedule(case: Case) -> None:
+    rows = generate_signed_seven_by_seven_schedule(
+        original_principal=Decimal("5000.00"),
+        agreed_daily_payment=Decimal("50.00"),
+        daily_interest_per_1000=Decimal("7.00"),
+        first_due_date=case.payment_start,
+    )
+    with _connection_factory() as connection, connection.cursor() as cursor:
+        register_verified_contract_schedule(
+            cursor,
+            loan_id=case.loan_id,
+            payment_frequency="daily",
+            contract_reference=f"SIGNED-X7-EXTRA-{case.loan_id}",
+            contract_signed_date=case.payment_start - timedelta(days=1),
+            effective_from=case.payment_start - timedelta(days=1),
+            grace_days=0,
+            installments=rows,
+            evidence_basis="signed_contract",
+            evidence_reference=f"SIGNED-X7-EXTRA-DOC-{case.loan_id}",
+            verification_note="Borrower accepted the signed 50 peso daily payment.",
+            verified_by_user_id=case.collector_id,
+            confirmed=True,
+        )
 
 
 def _headers(case: Case, command: CollectionCommand) -> SubmissionHeaders:
@@ -228,7 +273,9 @@ def _submit(case: Case, command: CollectionCommand):
     )
 
 
-def test_mobile_payment_uses_fixed_interest_first_allocator_and_exact_receipt_balance() -> None:
+def test_mobile_payment_uses_fixed_interest_first_allocator_and_exact_receipt_balance() -> (
+    None
+):
     case = _setup_case()
     command = _command(case, amount="200.00")
 
@@ -266,7 +313,7 @@ def test_mobile_payment_uses_fixed_interest_first_allocator_and_exact_receipt_ba
         Decimal("200.00"),
         Decimal("5000.00"),
         Decimal("4835.00"),
-        "seven_by_seven_operational_allocator_v1",
+        "seven_by_seven_operational_allocator_v2",
         "35.00",
         "35.00",
         "165.00",
@@ -275,7 +322,9 @@ def test_mobile_payment_uses_fixed_interest_first_allocator_and_exact_receipt_ba
     assert state == (Decimal("4835.00"), 1, 0, case.payment_start)
 
 
-def test_exact_retry_is_duplicate_and_stale_route_requires_refresh_before_next_payment() -> None:
+def test_exact_retry_is_duplicate_and_stale_route_requires_refresh_before_next_payment() -> (
+    None
+):
     case = _setup_case()
     first = _command(case, amount="200.00")
 
@@ -305,7 +354,9 @@ def test_exact_retry_is_duplicate_and_stale_route_requires_refresh_before_next_p
     assert accepted.status is CollectionStatus.ACCEPTED
     assert duplicate.status is CollectionStatus.DUPLICATE
     assert duplicate.posted is not None and accepted.posted is not None
-    assert duplicate.posted.server_transaction_id == accepted.posted.server_transaction_id
+    assert (
+        duplicate.posted.server_transaction_id == accepted.posted.server_transaction_id
+    )
     assert stale.status is CollectionStatus.CONFLICT
     assert stale.code == "route_revision_changed"
     assert refreshed.status is CollectionStatus.ACCEPTED
@@ -321,7 +372,9 @@ def test_exact_retry_is_duplicate_and_stale_route_requires_refresh_before_next_p
     assert count == 2
 
 
-def test_exact_covered_dates_are_preserved_without_changing_7x7_cash_allocation_basis() -> None:
+def test_exact_covered_dates_are_preserved_without_changing_7x7_cash_allocation_basis() -> (
+    None
+):
     case = _setup_case()
     selected = (
         case.payment_start,
@@ -365,7 +418,9 @@ def test_exact_covered_dates_are_preserved_without_changing_7x7_cash_allocation_
     assert allocation == ("35.00", "175.00")
 
 
-def test_unable_to_pay_is_no_cash_and_later_payment_accrues_calendar_gap_interest() -> None:
+def test_unable_to_pay_is_no_cash_and_later_payment_accrues_calendar_gap_interest() -> (
+    None
+):
     case = _setup_case()
     passed = _submit(
         case,
@@ -373,7 +428,10 @@ def test_unable_to_pay_is_no_cash_and_later_payment_accrues_calendar_gap_interes
             case,
             entry_type=CollectionEntryType.PASS,
             amount=None,
-            note="Client had no collection cash today",
+            past_due_followup=PastDueFollowupInput(
+                reason_code=PastDueReasonCode.NO_CASH,
+                note="Client had no collection cash today",
+            ),
         ),
     )
     paid = _submit(
@@ -407,10 +465,18 @@ def test_unable_to_pay_is_no_cash_and_later_payment_accrues_calendar_gap_interes
             (case.loan_id,),
         ).fetchall()
     assert rows[0][:3] == ("pass", Decimal("0.00"), Decimal("5000.00"))
-    assert rows[1] == ("payment", Decimal("70.00"), Decimal("5000.00"), "70.00", "70.00")
+    assert rows[1] == (
+        "payment",
+        Decimal("70.00"),
+        Decimal("5000.00"),
+        "70.00",
+        "70.00",
+    )
 
 
-def test_overpayment_and_unreconciled_history_fail_closed_without_official_write() -> None:
+def test_overpayment_and_unreconciled_history_fail_closed_without_official_write() -> (
+    None
+):
     overpay = _setup_case()
     rejected = _submit(overpay, _command(overpay, amount="6000.00"))
     assert rejected.status is CollectionStatus.REJECTED
@@ -452,6 +518,187 @@ def test_overpayment_and_unreconciled_history_fail_closed_without_official_write
         ).fetchone()[0]
     assert overpay_count == 0
     assert mismatch_count == 1
+
+
+def test_modern_extra_principal_posts_zero_interest_and_exact_immutable_effects() -> (
+    None
+):
+    case = _setup_case()
+    _register_verified_schedule(case)
+
+    scheduled = _submit(case, _command(case, amount="50.00"))
+    assert scheduled.status is CollectionStatus.ACCEPTED
+
+    extra_command = _command(
+        case,
+        amount="100.00",
+        device_sequence=2,
+        route_version=1,
+        payment_allocation_intent=(
+            PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+        ),
+    )
+    extra = _submit(case, extra_command)
+    duplicate = _submit(case, extra_command)
+
+    assert extra.status is CollectionStatus.ACCEPTED
+    assert extra.posted is not None
+    assert extra.posted.official_balance == Decimal("4885.00")
+    assert extra.posted.result_metadata["principal_reduction"] == "100.00"
+    assert extra.posted.result_metadata["interest_contribution"] == "0.00"
+    assert duplicate.status is CollectionStatus.DUPLICATE
+    assert duplicate.posted is not None
+    assert duplicate.posted.result_metadata == extra.posted.result_metadata
+
+    with _connection_factory() as connection:
+        receipt = connection.execute(
+            """
+            select
+                details->>'payment_allocation_intent',
+                details->>'seven_by_seven_interest_paid',
+                details->>'seven_by_seven_principal_paid'
+            from lending.collection_transactions
+            where id = %s
+            """,
+            (UUID(extra.posted.server_transaction_id),),
+        ).fetchone()
+        adjustment = connection.execute(
+            """
+            select principal_reduction, transaction_id
+            from lending.seven_by_seven_extra_principal_adjustments
+            where transaction_id = %s
+            """,
+            (UUID(extra.posted.server_transaction_id),),
+        ).fetchone()
+        signed_mismatch_count = connection.execute(
+            """
+            select count(*)
+            from lending.seven_by_seven_extra_principal_adjustment_items item
+            join lending.loan_contract_installments installment
+              on installment.id = item.installment_id
+            where item.adjustment_id = %s
+              and (
+                  item.signed_contractual_amount <> installment.contractual_amount
+                  or item.signed_principal_component <> installment.principal_component
+                  or item.signed_interest_component <> installment.interest_component
+              )
+            """,
+            (UUID(extra.posted.result_metadata["adjustment_id"]),),
+        ).fetchone()[0]
+        accounting_readiness = connection.execute(
+            """
+            select source_evidence_ready, accounting_status,
+                   automatic_source_posting
+            from accounting.seven_by_seven_extra_principal_accounting_readiness
+            where adjustment_id = %s
+            """,
+            (UUID(extra.posted.result_metadata["adjustment_id"]),),
+        ).fetchone()
+
+    assert receipt == (
+        "extra_as_principal_reduction",
+        "0.00",
+        "100.00",
+    )
+    assert adjustment == (
+        Decimal("100.00"),
+        UUID(extra.posted.server_transaction_id),
+    )
+    assert signed_mismatch_count == 0
+    assert accounting_readiness == (
+        True,
+        "management_accounting_review_required",
+        False,
+    )
+
+
+def test_reconciliation_failure_rolls_back_receipt_and_every_extra_fragment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = _setup_case()
+    _register_verified_schedule(case)
+    scheduled = _submit(case, _command(case, amount="50.00"))
+    assert scheduled.status is CollectionStatus.ACCEPTED
+
+    def fail_reconciliation(*_args, **_kwargs):
+        raise ExtraPrincipalReconciliationError("injected persisted mismatch")
+
+    monkeypatch.setattr(
+        "gilbic_backend.seven_by_seven_extra_principal_posting.reconcile_persisted_extra_principal",
+        fail_reconciliation,
+    )
+    rejected = _submit(
+        case,
+        _command(
+            case,
+            amount="100.00",
+            device_sequence=2,
+            route_version=1,
+            payment_allocation_intent=(
+                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+            ),
+        ),
+    )
+
+    assert rejected.status is CollectionStatus.REJECTED
+    assert rejected.code == "seven_by_seven_extra_principal_reconciliation_failed"
+    with _connection_factory() as connection:
+        receipt_count = connection.execute(
+            "select count(*) from lending.collection_transactions where loan_id = %s",
+            (case.loan_id,),
+        ).fetchone()[0]
+        adjustment_count = connection.execute(
+            """
+            select count(*)
+            from lending.seven_by_seven_extra_principal_adjustments
+            where loan_id = %s
+            """,
+            (case.loan_id,),
+        ).fetchone()[0]
+        state = connection.execute(
+            """
+            select remaining_balance, state_version
+            from lending.loan_collection_state
+            where loan_id = %s
+            """,
+            (case.loan_id,),
+        ).fetchone()
+
+    assert receipt_count == 1
+    assert adjustment_count == 0
+    assert state == (Decimal("4985.00"), 1)
+
+
+def test_legacy_voluntary_extra_cannot_activate_7x7_principal_reduction() -> None:
+    case = _setup_case()
+    _register_verified_schedule(case)
+    scheduled = _submit(case, _command(case, amount="50.00"))
+    assert scheduled.status is CollectionStatus.ACCEPTED
+
+    rejected = _submit(
+        case,
+        _command(
+            case,
+            amount="100.00",
+            device_sequence=2,
+            route_version=1,
+            payment_allocation_intent=PaymentAllocationIntent.VOLUNTARY_EXTRA,
+        ),
+    )
+
+    assert rejected.status is CollectionStatus.REJECTED
+    assert rejected.code == "seven_by_seven_extra_principal_intent_required"
+
+    with _connection_factory() as connection:
+        count = connection.execute(
+            """
+            select count(*)
+            from lending.collection_transactions
+            where loan_id = %s
+            """,
+            (case.loan_id,),
+        ).fetchone()[0]
+    assert count == 1
 
 
 def test_dedicated_feature_flag_remains_fail_closed_until_explicitly_enabled() -> None:

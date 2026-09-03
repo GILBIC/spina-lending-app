@@ -76,6 +76,7 @@ def _loan_payload(record) -> dict[str, object]:
         "loan_type_name": record.loan_type_name,
         "calculation_mode": record.calculation_mode,
         "principal": _decimal(record.principal),
+        "contractual_total": _decimal(record.contractual_total),
         "remaining_balance": _decimal(record.remaining_balance),
         "paid_amount": _decimal(record.paid_amount),
         "paid_percent": _decimal(record.paid_percent),
@@ -128,8 +129,10 @@ def _portal_payload(portal: ClientRenewalPortal) -> dict[str, object]:
         "loans": [_loan_payload(item) for item in portal.loans],
         "requests": [_request_payload(item) for item in portal.requests],
         "notice": (
-            "Submitting a renewal request does not create or release a new loan. "
-            "Management must review it and the SPINA office completes any approved renewal."
+            "Regular renewal normally becomes requestable after 50% of that loan's "
+            "total contractual balance is paid. A 7x7 renewal may be requested for "
+            "consideration at any paid percentage, but every 7x7 renewal requires "
+            "Management approval. A request does not create or release a new loan."
         ),
     }
 

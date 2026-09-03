@@ -26,21 +26,129 @@ void main() {
     expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
     expect(find.text('Question about payment'), findsOneWidget);
 
-    await tester.tap(find.text('Answer'));
+    await _submitResponse(
+      tester,
+      buttonKey: const Key('answer-support-support-1'),
+      response: 'Your payment is recorded correctly.',
+    );
+
+    expect(
+      find.byKey(const Key('management-review-client-support')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'The response will be saved to the client communication history. '
+        'Official financial records will not be edited.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.reviewedAction, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-client-support')));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('management-support-response')),
-      'Your payment is recorded correctly.',
+    expect(repository.reviewedAction, isNull);
+
+    await _submitResponse(
+      tester,
+      buttonKey: const Key('answer-support-support-1'),
+      response: 'Your payment is recorded correctly.',
     );
-    await tester.tap(
-      find.byKey(const Key('submit-management-support-response')),
-    );
+    await tester.tap(find.byKey(const Key('confirm-client-support')));
     await tester.pumpAndSettle();
 
     expect(repository.reviewedAction, 'answered');
     expect(repository.reviewedResponse, 'Your payment is recorded correctly.');
     expect(repository.deviceId, 'management-device');
   });
+
+  testWidgets('Management reviews a resolution before closing support', (
+    tester,
+  ) async {
+    final repository = _FakeManagementSupportRepository();
+    await _pumpPage(tester, repository);
+
+    await _submitResponse(
+      tester,
+      buttonKey: const Key('resolve-support-support-1'),
+      response: 'Receipt verified and concern resolved.',
+    );
+
+    expect(
+      find.text(
+        'The request will be closed as resolved with this response in '
+        'communication history. Official financial records will not be edited.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.reviewedAction, isNull);
+    await tester.tap(find.byKey(const Key('confirm-client-support')));
+    await tester.pumpAndSettle();
+
+    expect(repository.reviewedAction, 'resolved');
+    expect(
+      repository.reviewedResponse,
+      'Receipt verified and concern resolved.',
+    );
+  });
+
+  testWidgets('Management reviews a cancellation before closing support', (
+    tester,
+  ) async {
+    final repository = _FakeManagementSupportRepository();
+    await _pumpPage(tester, repository);
+
+    await _submitResponse(
+      tester,
+      buttonKey: const Key('cancel-support-support-1'),
+      response: 'Duplicate support request confirmed.',
+    );
+
+    expect(
+      find.text(
+        'The request will be closed as cancelled. Official financial records '
+        'will not be edited.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.reviewedAction, isNull);
+    await tester.tap(find.byKey(const Key('confirm-client-support')));
+    await tester.pumpAndSettle();
+
+    expect(repository.reviewedAction, 'cancelled');
+    expect(repository.reviewedResponse, 'Duplicate support request confirmed.');
+  });
+}
+
+Future<void> _pumpPage(
+  WidgetTester tester,
+  _FakeManagementSupportRepository repository,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: ManagementSupportRequestsPage(
+        session: _session,
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        repository: repository,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _submitResponse(
+  WidgetTester tester, {
+  required Key buttonKey,
+  required String response,
+}) async {
+  await tester.tap(find.byKey(buttonKey));
+  await tester.pumpAndSettle();
+  await tester.enterText(
+    find.byKey(const Key('management-support-response')),
+    response,
+  );
+  await tester.tap(find.byKey(const Key('submit-management-support-response')));
+  await tester.pumpAndSettle();
 }
 
 const UserSession _session = UserSession(
@@ -62,8 +170,7 @@ DeviceIdentityProvider _deviceIdentityProvider() {
   );
 }
 
-class _FakeManagementSupportRepository
-    implements ManagementSupportRepository {
+class _FakeManagementSupportRepository implements ManagementSupportRepository {
   String? deviceId;
   String? reviewedAction;
   String? reviewedResponse;
@@ -111,9 +218,9 @@ SupportRequestItem _request({required String status}) {
     status: status,
     createdAt: DateTime.utc(2026, 8, 7, 2, 30),
     managedByName: status == 'open' ? null : 'Management',
-    managementResponse:
-        status == 'open' ? '' : 'Your payment is recorded correctly.',
-    respondedAt:
-        status == 'open' ? null : DateTime.utc(2026, 8, 7, 2, 40),
+    managementResponse: status == 'open'
+        ? ''
+        : 'Your payment is recorded correctly.',
+    respondedAt: status == 'open' ? null : DateTime.utc(2026, 8, 7, 2, 40),
   );
 }
