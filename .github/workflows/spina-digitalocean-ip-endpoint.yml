@@ -1,0 +1,190 @@
+name: Spina DigitalOcean Direct IP Endpoint
+
+on:
+  push:
+    branches:
+      - ops/digitalocean-production
+    paths:
+      - .github/workflows/spina-digitalocean-ip-endpoint.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: spina-digitalocean-direct-ip
+  cancel-in-progress: true
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET_HOST: 157.230.250.111
+      TARGET_HOSTNAME: spina.157-230-250-111.sslip.io
+      RECOVERY_BROKER_URL: https://lnixxnckhitbzqtjvked.supabase.co/functions/v1/spina-github-recovery-secrets
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Configure and verify direct-IP HTTPS
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          cleanup() {
+            set +e
+            for file in \
+              /tmp/spina-owner-key.enc \
+              /tmp/spina-owner-key \
+              /tmp/spina-oidc.json \
+              /tmp/spina-recovery.json \
+              /tmp/spina-known-hosts; do
+              if [[ -f "$file" ]]; then
+                shred -u "$file" 2>/dev/null || rm -f "$file"
+              fi
+            done
+          }
+          trap cleanup EXIT
+
+          curl --fail --silent --show-error \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=spina-digitalocean-ip-endpoint" \
+            > /tmp/spina-oidc.json
+          OIDC_TOKEN="$(jq -er '.value' /tmp/spina-oidc.json)"
+          echo "::add-mask::$OIDC_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            "$RECOVERY_BROKER_URL" \
+            > /tmp/spina-recovery.json
+
+          OWNER_KEY_B64="$(jq -er '.owner_key_b64' /tmp/spina-recovery.json)"
+          OWNER_KEY_PASSPHRASE="$(jq -er '.owner_key_passphrase' /tmp/spina-recovery.json)"
+          echo "::add-mask::$OWNER_KEY_B64"
+          echo "::add-mask::$OWNER_KEY_PASSPHRASE"
+          printf '%s' "$OWNER_KEY_B64" | base64 -d > /tmp/spina-owner-key.enc
+          export OWNER_KEY_PASSPHRASE
+          openssl pkey \
+            -in /tmp/spina-owner-key.enc \
+            -passin env:OWNER_KEY_PASSPHRASE \
+            -out /tmp/spina-owner-key
+          chmod 600 /tmp/spina-owner-key
+          unset OWNER_KEY_B64 OWNER_KEY_PASSPHRASE
+
+          ssh-keyscan -T 10 -H "$TARGET_HOST" > /tmp/spina-known-hosts
+          SSH_OPTIONS=(
+            -i /tmp/spina-owner-key
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile=/tmp/spina-known-hosts
+            -o ConnectTimeout=15
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+          )
+
+          ssh "${SSH_OPTIONS[@]}" root@"$TARGET_HOST" \
+            "TARGET_HOST='$TARGET_HOST' TARGET_HOSTNAME='$TARGET_HOSTNAME' bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+
+          BACKUP="/etc/caddy/Caddyfile.before-direct-ip.$(date +%s)"
+          cp -a /etc/caddy/Caddyfile "$BACKUP"
+          rollback() {
+            set +e
+            cp -a "$BACKUP" /etc/caddy/Caddyfile
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1
+            systemctl reload caddy >/dev/null 2>&1
+          }
+          trap rollback ERR
+
+          echo "caddy_version=$(caddy version)"
+          if ! caddy version | grep -Eq '^v2\.(1[1-9]|[2-9][0-9])\.'; then
+            caddy upgrade
+          fi
+          echo "caddy_version_after=$(caddy version)"
+
+          if ! grep -q "^${TARGET_HOST}[[:space:]]*{" /etc/caddy/Caddyfile; then
+            cat >> /etc/caddy/Caddyfile <<CADDY
+
+          ${TARGET_HOST} {
+            tls {
+              issuer acme https://acme-v02.api.letsencrypt.org/directory {
+                profile shortlived
+              }
+            }
+
+            encode zstd gzip
+
+            header {
+              -Server
+              X-Content-Type-Options "nosniff"
+              Referrer-Policy "strict-origin-when-cross-origin"
+              X-Frame-Options "DENY"
+              Permissions-Policy "camera=(), microphone=(), geolocation=()"
+              Strict-Transport-Security "max-age=31536000"
+            }
+
+            handle /api/* {
+              reverse_proxy 127.0.0.1:8000
+            }
+
+            handle /health/* {
+              reverse_proxy 127.0.0.1:8000
+            }
+
+            handle {
+              root * /var/www/spina
+              try_files {path} /index.html
+              file_server
+            }
+          }
+          CADDY
+          fi
+
+          caddy fmt --overwrite /etc/caddy/Caddyfile
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          systemctl reload caddy
+
+          direct_ready=false
+          for _ in $(seq 1 90); do
+            if curl --fail --silent --show-error --max-time 15 \
+              "https://${TARGET_HOST}/health/live" >/tmp/spina-ip-live.json \
+              && curl --fail --silent --show-error --max-time 15 \
+              "https://${TARGET_HOST}/health/ready" >/tmp/spina-ip-ready.json \
+              && curl --fail --silent --show-error --max-time 15 \
+              "https://${TARGET_HOST}/" >/tmp/spina-ip-root.html \
+              && grep -q '"status":"ok"' /tmp/spina-ip-live.json \
+              && grep -q '"database":"ok"' /tmp/spina-ip-ready.json \
+              && grep -q '<title>Spina</title>' /tmp/spina-ip-root.html; then
+              direct_ready=true
+              break
+            fi
+            sleep 4
+          done
+          [[ "$direct_ready" == true ]] || {
+            journalctl -u caddy --since '10 minutes ago' --no-pager -n 200 >&2 || true
+            exit 1
+          }
+
+          status="$(curl --silent --show-error --max-time 20 \
+            --output /tmp/spina-ip-post.json \
+            --write-out '%{http_code}' \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H 'X-App-Platform: web' \
+            -H 'X-App-Version: 0.1.0' \
+            --data '{"username":"direct-ip-endpoint-check","password":"invalid","device_id":"direct-ip-check","platform":"web","app_version":"0.1.0"}' \
+            "https://${TARGET_HOST}/api/v1/auth/login")"
+          [[ "$status" == "401" ]]
+          grep -q 'Invalid username or password' /tmp/spina-ip-post.json
+
+          trap - ERR
+          rm -f "$BACKUP" /tmp/spina-ip-live.json /tmp/spina-ip-ready.json /tmp/spina-ip-root.html /tmp/spina-ip-post.json
+          echo "SPINA_DIRECT_IP_READY=https://${TARGET_HOST}"
+          REMOTE
