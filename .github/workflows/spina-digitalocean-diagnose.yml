@@ -1,0 +1,118 @@
+name: Spina DigitalOcean Login Diagnostics
+
+on:
+  push:
+    branches:
+      - ops/digitalocean-production
+    paths:
+      - .github/workflows/spina-digitalocean-diagnose.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TARGET_HOST: 157.230.250.111
+      RECOVERY_BROKER_URL: https://lnixxnckhitbzqtjvked.supabase.co/functions/v1/spina-github-recovery-secrets
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Inspect live login path without changing the server
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          cleanup() {
+            set +e
+            for file in /tmp/spina-owner-key.enc /tmp/spina-owner-key /tmp/spina-oidc.json /tmp/spina-recovery.json /tmp/spina-known-hosts; do
+              if [[ -f "$file" ]]; then
+                shred -u "$file" 2>/dev/null || rm -f "$file"
+              fi
+            done
+          }
+          trap cleanup EXIT
+
+          curl --fail --silent --show-error \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=spina-digitalocean-recovery" \
+            > /tmp/spina-oidc.json
+          OIDC_TOKEN="$(jq -er '.value' /tmp/spina-oidc.json)"
+          echo "::add-mask::$OIDC_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            "$RECOVERY_BROKER_URL" \
+            > /tmp/spina-recovery.json
+
+          OWNER_KEY_B64="$(jq -er '.owner_key_b64' /tmp/spina-recovery.json)"
+          OWNER_KEY_PASSPHRASE="$(jq -er '.owner_key_passphrase' /tmp/spina-recovery.json)"
+          echo "::add-mask::$OWNER_KEY_B64"
+          echo "::add-mask::$OWNER_KEY_PASSPHRASE"
+          printf '%s' "$OWNER_KEY_B64" | base64 -d > /tmp/spina-owner-key.enc
+          export OWNER_KEY_PASSPHRASE
+          openssl pkey \
+            -in /tmp/spina-owner-key.enc \
+            -passin env:OWNER_KEY_PASSPHRASE \
+            -out /tmp/spina-owner-key
+          chmod 600 /tmp/spina-owner-key
+          unset OWNER_KEY_B64 OWNER_KEY_PASSPHRASE
+
+          ssh-keyscan -T 10 -H "$TARGET_HOST" > /tmp/spina-known-hosts
+          ssh \
+            -i /tmp/spina-owner-key \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=/tmp/spina-known-hosts \
+            -o ConnectTimeout=15 \
+            root@"$TARGET_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          echo '=== service state ==='
+          systemctl is-active spina-api caddy
+          systemctl show spina-api -p MainPID -p NRestarts -p ActiveEnterTimestamp --no-pager
+          echo '=== listeners ==='
+          ss -ltnp | grep -E '(:80|:443|:8000)[[:space:]]' || true
+          echo '=== local health ==='
+          curl --fail --silent --show-error http://127.0.0.1:8000/health/live
+          echo
+          curl --fail --silent --show-error http://127.0.0.1:8000/health/ready
+          echo
+          echo '=== deployed public config ==='
+          curl --fail --silent --show-error https://spina.157-230-250-111.sslip.io/assets/config.js
+          echo
+          echo '=== Supabase DNS and Auth reachability ==='
+          set -a
+          source /etc/spina/spina.env
+          set +a
+          python3 - <<'PY'
+          import os
+          import socket
+          from urllib.parse import urlparse
+
+          hostname = urlparse(os.environ['GILBIC_SUPABASE_URL']).hostname
+          print('hostname=' + str(hostname))
+          for family, socktype, proto, canonname, sockaddr in socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM):
+              print('address=' + sockaddr[0] + ' family=' + ('ipv6' if family == socket.AF_INET6 else 'ipv4'))
+          PY
+          for family in 4 6; do
+            printf 'curl_ipv%s=' "$family"
+            curl "-$family" --silent --show-error --output /dev/null \
+              --connect-timeout 8 --max-time 15 \
+              --write-out 'http=%{http_code} connect=%{time_connect} tls=%{time_appconnect} total=%{time_total}\n' \
+              -H "apikey: $GILBIC_SUPABASE_PUBLISHABLE_KEY" \
+              "$GILBIC_SUPABASE_URL/auth/v1/settings" || echo 'failed'
+          done
+          echo '=== recent API journal ==='
+          journalctl -u spina-api --since '45 minutes ago' --no-pager -o short-iso | tail -n 400
+          echo '=== recent Caddy journal ==='
+          journalctl -u caddy --since '45 minutes ago' --no-pager -o short-iso | tail -n 250
+          REMOTE
