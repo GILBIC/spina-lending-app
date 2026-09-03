@@ -70,18 +70,6 @@ class SupabaseAuthAdminClient:
             code=str(code) if code else None,
         )
 
-    @staticmethod
-    def _user_id(response: httpx.Response, *, operation: str) -> UUID:
-        raw_id = response.json().get("id")
-        try:
-            return UUID(str(raw_id))
-        except (TypeError, ValueError) as exc:
-            raise SupabaseAuthError(
-                f"Supabase Auth did not return a valid {operation} user ID.",
-                status_code=502,
-                code="invalid_auth_admin_response",
-            ) from exc
-
     def invite_user(self, *, email: str) -> UUID:
         params: dict[str, str] = {}
         redirect_to = self._settings.staff_invite_redirect_url.strip()
@@ -101,46 +89,15 @@ class SupabaseAuthAdminClient:
                 code="auth_admin_unavailable",
             ) from exc
         self._raise_for_error(response)
-        return self._user_id(response, operation="invited")
-
-    def create_confirmed_user(self, *, email: str, password: str) -> UUID:
-        if len(password) < 12:
-            raise ValueError("Temporary password must contain at least 12 characters.")
+        raw_id = response.json().get("id")
         try:
-            response = self._client.post(
-                "/auth/v1/admin/users",
-                headers=self._headers(),
-                json={
-                    "email": email.strip().lower(),
-                    "password": password,
-                    "email_confirm": True,
-                },
-            )
-        except httpx.HTTPError as exc:
+            return UUID(str(raw_id))
+        except (TypeError, ValueError) as exc:
             raise SupabaseAuthError(
-                "Authentication administration service is unavailable.",
-                status_code=503,
-                code="auth_admin_unavailable",
+                "Supabase Auth did not return a valid invited user ID.",
+                status_code=502,
+                code="invalid_auth_admin_response",
             ) from exc
-        self._raise_for_error(response)
-        return self._user_id(response, operation="created")
-
-    def update_password(self, *, auth_user_id: UUID, password: str) -> None:
-        if len(password) < 12:
-            raise ValueError("Temporary password must contain at least 12 characters.")
-        try:
-            response = self._client.put(
-                f"/auth/v1/admin/users/{auth_user_id}",
-                headers=self._headers(),
-                json={"password": password},
-            )
-        except httpx.HTTPError as exc:
-            raise SupabaseAuthError(
-                "Authentication administration service is unavailable.",
-                status_code=503,
-                code="auth_admin_unavailable",
-            ) from exc
-        self._raise_for_error(response)
 
     def delete_user(self, *, auth_user_id: UUID) -> None:
         try:
