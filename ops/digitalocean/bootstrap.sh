@@ -17,12 +17,6 @@ package_manager_busy() {
       return 0
     fi
   done
-  if pgrep -x apt >/dev/null 2>&1 \
-    || pgrep -x apt-get >/dev/null 2>&1 \
-    || pgrep -x dpkg >/dev/null 2>&1 \
-    || pgrep -f unattended-upgrade >/dev/null 2>&1; then
-    return 0
-  fi
   return 1
 }
 
@@ -30,11 +24,26 @@ wait_for_package_manager() {
   local waited=0
   while package_manager_busy; do
     if (( waited >= 900 )); then
-      fail "timed out waiting for Ubuntu package-manager locks"
+      fail "timed out waiting for active package-manager lock holders"
+    fi
+    if (( waited % 60 == 0 )); then
+      printf 'SPINA_DEPLOY_WAIT: package manager is active (%ss)\n' "$waited"
     fi
     sleep 5
     waited=$((waited + 5))
   done
+}
+
+dpkg_repair() {
+  local attempt
+  for attempt in $(seq 1 60); do
+    wait_for_package_manager
+    if dpkg --configure -a; then
+      return 0
+    fi
+    sleep 5
+  done
+  fail "dpkg repair did not complete"
 }
 
 wait_for_first_boot_packages() {
@@ -42,19 +51,24 @@ wait_for_first_boot_packages() {
     timeout 900 cloud-init status --wait >/dev/null 2>&1 \
       || fail "cloud-init did not finish successfully"
   fi
-  wait_for_package_manager
-  dpkg --configure -a
+  dpkg_repair
 }
 
 apt_retry() {
   local attempt
+  local executable="$1"
+  shift
   for attempt in 1 2 3 4 5 6; do
     wait_for_package_manager
-    if "$@"; then
+    if [[ "$executable" == "apt-get" ]]; then
+      if apt-get -o DPkg::Lock::Timeout=300 "$@"; then
+        return 0
+      fi
+    elif "$executable" "$@"; then
       return 0
     fi
     if (( attempt == 6 )); then
-      fail "package command failed after ${attempt} attempts: $*"
+      fail "package command failed after ${attempt} attempts: ${executable} $*"
     fi
     sleep $((attempt * 5))
   done
