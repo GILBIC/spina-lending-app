@@ -13,7 +13,7 @@ void main() {
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
       await tester.pumpWidget(
-        GilbicApp(sessionStore: InMemorySessionStore()),
+        GilbicApp(sessionStore: MemorySessionStore()),
       );
       await tester.pumpAndSettle();
 
