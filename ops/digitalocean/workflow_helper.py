@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 HOST_PATTERN = re.compile(r"spina\.(?:\d{1,3}-){3}\d{1,3}\.sslip\.io")
 
@@ -53,11 +54,27 @@ def env_quote(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
 
 
+def validate_session_pooler_url(value: str) -> str:
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        raise ValueError("database_pooler_url must use PostgreSQL")
+    if not parsed.hostname or "pooler" not in parsed.hostname.lower():
+        raise ValueError("database_pooler_url must target a database pooler")
+    if parsed.port != 5432:
+        raise ValueError("database_pooler_url must use session mode on port 5432")
+    if not parsed.username or not parsed.password:
+        raise ValueError("database_pooler_url must include runtime credentials")
+    sslmode = parse_qs(parsed.query).get("sslmode", [])
+    if sslmode != ["require"]:
+        raise ValueError("database_pooler_url must require TLS")
+    return value
+
+
 def write_env(*, secrets_path: Path, target_path: Path, output_path: Path) -> None:
     secrets = load_json(secrets_path)
     target = load_target(target_path)
     required = {
-        "database_url": "GILBIC_DATABASE_URL",
+        "database_pooler_url": "GILBIC_DATABASE_URL",
         "supabase_url": "GILBIC_SUPABASE_URL",
         "supabase_publishable_key": "GILBIC_SUPABASE_PUBLISHABLE_KEY",
         "supabase_secret_key": "GILBIC_SUPABASE_SECRET_KEY",
@@ -70,6 +87,8 @@ def write_env(*, secrets_path: Path, target_path: Path, output_path: Path) -> No
         value = str(secrets.get(source, "")).strip()
         if not value:
             raise ValueError(f"secret broker response is missing {source}")
+        if source == "database_pooler_url":
+            value = validate_session_pooler_url(value)
         values[destination] = value
 
     public_url = f"https://{target['hostname']}"
@@ -128,7 +147,7 @@ def write_comment(
                 "- Liveness: `200 / ok`",
                 "- Readiness: `200 / database: ok`",
                 "- Runtime: one loopback-only Uvicorn worker behind Caddy HTTPS",
-                "- Database/Auth: existing Supabase authority",
+                "- Database/Auth: existing Supabase authority through session pooler",
                 "",
                 "No credential, database URL, or SSH private key is included in this evidence.",
                 "",
