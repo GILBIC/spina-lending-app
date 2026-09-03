@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: spina-delivery-${{ github.ref }}
+  group: spina-artifact-delivery-${{ github.ref }}
   cancel-in-progress: true
 
 env:
