@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 import os
-import sys
-from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+import psycopg
 
-ROOT = Path(__file__).resolve().parents[1]
-BACKEND_SRC = ROOT / "gilbic_backend" / "src"
-if str(BACKEND_SRC) not in sys.path:
-    sys.path.insert(0, str(BACKEND_SRC))
 
 _DATABASE_ENV_NAMES = (
     "GILBIC_DATABASE_URL",
@@ -18,11 +14,30 @@ _DATABASE_ENV_NAMES = (
 )
 
 
-def _source_name() -> str:
+def _database_url() -> tuple[str, str]:
     for name in _DATABASE_ENV_NAMES:
-        if os.getenv(name, "").strip():
-            return name
-    return "none"
+        value = os.getenv(name, "").strip()
+        if value:
+            return name, value
+    return "none", ""
+
+
+def _normalize(database_url: str) -> str:
+    parsed = urlsplit(database_url)
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if not (key == "workaround" and value == "supabase-pooler.vercel")
+    ]
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(query),
+            parsed.fragment,
+        )
+    )
 
 
 def _reason(error: BaseException) -> str:
@@ -45,19 +60,21 @@ def _reason(error: BaseException) -> str:
 
 
 def main() -> int:
-    source = _source_name()
-    if source == "none":
+    source, database_url = _database_url()
+    if not database_url:
         print("SPINA_DATABASE_PREFLIGHT status=missing source=none")
         return 0
 
     try:
-        from gilbic_backend.database import open_connection
-
-        with open_connection() as connection:
+        with psycopg.connect(
+            _normalize(database_url),
+            connect_timeout=5,
+            application_name="spina-vercel-preflight",
+        ) as connection:
             with connection.cursor() as cursor:
                 cursor.execute("select 1")
                 ready = cursor.fetchone() == (1,)
-    except BaseException as error:  # Build diagnostic must never expose credentials.
+    except (psycopg.Error, ValueError) as error:
         print(
             "SPINA_DATABASE_PREFLIGHT "
             f"status=unavailable source={source} reason={_reason(error)}"
