@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from gilbic_backend.database import normalize_database_url_for_psycopg
 
@@ -18,7 +18,8 @@ def test_removes_vercel_supabase_workaround_parameter() -> None:
     assert parsed.hostname == "aws-0-ap-southeast-1.pooler.supabase.com"
     assert parsed.port == 6543
     assert parsed.username == "postgres.project"
-    assert parsed.password == "p@ssword"
+    assert parsed.password == "p%40ssword"
+    assert unquote(parsed.password) == "p@ssword"
     assert parse_qsl(parsed.query, keep_blank_values=True) == [("sslmode", "require")]
 
 
