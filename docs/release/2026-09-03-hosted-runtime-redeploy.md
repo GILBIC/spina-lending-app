@@ -13,4 +13,6 @@ Verification gate:
 
 A new Preview deployment was triggered from `mvp/cross-platform-four-role` after Management confirmed that `POSTGRES_URL` was saved. This checkpoint verifies the Preview environment rather than the older `main` production deployment.
 
-Management then removed the literal square brackets around the database password. This commit triggers a fresh Preview deployment so the corrected `POSTGRES_URL` can be verified without exposing its value.
+Management then removed the literal square brackets around the database password.
+
+Management has now replaced the database address with the Supabase Shared transaction pooler URI on port 6543. This commit triggers a fresh Preview deployment to verify the corrected IPv4-compatible serverless connection without exposing any credential value.
