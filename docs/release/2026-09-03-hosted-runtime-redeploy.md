@@ -11,4 +11,4 @@ Verification gate:
 - Client, Employee, Collector, and Management authentication is verified;
 - no secret values are committed to GitHub.
 
-Verification redeploy triggered after Management saved `POSTGRES_URL` for the active Vercel environments.
+A new Preview deployment was triggered from `mvp/cross-platform-four-role` after Management confirmed that `POSTGRES_URL` was saved. This checkpoint verifies the Preview environment rather than the older `main` production deployment.
