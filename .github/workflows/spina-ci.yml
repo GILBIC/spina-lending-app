@@ -191,8 +191,8 @@ jobs:
           call "%FLUTTER%" build apk --debug --target-platform android-arm64,android-x64 --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
-          copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\app-debug.apk" >nul || exit /b 1
-          for %%I in ("%APK_OUT%\app-debug.apk") do echo APK size: %%~zI bytes
+          copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\Spina-Android-internal.apk" >nul || exit /b 1
+          for %%I in ("%APK_OUT%\Spina-Android-internal.apk") do echo APK size: %%~zI bytes
           popd
           rmdir /s /q "%HOST%" || exit /b 1
 
@@ -200,7 +200,7 @@ jobs:
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
         shell: cmd
         run: |
-          python -c "import zipfile; p=r'gilbic_mobile\build\app\outputs\flutter-apk\app-debug.apk'; z=zipfile.ZipFile(p); n=set(z.namelist()); assert 'lib/arm64-v8a/libflutter.so' in n, 'missing arm64-v8a Flutter runtime'; assert 'lib/x86_64/libflutter.so' in n, 'missing x86_64 Flutter runtime'" || exit /b 1
+          python -c "import zipfile; p=r'gilbic_mobile\build\app\outputs\flutter-apk\Spina-Android-internal.apk'; z=zipfile.ZipFile(p); n=set(z.namelist()); assert 'lib/arm64-v8a/libflutter.so' in n, 'missing arm64-v8a Flutter runtime'; assert 'lib/x86_64/libflutter.so' in n, 'missing x86_64 Flutter runtime'" || exit /b 1
 
       - name: Require a clean committed tree
         shell: cmd
@@ -209,15 +209,14 @@ jobs:
           git diff --exit-code || exit /b 1
           git diff --cached --exit-code || exit /b 1
 
-      - name: Upload Android debug APK
-        if: github.event_name == 'workflow_dispatch' && inputs.upload_apk
-        continue-on-error: true
+      - name: Upload Android internal APK
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
         uses: actions/upload-artifact@v4
         with:
-          name: gilbic-mobile-debug-${{ github.sha }}
-          path: gilbic_mobile/build/app/outputs/flutter-apk/app-debug.apk
+          name: Spina-Android-internal-${{ github.event.pull_request.head.sha || github.sha }}
+          path: gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
       # Completed Stage 5E live migrations remain explicit manual maintenance
       # only. Normal PR/push Core validation never executes these steps.
