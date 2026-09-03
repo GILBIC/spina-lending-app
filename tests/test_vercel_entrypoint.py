@@ -69,3 +69,16 @@ def test_preflight_rejects_unlisted_origin() -> None:
 
     assert response.status_code == 400
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_vercel_requirements_use_registry_dependencies_not_ambiguous_local_paths() -> None:
+    lines = [
+        line.strip()
+        for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+    assert "./gilbic_backend" not in lines
+    assert "./spina_backend_mobile" not in lines
+    assert any(line.startswith("fastapi") for line in lines)
+    assert any(line.startswith("psycopg") for line in lines)
