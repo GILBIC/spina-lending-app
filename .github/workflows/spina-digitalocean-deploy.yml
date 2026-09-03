@@ -146,12 +146,62 @@ jobs:
             -o StrictHostKeyChecking=yes
             -o UserKnownHostsFile=/tmp/spina-known-hosts
             -o ConnectTimeout=15
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
           )
-          scp "${SSH_OPTIONS[@]}" /tmp/spina-release.tar.gz root@"$HOST":/tmp/spina-release.tar.gz
-          scp "${SSH_OPTIONS[@]}" /tmp/spina.env root@"$HOST":/tmp/spina.env
-          scp "${SSH_OPTIONS[@]}" ops/digitalocean/bootstrap.sh root@"$HOST":/tmp/spina-bootstrap.sh
-          ssh "${SSH_OPTIONS[@]}" root@"$HOST" \
-            "bash /tmp/spina-bootstrap.sh '$GITHUB_SHA' '$HOSTNAME'"
+
+          ssh_with_retry() {
+            local attempt
+            for attempt in $(seq 1 8); do
+              if ssh "${SSH_OPTIONS[@]}" root@"$HOST" "$@"; then
+                return 0
+              fi
+              sleep $((attempt * 3))
+            done
+            return 1
+          }
+
+          scp_with_retry() {
+            local source="$1"
+            local destination="$2"
+            local attempt
+            for attempt in $(seq 1 8); do
+              if scp "${SSH_OPTIONS[@]}" "$source" root@"$HOST":"$destination"; then
+                return 0
+              fi
+              sleep $((attempt * 3))
+            done
+            return 1
+          }
+
+          start_remote_bootstrap() {
+            ssh_with_retry "install -d -m 0700 /var/lib/spina; rm -f /var/lib/spina-bootstrap.exit /var/log/spina-bootstrap.log; (nohup bash /tmp/spina-bootstrap.sh '$GITHUB_SHA' '$HOSTNAME' > /var/log/spina-bootstrap.log 2>&1 < /dev/null; printf '%s\\n' \$? > /var/lib/spina-bootstrap.exit) >/dev/null 2>&1 &"
+          }
+
+          poll_remote_bootstrap() {
+            local status
+            local attempt
+            for attempt in $(seq 1 180); do
+              status="$(ssh "${SSH_OPTIONS[@]}" root@"$HOST" "cat /var/lib/spina-bootstrap.exit 2>/dev/null || true" 2>/dev/null | tr -d '\r\n' || true)"
+              if [[ "$status" == "0" ]]; then
+                return 0
+              fi
+              if [[ "$status" =~ ^[1-9][0-9]*$ ]]; then
+                ssh_with_retry "tail -n 200 /var/log/spina-bootstrap.log >&2 || true; journalctl -u spina-api --no-pager -n 100 >&2 || true" || true
+                return 1
+              fi
+              sleep 10
+            done
+            ssh_with_retry "tail -n 200 /var/log/spina-bootstrap.log >&2 || true; journalctl -u spina-api --no-pager -n 100 >&2 || true" || true
+            return 1
+          }
+
+          scp_with_retry /tmp/spina-release.tar.gz /tmp/spina-release.tar.gz
+          scp_with_retry /tmp/spina.env /tmp/spina.env
+          scp_with_retry ops/digitalocean/bootstrap.sh /tmp/spina-bootstrap.sh
+          start_remote_bootstrap
+          poll_remote_bootstrap
 
           public_ready=false
           for _ in $(seq 1 120); do
@@ -169,8 +219,7 @@ jobs:
           [[ "$public_ready" == true ]] || { echo "Public HTTPS verification failed." >&2; exit 1; }
 
           KEY_COMMENT="spina-digitalocean-run-${GITHUB_RUN_ID}"
-          ssh "${SSH_OPTIONS[@]}" root@"$HOST" \
-            "set -Eeuo pipefail; temporary=\$(mktemp); grep -vF -- '$KEY_COMMENT' /root/.ssh/authorized_keys > \"\$temporary\" || true; test -s \"\$temporary\"; install -m 0600 -o root -g root \"\$temporary\" /root/.ssh/authorized_keys; rm -f \"\$temporary\"; ! grep -F -- '$KEY_COMMENT' /root/.ssh/authorized_keys"
+          ssh_with_retry "set -Eeuo pipefail; temporary=\$(mktemp); grep -vF -- '$KEY_COMMENT' /root/.ssh/authorized_keys > \"\$temporary\" || true; test -s \"\$temporary\"; install -m 0600 -o root -g root \"\$temporary\" /root/.ssh/authorized_keys; rm -f \"\$temporary\"; ! grep -F -- '$KEY_COMMENT' /root/.ssh/authorized_keys"
 
           python ops/digitalocean/workflow_helper.py write-evidence \
             --target /tmp/spina-target.json \
