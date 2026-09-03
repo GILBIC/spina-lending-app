@@ -20,11 +20,25 @@ test('portal shell includes login, Client registration, and accessible applicati
   }
 });
 
+test('user-facing branding uses Spina only', async () => {
+  const html = await text('../index.html');
+  const config = await text('../assets/config.js');
+  const manifest = JSON.parse(await text('../manifest.webmanifest'));
+
+  assert.match(html, /<title>Spina<\/title>/);
+  assert.match(html, />Spina</);
+  assert.doesNotMatch(html, /SPINA Lending Company|SPINA Lending|>MVP</i);
+  assert.doesNotMatch(config, /Controlled MVP/);
+  assert.equal(manifest.name, 'Spina');
+  assert.equal(manifest.short_name, 'Spina');
+  assert.doesNotMatch(manifest.description, /SPINA Lending Company|SPINA Lending/);
+});
+
 test('PWA manifest is installable for browser and Windows app mode', async () => {
   const manifest = JSON.parse(await text('../manifest.webmanifest'));
 
-  assert.equal(manifest.name, 'SPINA Lending');
-  assert.equal(manifest.short_name, 'SPINA');
+  assert.equal(manifest.name, 'Spina');
+  assert.equal(manifest.short_name, 'Spina');
   assert.equal(manifest.start_url, '/');
   assert.equal(manifest.display, 'standalone');
   assert.ok(Array.isArray(manifest.icons));
