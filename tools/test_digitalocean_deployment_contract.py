@@ -64,6 +64,7 @@ def verify_helper_contract() -> None:
             json.dumps(
                 {
                     "database_url": "postgresql://runtime:secret@db.example/postgres",
+                    "database_pooler_url": "postgresql://runtime:secret@pooler.example:5432/postgres?sslmode=require",
                     "supabase_url": "https://project.example",
                     "supabase_publishable_key": "publishable-test",
                     "supabase_secret_key": "secret-test",
@@ -83,7 +84,12 @@ def verify_helper_contract() -> None:
         )
         require(written.returncode == 0, written.stderr or "environment writer failed")
         env_text = env_path.read_text(encoding="utf-8")
-        require("GILBIC_DATABASE_URL=" in env_text, "database URL variable is missing")
+        require(
+            'GILBIC_DATABASE_URL="postgresql://runtime:secret@pooler.example:5432/postgres?sslmode=require"'
+            in env_text,
+            "DigitalOcean runtime must use the IPv4 session pooler URL",
+        )
+        require("db.example" not in env_text, "direct IPv6 database URL must not reach the Droplet")
         require(
             'GILBIC_CORS_ORIGINS="https://spina.159-223-39-43.sslip.io"' in env_text,
             "public HTTPS origin is missing",
