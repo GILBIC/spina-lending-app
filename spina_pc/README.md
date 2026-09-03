@@ -1,12 +1,12 @@
-# SPINA PC MVP
+# Spina for Windows
 
-SPINA PC is the installable Windows presentation of the SPINA progressive web app. It opens the responsive four-role portal in Microsoft Edge or Google Chrome **app mode**, so staff can launch it from the Desktop or Start Menu without using an ordinary browser tab.
+Spina opens the secure company portal in Microsoft Edge or Google Chrome app mode. Staff can launch it from the Desktop or Start Menu without using a normal browser tab.
 
-It is not a second backend and it does not contain a local lending database. Web, PC, Android, and iOS use the same FastAPI service and the same PostgreSQL/Supabase authority for roles, permissions, clients, loans, routes, balances, receipts, reviews, and audit evidence.
+Web, Windows, Android, and iOS use the same FastAPI service and PostgreSQL/Supabase authority. Windows does not keep a separate lending database.
 
 ## Install
 
-Open PowerShell in this directory and run:
+Open PowerShell in this directory:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -15,11 +15,11 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 The installer:
 
-- requires HTTPS except for `localhost` or `127.0.0.1` development;
-- prefers Microsoft Edge, then Google Chrome;
-- creates only `SPINA Lending.lnk` on the Desktop and Start Menu;
-- stores the portal URL, not a password, token, database URL, or Supabase secret;
-- uses the portal service worker only for static shell assets. Authenticated API responses are never intentionally cached.
+- requires HTTPS except on localhost;
+- uses Microsoft Edge or Google Chrome;
+- creates `Spina.lnk` on the Desktop and Start Menu;
+- stores no password, token, database URL, or Supabase secret;
+- never intentionally caches authenticated API responses.
 
 ## Uninstall
 
@@ -27,10 +27,10 @@ The installer:
 .\uninstall_spina_pc.ps1
 ```
 
-The uninstaller removes only the two SPINA-owned shortcuts. It does not delete the browser profile or any server record.
+The uninstaller removes only the two Spina shortcuts. It does not delete browser or server data.
 
-## Security and usage boundary
+## Company-use gate
 
-This MVP is for controlled/demo data until Management completes security, role, database, and release acceptance. It is **not authorized for real money**, actual borrower records, legal-book posting, tax filing, or production accounting merely because the shortcut launches successfully.
+Use company records only after Management completes security, migration, reconciliation, backup, rollback, role-permission, and release acceptance checks.
 
-Collector payment entry is online-only. If the connection is uncertain after a submission, the portal locks financial entry and requires an authoritative refresh before another attempt.
+Collector payment entry is online-only. After an uncertain submission, refresh the authoritative server state before trying again.
