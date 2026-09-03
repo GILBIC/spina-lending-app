@@ -1,4 +1,5 @@
 import { buildManagementViewModel } from '../presenters.js';
+import { staffInviteMarkup, submitStaffInvitation } from '../staff-invite.js';
 import {
   asArray,
   badge,
@@ -81,6 +82,31 @@ function accountCard(account) {
   return `<div class="data-card"><div class="kv-list"><div class="kv-row"><span>Name</span><strong>${escapeHtml(profile.full_name || '—')}</strong></div><div class="kv-row"><span>Username</span><strong>${escapeHtml(profile.username || '—')}</strong></div><div class="kv-row"><span>Email</span><strong>${escapeHtml(profile.email || '—')}</strong></div><div class="kv-row"><span>Roles</span><strong>${escapeHtml(asArray(profile.roles).join(', ') || profile.role || 'Management')}</strong></div><div class="kv-row"><span>Status</span>${badge(profile.status || 'unknown')}</div></div></div>`;
 }
 
+function bindStaffInvite(context) {
+  const form = context.root.querySelector('#management-staff-invite-form');
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const button = form.querySelector('button[type="submit"]');
+    setButtonBusy(button, true, 'Sending…');
+    try {
+      const result = await submitStaffInvitation(context.api, {
+        fullName: data.get('fullName'),
+        username: data.get('username'),
+        email: data.get('email'),
+        role: data.get('role'),
+      });
+      form.reset();
+      const invited = result?.account?.full_name || result?.account?.username || 'staff member';
+      showToast(`Invitation sent to ${invited}.`, 'success');
+      await mountManagementWorkspace(context);
+    } catch (error) {
+      showToast(error.message, 'error');
+      setButtonBusy(button, false);
+    }
+  });
+}
+
 function bindRenewals(context) {
   for (const form of context.root.querySelectorAll('.management-renewal-review')) {
     form.addEventListener('submit', async (event) => {
@@ -144,7 +170,7 @@ function bindRegistrations(context) {
             if (!globalThis.confirm?.('Approve this account and link it to the selected borrower record?')) return;
             setButtonBusy(approveButton, true, 'Approving…');
             try {
-              await context.api.request(`/api/v1/management/client-registrations/${encodeURIComponent(card.dataset.registrationUserId)}/approve`, { method: 'POST', body: { client_id: approveButton.dataset.clientId, review_note: 'Identity and borrower record reviewed in SPINA MVP.' } });
+              await context.api.request(`/api/v1/management/client-registrations/${encodeURIComponent(card.dataset.registrationUserId)}/approve`, { method: 'POST', body: { client_id: approveButton.dataset.clientId, review_note: 'Identity and borrower record reviewed in Spina.' } });
               showToast('Client account approved and linked.', 'success');
               await mountManagementWorkspace(context);
             } catch (error) {
@@ -203,14 +229,16 @@ export async function mountManagementWorkspace(context) {
   const canDashboard = hasPermission(session, 'management.dashboard.view');
   const canRenewals = hasPermission(session, 'renewal.manage');
   const canSupport = hasPermission(session, 'support.manage');
-  const canAccounts = hasPermission(session, 'account.manage') || hasPermission(session, 'device.manage');
+  const canManageAccounts = hasPermission(session, 'account.manage');
+  const canViewStaff = canManageAccounts || hasPermission(session, 'device.manage');
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
     { id: 'management-loans', label: 'Clients & loans' },
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
     ...(canSupport ? [{ id: 'management-support', label: 'Support' }] : []),
-    ...(canAccounts ? [{ id: 'management-registrations', label: 'Client registrations' }, { id: 'management-staff', label: 'Staff & devices' }] : []),
+    ...(canManageAccounts ? [{ id: 'management-registrations', label: 'Client registrations' }] : []),
+    ...(canViewStaff ? [{ id: 'management-staff', label: 'Staff & devices' }] : []),
     { id: 'management-account', label: 'My account' },
   ]);
   root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
@@ -222,22 +250,24 @@ export async function mountManagementWorkspace(context) {
     canDashboard ? settledRequest(api, '/api/v1/management/alerts-audit?window_days=30&limit=100', {}, { alerts: [], events: [] }) : Promise.resolve({ data: { alerts: [], events: [] }, error: null }),
     canRenewals ? settledRequest(api, '/api/v1/management/renewals?status=pending', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
     canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
-    canAccounts ? settledRequest(api, '/api/v1/management/client-registrations?status=pending', {}, { registrations: [] }) : Promise.resolve({ data: { registrations: [] }, error: null }),
-    canAccounts ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
+    canManageAccounts ? settledRequest(api, '/api/v1/management/client-registrations?status=pending', {}, { registrations: [] }) : Promise.resolve({ data: { registrations: [] }, error: null }),
+    canViewStaff ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
   ]);
   const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data, registrations: registrations.data });
 
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
-  <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This MVP view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
-  ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning SPINA records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
+  <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
-  ${canAccounts ? `<section class="section-card" id="management-registrations"><div class="section-heading"><div><h2>Client registrations</h2><p>Verify identity, search the borrower record, then approve and link—or reject with a reason.</p></div></div>${registrations.error ? errorCard(registrations.error) : registrationQueue(model.pendingRegistrations)}</section><section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Permission-filtered staff directory and device count.</p></div></div>${staff.error ? errorCard(staff.error) : staffRows(asArray(staff.data.accounts))}</section>` : ''}
+  ${canManageAccounts ? `<section class="section-card" id="management-registrations"><div class="section-heading"><div><h2>Client registrations</h2><p>Verify identity, search the borrower record, then approve and link—or reject with a reason.</p></div></div>${registrations.error ? errorCard(registrations.error) : registrationQueue(model.pendingRegistrations)}</section>` : ''}
+  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff and review the permission-filtered directory.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(asArray(staff.data.accounts))}</section>` : ''}
   <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
 
   bindLoanSearch(context);
   bindRenewals(context);
   bindSupport(context);
   bindRegistrations(context);
+  bindStaffInvite(context);
 }
