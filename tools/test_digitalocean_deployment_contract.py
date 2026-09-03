@@ -107,6 +107,19 @@ def main() -> None:
     require("ufw --force enable" in bootstrap, "host firewall must be enabled")
     require("dl.cloudsmith.io/public/caddy/stable" in bootstrap, "official Caddy package repository is required")
 
+    require("wait_for_first_boot_packages" in bootstrap, "bootstrap must coordinate with Ubuntu first boot")
+    require("cloud-init status --wait" in bootstrap, "bootstrap must wait for cloud-init")
+    for lock_path in (
+        "/var/lib/dpkg/lock-frontend",
+        "/var/lib/dpkg/lock",
+        "/var/lib/apt/lists/lock",
+        "/var/cache/apt/archives/lock",
+    ):
+        require(lock_path in bootstrap, f"bootstrap must wait for {lock_path}")
+    require("apt_retry apt-get update" in bootstrap, "apt update must use bounded retry")
+    require("apt_retry apt-get install" in bootstrap, "apt install must use bounded retry")
+    require("dpkg --configure -a" in bootstrap, "interrupted package state must be repaired")
+
     require("id-token: write" in workflow, "workflow must request GitHub OIDC")
     require("https://$HOSTNAME/health/live" in workflow, "public liveness must use HTTPS")
     require("https://$HOSTNAME/health/ready" in workflow, "public readiness must use HTTPS")
@@ -124,6 +137,13 @@ def main() -> None:
     require("SUPABASE_DB_URL" not in workflow, "workflow must not name or embed the database secret")
     require("SUPABASE_SERVICE_ROLE_KEY" not in workflow, "workflow must not name or embed the admin secret")
     require("private_key" not in workflow.lower(), "workflow must not embed a private key")
+
+    require(
+        "spina-digitalocean-run-${GITHUB_RUN_ID}" in workflow,
+        "workflow key cleanup must target the exact run comment",
+    )
+    require("/root/.ssh/authorized_keys" in workflow, "workflow must clean the server authorized_keys file")
+    require("grep -vF" in workflow, "workflow must remove only the exact short-lived key comment")
 
     verify_helper_contract()
     print("DigitalOcean deployment contract passed.")
