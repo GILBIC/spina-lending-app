@@ -103,35 +103,64 @@ jobs:
       - name: Install pinned Flutter
         shell: bash
         run: |
+          set -euo pipefail
           git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Verify Flutter
         run: flutter --version
-      - name: Generate Android host
+      - name: Validate Spina Flutter source
         working-directory: gilbic_mobile
+        shell: bash
         run: |
+          set -euo pipefail
           flutter config --no-analytics
-          flutter create --platforms=android --org ph.spina --project-name gilbic_mobile .
-          sed -i 's/android:label="gilbic_mobile"/android:label="Spina"/' android/app/src/main/AndroidManifest.xml
-      - name: Resolve, analyze and test
-        working-directory: gilbic_mobile
-        run: |
           flutter pub get
           flutter analyze --fatal-infos
           flutter test
-      - name: Build Android release APK
-        working-directory: gilbic_mobile
-        run: >-
-          flutter build apk --release
-          --dart-define=SPINA_API_BASE_URL=${{ env.SPINA_PORTAL_URL }}
-          --dart-define=GILBIC_API_BASE_URL=${{ env.SPINA_PORTAL_URL }}
-      - name: Prepare Android delivery
+      - name: Generate isolated Android host
         shell: bash
         run: |
+          set -euo pipefail
+          HOST="$RUNNER_TEMP/spina-android-host"
+          rm -rf "$HOST"
+          flutter create --platforms=android --org ph.spina --project-name gilbic_mobile "$HOST"
+          rm -rf "$HOST/lib"
+          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"
+          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$HOST/pubspec.yaml"
+          if [ -f "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.lock" ]; then
+            cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.lock" "$HOST/pubspec.lock"
+          fi
+          sed -i 's/android:label="gilbic_mobile"/android:label="Spina"/' "$HOST/android/app/src/main/AndroidManifest.xml"
+          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$HOST/android/gradle.properties"
+      - name: Build Android release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/spina-android-host"
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64,android-x64 --no-pub \
+            --dart-define=SPINA_API_BASE_URL="$SPINA_PORTAL_URL" \
+            --dart-define=GILBIC_API_BASE_URL="$SPINA_PORTAL_URL"
+      - name: Prepare and verify Android delivery
+        shell: bash
+        run: |
+          set -euo pipefail
           mkdir -p delivery/Spina-Android
-          cp gilbic_mobile/build/app/outputs/flutter-apk/app-release.apk delivery/Spina-Android/Spina.apk
+          cp "$RUNNER_TEMP/spina-android-host/build/app/outputs/flutter-apk/app-release.apk" delivery/Spina-Android/Spina.apk
           sha256sum delivery/Spina-Android/Spina.apk > delivery/Spina-Android/SHA256.txt
           printf '%s\n' "$SPINA_PORTAL_URL" > delivery/Spina-Android/SERVER.txt
+          python - <<'PY'
+          import pathlib
+          import zipfile
+
+          path = pathlib.Path("delivery/Spina-Android/Spina.apk")
+          assert path.is_file() and path.stat().st_size > 0
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+          assert "lib/arm64-v8a/libflutter.so" in names
+          assert "lib/x86_64/libflutter.so" in names
+          print(f"Verified Spina APK: {path.stat().st_size} bytes")
+          PY
       - name: Upload Android package
         uses: actions/upload-artifact@v4
         with:
