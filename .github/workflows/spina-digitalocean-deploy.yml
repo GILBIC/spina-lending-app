@@ -1,13 +1,6 @@
 name: Spina DigitalOcean Production Deploy
 
 on:
-  push:
-    branches:
-      - ops/digitalocean-production
-    paths:
-      - .github/workflows/spina-digitalocean-deploy.yml
-      - ops/digitalocean/**
-      - tools/test_digitalocean_deployment_contract.py
   workflow_dispatch:
 
 permissions:
@@ -106,7 +99,7 @@ jobs:
             "$SECRET_BROKER_URL" \
             > /tmp/spina-secrets.json
 
-          for field in database_url supabase_url supabase_publishable_key supabase_secret_key; do
+          for field in database_url database_pooler_url supabase_url supabase_publishable_key supabase_secret_key; do
             value="$(jq -er --arg field "$field" '.[$field]' /tmp/spina-secrets.json)"
             echo "::add-mask::$value"
           done
