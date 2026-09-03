@@ -14,7 +14,7 @@ await writeFile(
   resolve(output, '_build.json'),
   JSON.stringify(
     {
-      application: 'SPINA Lending',
+      application: 'Spina',
       surface: 'four-role-pwa',
       version: '0.1.0',
       built_at: new Date().toISOString(),
@@ -25,4 +25,4 @@ await writeFile(
   'utf8',
 );
 
-console.log(`SPINA portal built at ${output}`);
+console.log(`Spina portal built at ${output}`);
