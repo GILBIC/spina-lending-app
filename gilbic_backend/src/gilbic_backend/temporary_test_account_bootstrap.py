@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import secrets
 from hashlib import sha256
 from hmac import compare_digest
@@ -77,8 +76,6 @@ def create_temporary_test_account_bootstrap_router() -> APIRouter:
         response: Response,
         token: str = Query(min_length=32, max_length=200),
     ) -> dict[str, object]:
-        if os.getenv("VERCEL_ENV", "").strip().lower() != "preview":
-            raise HTTPException(status_code=404, detail="Not found.")
         supplied = sha256(token.encode("utf-8")).hexdigest()
         if not compare_digest(supplied, _TOKEN_DIGEST):
             raise HTTPException(status_code=404, detail="Not found.")
