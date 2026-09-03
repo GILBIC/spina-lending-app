@@ -1,0 +1,258 @@
+name: Spina DigitalOcean Production Deploy
+
+on:
+  push:
+    branches:
+      - ops/digitalocean-production
+    paths:
+      - .github/workflows/spina-digitalocean-deploy.yml
+      - ops/digitalocean/**
+      - tools/test_digitalocean_deployment_contract.py
+
+permissions:
+  contents: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: spina-digitalocean-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Deploy exact revision
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SECRET_BROKER_URL: https://lnixxnckhitbzqtjvked.supabase.co/functions/v1/spina-github-deploy-secrets
+        run: |
+          set -Eeuo pipefail
+          trap 'rm -f /tmp/spina-do-key /tmp/spina-do-key.pub /tmp/spina-target.json /tmp/spina-oidc.json /tmp/spina-secrets.json /tmp/spina.env /tmp/spina-release.tar.gz /tmp/spina-live.json /tmp/spina-ready.json /tmp/spina-root.html /tmp/spina-known-hosts' EXIT
+
+          put_branch_file() {
+            local path="$1"
+            local source_file="$2"
+            local message="$3"
+            local encoded existing_sha
+            encoded="$(base64 -w0 < "$source_file")"
+            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=${GITHUB_REF_NAME}" --jq .sha 2>/dev/null || true)"
+            if [[ -n "$existing_sha" ]]; then
+              gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+                -f message="$message" \
+                -f content="$encoded" \
+                -f branch="$GITHUB_REF_NAME" \
+                -f sha="$existing_sha" >/dev/null
+            else
+              gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+                -f message="$message" \
+                -f content="$encoded" \
+                -f branch="$GITHUB_REF_NAME" >/dev/null
+            fi
+          }
+
+          ssh-keygen -t ed25519 -N '' -C "spina-digitalocean-run-${GITHUB_RUN_ID}" -f /tmp/spina-do-key
+          chmod 600 /tmp/spina-do-key
+          put_branch_file \
+            ".deploy/digitalocean-public-key.txt" \
+            "/tmp/spina-do-key.pub" \
+            "ops: publish ephemeral DigitalOcean public key for run ${GITHUB_RUN_ID}"
+
+          echo "Waiting for the DigitalOcean target rendezvous."
+          target_ready=false
+          for _ in $(seq 1 240); do
+            encoded_target="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.deploy/digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null || true)"
+            if [[ -n "$encoded_target" ]]; then
+              printf '%s' "$encoded_target" | tr -d '\n' | base64 -d > /tmp/spina-target.json
+              if python - <<'PY'
+                import ipaddress
+                import json
+                import re
+
+                with open('/tmp/spina-target.json', encoding='utf-8') as handle:
+                    target = json.load(handle)
+
+                if not isinstance(target.get('droplet_id'), int) or target['droplet_id'] <= 0:
+                    raise SystemExit(1)
+                ip = ipaddress.ip_address(str(target.get('host', '')))
+                if ip.version != 4 or not ip.is_global:
+                    raise SystemExit(1)
+                hostname = str(target.get('hostname', ''))
+                if not re.fullmatch(r'spina\.(?:\d{1,3}-){3}\d{1,3}\.sslip\.io', hostname):
+                    raise SystemExit(1)
+                expected = 'spina.' + str(ip).replace('.', '-') + '.sslip.io'
+                if hostname != expected:
+                    raise SystemExit(1)
+                PY
+              then
+                target_ready=true
+                break
+              fi
+            fi
+            sleep 5
+          done
+          [[ "$target_ready" == true ]] || { echo "DigitalOcean target rendezvous timed out." >&2; exit 1; }
+
+          DROPLET_ID="$(jq -er '.droplet_id' /tmp/spina-target.json)"
+          HOST="$(jq -er '.host' /tmp/spina-target.json)"
+          HOSTNAME="$(jq -er '.hostname' /tmp/spina-target.json)"
+
+          curl --fail --silent --show-error \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=spina-digitalocean-deploy" \
+            > /tmp/spina-oidc.json
+          OIDC_TOKEN="$(jq -er '.value' /tmp/spina-oidc.json)"
+          echo "::add-mask::$OIDC_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            "$SECRET_BROKER_URL" \
+            > /tmp/spina-secrets.json
+
+          DATABASE_URL="$(jq -er '.database_url' /tmp/spina-secrets.json)"
+          SUPABASE_URL="$(jq -er '.supabase_url' /tmp/spina-secrets.json)"
+          SUPABASE_PUBLISHABLE_KEY="$(jq -er '.supabase_publishable_key' /tmp/spina-secrets.json)"
+          SUPABASE_SECRET_KEY="$(jq -er '.supabase_secret_key' /tmp/spina-secrets.json)"
+          for value in "$DATABASE_URL" "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" "$SUPABASE_SECRET_KEY"; do
+            echo "::add-mask::$value"
+          done
+
+          export DATABASE_URL SUPABASE_URL SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY HOSTNAME
+          python - <<'PY'
+            import os
+            from pathlib import Path
+
+            def quote(value: str) -> str:
+                return '"' + value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n') + '"'
+
+            values = {
+                'GILBIC_APP_NAME': 'Spina API',
+                'GILBIC_ENVIRONMENT': 'production',
+                'GILBIC_DATABASE_URL': os.environ['DATABASE_URL'],
+                'GILBIC_SUPABASE_URL': os.environ['SUPABASE_URL'],
+                'GILBIC_SUPABASE_PUBLISHABLE_KEY': os.environ['SUPABASE_PUBLISHABLE_KEY'],
+                'GILBIC_SUPABASE_SECRET_KEY': os.environ['SUPABASE_SECRET_KEY'],
+                'GILBIC_CORS_ORIGINS': f"https://{os.environ['HOSTNAME']}",
+                'GILBIC_STAFF_INVITE_REDIRECT_URL': f"https://{os.environ['HOSTNAME']}/",
+                'GILBIC_GCASH_MODE': 'disabled',
+            }
+            Path('/tmp/spina.env').write_text(
+                ''.join(f'{key}={quote(value)}\n' for key, value in values.items()),
+                encoding='utf-8',
+            )
+            PY
+          chmod 600 /tmp/spina.env
+
+          python tools/test_digitalocean_deployment_contract.py
+          bash -n ops/digitalocean/bootstrap.sh
+          npm install --ignore-scripts
+          npm run build
+
+          tar -czf /tmp/spina-release.tar.gz \
+            dist \
+            gilbic_backend \
+            spina_backend_mobile \
+            requirements.txt \
+            ops/digitalocean/bootstrap.sh
+
+          : > /tmp/spina-known-hosts
+          ssh_ready=false
+          for _ in $(seq 1 120); do
+            if ssh-keyscan -T 5 -H "$HOST" > /tmp/spina-known-hosts 2>/dev/null && [[ -s /tmp/spina-known-hosts ]]; then
+              ssh_ready=true
+              break
+            fi
+            sleep 5
+          done
+          [[ "$ssh_ready" == true ]] || { echo "SSH did not become ready." >&2; exit 1; }
+
+          SSH_OPTIONS=(
+            -i /tmp/spina-do-key
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile=/tmp/spina-known-hosts
+            -o ConnectTimeout=15
+          )
+          scp "${SSH_OPTIONS[@]}" /tmp/spina-release.tar.gz root@"$HOST":/tmp/spina-release.tar.gz
+          scp "${SSH_OPTIONS[@]}" /tmp/spina.env root@"$HOST":/tmp/spina.env
+          scp "${SSH_OPTIONS[@]}" ops/digitalocean/bootstrap.sh root@"$HOST":/tmp/spina-bootstrap.sh
+          ssh "${SSH_OPTIONS[@]}" root@"$HOST" \
+            "bash /tmp/spina-bootstrap.sh '$GITHUB_SHA' '$HOSTNAME'"
+
+          public_ready=false
+          for _ in $(seq 1 120); do
+            if curl --fail --silent --show-error --max-time 15 "https://$HOSTNAME/health/live" > /tmp/spina-live.json \
+              && curl --fail --silent --show-error --max-time 15 "https://$HOSTNAME/health/ready" > /tmp/spina-ready.json \
+              && curl --fail --silent --show-error --max-time 15 "https://$HOSTNAME/" > /tmp/spina-root.html \
+              && jq -e '.status == "ok"' /tmp/spina-live.json >/dev/null \
+              && jq -e '.status == "ready" and .database == "ok"' /tmp/spina-ready.json >/dev/null \
+              && grep -q '<title>Spina</title>' /tmp/spina-root.html; then
+              public_ready=true
+              break
+            fi
+            sleep 5
+          done
+          [[ "$public_ready" == true ]] || { echo "Public HTTPS verification failed." >&2; exit 1; }
+
+          python - <<PY
+            import json
+            from pathlib import Path
+
+            Path('/tmp/spina-deployment-evidence.json').write_text(
+                json.dumps(
+                    {
+                        'git_sha': '${GITHUB_SHA}',
+                        'droplet_id': int('${DROPLET_ID}'),
+                        'host': '${HOST}',
+                        'hostname': '${HOSTNAME}',
+                        'url': 'https://${HOSTNAME}',
+                        'liveness': 'ok',
+                        'readiness': 'ready',
+                        'database': 'ok',
+                    },
+                    indent=2,
+                ) + '\n',
+                encoding='utf-8',
+            )
+            PY
+
+          cat > /tmp/spina-deployment-comment.md <<EOF
+            ## DigitalOcean deployment completed
+
+            - Exact Git SHA: \`${GITHUB_SHA}\`
+            - Droplet ID: \`${DROPLET_ID}\`
+            - Region: \`sgp1\`
+            - Public URL: https://${HOSTNAME}
+            - Liveness: \`200 / ok\`
+            - Readiness: \`200 / database: ok\`
+            - Runtime: one loopback-only Uvicorn worker behind Caddy HTTPS
+            - Database/Auth: existing Supabase authority
+
+            No credential, database URL, or SSH private key is included in this evidence.
+            EOF
+          gh issue comment 296 --repo "$GITHUB_REPOSITORY" --body-file /tmp/spina-deployment-comment.md
+
+      - name: Upload non-secret deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-digitalocean-deployment-${{ github.sha }}
+          path: /tmp/spina-deployment-evidence.json
+          if-no-files-found: ignore
+          retention-days: 30
