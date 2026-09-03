@@ -4,6 +4,14 @@ BEGIN;
 -- accounting, device, and audit records only through the protected FastAPI API.
 -- This migration is intentionally idempotent and does not change object owners,
 -- RLS state, or the privileges of the database role used by the backend.
+
+-- PostgreSQL grants EXECUTE on newly created functions/routines to PUBLIC by
+-- default. Per-schema default privileges can add to, but cannot subtract from,
+-- that global default. Revoke it globally for future routines created by the
+-- current migration owner; any deliberately public routine must receive an
+-- explicit reviewed GRANT in its own migration.
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+
 DO $spina_mvp_private_schema_barrier$
 DECLARE
     target_schema text;
@@ -50,8 +58,9 @@ BEGIN
             target_schema
         );
 
-        -- Preserve the same boundary for future objects created by the current
-        -- migration/database owner. Migrations must continue to run as that owner.
+        -- Preserve the same boundary for future tables and sequences created by
+        -- the current migration/database owner. The global function default above
+        -- provides the required future routine boundary.
         EXECUTE format(
             'ALTER DEFAULT PRIVILEGES IN SCHEMA %I REVOKE ALL PRIVILEGES ON TABLES FROM PUBLIC',
             target_schema
@@ -60,6 +69,7 @@ BEGIN
             'ALTER DEFAULT PRIVILEGES IN SCHEMA %I REVOKE ALL PRIVILEGES ON SEQUENCES FROM PUBLIC',
             target_schema
         );
+        -- This also reverses any earlier explicit per-schema function GRANT.
         EXECUTE format(
             'ALTER DEFAULT PRIVILEGES IN SCHEMA %I REVOKE ALL PRIVILEGES ON FUNCTIONS FROM PUBLIC',
             target_schema
