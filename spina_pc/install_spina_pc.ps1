@@ -7,7 +7,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ShortcutName = "SPINA Lending.lnk"
+$ShortcutName = "Spina.lnk"
 
 function Resolve-SafePortalUri {
     param([string]$Value)
@@ -25,7 +25,7 @@ function Resolve-SafePortalUri {
 
     $LocalHosts = @("localhost", "127.0.0.1", "::1")
     if ($Uri.Scheme -ne "https" -and $LocalHosts -notcontains $Uri.Host) {
-        throw "SPINA PC requires an HTTPS portal URL. HTTP is allowed only for localhost development."
+        throw "Spina requires an HTTPS portal URL. HTTP is allowed only for localhost development."
     }
 
     return $Uri.AbsoluteUri.TrimEnd("/")
@@ -47,7 +47,7 @@ function Find-SupportedBrowser {
         }
     }
 
-    throw "Microsoft Edge or Google Chrome is required to install SPINA PC app mode."
+    throw "Microsoft Edge or Google Chrome is required to install Spina."
 }
 
 function New-SpinaShortcut {
@@ -70,7 +70,7 @@ function New-SpinaShortcut {
     $Shortcut.TargetPath = $BrowserPath
     $Shortcut.Arguments = "--app=$SafePortalUrl --start-maximized"
     $Shortcut.WorkingDirectory = Split-Path -Parent $BrowserPath
-    $Shortcut.Description = "SPINA Lending secure four-role workspace"
+    $Shortcut.Description = "Spina secure workspace"
     $Shortcut.IconLocation = "$BrowserPath,0"
     $Shortcut.Save()
 }
@@ -83,12 +83,12 @@ $StartMenuShortcut = Join-Path ([Environment]::GetFolderPath("StartMenu")) "Prog
 New-SpinaShortcut -ShortcutPath $DesktopShortcut -BrowserPath $BrowserPath -SafePortalUrl $SafePortalUrl
 New-SpinaShortcut -ShortcutPath $StartMenuShortcut -BrowserPath $BrowserPath -SafePortalUrl $SafePortalUrl
 
-Write-Host "SPINA PC installed."
+Write-Host "Spina installed."
 Write-Host "Portal: $SafePortalUrl"
 Write-Host "Browser app host: $BrowserPath"
 Write-Host "Desktop shortcut: $DesktopShortcut"
 Write-Host "Start Menu shortcut: $StartMenuShortcut"
-Write-Host "SPINA PC stores no database password or backend secret in the shortcut."
+Write-Host "Spina stores no database password or backend secret in the shortcut."
 
 if ($StartAfterInstall) {
     Start-Process -FilePath $BrowserPath -ArgumentList "--app=$SafePortalUrl", "--start-maximized"
