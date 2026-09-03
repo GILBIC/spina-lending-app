@@ -14,5 +14,10 @@ for package_root in (
         sys.path.insert(0, value)
 
 from gilbic_backend.main import app
+from gilbic_backend.temporary_test_account_bootstrap import (
+    create_temporary_test_account_bootstrap_router,
+)
+
+app.include_router(create_temporary_test_account_bootstrap_router())
 
 __all__ = ["app"]
