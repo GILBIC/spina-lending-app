@@ -123,9 +123,9 @@ export function buildEmployeeViewModel({
     openSupportCount: supportItems.filter((request) => statusIs(request, 'open', 'answered')).length,
     account,
     unavailable: [
-      { key: 'attendance', label: 'Attendance', message: 'Not connected in this MVP.' },
-      { key: 'payroll', label: 'Payroll & payslips', message: 'Not connected in this MVP.' },
-      { key: 'leave', label: 'Leave requests', message: 'Not connected in this MVP.' },
+      { key: 'attendance', label: 'Attendance', message: 'Not connected yet.' },
+      { key: 'payroll', label: 'Payroll & payslips', message: 'Not connected yet.' },
+      { key: 'leave', label: 'Leave requests', message: 'Not connected yet.' },
     ],
   };
 }
