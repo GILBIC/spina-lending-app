@@ -102,6 +102,14 @@ jobs:
           FLUTTER_ROOT="$RUNNER_TEMP/flutter-3.44.7"
           git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "$FLUTTER_ROOT"
           echo "$FLUTTER_ROOT/bin" >> "$GITHUB_PATH"
+      - name: Validate Spina Flutter source
+        working-directory: gilbic_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze --fatal-infos
+          flutter test
       - name: Build Android install package
         shell: bash
         run: |
@@ -115,8 +123,6 @@ jobs:
           printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$HOST/android/gradle.properties"
           cd "$HOST"
           flutter pub get
-          flutter analyze --fatal-infos
-          flutter test
           flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub
           mkdir -p "$OUT"
           cp build/app/outputs/flutter-apk/app-debug.apk "$OUT/Spina-Android-internal.apk"
