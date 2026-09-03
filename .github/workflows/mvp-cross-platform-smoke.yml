@@ -10,6 +10,9 @@ on:
       - "spina_portal/**"
       - "spina_pc/**"
       - "gilbic_mobile/tool/bootstrap_all_platforms.ps1"
+      - "gilbic_backend/sql/0109_mvp_private_schema_barrier.sql"
+      - "gilbic_backend/tests/test_mvp_private_schema_barrier.py"
+      - "tools/run_mvp_private_schema_barrier_validation.py"
       - "tools/build_portal.mjs"
       - "tools/check_portal_modules.mjs"
       - "tests/test_vercel_entrypoint.py"
@@ -48,13 +51,14 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install -e ./spina_backend_mobile -e './gilbic_backend[test]'
-      - name: Run deployable API and platform contracts
+      - name: Run deployable API, platform, and private-schema contracts
         env:
           PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
         run: >-
           python -m pytest -q
           tests/test_vercel_entrypoint.py
           tests/test_platform_bootstrap_contract.py
+          gilbic_backend/tests/test_mvp_private_schema_barrier.py
 
   portal-contract:
     runs-on: ubuntu-latest
