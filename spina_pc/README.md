@@ -31,6 +31,6 @@ The uninstaller removes only the two SPINA-owned shortcuts. It does not delete t
 
 ## Security and usage boundary
 
-This MVP is for controlled/demo data until Management completes security, role, database, and release acceptance. Do not use real-money collection, actual borrower records, legal-book posting, tax filing, or production accounting merely because the shortcut launches successfully.
+This MVP is for controlled/demo data until Management completes security, role, database, and release acceptance. It is **not authorized for real money**, actual borrower records, legal-book posting, tax filing, or production accounting merely because the shortcut launches successfully.
 
 Collector payment entry is online-only. If the connection is uncertain after a submission, the portal locks financial entry and requires an authoritative refresh before another attempt.
