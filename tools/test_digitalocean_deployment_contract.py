@@ -145,6 +145,15 @@ def main() -> None:
     require("/root/.ssh/authorized_keys" in workflow, "workflow must clean the server authorized_keys file")
     require("grep -vF" in workflow, "workflow must remove only the exact short-lived key comment")
 
+    require("start_remote_bootstrap" in workflow, "bootstrap must start through a recoverable helper")
+    require("nohup bash /tmp/spina-bootstrap.sh" in workflow, "bootstrap must survive an SSH disconnect")
+    require("/var/lib/spina-bootstrap.exit" in workflow, "bootstrap must persist its exit status")
+    require("/var/log/spina-bootstrap.log" in workflow, "bootstrap must persist a diagnostic log")
+    require("poll_remote_bootstrap" in workflow, "workflow must reconnect and poll bootstrap completion")
+    require("ServerAliveInterval=15" in workflow, "SSH sessions must send keepalives")
+    require("ServerAliveCountMax=4" in workflow, "SSH keepalive failure must be bounded")
+    require("ConnectionAttempts=3" in workflow, "SSH connection establishment must retry")
+
     verify_helper_contract()
     print("DigitalOcean deployment contract passed.")
 
