@@ -1,4 +1,4 @@
-name: SPINA Cross-Platform MVP Smoke
+name: SPINA Web, PC & Android Delivery
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - "api/**"
       - "spina_portal/**"
       - "spina_pc/**"
-      - "gilbic_mobile/tool/bootstrap_all_platforms.ps1"
+      - "gilbic_mobile/**"
       - "gilbic_backend/sql/0109_mvp_private_schema_barrier.sql"
       - "gilbic_backend/tests/test_mvp_private_schema_barrier.py"
       - "tools/run_mvp_private_schema_barrier_validation.py"
@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: spina-mvp-smoke-${{ github.event.pull_request.number || github.ref }}
+  group: spina-delivery-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install -e ./spina_backend_mobile -e './gilbic_backend[test]'
-      - name: Run deployable API, platform, and private-schema contracts
+      - name: Run API and platform contracts
         env:
           PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
         run: >-
@@ -73,7 +73,7 @@ jobs:
           node-version: "22"
       - name: Check and test portal modules
         run: npm test
-      - name: Build deployable PWA
+      - name: Build deployable Web application
         run: npm run build
       - name: Verify static output boundary
         shell: bash
@@ -86,6 +86,64 @@ jobs:
             echo "Public portal output contains a forbidden backend secret pattern."
             exit 1
           fi
+
+  android-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install Flutter 3.44.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          FLUTTER_ROOT="$RUNNER_TEMP/flutter-3.44.7"
+          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "$FLUTTER_ROOT"
+          echo "$FLUTTER_ROOT/bin" >> "$GITHUB_PATH"
+      - name: Build Android install package
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="$RUNNER_TEMP/spina-android-host"
+          OUT="$GITHUB_WORKSPACE/gilbic_mobile/build/app/outputs/flutter-apk"
+          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile "$HOST"
+          rm -rf "$HOST/lib"
+          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"
+          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$HOST/pubspec.yaml"
+          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$HOST/android/gradle.properties"
+          cd "$HOST"
+          flutter pub get
+          flutter analyze --fatal-infos
+          flutter test
+          flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub
+          mkdir -p "$OUT"
+          cp build/app/outputs/flutter-apk/app-debug.apk "$OUT/Spina-Android-internal.apk"
+      - name: Verify Android package
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import zipfile
+
+          path = pathlib.Path('gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk')
+          assert path.is_file() and path.stat().st_size > 0
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+          assert 'lib/arm64-v8a/libflutter.so' in names
+          assert 'lib/x86_64/libflutter.so' in names
+          print(f'APK bytes: {path.stat().st_size}')
+          print(f'SHA-256: {hashlib.sha256(path.read_bytes()).hexdigest()}')
+          PY
+      - name: Upload Android install package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spina-Android-internal-${{ github.event.pull_request.head.sha || github.sha }}
+          path: gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk
+          if-no-files-found: error
+          retention-days: 7
 
   private-schema-postgres:
     runs-on: ubuntu-latest
