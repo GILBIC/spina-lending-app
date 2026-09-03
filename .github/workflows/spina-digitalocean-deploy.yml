@@ -8,6 +8,7 @@ on:
       - .github/workflows/spina-digitalocean-deploy.yml
       - ops/digitalocean/**
       - tools/test_digitalocean_deployment_contract.py
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,7 +17,7 @@ permissions:
 
 concurrency:
   group: spina-digitalocean-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -166,6 +167,10 @@ jobs:
             sleep 5
           done
           [[ "$public_ready" == true ]] || { echo "Public HTTPS verification failed." >&2; exit 1; }
+
+          KEY_COMMENT="spina-digitalocean-run-${GITHUB_RUN_ID}"
+          ssh "${SSH_OPTIONS[@]}" root@"$HOST" \
+            "set -Eeuo pipefail; temporary=\$(mktemp); grep -vF -- '$KEY_COMMENT' /root/.ssh/authorized_keys > \"\$temporary\" || true; test -s \"\$temporary\"; install -m 0600 -o root -g root \"\$temporary\" /root/.ssh/authorized_keys; rm -f \"\$temporary\"; ! grep -F -- '$KEY_COMMENT' /root/.ssh/authorized_keys"
 
           python ops/digitalocean/workflow_helper.py write-evidence \
             --target /tmp/spina-target.json \
