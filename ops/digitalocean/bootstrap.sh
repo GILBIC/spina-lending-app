@@ -6,6 +6,60 @@ fail() {
   exit 1
 }
 
+package_manager_busy() {
+  local lock_path
+  for lock_path in \
+    /var/lib/dpkg/lock-frontend \
+    /var/lib/dpkg/lock \
+    /var/lib/apt/lists/lock \
+    /var/cache/apt/archives/lock; do
+    if command -v fuser >/dev/null 2>&1 && fuser "$lock_path" >/dev/null 2>&1; then
+      return 0
+    fi
+  done
+  if pgrep -x apt >/dev/null 2>&1 \
+    || pgrep -x apt-get >/dev/null 2>&1 \
+    || pgrep -x dpkg >/dev/null 2>&1 \
+    || pgrep -f unattended-upgrade >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+wait_for_package_manager() {
+  local waited=0
+  while package_manager_busy; do
+    if (( waited >= 900 )); then
+      fail "timed out waiting for Ubuntu package-manager locks"
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+}
+
+wait_for_first_boot_packages() {
+  if command -v cloud-init >/dev/null 2>&1; then
+    timeout 900 cloud-init status --wait >/dev/null 2>&1 \
+      || fail "cloud-init did not finish successfully"
+  fi
+  wait_for_package_manager
+  dpkg --configure -a
+}
+
+apt_retry() {
+  local attempt
+  for attempt in 1 2 3 4 5 6; do
+    wait_for_package_manager
+    if "$@"; then
+      return 0
+    fi
+    if (( attempt == 6 )); then
+      fail "package command failed after ${attempt} attempts: $*"
+    fi
+    sleep $((attempt * 5))
+  done
+}
+
 [[ $# -eq 2 ]] || fail "usage: bootstrap.sh <git-sha> <hostname>"
 SHA="$1"
 HOSTNAME="$2"
@@ -16,8 +70,9 @@ HOSTNAME="$2"
 [[ -s /tmp/spina.env ]] || fail "missing runtime environment"
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y --no-install-recommends \
+wait_for_first_boot_packages
+apt_retry apt-get update -y
+apt_retry apt-get install -y --no-install-recommends \
   apt-transport-https \
   ca-certificates \
   curl \
@@ -35,8 +90,8 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
   > /etc/apt/sources.list.d/caddy-stable.list
 chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 chmod o+r /etc/apt/sources.list.d/caddy-stable.list
-apt-get update -y
-apt-get install -y --no-install-recommends caddy
+apt_retry apt-get update -y
+apt_retry apt-get install -y --no-install-recommends caddy
 
 if ! swapon --show --noheadings | grep -q .; then
   if [[ ! -f /swapfile ]]; then
