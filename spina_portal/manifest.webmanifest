@@ -1,7 +1,7 @@
 {
-  "name": "SPINA Lending",
-  "short_name": "SPINA",
-  "description": "Secure Client, Employee, Collector, and Management workspace for SPINA Lending.",
+  "name": "Spina",
+  "short_name": "Spina",
+  "description": "Secure Client, Employee, Collector, and Management workspace for Spina.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
