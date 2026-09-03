@@ -114,6 +114,11 @@ def main() -> None:
     require("ssh-keygen -t ed25519" in workflow, "deployment key must be ephemeral")
     require("digitalocean-public-key.txt" in workflow, "public-key rendezvous is required")
     require("digitalocean-target.json" in workflow, "target rendezvous is required")
+    require('if encoded_target="$(gh api' in workflow, "missing rendezvous must be handled by command status")
+    require(
+        'digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null || true' not in workflow,
+        "missing rendezvous must not be decoded as base64",
+    )
     require("trap 'rm -f" in workflow, "temporary secret files must be deleted")
     require("<<" not in workflow, "workflow must not use indentation-sensitive heredocs")
     require("SUPABASE_DB_URL" not in workflow, "workflow must not name or embed the database secret")

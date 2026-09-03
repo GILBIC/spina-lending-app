@@ -76,8 +76,7 @@ jobs:
           echo "Waiting for the DigitalOcean target rendezvous."
           target_ready=false
           for _ in $(seq 1 240); do
-            encoded_target="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.deploy/digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null || true)"
-            if [[ -n "$encoded_target" ]]; then
+            if encoded_target="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.deploy/digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null)"; then
               printf '%s' "$encoded_target" | tr -d '\n' | base64 -d > /tmp/spina-target.json
               if python ops/digitalocean/workflow_helper.py validate-target \
                 --target /tmp/spina-target.json \
