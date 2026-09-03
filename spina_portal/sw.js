@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-mvp-shell-v1';
+const CACHE_NAME = 'spina-company-shell-v2';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -12,6 +12,7 @@ const SHELL_ASSETS = [
   '/assets/ui.js',
   '/assets/presenters.js',
   '/assets/collector-contract.js',
+  '/assets/staff-invite.js',
   '/assets/roles/client.js',
   '/assets/roles/employee.js',
   '/assets/roles/collector.js',
