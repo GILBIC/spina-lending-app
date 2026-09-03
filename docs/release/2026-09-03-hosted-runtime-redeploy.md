@@ -12,3 +12,5 @@ Verification gate:
 - no secret values are committed to GitHub.
 
 A new Preview deployment was triggered from `mvp/cross-platform-four-role` after Management confirmed that `POSTGRES_URL` was saved. This checkpoint verifies the Preview environment rather than the older `main` production deployment.
+
+Management then removed the literal square brackets around the database password. This commit triggers a fresh Preview deployment so the corrected `POSTGRES_URL` can be verified without exposing its value.
