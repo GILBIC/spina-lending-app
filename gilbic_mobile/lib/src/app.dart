@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
 import 'package:gilbic_mobile/src/core/auth/session_store.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_cache_factory.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -85,7 +86,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       _collectorRouteLoader = suppliedLoader;
       _collectorRouteCache = widget.collectorRouteCache;
     } else {
-      final cache = widget.collectorRouteCache ?? SqlCipherCollectorRouteCache();
+      final cache =
+          widget.collectorRouteCache ?? createDefaultCollectorRouteCache();
       _collectorRouteCache = cache;
       _collectorRouteLoader = CachedCollectorRouteLoader(
         remote: widget.collectorRouteRepository ??
