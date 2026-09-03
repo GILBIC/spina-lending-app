@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     app_name: str = "Gilbic API"
@@ -19,11 +20,42 @@ class Settings(BaseSettings):
     api_prefix: str = "/api"
     database_url: str = Field(
         default="postgresql://127.0.0.1:5432/gilbic_dev",
+        validation_alias=AliasChoices(
+            "GILBIC_DATABASE_URL",
+            "POSTGRES_URL",
+            "POSTGRES_URL_NON_POOLING",
+            "DATABASE_URL",
+        ),
         repr=False,
     )
-    supabase_url: str = ""
-    supabase_publishable_key: str = Field(default="", repr=False)
-    supabase_secret_key: str = Field(default="", repr=False)
+    supabase_url: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "GILBIC_SUPABASE_URL",
+            "SUPABASE_URL",
+            "NEXT_PUBLIC_SUPABASE_URL",
+        ),
+    )
+    supabase_publishable_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "GILBIC_SUPABASE_PUBLISHABLE_KEY",
+            "SUPABASE_PUBLISHABLE_KEY",
+            "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+            "SUPABASE_ANON_KEY",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        ),
+        repr=False,
+    )
+    supabase_secret_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "GILBIC_SUPABASE_SECRET_KEY",
+            "SUPABASE_SECRET_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
+        ),
+        repr=False,
+    )
     staff_invite_redirect_url: str = ""
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     mobile_android_minimum_version: str = ""
