@@ -56,3 +56,10 @@ def test_android_delivery_uses_an_isolated_generated_host() -> None:
     assert source.index("Validate Spina Flutter source") < source.index(
         "Generate isolated Android host"
     )
+
+
+def test_delivery_workflow_has_an_independent_concurrency_group() -> None:
+    source = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "group: spina-artifact-delivery-${{ github.ref }}" in source
+    assert "group: spina-delivery-${{ github.ref }}" not in source
