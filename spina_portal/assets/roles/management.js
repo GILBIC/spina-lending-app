@@ -1,0 +1,243 @@
+import { buildManagementViewModel } from '../presenters.js';
+import {
+  asArray,
+  badge,
+  emptyState,
+  errorCard,
+  escapeHtml,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  hasPermission,
+  loadingPanel,
+  metricCard,
+  settledRequest,
+  setButtonBusy,
+  showToast,
+  titleCase,
+} from '../ui.js';
+
+function metricValue(metric) {
+  if (metric.amount != null) return formatMoney(metric.amount);
+  if (metric.count != null) return escapeHtml(metric.count);
+  return '—';
+}
+
+function overviewMetrics(metrics) {
+  if (!metrics.length) return emptyState('No Management metric is currently available.');
+  return `<div class="metric-grid">${metrics.map((metric) => metricCard(titleCase(metric.key), metricValue(metric), metric.as_of_date ? `As of ${formatDate(metric.as_of_date)}` : '')).join('')}</div>`;
+}
+
+function loanTable(data) {
+  const loans = asArray(data.loans);
+  if (!loans.length) return emptyState('No loan matches the current search.');
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Client</th><th>Loan</th><th>Type</th><th>Principal</th><th>Official balance</th><th>Daily</th><th>Due</th><th>Status</th></tr></thead>
+    <tbody>${loans.map((loan) => `<tr>
+      <td><strong>${escapeHtml(loan.client_name || 'Client')}</strong><br><span class="meta">${escapeHtml(loan.client_code || '')} · ${escapeHtml(loan.client_area || '')}</span></td>
+      <td>${escapeHtml(loan.loan_number || '—')}</td>
+      <td>${escapeHtml(loan.loan_type_name || '—')}</td>
+      <td>${formatMoney(loan.principal)}</td>
+      <td>${formatMoney(loan.remaining_balance)}</td>
+      <td>${formatMoney(loan.daily_amount)}</td>
+      <td>${formatDate(loan.due_date)}</td>
+      <td>${badge(loan.loan_status || 'unknown')}${loan.is_overdue ? '<br><span class="badge danger">Overdue</span>' : ''}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function alertsMarkup(alerts, events) {
+  const alertCards = alerts.length
+    ? `<div class="card-grid">${alerts.map((alert) => `<article class="data-card"><div class="section-heading"><div><h3>${escapeHtml(alert.title || titleCase(alert.code))}</h3><p>${escapeHtml(alert.domain || '')}</p></div>${badge(alert.severity || 'info')}</div><strong class="metric-value">${escapeHtml(alert.count ?? 0)}</strong>${alert.amount != null ? `<p>${formatMoney(alert.amount)}</p>` : ''}</article>`).join('')}</div>`
+    : emptyState('No actionable alert is visible under the current permissions.');
+  const eventList = events.length
+    ? `<div class="timeline">${events.slice(0, 60).map((event) => `<article class="timeline-item"><strong>${escapeHtml(event.title || event.action_code || 'Activity')}</strong><span>${escapeHtml(event.reference || event.current_state || '')}</span><span class="meta">${escapeHtml(event.actor_name || '')}${event.occurred_at ? ` · ${formatDateTime(event.occurred_at)}` : ''}</span>${event.reason ? `<span>${escapeHtml(event.reason)}</span>` : ''}</article>`).join('')}</div>`
+    : emptyState('No recent allowlisted audit event is available.');
+  return `${alertCards}<div class="section-heading" style="margin-top:1rem"><div><h2>Recent audit activity</h2></div></div>${eventList}`;
+}
+
+function renewalQueue(items) {
+  if (!items.length) return emptyState('No pending renewal request requires review.');
+  return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.loan_number || 'Loan')} · ${escapeHtml(request.loan_type_name || '')}</div></div>${badge(request.status)}</div><div class="detail-grid"><div class="detail-item"><span>Current principal</span><strong>${formatMoney(request.current_principal)}</strong></div><div class="detail-item"><span>Remaining</span><strong>${formatMoney(request.remaining_balance)}</strong></div><div class="detail-item"><span>Requested</span><strong>${formatMoney(request.requested_amount)}</strong></div></div>${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}<form class="entry-form management-renewal-review" data-request-id="${escapeHtml(request.request_id)}"><label>Decision<select name="decision"><option value="approved">Approve request</option><option value="rejected">Reject request</option></select></label><label>Review note<textarea name="reviewNote" maxlength="1000" placeholder="Required when rejecting"></textarea></label><button class="button button-primary" type="submit">Confirm review</button></form></article>`).join('')}</div>`;
+}
+
+function supportQueue(items) {
+  if (!items.length) return emptyState('No open support request requires review.');
+  return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div></div>${badge(request.status)}</div><p>${escapeHtml(request.message || '')}</p>${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}<form class="entry-form management-support-review" data-request-id="${escapeHtml(request.request_id)}"><label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label><label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label><button class="button button-primary" type="submit">Save response</button></form></article>`).join('')}</div>`;
+}
+
+function registrationQueue(items) {
+  if (!items.length) return emptyState('No pending Client registration requires review.');
+  return `<div class="list-stack">${items.map((registration) => `<article class="list-item registration-card" data-registration-user-id="${escapeHtml(registration.user_id)}"><div class="section-heading"><div><strong>${escapeHtml(registration.full_name || registration.username)}</strong><div class="meta">${escapeHtml(registration.username || '')} · ${escapeHtml(registration.email || '')}</div></div>${badge(registration.registration_status)}</div><div class="detail-grid"><div class="detail-item"><span>Claimed Client code</span><strong>${escapeHtml(registration.claimed_client_code || '—')}</strong></div><div class="detail-item"><span>Claimed phone</span><strong>${escapeHtml(registration.claimed_phone_number || '—')}</strong></div><div class="detail-item"><span>Submitted</span><strong>${formatDateTime(registration.submitted_at)}</strong></div></div><form class="entry-form candidate-search-form"><label>Find borrower record<input name="query" minlength="2" required value="${escapeHtml(registration.claimed_client_code || registration.full_name || '')}" /></label><button class="button button-secondary" type="submit">Search candidates</button><button class="button button-outline reject-registration" type="button">Reject request</button></form><div class="candidate-results"></div></article>`).join('')}</div>`;
+}
+
+function staffRows(accounts) {
+  if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
+  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Updated</th></tr></thead><tbody>${accounts.map((account) => `<tr><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 0)}</td><td>${formatDateTime(account.updated_at)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function accountCard(account) {
+  const profile = account.profile ?? {};
+  return `<div class="data-card"><div class="kv-list"><div class="kv-row"><span>Name</span><strong>${escapeHtml(profile.full_name || '—')}</strong></div><div class="kv-row"><span>Username</span><strong>${escapeHtml(profile.username || '—')}</strong></div><div class="kv-row"><span>Email</span><strong>${escapeHtml(profile.email || '—')}</strong></div><div class="kv-row"><span>Roles</span><strong>${escapeHtml(asArray(profile.roles).join(', ') || profile.role || 'Management')}</strong></div><div class="kv-row"><span>Status</span>${badge(profile.status || 'unknown')}</div></div></div>`;
+}
+
+function bindRenewals(context) {
+  for (const form of context.root.querySelectorAll('.management-renewal-review')) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const decision = String(data.get('decision'));
+      const reviewNote = String(data.get('reviewNote') || '').trim();
+      if (decision === 'rejected' && reviewNote.length < 3) {
+        showToast('Enter a clear rejection reason.', 'error');
+        return;
+      }
+      if (!globalThis.confirm?.(`Confirm ${decision} for this renewal request?`)) return;
+      const button = form.querySelector('button[type="submit"]');
+      setButtonBusy(button, true, 'Saving…');
+      try {
+        await context.api.request(`/api/v1/management/renewals/${encodeURIComponent(form.dataset.requestId)}/review`, { method: 'POST', body: { decision, review_note: reviewNote } });
+        showToast(`Renewal request ${decision}.`, 'success');
+        await mountManagementWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+        setButtonBusy(button, false);
+      }
+    });
+  }
+}
+
+function bindSupport(context) {
+  for (const form of context.root.querySelectorAll('.management-support-review')) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      setButtonBusy(button, true, 'Saving…');
+      try {
+        await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, { method: 'POST', body: { action: data.get('action'), response: String(data.get('response') || '').trim() } });
+        showToast('Support review saved.', 'success');
+        await mountManagementWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+        setButtonBusy(button, false);
+      }
+    });
+  }
+}
+
+function bindRegistrations(context) {
+  for (const form of context.root.querySelectorAll('.candidate-search-form')) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const card = form.closest('.registration-card');
+      const results = card.querySelector('.candidate-results');
+      const query = String(new FormData(form).get('query') || '').trim();
+      const button = form.querySelector('button[type="submit"]');
+      setButtonBusy(button, true, 'Searching…');
+      try {
+        const data = await context.api.request(`/api/v1/management/client-link-candidates?q=${encodeURIComponent(query)}`);
+        const clients = asArray(data.clients);
+        results.innerHTML = clients.length ? `<div class="list-stack">${clients.map((client) => `<div class="list-item"><div class="section-heading"><div><strong>${escapeHtml(client.full_name)}</strong><div class="meta">${escapeHtml(client.client_code)} · ${escapeHtml(client.area || '')} · ${escapeHtml(client.phone_number || '')}</div></div>${badge(client.status)}</div><button class="button button-primary button-small approve-registration" type="button" data-client-id="${escapeHtml(client.id)}">Approve and link this record</button></div>`).join('')}</div>` : emptyState('No matching borrower record was found.');
+        for (const approveButton of results.querySelectorAll('.approve-registration')) {
+          approveButton.addEventListener('click', async () => {
+            if (!globalThis.confirm?.('Approve this account and link it to the selected borrower record?')) return;
+            setButtonBusy(approveButton, true, 'Approving…');
+            try {
+              await context.api.request(`/api/v1/management/client-registrations/${encodeURIComponent(card.dataset.registrationUserId)}/approve`, { method: 'POST', body: { client_id: approveButton.dataset.clientId, review_note: 'Identity and borrower record reviewed in SPINA MVP.' } });
+              showToast('Client account approved and linked.', 'success');
+              await mountManagementWorkspace(context);
+            } catch (error) {
+              showToast(error.message, 'error');
+              setButtonBusy(approveButton, false);
+            }
+          });
+        }
+      } catch (error) {
+        results.innerHTML = errorCard(error);
+      } finally {
+        setButtonBusy(button, false);
+      }
+    });
+
+    const rejectButton = form.querySelector('.reject-registration');
+    rejectButton?.addEventListener('click', async () => {
+      const card = form.closest('.registration-card');
+      const reason = globalThis.prompt?.('Enter the rejection reason:')?.trim();
+      if (!reason || reason.length < 3) return;
+      setButtonBusy(rejectButton, true, 'Rejecting…');
+      try {
+        await context.api.request(`/api/v1/management/client-registrations/${encodeURIComponent(card.dataset.registrationUserId)}/reject`, { method: 'POST', body: { review_note: reason } });
+        showToast('Client registration rejected with retained reason.', 'success');
+        await mountManagementWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+        setButtonBusy(rejectButton, false);
+      }
+    });
+  }
+}
+
+function bindLoanSearch(context) {
+  const form = context.root.querySelector('#management-loan-search');
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const target = context.root.querySelector('#management-loan-results');
+    const button = form.querySelector('button[type="submit"]');
+    setButtonBusy(button, true, 'Searching…');
+    target.innerHTML = '<div class="loading-panel"><div class="spinner"></div></div>';
+    try {
+      const loans = await context.api.request(`/api/v1/management/loans?q=${encodeURIComponent(String(data.get('query') || '').trim())}&status=${encodeURIComponent(String(data.get('status') || 'active'))}`);
+      target.innerHTML = loanTable(loans);
+    } catch (error) {
+      target.innerHTML = errorCard(error);
+    } finally {
+      setButtonBusy(button, false);
+    }
+  });
+}
+
+export async function mountManagementWorkspace(context) {
+  const { root, api, session, setNavigation } = context;
+  const canDashboard = hasPermission(session, 'management.dashboard.view');
+  const canRenewals = hasPermission(session, 'renewal.manage');
+  const canSupport = hasPermission(session, 'support.manage');
+  const canAccounts = hasPermission(session, 'account.manage') || hasPermission(session, 'device.manage');
+  setNavigation([
+    { id: 'management-overview', label: 'Overview' },
+    { id: 'management-loans', label: 'Clients & loans' },
+    ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
+    ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
+    ...(canSupport ? [{ id: 'management-support', label: 'Support' }] : []),
+    ...(canAccounts ? [{ id: 'management-registrations', label: 'Client registrations' }, { id: 'management-staff', label: 'Staff & devices' }] : []),
+    { id: 'management-account', label: 'My account' },
+  ]);
+  root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
+
+  const [account, overview, loans, alerts, renewals, support, registrations, staff] = await Promise.all([
+    settledRequest(api, '/api/v1/account', {}, {}),
+    canDashboard ? settledRequest(api, '/api/v1/management/dashboard-overview', {}, { metrics: [] }) : Promise.resolve({ data: { metrics: [] }, error: null }),
+    settledRequest(api, '/api/v1/management/loans?status=active', {}, { summary: {}, loans: [] }),
+    canDashboard ? settledRequest(api, '/api/v1/management/alerts-audit?window_days=30&limit=100', {}, { alerts: [], events: [] }) : Promise.resolve({ data: { alerts: [], events: [] }, error: null }),
+    canRenewals ? settledRequest(api, '/api/v1/management/renewals?status=pending', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
+    canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
+    canAccounts ? settledRequest(api, '/api/v1/management/client-registrations?status=pending', {}, { registrations: [] }) : Promise.resolve({ data: { registrations: [] }, error: null }),
+    canAccounts ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
+  ]);
+  const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data, registrations: registrations.data });
+
+  root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
+  ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
+  <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This MVP view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning SPINA records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
+  ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
+  ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
+  ${canAccounts ? `<section class="section-card" id="management-registrations"><div class="section-heading"><div><h2>Client registrations</h2><p>Verify identity, search the borrower record, then approve and link—or reject with a reason.</p></div></div>${registrations.error ? errorCard(registrations.error) : registrationQueue(model.pendingRegistrations)}</section><section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Permission-filtered staff directory and device count.</p></div></div>${staff.error ? errorCard(staff.error) : staffRows(asArray(staff.data.accounts))}</section>` : ''}
+  <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
+
+  bindLoanSearch(context);
+  bindRenewals(context);
+  bindSupport(context);
+  bindRegistrations(context);
+}

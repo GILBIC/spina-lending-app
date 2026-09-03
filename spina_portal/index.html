@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#c72c73" />
+    <meta name="description" content="SPINA Lending — secure role-based lending and collection workspace." />
+    <title>SPINA Lending</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/assets/spina-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <div id="app-root">
+      <section id="auth-view" class="auth-page">
+        <div class="auth-backdrop" aria-hidden="true"></div>
+        <header class="auth-brand">
+          <img src="/assets/spina-icon.svg" alt="" width="52" height="52" />
+          <div>
+            <p class="eyebrow">SPINA Lending Company</p>
+            <h1>One secure workspace for every role.</h1>
+            <p class="lede">
+              Client, Employee, Collector, and Management use the same protected SPINA backend and official records.
+            </p>
+          </div>
+        </header>
+
+        <div class="auth-grid">
+          <article class="auth-card">
+            <div class="card-heading">
+              <span class="icon-chip" aria-hidden="true">↗</span>
+              <div>
+                <p class="eyebrow">Welcome back</p>
+                <h2>Sign in</h2>
+              </div>
+            </div>
+            <form id="login-form" class="form-stack" novalidate>
+              <label>
+                Username
+                <input name="username" autocomplete="username" required maxlength="80" placeholder="Enter your SPINA username" />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Enter your password" />
+              </label>
+              <button class="button button-primary" type="submit">Sign in securely</button>
+            </form>
+            <p class="form-help">
+              Collector phones may require Management device approval before access is activated.
+            </p>
+          </article>
+
+          <article class="auth-card auth-card-soft">
+            <div class="card-heading">
+              <span class="icon-chip" aria-hidden="true">＋</span>
+              <div>
+                <p class="eyebrow">New Client</p>
+                <h2>Request an account</h2>
+              </div>
+            </div>
+            <form id="registration-form" class="form-grid" novalidate>
+              <label>
+                Full name
+                <input name="fullName" autocomplete="name" required minlength="2" maxlength="200" />
+              </label>
+              <label>
+                Client code
+                <input name="clientCode" required maxlength="80" placeholder="Code from SPINA records" />
+              </label>
+              <label>
+                Phone number
+                <input name="phoneNumber" autocomplete="tel" maxlength="40" />
+              </label>
+              <label>
+                Email
+                <input name="email" type="email" autocomplete="email" required maxlength="320" />
+              </label>
+              <label>
+                Username
+                <input name="username" autocomplete="username" required minlength="3" maxlength="80" />
+              </label>
+              <label>
+                Password
+                <input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" />
+              </label>
+              <button class="button button-secondary form-span" type="submit">Send registration request</button>
+            </form>
+            <p class="form-help">
+              Registration does not activate access by itself. Management must verify and link the request to the correct borrower record.
+            </p>
+          </article>
+        </div>
+
+        <div class="role-strip" aria-label="Supported roles">
+          <span>Client</span><span>Employee</span><span>Collector</span><span>Management</span>
+        </div>
+      </section>
+
+      <section id="authenticated-app" class="authenticated-app" hidden>
+        <header class="topbar">
+          <div class="brand-lockup">
+            <img src="/assets/spina-icon.svg" alt="" width="40" height="40" />
+            <div>
+              <strong>SPINA Lending</strong>
+              <span id="environment-label">MVP</span>
+            </div>
+          </div>
+          <div class="topbar-context">
+            <span id="connection-status" class="status-chip" role="status">Checking connection</span>
+            <span id="signed-in-role" class="role-chip"></span>
+            <span id="signed-in-name" class="signed-in-name"></span>
+          </div>
+          <div class="topbar-actions">
+            <button id="refresh-workspace" class="button button-quiet" type="button">Refresh</button>
+            <button id="logout-button" class="button button-outline" type="button">Sign out</button>
+          </div>
+        </header>
+
+        <div class="app-layout">
+          <aside class="sidebar">
+            <div class="sidebar-title">
+              <p class="eyebrow">Workspace</p>
+              <h2 id="workspace-title">SPINA</h2>
+            </div>
+            <nav id="role-navigation" aria-label="Role workspace navigation"></nav>
+            <div class="sidebar-note">
+              <strong>Official records stay on the server.</strong>
+              <span>Cached pages and browser totals never replace SPINA receipts or balances.</span>
+            </div>
+          </aside>
+          <main id="role-content" class="role-content" tabindex="-1"></main>
+        </div>
+      </section>
+
+      <div id="status-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <noscript>SPINA requires JavaScript for secure authenticated access.</noscript>
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>

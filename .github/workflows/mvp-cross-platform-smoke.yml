@@ -9,6 +9,8 @@ on:
       - "api/**"
       - "spina_portal/**"
       - "spina_pc/**"
+      - "tools/build_portal.mjs"
+      - "tools/check_portal_modules.mjs"
       - "tests/test_vercel_entrypoint.py"
       - "tests/test_platform_bootstrap_contract.py"
       - "requirements.txt"
@@ -61,13 +63,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Run portal contracts when present
+      - name: Check and test portal modules
+        run: npm test
+      - name: Build deployable PWA
+        run: npm run build
+      - name: Verify static output boundary
         shell: bash
         run: |
-          shopt -s nullglob
-          tests=(spina_portal/tests/*.test.mjs)
-          if [ ${#tests[@]} -eq 0 ]; then
-            echo "No portal tests yet."
-            exit 0
+          test -f dist/index.html
+          test -f dist/assets/app.js
+          test -f dist/manifest.webmanifest
+          test ! -d dist/tests
+          if grep -R -E "GILBIC_(DATABASE_URL|SUPABASE_SECRET_KEY)|service_role|postgresql://" dist; then
+            echo "Public portal output contains a forbidden backend secret pattern."
+            exit 1
           fi
-          node --test "${tests[@]}"
