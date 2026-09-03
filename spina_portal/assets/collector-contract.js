@@ -112,7 +112,7 @@ export function buildCollectionSubmission({
   }
   const normalizedType = String(entryType ?? '').trim().toLowerCase();
   if (!['payment', 'pass'].includes(normalizedType)) {
-    throw new TypeError('The MVP supports Payment and Unable to pay entries only.');
+    throw new TypeError('Spina supports Payment and Unable to pay entries only.');
   }
 
   let normalizedAmount = null;
