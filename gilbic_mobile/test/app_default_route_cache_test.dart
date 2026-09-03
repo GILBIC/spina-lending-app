@@ -10,14 +10,16 @@ void main() {
     'default app composition avoids SQLCipher on Windows',
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      try {
+        await tester.pumpWidget(
+          GilbicApp(sessionStore: MemorySessionStore()),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        GilbicApp(sessionStore: MemorySessionStore()),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sign in'), findsOneWidget);
+        expect(find.text('Sign in'), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     },
   );
 }
