@@ -40,7 +40,8 @@ def test_windows_installer_prefers_edge_then_chrome_and_embeds_no_credentials() 
 def test_windows_uninstaller_removes_only_spina_owned_shortcuts() -> None:
     source = _read("spina_pc/uninstall_spina_pc.ps1")
 
-    assert "SPINA Lending.lnk" in source
+    assert "Spina.lnk" in source
+    assert "SPINA Lending.lnk" not in source
     assert "Remove-Item" in source
     assert "*.lnk" not in source
     assert "Recurse" not in source
@@ -59,10 +60,14 @@ def test_flutter_bootstrap_analyzes_and_tests_before_optional_android_build() ->
     assert "windows" in lowered
 
 
-def test_pc_readme_describes_browser_app_mode_not_a_second_backend() -> None:
+def test_windows_guide_describes_one_backend_and_company_use_gate() -> None:
     source = _read("spina_pc/README.md").lower()
 
-    assert "progressive web app" in source
+    assert "# spina for windows" in source
     assert "fastapi" in source
-    assert "same" in source and "backend" in source
-    assert "real money" in source
+    assert "same" in source and "postgresql/supabase authority" in source
+    assert "separate lending database" in source
+    assert "company-use gate" in source
+    assert "management completes" in source
+    assert "authoritative server state" in source
+    assert "spina lending" not in source
