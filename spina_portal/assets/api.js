@@ -51,7 +51,7 @@ export class SpinaApi {
     apiBaseUrl = '',
     appVersion = '0.1.0',
     sessionStore,
-    fetchImpl = globalThis.fetch,
+    fetchImpl = globalThis.fetch?.bind(globalThis),
   }) {
     if (!sessionStore) {
       throw new TypeError('sessionStore is required.');
