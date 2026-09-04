@@ -223,9 +223,10 @@ def plan_protected_regular_allocation(
     same number of nearest future operational rows before any cash can become a
     genuine voluntary extra.
 
-    Genuine extra is never guessed. The borrower must explicitly choose either
-    ``advance`` (oldest future obligation first) or ``principal_reduction``
-    (contractual tail first). Without that choice this function fails closed.
+    Genuine extra is never guessed. Advance is unavailable when the borrower
+    enters the transaction with Past Due or an active borrower-caused extension.
+    Otherwise the borrower may explicitly choose ``advance`` or
+    ``principal_reduction`` for genuine extra cash.
     """
 
     amount = _money(transaction_amount)
@@ -240,6 +241,9 @@ def plan_protected_regular_allocation(
     )
     if not remaining:
         raise PaymentAllocationError("The contractual schedule is already fully paid.")
+
+    had_past_due = any(row.due_date < collection_date for row in remaining)
+    advance_blocked = had_past_due or active_borrower_extension_slots > 0
 
     amount_left = amount
     instructions: list[AllocationInstruction] = []
@@ -290,6 +294,11 @@ def plan_protected_regular_allocation(
     if extra_choice is None:
         raise PaymentAllocationError(
             "Payment includes extra cash after Past Due, Due Today, and borrower catch-up. Choose Advance or Principal Reduction."
+        )
+
+    if extra_choice == "advance" and advance_blocked:
+        raise PaymentAllocationError(
+            "Advance is unavailable while Past Due or a borrower schedule extension exists."
         )
 
     catch_up_ids = {row.installment_id for row in catch_up_rows}
