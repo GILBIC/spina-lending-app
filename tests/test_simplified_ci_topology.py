@@ -37,6 +37,35 @@ def test_primary_ci_has_three_clear_hosted_lanes() -> None:
     )
 
 
+def test_hosted_ci_uses_current_node_24_action_runtimes() -> None:
+    source = PRIMARY.read_text(encoding="utf-8")
+
+    for action in (
+        "actions/checkout@v7.0.1",
+        "actions/setup-python@v7.0.0",
+        "actions/setup-node@v7.0.0",
+        "actions/setup-java@v6.0.0",
+        "actions/upload-artifact@v7.0.0",
+    ):
+        assert action in source
+    for retired in (
+        "actions/checkout@v4",
+        "actions/setup-python@v5",
+        "actions/setup-node@v4",
+        "actions/setup-java@v4",
+        "actions/upload-artifact@v4",
+    ):
+        assert retired not in source
+
+
+def test_private_schema_validator_uses_an_explicit_test_database() -> None:
+    source = PRIMARY.read_text(encoding="utf-8")
+
+    assert "mvp_private_schema_test" in source
+    assert "/privateschema?" not in source
+    assert '--health-cmd "pg_isready -U postgres"' in source
+
+
 def test_retired_broad_workflows_are_removed() -> None:
     for filename in RETIRED:
         assert not (WORKFLOWS / filename).exists(), filename
