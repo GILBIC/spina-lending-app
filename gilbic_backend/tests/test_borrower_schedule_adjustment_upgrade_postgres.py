@@ -51,10 +51,48 @@ def _ensure_0110_installed() -> None:
             connection.execute(_migration_body(SQL_0110))
 
 
+def _seed_pre_0110_no_collection_adjustment(case) -> object:
+    """Insert one valid legacy adjustment row using the pre-0110 column shape."""
+    assert DATABASE_URL is not None
+    with psycopg.connect(DATABASE_URL) as connection:
+        schedule_id = connection.execute(
+            """
+            select id
+            from lending.loan_contract_schedules
+            where loan_id = %s
+              and status = 'active'
+            """,
+            (case.loan_id,),
+        ).fetchone()[0]
+        return connection.execute(
+            """
+            insert into lending.loan_schedule_adjustments (
+                loan_id,
+                schedule_id,
+                adjustment_type,
+                no_collection_date,
+                reason,
+                expected_operational_version,
+                resulting_operational_version,
+                actor_user_id
+            )
+            values (%s, %s, 'no_collection', %s, %s, 0, 1, %s)
+            returning id
+            """,
+            (
+                case.loan_id,
+                schedule_id,
+                case.payment_start,
+                "Pre-0110 disposable No Collection audit row.",
+                case.collector_id,
+            ),
+        ).fetchone()[0]
+
+
 def test_0110_backfills_existing_no_collection_event_date_without_losing_audit() -> None:
     assert DATABASE_URL is not None
     case = cases._setup_case()
-    adjustment_id = cases._declare_no_collection(case)
+    adjustment_id = _seed_pre_0110_no_collection_adjustment(case)
 
     with psycopg.connect(DATABASE_URL) as connection:
         before = connection.execute(
