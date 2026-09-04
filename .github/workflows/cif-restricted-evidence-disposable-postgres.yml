@@ -9,6 +9,7 @@ on:
       - 'gilbic_backend/src/gilbic_backend/restricted_identity_*.py'
       - 'gilbic_backend/tests/test_cif_*.py'
       - 'gilbic_backend/tests/test_restricted_identity_*.py'
+      - 'tools/prepare_cif_restricted_evidence_test_database.py'
   push:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - 'gilbic_backend/src/gilbic_backend/restricted_identity_*.py'
       - 'gilbic_backend/tests/test_cif_*.py'
       - 'gilbic_backend/tests/test_restricted_identity_*.py'
+      - 'tools/prepare_cif_restricted_evidence_test_database.py'
   workflow_dispatch:
 
 permissions:
@@ -121,6 +123,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Disposable PostgreSQL is not ready.' }
 
             $env:GILBIC_TEST_DATABASE_URL = "postgresql://cifrestricted@127.0.0.1:$port/postgres?sslmode=disable"
+            & $python tools\prepare_cif_restricted_evidence_test_database.py
+            if ($LASTEXITCODE -ne 0) {
+              throw "CIF prerequisite replay failed with exit code $LASTEXITCODE."
+            }
             & $python -m pytest -q `
               gilbic_backend\tests\test_cif_domain.py `
               gilbic_backend\tests\test_cif_restricted_evidence_migration.py `
