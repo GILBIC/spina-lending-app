@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "spina-delivery.yml"
+PRODUCTION_API_URL = "https://spina.157-230-250-111.sslip.io"
 
 
 def test_delivery_workflow_packages_active_platforms() -> None:
@@ -34,6 +35,15 @@ def test_android_delivery_is_not_a_debug_build() -> None:
 
     assert "flutter build apk --release" in source
     assert "flutter build apk --debug" not in source
+
+
+def test_android_delivery_targets_production_api() -> None:
+    source = WORKFLOW.read_text(encoding="utf-8")
+
+    assert f"SPINA_API_URL: {PRODUCTION_API_URL}" in source
+    assert '--dart-define=GILBIC_API_URL="$SPINA_API_URL"' in source
+    assert "--dart-define=GILBIC_API_BASE_URL" not in source
+    assert "--dart-define=SPINA_API_BASE_URL" not in source
 
 
 def test_android_delivery_uses_an_isolated_generated_host() -> None:
