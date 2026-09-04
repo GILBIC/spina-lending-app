@@ -1,0 +1,91 @@
+name: Temporary CIF CI Patch Runner
+
+on:
+  push:
+    branches:
+      - feat/cif-restricted-evidence
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temp-cif-ci-patch
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'fix: correct CIF PostgreSQL verification') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/cif-restricted-evidence
+          fetch-depth: 0
+
+      - name: Apply two exact verified replacements
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match in {path}; found {count}.")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_once(
+              "gilbic_backend/src/gilbic_backend/cif_repository.py",
+              """                    select
+                          coalesce(max(form_version), 0) + 1 as next_version,
+                          max(id) filter (where lifecycle_state = 'active') as active_cif_id
+                      from lending.client_information_forms
+                      where client_id = %s
+                      \"\"\",
+                      (client_id,),
+          """,
+              """                    select
+                          coalesce(max(form_version), 0) + 1 as next_version,
+                          (
+                              select active.id
+                              from lending.client_information_forms active
+                              where active.client_id = %s
+                                and active.lifecycle_state = 'active'
+                              order by active.form_version desc, active.id desc
+                              limit 1
+                          ) as active_cif_id
+                      from lending.client_information_forms
+                      where client_id = %s
+                      \"\"\",
+                      (client_id, client_id),
+          """,
+          )
+          replace_once(
+              "gilbic_backend/tests/test_cif_restricted_evidence_postgres.py",
+              "    effective_v2 = effective_v1 + timedelta(seconds=1)\n",
+              "    effective_v2 = effective_v1\n",
+          )
+          PY
+
+      - name: Verify patch scope
+        shell: bash
+        run: |
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 2
+          git diff --name-only | grep -Fx 'gilbic_backend/src/gilbic_backend/cif_repository.py'
+          git diff --name-only | grep -Fx 'gilbic_backend/tests/test_cif_restricted_evidence_postgres.py'
+          ! grep -F "max(id) filter (where lifecycle_state = 'active')" gilbic_backend/src/gilbic_backend/cif_repository.py
+          ! grep -F "effective_v1 + timedelta(seconds=1)" gilbic_backend/tests/test_cif_restricted_evidence_postgres.py
+
+      - name: Commit narrow correction
+        shell: bash
+        run: |
+          git config user.name "SPINA CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add gilbic_backend/src/gilbic_backend/cif_repository.py gilbic_backend/tests/test_cif_restricted_evidence_postgres.py
+          git commit -m "fix: correct CIF PostgreSQL verification"
+          git push origin HEAD:feat/cif-restricted-evidence
