@@ -394,7 +394,7 @@ def test_cif_constraints_status_and_immutability(database) -> None:
         ),
     )
 
-    effective_v2 = effective_v1 + timedelta(seconds=1)
+    effective_v2 = effective_v1
     expires_v2 = five_year_expiry(effective_v2)
     with connection.transaction():
         connection.execute(

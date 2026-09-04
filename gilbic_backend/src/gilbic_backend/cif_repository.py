@@ -305,11 +305,18 @@ class PostgresCifRepository:
                     """
                     select
                         coalesce(max(form_version), 0) + 1 as next_version,
-                        max(id) filter (where lifecycle_state = 'active') as active_cif_id
+                        (
+                  select active.id
+                  from lending.client_information_forms active
+                  where active.client_id = %s
+                    and active.lifecycle_state = 'active'
+                  order by active.form_version desc, active.id desc
+                  limit 1
+              ) as active_cif_id
                     from lending.client_information_forms
                     where client_id = %s
                     """,
-                    (client_id,),
+                    (client_id, client_id),
                 )
                 version_row = cursor.fetchone()
                 cursor.execute(
