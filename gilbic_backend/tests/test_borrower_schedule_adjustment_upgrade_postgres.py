@@ -7,6 +7,10 @@ from pathlib import Path
 import psycopg
 import pytest
 
+from gilbic_backend.management_no_collection_repository import (
+    PostgresManagementNoCollectionRepository,
+)
+
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -152,3 +156,33 @@ def test_management_no_collection_declaration_writes_event_date_after_0110() -> 
             (adjustment_id,),
         ).fetchone()
     assert row == ("no_collection", case.payment_start, case.payment_start)
+
+
+def test_management_no_collection_reversal_writes_event_date_after_0110() -> None:
+    assert DATABASE_URL is not None
+    case = cases._setup_case()
+    _ensure_0110_installed()
+    adjustment_id = cases._declare_no_collection(case)
+
+    reversed_record = PostgresManagementNoCollectionRepository().reverse(
+        actor_user_id=case.collector_id,
+        adjustment_id=adjustment_id,
+        expected_operational_version=1,
+        reason="Disposable reversal after 0110.",
+    )
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        row = connection.execute(
+            """
+            select adjustment_type, no_collection_date, event_date, reverses_adjustment_id
+            from lending.loan_schedule_adjustments
+            where id = %s
+            """,
+            (reversed_record.adjustment_id,),
+        ).fetchone()
+    assert row == (
+        "reversal",
+        case.payment_start,
+        case.payment_start,
+        adjustment_id,
+    )
