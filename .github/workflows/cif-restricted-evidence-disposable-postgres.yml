@@ -10,6 +10,7 @@ on:
       - 'gilbic_backend/tests/test_cif_*.py'
       - 'gilbic_backend/tests/test_restricted_identity_*.py'
       - 'tools/prepare_cif_restricted_evidence_test_database.py'
+      - 'tools/run_cif_restricted_evidence_tests.py'
   push:
     branches:
       - main
@@ -21,6 +22,7 @@ on:
       - 'gilbic_backend/tests/test_cif_*.py'
       - 'gilbic_backend/tests/test_restricted_identity_*.py'
       - 'tools/prepare_cif_restricted_evidence_test_database.py'
+      - 'tools/run_cif_restricted_evidence_tests.py'
   workflow_dispatch:
 
 permissions:
@@ -127,10 +129,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               throw "CIF prerequisite replay failed with exit code $LASTEXITCODE."
             }
-            & $python -m pytest -q `
-              gilbic_backend\tests\test_cif_domain.py `
-              gilbic_backend\tests\test_cif_restricted_evidence_migration.py `
-              gilbic_backend\tests\test_cif_restricted_evidence_postgres.py
+            & $python tools\run_cif_restricted_evidence_tests.py
             if ($LASTEXITCODE -ne 0) {
               throw "CIF disposable PostgreSQL validation failed with exit code $LASTEXITCODE."
             }
