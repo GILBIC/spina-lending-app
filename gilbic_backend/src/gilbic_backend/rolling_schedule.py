@@ -25,6 +25,15 @@ class RollingScheduleInstallment:
 
 
 @dataclass(frozen=True, slots=True)
+class RollingScheduleShift:
+    installment_id: int
+    installment_number: int
+    contractual_due_date: date
+    prior_effective_due_date: date
+    new_effective_due_date: date
+
+
+@dataclass(frozen=True, slots=True)
 class RollingScheduleDayClose:
     business_date: date
     scheduled_count: int
@@ -106,6 +115,95 @@ def finalize_rolling_schedule_day(
         extension_slots_added=len(incomplete),
         close_status="shortfall",
     )
+
+
+def plan_borrower_shortfall_shift(
+    *,
+    installments: Iterable[RollingScheduleInstallment],
+    business_date: date,
+    payment_frequency: str,
+    blocked_dates: Iterable[date] = (),
+    semi_monthly_days: tuple[int, int] = (15, 30),
+) -> tuple[RollingScheduleShift, ...]:
+    """Move one unresolved operational date and every later row one slot.
+
+    The planner is intentionally pure. It plans changes to current effective
+    dates only and never rewrites contractual dates, installment identity, or
+    payment allocation evidence. Interior rows inherit the next row's current
+    effective date so existing operational spacing is preserved. Only the tail
+    needs cadence arithmetic.
+    """
+
+    rows = tuple(
+        sorted(
+            installments,
+            key=lambda row: (
+                row.effective_due_date,
+                row.installment_number,
+                row.installment_id,
+            ),
+        )
+    )
+    if not rows:
+        return ()
+
+    first_incomplete_index = next(
+        (
+            index
+            for index, row in enumerate(rows)
+            if row.effective_due_date == business_date
+            and _money(row.remaining_amount) > ZERO
+        ),
+        None,
+    )
+    if first_incomplete_index is None:
+        return ()
+
+    frequency = payment_frequency.strip().lower()
+    if frequency in {"balloon", "custom"}:
+        raise RollingScheduleError(
+            "Borrower shortfall shift requires a deterministic payment cadence."
+        )
+
+    blocked = set(blocked_dates)
+    monthly_anchor_day = rows[0].contractual_due_date.day
+    planned: list[RollingScheduleShift] = []
+
+    for index in range(first_incomplete_index, len(rows)):
+        row = rows[index]
+        if index + 1 < len(rows):
+            new_due_date = rows[index + 1].effective_due_date
+        else:
+            new_due_date = _advance_cadence(
+                row.effective_due_date,
+                payment_frequency=frequency,
+                semi_monthly_days=semi_monthly_days,
+                monthly_anchor_day=monthly_anchor_day,
+            )
+            while new_due_date in blocked:
+                new_due_date = _advance_cadence(
+                    new_due_date,
+                    payment_frequency=frequency,
+                    semi_monthly_days=semi_monthly_days,
+                    monthly_anchor_day=monthly_anchor_day,
+                )
+
+        if new_due_date <= row.effective_due_date:
+            raise RollingScheduleError(
+                "Borrower shortfall shift must move every affected row forward."
+            )
+
+        planned.append(
+            RollingScheduleShift(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                contractual_due_date=row.contractual_due_date,
+                prior_effective_due_date=row.effective_due_date,
+                new_effective_due_date=new_due_date,
+            )
+        )
+
+    return tuple(planned)
 
 
 def project_rolling_schedule(
