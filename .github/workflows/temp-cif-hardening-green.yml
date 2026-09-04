@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - feat/cif-restricted-evidence
+    paths:
+      - .github/temp-cif-hardening-trigger
 
 permissions:
   contents: write
@@ -14,7 +16,6 @@ concurrency:
 
 jobs:
   patch-and-test:
-    if: "${{ github.event.head_commit.message != 'fix: harden CIF validation boundaries' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,199 +27,11 @@ jobs:
 
       - name: Apply narrow validation corrections
         shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          def replace_once(path: str, old: str, new: str) -> None:
-              target = Path(path)
-              text = target.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"Expected one match in {path}; found {count}.")
-              target.write_text(text.replace(old, new), encoding="utf-8")
-
-          domain_path = Path("gilbic_backend/src/gilbic_backend/cif_domain.py")
-          domain_text = domain_path.read_text(encoding="utf-8")
-          old_set = """    if isinstance(value, (set, frozenset)):
-        return list(value)
-"""
-          new_set = """    if isinstance(value, (set, frozenset)):
-        return sorted(value, key=lambda item: str(item))
-"""
-          if domain_text.count(old_set) != 1:
-              raise SystemExit("Expected one unordered CIF set serializer.")
-          domain_text = domain_text.replace(old_set, new_set)
-          if "def normalize_external_reference(" in domain_text:
-              raise SystemExit("External-reference normalizer already exists.")
-          domain_text += """
-
-
-def normalize_external_reference(
-    value: str,
-    *,
-    name: str = "External reference",
-    maximum: int = 500,
-) -> str:
-    \"\"\"Accept an opaque restricted-object reference, never inline file bytes.\"\"\"
-
-    if not isinstance(value, str):
-        raise ValueError(f"{name} must be text.")
-    if any(ord(character) < 32 or ord(character) == 127 for character in value):
-        raise ValueError(f"{name} must not contain control characters.")
-    normalized = value.strip()
-    if not normalized:
-        raise ValueError(f"{name} is required.")
-    if len(normalized) > maximum:
-        raise ValueError(f"{name} is too long.")
-    lowered = normalized.lower()
-    if lowered.startswith("data:") or lowered.startswith("base64:") or ";base64," in lowered:
-        raise ValueError(
-            f"{name} must reference an approved restricted object, not inline data."
-        )
-    return normalized
-"""
-          domain_path.write_text(domain_text, encoding="utf-8")
-
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/cif_repository.py",
-              """from .cif_domain import (
-    ALLOWED_REVERIFICATION_REASONS,
-    canonical_cif_digest,
-)
-""",
-              """from .cif_domain import (
-    ALLOWED_REVERIFICATION_REASONS,
-    canonical_cif_digest,
-    normalize_external_reference,
-)
-""",
-          )
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/cif_repository.py",
-              """        permanent = cls._normalize_object(
-            draft.permanent_address,
-            name="Permanent address",
-            allowed_keys=_ADDRESS_KEYS,
-        )
-        livelihood = cls._normalize_object(
-""",
-              """        permanent = cls._normalize_object(
-            draft.permanent_address,
-            name="Permanent address",
-            allowed_keys=_ADDRESS_KEYS,
-        )
-        if draft.same_as_present_address:
-            permanent = dict(present)
-        livelihood = cls._normalize_object(
-""",
-          )
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/cif_repository.py",
-              """        signature_reference = cls._normalize_text(
-            draft.client_signature_reference,
-            name="Client signature reference",
-            maximum=500,
-            required=False,
-        )
-""",
-              """        signature_reference = cls._normalize_text(
-            draft.client_signature_reference,
-            name="Client signature reference",
-            maximum=500,
-            required=False,
-        )
-        if signature_reference:
-            try:
-                signature_reference = normalize_external_reference(
-                    signature_reference,
-                    name="Client signature reference",
-                    maximum=500,
-                )
-            except ValueError as error:
-                raise CifInvalid(str(error)) from error
-""",
-          )
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/cif_repository.py",
-              """    @classmethod
-    def _assert_complete(cls, row: Mapping[str, Any]) -> None:
-""",
-              """    @staticmethod
-    def _has_meaningful_mapping(value: object) -> bool:
-        if not isinstance(value, Mapping):
-            return False
-        return any(
-            item is not None
-            and (not isinstance(item, str) or bool(item.strip()))
-            for item in value.values()
-        )
-
-    @classmethod
-    def _assert_complete(cls, row: Mapping[str, Any]) -> None:
-""",
-          )
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/cif_repository.py",
-              """        for key, label in (
-            ("present_address", "present address"),
-            ("permanent_address", "permanent address"),
-            ("livelihood_profile", "livelihood profile"),
-        ):
-            if not row.get(key):
-                missing.append(label)
-""",
-              """        for key, label in (
-            ("present_address", "present address"),
-            ("permanent_address", "permanent address"),
-            ("livelihood_profile", "livelihood profile"),
-        ):
-            if not cls._has_meaningful_mapping(row.get(key)):
-                missing.append(label)
-""",
-          )
-
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/restricted_identity_repository.py",
-              """from .cif_domain import (
-    ALLOWED_ACCESS_PURPOSES,
-    ALLOWED_EVIDENCE_TYPES,
-    normalize_masked_reference,
-)
-""",
-              """from .cif_domain import (
-    ALLOWED_ACCESS_PURPOSES,
-    ALLOWED_EVIDENCE_TYPES,
-    normalize_external_reference,
-    normalize_masked_reference,
-)
-""",
-          )
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/restricted_identity_repository.py",
-              """        external_reference = cls._normalize_text(
-            data.external_evidence_reference,
-            name="External evidence reference",
-            maximum=500,
-            required=True,
-        )
-""",
-              """        try:
-            external_reference = normalize_external_reference(
-                data.external_evidence_reference,
-                name="External evidence reference",
-                maximum=500,
-            )
-        except ValueError as error:
-            raise RestrictedIdentityInvalid(str(error)) from error
-""",
-          )
-          PY
+        run: python tools/temp_cif_hardening_patch.py
 
       - name: Install focused test dependencies
         shell: bash
-        run: |
-          python -m pip install --disable-pip-version-check -e "./gilbic_backend[test]"
+        run: python -m pip install --disable-pip-version-check -e "./gilbic_backend[test]"
 
       - name: Run hardening red-green tests
         shell: bash
