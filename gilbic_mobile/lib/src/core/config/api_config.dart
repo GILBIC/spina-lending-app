@@ -3,7 +3,7 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'GILBIC_API_URL',
-    defaultValue: 'http://10.0.2.2:8000',
+    defaultValue: 'https://spina.157-230-250-111.sslip.io',
   );
 
   static const String registerPath = String.fromEnvironment(
