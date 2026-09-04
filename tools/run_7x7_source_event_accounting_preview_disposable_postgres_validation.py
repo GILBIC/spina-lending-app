@@ -13,13 +13,14 @@ from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_7x7_source_preview_"
-BOOTSTRAP_THROUGH = 108
+BOOTSTRAP_THROUGH = 109
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
     TEST_ROOT / "test_seven_by_seven_desktop_server_postgres_parity.py",
     TEST_ROOT / "test_7x7_source_event_accounting_preview_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_persistence_postgres.py",
+    TEST_ROOT / "test_borrower_schedule_adjustment_upgrade_postgres.py",
 )
 
 
@@ -33,12 +34,14 @@ def _run_tests(test_database_url: str) -> int:
     if missing:
         raise SystemExit(
             "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
-            "reader validation refused: required integration test file is missing: "
+            "reader / borrower-schedule upgrade validation refused: required integration "
+            "test file is missing: "
             + ", ".join(missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
+    env["GILBIC_DATABASE_URL"] = test_database_url
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     python_paths = [
         str(ROOT),
@@ -67,17 +70,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0108, then prove the protected 7x7 source-event accounting preview, "
-            "Master #296 B.3 exact Desktop/server operational parity, B.5 protected mobile "
-            "posting acceptance, the 7x7 Extra Principal operational amount / Refund Due "
-            "persistence foundation, and operational-reader schema alignment. The dedicated "
+            "through both 0109 migrations, then prove the protected 7x7 source-event accounting "
+            "preview, Master #296 B.3 exact Desktop/server operational parity, B.5 protected "
+            "mobile posting acceptance, the 7x7 Extra Principal operational amount / Refund Due "
+            "persistence foundation, operational-reader schema alignment, and the 0110 borrower "
+            "schedule upgrade against pre-existing audited No Collection history. The dedicated "
             "7x7 feature flag is enabled only on disposable fixture loan types. Payment, exact "
             "covered dates, unable-to-pay, balance/receipt, exact retry, stale-route refresh, "
             "overpayment rejection, balance-reconciliation fail-closed behavior, signed-row "
             "immutability, repeated Extra Principal operational shortening, Advance conservation, "
-            "migration 0107 DPD compatibility, and the 0108 protected Extra Principal "
-            "forward bridge are proven. No live database or production "
-            "loan-type flag is modified."
+            "migration 0107 DPD compatibility, the 0108 protected Extra Principal forward bridge, "
+            "and migration 0110 audit-safe event-date backfill are proven. No live database or "
+            "production loan-type flag is modified."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -99,7 +103,8 @@ def main() -> int:
     if configured_database.startswith(TEST_DATABASE_PREFIX):
         raise SystemExit(
             "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
-            "reader validation refused: configured database uses the reserved disposable prefix."
+            "reader / borrower-schedule upgrade validation refused: configured database uses "
+            "the reserved disposable prefix."
         )
 
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
@@ -108,7 +113,7 @@ def main() -> int:
             dropped = disposable._drop_stale_disposable_databases(admin)
         print(
             "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
-            f"reader janitor passed: dropped={dropped}."
+            f"reader / borrower-schedule upgrade janitor passed: dropped={dropped}."
         )
         return 0
 
@@ -121,7 +126,8 @@ def main() -> int:
             if disposable._database_exists(admin, test_database):
                 raise SystemExit(
                     "7x7 source-event / operational parity / mobile acceptance / Extra "
-                    "Principal reader validation refused: generated database already exists."
+                    "Principal reader / borrower-schedule upgrade validation refused: generated "
+                    "database already exists."
                 )
             cleanup_required = True
             admin.execute(
@@ -136,31 +142,32 @@ def main() -> int:
         if result != 0:
             raise SystemExit(
                 "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
-                f"reader disposable PostgreSQL validation failed: integration tests exited "
-                f"with code {result}."
+                "reader / borrower-schedule upgrade disposable PostgreSQL validation failed: "
+                f"integration tests exited with code {result}."
             )
         print(
             "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
-            "reader disposable PostgreSQL validation passed: protected collection UUID/date/"
-            "type/amount rows retained exact Desktop/server fixed-original-principal parity; "
-            "disposable flagged 7x7 loans used the canonical interest-first allocator for "
-            "Payment and exact covered-date cash; unable-to-pay stayed no-cash; receipt/balance "
-            "and route revisions were exact; exact retry created no duplicate; stale-route, "
-            "overpayment and unreconciled-state cases failed closed; migration 0106 preserved "
-            "immutable signed installment values while repeated Extra Principal updated only "
-            "operational amount state and conserved Advance as retained amount plus separate "
-            "Refund Due evidence; migration 0107 compiled the operational-reader/DPD alignment "
-            "on the same disposable schema; migration 0108 kept Extra Principal receipt, "
-            "principal-only schedule effects, and retry metadata atomic. Production 7x7 "
-            "loan-type flags were not changed and "
-            "no live write path was used."
+            "reader / borrower-schedule upgrade disposable PostgreSQL validation passed: "
+            "protected collection UUID/date/type/amount rows retained exact Desktop/server "
+            "fixed-original-principal parity; disposable flagged 7x7 loans used the canonical "
+            "interest-first allocator for Payment and exact covered-date cash; unable-to-pay "
+            "stayed no-cash; receipt/balance and route revisions were exact; exact retry created "
+            "no duplicate; stale-route, overpayment and unreconciled-state cases failed closed; "
+            "migration 0106 preserved immutable signed installment values while repeated Extra "
+            "Principal updated only operational amount state and conserved Advance as retained "
+            "amount plus separate Refund Due evidence; migration 0107 compiled the operational-"
+            "reader/DPD alignment on the same disposable schema; migration 0108 kept Extra "
+            "Principal receipt, principal-only schedule effects, and retry metadata atomic; both "
+            "0109 migrations replayed before an existing audited No Collection adjustment was "
+            "upgraded by 0110 with event_date preserved. Production 7x7 loan-type flags were not "
+            "changed and no live write path was used."
         )
         return 0
     except psycopg.Error as error:
         primary_error = error
         raise SystemExit(
             "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
-            "reader disposable PostgreSQL validation failed: "
+            "reader / borrower-schedule upgrade disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
     except BaseException as error:
@@ -174,7 +181,8 @@ def main() -> int:
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
                     "7x7 source-event / operational parity / mobile acceptance / Extra "
-                    "Principal reader disposable PostgreSQL cleanup failed: "
+                    "Principal reader / borrower-schedule upgrade disposable PostgreSQL cleanup "
+                    "failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
