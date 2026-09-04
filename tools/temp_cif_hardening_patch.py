@@ -147,7 +147,8 @@ def patch_cif_repository() -> None:
             ("permanent_address", "permanent address"),
             ("livelihood_profile", "livelihood profile"),
         ):
-            if not row.get(key):
+            value = row.get(key)
+            if not isinstance(value, Mapping) or not value:
                 missing.append(label)
 """,
         """        for key, label in (
