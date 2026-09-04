@@ -22,6 +22,7 @@ AllocationBasis = Literal[
     "exact_covered_date",
     "voluntary_extra_tail",
     "future_advance_oldest_first",
+    "borrower_catch_up_oldest_first",
 ]
 ExtraAllocationChoice = Literal["advance", "principal_reduction"]
 InstallmentId = int | UUID | str
@@ -212,12 +213,15 @@ def plan_protected_regular_allocation(
     installments: Iterable[OutstandingInstallment],
     collection_date: date,
     extra_choice: ExtraAllocationChoice | None = None,
+    active_borrower_extension_slots: int = 0,
 ) -> tuple[AllocationInstruction, ...]:
     """Apply Regular cash using the protected SPINA allocation order.
 
-    Cash first clears every unpaid contractual obligation due on or before the
-    collection date, oldest first. Only money left after all Past Due and Due
-    Today obligations are satisfied is genuine extra cash.
+    Cash first clears every unpaid operational obligation due on or before the
+    collection date, oldest first. While borrower-caused extension slots remain,
+    normal cash above the current due amount is catch-up and is applied to the
+    same number of nearest future operational rows before any cash can become a
+    genuine voluntary extra.
 
     Genuine extra is never guessed. The borrower must explicitly choose either
     ``advance`` (oldest future obligation first) or ``principal_reduction``
@@ -227,6 +231,8 @@ def plan_protected_regular_allocation(
     amount = _money(transaction_amount)
     if amount <= 0:
         raise PaymentAllocationError("Payment amount must be greater than zero.")
+    if active_borrower_extension_slots < 0:
+        raise PaymentAllocationError("Active borrower extension slots cannot be negative.")
 
     remaining = sorted(
         (row for row in installments if row.remaining_amount > 0),
@@ -260,16 +266,41 @@ def plan_protected_regular_allocation(
     if amount_left <= 0:
         return tuple(instructions)
 
+    catch_up_rows = future_rows[:active_borrower_extension_slots]
+    for row in catch_up_rows:
+        if amount_left <= 0:
+            break
+        applied = _money(min(row.remaining_amount, amount_left))
+        if applied <= 0:
+            continue
+        instructions.append(
+            AllocationInstruction(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                due_date=row.due_date,
+                amount_applied=applied,
+                allocation_basis="borrower_catch_up_oldest_first",
+            )
+        )
+        amount_left = _money(amount_left - applied)
+
+    if amount_left <= 0:
+        return tuple(instructions)
+
     if extra_choice is None:
         raise PaymentAllocationError(
-            "Payment includes extra cash after Past Due and Due Today. Choose Advance or Principal Reduction."
+            "Payment includes extra cash after Past Due, Due Today, and borrower catch-up. Choose Advance or Principal Reduction."
         )
 
+    catch_up_ids = {row.installment_id for row in catch_up_rows}
+    remaining_future_rows = [
+        row for row in future_rows if row.installment_id not in catch_up_ids
+    ]
     if extra_choice == "advance":
-        extra_candidates = future_rows
+        extra_candidates = remaining_future_rows
         extra_basis: AllocationBasis = "future_advance_oldest_first"
     elif extra_choice == "principal_reduction":
-        extra_candidates = list(reversed(future_rows))
+        extra_candidates = list(reversed(remaining_future_rows))
         extra_basis = "voluntary_extra_tail"
     else:
         raise PaymentAllocationError("Choose a valid extra allocation: Advance or Principal Reduction.")
