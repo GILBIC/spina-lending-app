@@ -30,44 +30,64 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          def replace_once(path: str, old: str, new: str) -> None:
-              target = Path(path)
-              text = target.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"Expected exactly one match in {path}; found {count}.")
-              target.write_text(text.replace(old, new), encoding="utf-8")
-
-          replace_once(
-              "gilbic_backend/src/gilbic_backend/cif_repository.py",
-              """                    select
-                          coalesce(max(form_version), 0) + 1 as next_version,
-                          max(id) filter (where lifecycle_state = 'active') as active_cif_id
-                      from lending.client_information_forms
-                      where client_id = %s
-                      \"\"\",
-                      (client_id,),
-          """,
-              """                    select
-                          coalesce(max(form_version), 0) + 1 as next_version,
-                          (
-                              select active.id
-                              from lending.client_information_forms active
-                              where active.client_id = %s
-                                and active.lifecycle_state = 'active'
-                              order by active.form_version desc, active.id desc
-                              limit 1
-                          ) as active_cif_id
-                      from lending.client_information_forms
-                      where client_id = %s
-                      \"\"\",
-                      (client_id, client_id),
-          """,
+          repository_path = Path(
+              "gilbic_backend/src/gilbic_backend/cif_repository.py"
           )
-          replace_once(
-              "gilbic_backend/tests/test_cif_restricted_evidence_postgres.py",
-              "    effective_v2 = effective_v1 + timedelta(seconds=1)\n",
-              "    effective_v2 = effective_v1\n",
+          repository_text = repository_path.read_text(encoding="utf-8")
+          uuid_aggregate = (
+              "max(id) filter (where lifecycle_state = 'active') "
+              "as active_cif_id"
+          )
+          if repository_text.count(uuid_aggregate) != 1:
+              raise SystemExit(
+                  "Expected exactly one UUID aggregate in cif_repository.py."
+              )
+          repository_text = repository_text.replace(
+              uuid_aggregate,
+              """(
+                            select active.id
+                            from lending.client_information_forms active
+                            where active.client_id = %s
+                              and active.lifecycle_state = 'active'
+                            order by active.form_version desc, active.id desc
+                            limit 1
+                        ) as active_cif_id""",
+          )
+          anchor_start = repository_text.index(
+              "select active.id",
+          )
+          anchor_end = repository_text.index(
+              "version_row = cursor.fetchone()",
+              anchor_start,
+          )
+          query_segment = repository_text[anchor_start:anchor_end]
+          if query_segment.count("(client_id,),") != 1:
+              raise SystemExit(
+                  "Expected exactly one create-draft client parameter tuple."
+              )
+          query_segment = query_segment.replace(
+              "(client_id,),",
+              "(client_id, client_id),",
+          )
+          repository_text = (
+              repository_text[:anchor_start]
+              + query_segment
+              + repository_text[anchor_end:]
+          )
+          repository_path.write_text(repository_text, encoding="utf-8")
+
+          test_path = Path(
+              "gilbic_backend/tests/test_cif_restricted_evidence_postgres.py"
+          )
+          test_text = test_path.read_text(encoding="utf-8")
+          old_effective = "    effective_v2 = effective_v1 + timedelta(seconds=1)\n"
+          if test_text.count(old_effective) != 1:
+              raise SystemExit(
+                  "Expected exactly one future-effective CIF test assignment."
+              )
+          test_path.write_text(
+              test_text.replace(old_effective, "    effective_v2 = effective_v1\n"),
+              encoding="utf-8",
           )
           PY
 
@@ -79,7 +99,10 @@ jobs:
           git diff --name-only | grep -Fx 'gilbic_backend/src/gilbic_backend/cif_repository.py'
           git diff --name-only | grep -Fx 'gilbic_backend/tests/test_cif_restricted_evidence_postgres.py'
           ! grep -F "max(id) filter (where lifecycle_state = 'active')" gilbic_backend/src/gilbic_backend/cif_repository.py
+          grep -F "select active.id" gilbic_backend/src/gilbic_backend/cif_repository.py
+          grep -F "(client_id, client_id)" gilbic_backend/src/gilbic_backend/cif_repository.py
           ! grep -F "effective_v1 + timedelta(seconds=1)" gilbic_backend/tests/test_cif_restricted_evidence_postgres.py
+          grep -F "effective_v2 = effective_v1" gilbic_backend/tests/test_cif_restricted_evidence_postgres.py
 
       - name: Commit narrow correction
         shell: bash
