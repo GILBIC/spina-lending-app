@@ -79,3 +79,20 @@ test('Management catalog requires exact permissions for protected families', () 
   assert.ok(expanded.some((entry) => entry.path === '/api/v1/management/support'));
   assert.ok(expanded.some((entry) => entry.path === '/api/v1/notifications'));
 });
+
+test('Management device administration is exposed only with device.manage', () => {
+  const withoutDevice = availableRoleActions('management', ['account.manage']);
+  const withDevice = availableRoleActions('management', ['device.manage']);
+
+  assert.equal(
+    withoutDevice.some((entry) => entry.key === 'management-staff-devices'),
+    false,
+  );
+  assert.ok(
+    withDevice.some(
+      (entry) =>
+        entry.key === 'management-staff-devices' &&
+        entry.path === '/api/v1/management/accounts',
+    ),
+  );
+});
