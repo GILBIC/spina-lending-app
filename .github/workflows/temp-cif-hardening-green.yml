@@ -29,6 +29,12 @@ jobs:
         shell: bash
         run: python tools/temp_cif_hardening_patch.py
 
+      - name: Verify patched checkout imports
+        shell: bash
+        run: |
+          grep -n 'def normalize_external_reference' gilbic_backend/src/gilbic_backend/cif_domain.py
+          PYTHONPATH="$PWD/gilbic_backend/src" python -c "from gilbic_backend.cif_domain import normalize_external_reference; assert normalize_external_reference('restricted://object/1') == 'restricted://object/1'"
+
       - name: Install focused test dependencies
         shell: bash
         run: python -m pip install --disable-pip-version-check -e "./gilbic_backend[test]"
@@ -36,7 +42,7 @@ jobs:
       - name: Run hardening red-green tests
         shell: bash
         run: |
-          python -m pytest -q \
+          PYTHONPATH="$PWD/gilbic_backend/src" python -m pytest -q \
             gilbic_backend/tests/test_cif_hardening.py \
             gilbic_backend/tests/test_cif_domain.py
 
