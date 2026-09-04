@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, 'fix: correct CIF PostgreSQL verification') }}
+    if: "${{ github.event.head_commit.message != 'fix: correct CIF PostgreSQL verification' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
