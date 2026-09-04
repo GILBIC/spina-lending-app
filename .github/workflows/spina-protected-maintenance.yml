@@ -10,6 +10,11 @@ on:
         options:
           - ecl-credit-risk-labels
           - v1-tax-accounting
+          - stage5e2-history-import
+          - stage5e3-outcome-review
+          - stage5e41-contractual-dpd
+          - stage5e43-contract-registration
+          - stage5e46a-contract-activation
       confirm_protected_live_database:
         description: I explicitly authorize this protected live-database maintenance run
         required: true
@@ -26,7 +31,7 @@ concurrency:
 jobs:
   protected-maintenance:
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Require explicit main-branch authorization
@@ -50,6 +55,24 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Require the selected legacy one-time marker
+        if: startsWith(inputs.operation, 'stage5e')
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $markers = @{
+            'stage5e2-history-import' = 'tools\stage5e2-import.once'
+            'stage5e3-outcome-review' = 'tools\stage5e3-live-migration.once'
+            'stage5e41-contractual-dpd' = 'tools\stage5e41-live-migration.once'
+            'stage5e43-contract-registration' = 'tools\stage5e43-live-migration.once'
+            'stage5e46a-contract-activation' = 'tools\stage5e46a-live-migration.once'
+          }
+          $operation = '${{ inputs.operation }}'
+          $marker = $markers[$operation]
+          if ([string]::IsNullOrWhiteSpace($marker) -or -not (Test-Path -LiteralPath $marker)) {
+            throw "The selected protected maintenance operation is missing its committed one-time marker: $operation"
+          }
+
       - name: Create isolated maintenance environment
         shell: cmd
         run: |
@@ -71,6 +94,38 @@ jobs:
         shell: cmd
         run: |
           "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_v1_tax_accounting_migrations.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Manual Stage 5E.2 live historical import
+        if: inputs.operation == 'stage5e2-history-import' && hashFiles('tools/stage5e2-import.once') != ''
+        shell: cmd
+        env:
+          GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
+
+      - name: Manual Stage 5E.3 live outcome-review migration
+        if: inputs.operation == 'stage5e3-outcome-review' && hashFiles('tools/stage5e3-live-migration.once') != ''
+        shell: cmd
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_stage5e3_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-episodes 992 --expected-usable 919 || exit /b 1
+
+      - name: Manual Stage 5E.4.1 live contractual DPD migration
+        if: inputs.operation == 'stage5e41-contractual-dpd' && hashFiles('tools/stage5e41-live-migration.once') != ''
+        shell: cmd
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_stage5e41_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Manual Stage 5E.4.3 live verified contract registration migration
+        if: inputs.operation == 'stage5e43-contract-registration' && hashFiles('tools/stage5e43-live-migration.once') != ''
+        shell: cmd
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_stage5e43_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Manual Stage 5E.4.6A live per-loan activation schema migration
+        if: inputs.operation == 'stage5e46a-contract-activation' && hashFiles('tools/stage5e46a-live-migration.once') != ''
+        shell: cmd
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_stage5e46a_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
       - name: Require a clean committed tree
         if: always()

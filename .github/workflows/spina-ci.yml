@@ -1,4 +1,4 @@
-name: SPINA Core Validation
+name: SPINA CI
 
 on:
   pull_request:
@@ -6,211 +6,338 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      upload_apk:
-        description: Build and upload the Android debug APK as a temporary artifact
-        required: false
-        default: false
-        type: boolean
-      run_legacy_live_migrations:
-        description: Run completed Stage 5E legacy live maintenance gates
-        required: false
-        default: false
-        type: boolean
 
 permissions:
-  actions: read
   contents: read
-  pull-requests: read
 
 concurrency:
-  group: spina-core-${{ github.event.pull_request.number || github.ref }}
+  group: spina-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  FLUTTER_VERSION: "3.44.7"
+  GITLEAKS_VERSION: "8.30.1"
+
 jobs:
-  validate:
-    if: >-
-      github.event_name != 'pull_request' ||
-      (github.actor == github.repository_owner &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.user.login == github.repository_owner)
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 100
+  backend:
+    name: Backend, quality, and security
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
 
     steps:
-      - name: Check out exact revision
+      - name: Check out exact revision and history
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      # Squash merging creates a new main SHA even when its tree is identical to
-      # an exact PR head that already passed this workflow. Reuse that full suite
-      # only after GitHub proves the main SHA belongs to one merged owner PR and
-      # the exact PR head has a successful pull_request run. Any missing or
-      # inconsistent evidence fails closed to the complete backend/Flutter suite.
-      - name: Prove exact successful PR validation
-        id: validated_pr
-        if: github.event_name == 'push'
-        shell: cmd
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
+            requirements.txt
+
+      - name: Install backend, test, quality, and security dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check \
+            -e './spina_backend_mobile[test]' \
+            -e './gilbic_backend[test]' \
+            'ruff>=0.11,<1' \
+            'pyright>=1.1,<2' \
+            'pytest-cov>=6,<8' \
+            'bandit>=1.8,<2' \
+            'pip-audit>=2.8,<3'
+          mkdir -p ci-artifacts/backend
+
+      - name: Compile Python sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m compileall -q spina_app gilbic_backend/src spina_backend_mobile/src tools
+
+      - name: Ruff lint baseline
+        id: ruff_lint
+        shell: bash
+        run: |
+          set +e
+          ruff check gilbic_backend/src gilbic_backend/tests spina_backend_mobile/src spina_backend_mobile/tests \
+            --output-format json --output-file ci-artifacts/backend/ruff.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+
+      - name: Ruff format baseline
+        id: ruff_format
+        shell: bash
+        run: |
+          set +e
+          ruff format --check gilbic_backend/src gilbic_backend/tests spina_backend_mobile/src spina_backend_mobile/tests \
+            > ci-artifacts/backend/ruff-format.txt 2>&1
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            cat ci-artifacts/backend/ruff-format.txt
+            exit "$code"
+          fi
+
+      - name: Pyright typed-code baseline
+        id: pyright
+        shell: bash
+        run: |
+          set +e
+          pyright --outputjson gilbic_backend/src/gilbic_backend spina_backend_mobile/src/spina_mobile_collections \
+            > ci-artifacts/backend/pyright.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            cat ci-artifacts/backend/pyright.json
+            exit "$code"
+          fi
+
+      - name: Bandit security baseline
+        id: bandit
+        shell: bash
+        run: |
+          set +e
+          bandit -r gilbic_backend/src spina_backend_mobile/src -f json -o ci-artifacts/backend/bandit.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+
+      - name: Dependency vulnerability baseline
+        id: pip_audit
+        shell: bash
+        run: |
+          set +e
+          pip-audit --local --skip-editable -f json -o ci-artifacts/backend/pip-audit.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+
+      - name: Install pinned Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          tool_dir="$RUNNER_TEMP/gitleaks"
+          rm -rf "$tool_dir"
+          mkdir -p "$tool_dir"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output "$archive"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$tool_dir" gitleaks
+          "$tool_dir/gitleaks" version
+          echo "GITLEAKS_EXE=$tool_dir/gitleaks" >> "$GITHUB_ENV"
+
+      - name: Gitleaks full-history baseline
+        id: gitleaks
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="ci-artifacts/backend/gitleaks-redacted.json"
+          log="ci-artifacts/backend/gitleaks-redacted.txt"
+          rm -f "$report" "$log"
+          set +e
+          "$GITLEAKS_EXE" git --redact=100 --verbose --no-banner \
+            --report-format json --report-path "$report" . > "$log" 2>&1
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 0 ]; then exit 0; fi
+          if [ "$code" -ne 1 ] || [ ! -s "$report" ]; then
+            cat "$log"
+            echo "Gitleaks scanner/runtime failure with exit code $code."
+            exit "${code:-2}"
+          fi
+          python - "$report" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          findings = json.loads(path.read_text(encoding="utf-8"))
+          if not isinstance(findings, list) or not findings:
+              raise SystemExit("Gitleaks returned findings status without a valid findings report")
+          print(f"Gitleaks reported {len(findings)} fully redacted baseline finding(s).")
+          PY
+
+      - name: Run Python test suite once with coverage and timings
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GILBIC_TEST_DATABASE_URL: ""
+          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
         run: |
-          python tools\reuse_validated_pr_ci.py --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --workflow-file "spina-ci.yml" --base-ref "main" --github-output "%GITHUB_OUTPUT%" || exit /b 1
+          set -euo pipefail
+          python -m pytest -q gilbic_backend/tests spina_backend_mobile/tests tests \
+            --cov=gilbic_backend --cov=spina_mobile_collections \
+            --cov-report=term-missing \
+            --cov-report=xml:ci-artifacts/backend/coverage.xml \
+            --cov-report=json:ci-artifacts/backend/coverage.json \
+            --durations=20 | tee ci-artifacts/backend/pytest.txt
 
-      - name: Verify Python runtime
-        shell: cmd
-        run: |
-          python --version || exit /b 1
-          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
-
-      - name: Create isolated Python environment
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          if exist "%VENV%" rmdir /s /q "%VENV%"
-          python -m venv "%VENV%" || exit /b 1
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
-
-      - name: Install full validation dependencies
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
-
-      - name: Compile desktop and backend Python
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\reuse_validated_pr_ci.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e3_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e41_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e43_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e46a_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_draft_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_posting_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_regular_journal_draft_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
-
-      - name: Report reused pull-request validation
-        if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
-        shell: cmd
-        run: |
-          echo Reusing successful PR #${{ steps.validated_pr.outputs.validated_pr_number }} validation run ${{ steps.validated_pr.outputs.validated_workflow_run_id }} for exact head ${{ steps.validated_pr.outputs.validated_head_sha }}.
-          echo Financial/database validation is owned by the separate SPINA Financial and Database workflow.
-
-      - name: Run backend and database tests
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
+      - name: Publish backend summary
+        if: always()
+        shell: bash
         env:
-          GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
+          RUFF_LINT_EXIT: ${{ steps.ruff_lint.outputs.exit_code }}
+          RUFF_FORMAT_EXIT: ${{ steps.ruff_format.outputs.exit_code }}
+          PYRIGHT_EXIT: ${{ steps.pyright.outputs.exit_code }}
+          BANDIT_EXIT: ${{ steps.bandit.outputs.exit_code }}
+          PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
+          GITLEAKS_EXIT: ${{ steps.gitleaks.outputs.exit_code }}
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests spina_backend_mobile\tests || exit /b 1
+          mkdir -p ci-artifacts/backend
+          {
+            echo "## Backend, quality, and security"
+            echo
+            echo "Existing lint, type, and scanner findings remain baseline-only; tool failures and tests are blocking."
+            echo
+            echo "- Ruff lint exit: ${RUFF_LINT_EXIT:-not-run}"
+            echo "- Ruff format exit: ${RUFF_FORMAT_EXIT:-not-run}"
+            echo "- Pyright exit: ${PYRIGHT_EXIT:-not-run}"
+            echo "- Bandit exit: ${BANDIT_EXIT:-not-run}"
+            echo "- pip-audit exit: ${PIP_AUDIT_EXIT:-not-run}"
+            echo "- Gitleaks exit: ${GITLEAKS_EXIT:-not-run}"
+          } | tee ci-artifacts/backend/summary.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Install Flutter 3.44.7
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
+      - name: Require clean tracked files
+        if: always()
+        shell: bash
         run: |
-          set "FLUTTER_ROOT=%RUNNER_TEMP%\flutter-3.44.7"
-          set "PUB_CACHE=%RUNNER_TEMP%\pub-cache"
-          if exist "%FLUTTER_ROOT%" rmdir /s /q "%FLUTTER_ROOT%"
-          if not exist "%PUB_CACHE%" mkdir "%PUB_CACHE%" || exit /b 1
-          echo PUB_CACHE=%PUB_CACHE%>>"%GITHUB_ENV%"
-          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "%FLUTTER_ROOT%" || exit /b 1
-          echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
 
-      - name: Verify Flutter runtime
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
-        run: flutter --version || exit /b 1
+      - name: Upload backend reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-ci-backend-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ci-artifacts/backend
+          if-no-files-found: warn
+          retention-days: 14
 
-      - name: Resolve Flutter packages
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
+  client-apps:
+    name: Portal, Flutter, and Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Test portal modules
+        run: npm test
+
+      - name: Build portal without repeating tests
+        run: node tools/build_portal.mjs
+
+      - name: Verify public portal output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test -f dist/assets/app.js
+          test -f dist/manifest.webmanifest
+          test ! -d dist/tests
+          if grep -R -E "GILBIC_(DATABASE_URL|SUPABASE_SECRET_KEY)|service_role|postgresql://" dist; then
+            echo "Public portal output contains a forbidden backend secret pattern."
+            exit 1
+          fi
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_root="$RUNNER_TEMP/flutter-${FLUTTER_VERSION}"
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$flutter_root"
+          echo "$flutter_root/bin" >> "$GITHUB_PATH"
+
+      - name: Analyze and test Flutter
         working-directory: gilbic_mobile
-        run: flutter pub get || exit /b 1
-
-      - name: Analyze Flutter application
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
-        working-directory: gilbic_mobile
-        run: flutter analyze --fatal-infos || exit /b 1
-
-      - name: Run Flutter tests
-        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
-        shell: cmd
-        working-directory: gilbic_mobile
-        run: flutter test || exit /b 1
-
-      # The former standalone Collector Android acceptance lane duplicated the
-      # full backend and Flutter tests above. Keep its unique protection here:
-      # every PR must still prove that an Android review APK can be packaged.
-      - name: Reclaim runner-owned space before Android smoke build
-        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
-        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        shell: bash
         run: |
-          $ErrorActionPreference = 'Stop'
-          $venv = Join-Path $env:RUNNER_TEMP 'spina-core-ci-venv'
-          if (Test-Path -LiteralPath $venv) {
-            Remove-Item -LiteralPath $venv -Recurse -Force -ErrorAction Continue
-          }
-          $driveName = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP).Substring(0, 1)
-          $freeBytes = (Get-PSDrive -Name $driveName).Free
-          $freeGb = [math]::Round($freeBytes / 1GB, 2)
-          Write-Host "Free disk before Android smoke build: $freeGb GB"
-          if ($freeBytes -lt 6GB) {
-            throw "SPINA Core Android smoke build requires at least 6 GB free; only $freeGb GB is available."
-          }
+          set -euo pipefail
+          flutter pub get
+          flutter analyze --fatal-infos
+          flutter test
 
-      - name: Build Android debug APK in generated host
-        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
-        shell: cmd
+      - name: Build Android debug package in generated host
+        shell: bash
         run: |
-          set "HOST=%RUNNER_TEMP%\gilbic-android-host"
-          set "APK_OUT=%GITHUB_WORKSPACE%\gilbic_mobile\build\app\outputs\flutter-apk"
-          set "FLUTTER=%RUNNER_TEMP%\flutter-3.44.7\bin\flutter.bat"
-          if not exist "%FLUTTER%" exit /b 1
-          if exist "%HOST%" rmdir /s /q "%HOST%"
-          mkdir "%HOST%" || exit /b 1
-          pushd "%HOST%"
-          call "%FLUTTER%" create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
-          if exist "lib" rmdir /s /q "lib"
-          xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
-          copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
-          echo kotlin.incremental=false>>"android\gradle.properties"
-          echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
-          echo org.gradle.daemon=false>>"android\gradle.properties"
-          call "%FLUTTER%" pub get || exit /b 1
-          call "%FLUTTER%" build apk --debug --target-platform android-arm64,android-x64 --no-pub || exit /b 1
-          if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
-          if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
-          copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\Spina-Android-internal.apk" >nul || exit /b 1
-          for %%I in ("%APK_OUT%\Spina-Android-internal.apk") do echo APK size: %%~zI bytes
-          popd
-          rmdir /s /q "%HOST%" || exit /b 1
+          set -euo pipefail
+          host="$RUNNER_TEMP/spina-android-host"
+          output="$GITHUB_WORKSPACE/gilbic_mobile/build/app/outputs/flutter-apk"
+          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile "$host"
+          rm -rf "$host/lib"
+          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$host/lib"
+          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$host/pubspec.yaml"
+          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$host/android/gradle.properties"
+          cd "$host"
+          flutter pub get
+          flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub
+          mkdir -p "$output"
+          cp build/app/outputs/flutter-apk/app-debug.apk "$output/Spina-Android-internal.apk"
 
-      - name: Verify Android APK ABI coverage
-        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
-        shell: cmd
+      - name: Verify Android package
+        shell: bash
         run: |
-          python -c "import zipfile; p=r'gilbic_mobile\build\app\outputs\flutter-apk\Spina-Android-internal.apk'; z=zipfile.ZipFile(p); n=set(z.namelist()); assert 'lib/arm64-v8a/libflutter.so' in n, 'missing arm64-v8a Flutter runtime'; assert 'lib/x86_64/libflutter.so' in n, 'missing x86_64 Flutter runtime'" || exit /b 1
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import zipfile
 
-      - name: Require a clean committed tree
-        shell: cmd
+          path = pathlib.Path("gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk")
+          assert path.is_file() and path.stat().st_size > 0
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+          assert "lib/arm64-v8a/libflutter.so" in names
+          assert "lib/x86_64/libflutter.so" in names
+          print(f"APK bytes: {path.stat().st_size}")
+          print(f"SHA-256: {hashlib.sha256(path.read_bytes()).hexdigest()}")
+          PY
+
+      - name: Require clean tracked files
+        if: always()
+        shell: bash
         run: |
-          git diff --check || exit /b 1
-          git diff --exit-code || exit /b 1
-          git diff --cached --exit-code || exit /b 1
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
 
-      - name: Upload Android internal APK
-        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
+      - name: Upload Android package
         uses: actions/upload-artifact@v4
         with:
           name: Spina-Android-internal-${{ github.event.pull_request.head.sha || github.sha }}
@@ -218,41 +345,101 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      # Completed Stage 5E live migrations remain explicit manual maintenance
-      # only. Normal PR/push Core validation never executes these steps.
-      - name: Manual Stage 5E.2 live historical import
-        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e2-import.once') != ''
-        shell: cmd
+  financial-database:
+    name: Financial and disposable PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    services:
+      postgres:
+        image: postgres:17
         env:
-          GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
-      - name: Manual Stage 5E.3 live outcome-review migration
-        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e3-live-migration.once') != ''
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_stage5e3_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-episodes 992 --expected-usable 919 || exit /b 1
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Manual Stage 5E.4.1 live contractual DPD migration
-        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e41-live-migration.once') != ''
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_stage5e41_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
 
-      - name: Manual Stage 5E.4.3 live verified contract registration migration
-        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e43-live-migration.once') != ''
-        shell: cmd
+      - name: Install database verifier dependencies
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_stage5e43_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check -e ./spina_backend_mobile -e './gilbic_backend[test]'
 
-      - name: Manual Stage 5E.4.6A live per-loan activation schema migration
-        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e46a-live-migration.once') != ''
-        shell: cmd
+      - name: Compile disposable validators
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_stage5e46a_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          set -euo pipefail
+          python -m py_compile \
+            tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py \
+            tools/run_combined_collection_renewal_disposable_postgres_validation.py \
+            tools/run_delegated_area_disposable_postgres_validation.py \
+            tools/run_initial_capital_funding_disposable_postgres_validation.py \
+            tools/run_period_close_disposable_postgres_validation.py \
+            tools/run_0099_remittance_capacity_disposable_postgres_validation.py \
+            tools/run_0102_remittance_review_disposable_postgres_validation.py \
+            tools/run_v1_tax_evidence_disposable_postgres_validation.py \
+            tools/run_mvp_private_schema_barrier_validation.py
+
+      - name: Create isolated validation databases
+        shell: bash
+        run: |
+          set -euo pipefail
+          for database in x7preview combinedrenewal delegatedarea initialcapital periodclose remittancecap remittancereview v1tax privateschema; do
+            docker exec "${{ job.services.postgres.id }}" createdb -U postgres "$database"
+          done
+
+      - name: Run disposable PostgreSQL validations
+        shell: bash
+        env:
+          SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
+          X7PREVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/x7preview?sslmode=disable
+          COMBINED_RENEWAL_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/combinedrenewal?sslmode=disable
+          DELEGATE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/delegatedarea?sslmode=disable
+          CAPITAL_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/initialcapital?sslmode=disable
+          CLOSE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/periodclose?sslmode=disable
+          REMIT_CAP_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancecap?sslmode=disable
+          REMIT_REVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancereview?sslmode=disable
+          TAX_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/v1tax?sslmode=disable
+          GILBIC_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/privateschema?sslmode=disable
+        run: |
+          set -euo pipefail
+          python tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py --database-url-env X7PREVIEW_DATABASE_URL
+          python tools/run_combined_collection_renewal_disposable_postgres_validation.py
+          python tools/run_delegated_area_disposable_postgres_validation.py --database-url-env DELEGATE_DATABASE_URL
+          python tools/run_initial_capital_funding_disposable_postgres_validation.py --database-url-env CAPITAL_DATABASE_URL
+          python tools/run_period_close_disposable_postgres_validation.py --database-url-env CLOSE_DATABASE_URL
+          python tools/run_0099_remittance_capacity_disposable_postgres_validation.py --database-url-env REMIT_CAP_DATABASE_URL
+          python tools/run_0102_remittance_review_disposable_postgres_validation.py
+          python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
+          python tools/run_mvp_private_schema_barrier_validation.py
+
+      - name: Require clean tracked files
+        if: always()
+        shell: bash
+        run: |
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
