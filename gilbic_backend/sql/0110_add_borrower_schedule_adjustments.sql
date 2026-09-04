@@ -10,12 +10,20 @@ ALTER TABLE lending.loan_schedule_operational_state
 ALTER TABLE lending.loan_schedule_adjustments
     ADD COLUMN IF NOT EXISTS event_date DATE;
 
--- Existing No Collection, reversal, and voluntary-completion records already
--- carry their authoritative event date in no_collection_date. Preserve that
--- evidence during the upgrade.
+-- Existing No Collection, reversal, and voluntary-completion rows are immutable
+-- audit evidence. Migration 0110 is the one controlled upgrade that must copy
+-- their already-audited no_collection_date into the new generic event_date.
+-- Disable only the table's user audit trigger inside this transaction; PostgreSQL
+-- rolls the trigger state back too if any later statement fails.
+ALTER TABLE lending.loan_schedule_adjustments
+    DISABLE TRIGGER lending_loan_schedule_adjustment_audit_guard;
+
 UPDATE lending.loan_schedule_adjustments
 SET event_date = no_collection_date
 WHERE event_date IS NULL;
+
+ALTER TABLE lending.loan_schedule_adjustments
+    ENABLE TRIGGER lending_loan_schedule_adjustment_audit_guard;
 
 ALTER TABLE lending.loan_schedule_adjustments
     ALTER COLUMN event_date SET NOT NULL;
