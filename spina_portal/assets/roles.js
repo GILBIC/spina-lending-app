@@ -60,6 +60,10 @@ export const ROLE_ENDPOINTS = Object.freeze({
       section: 'Review',
       permission: 'support.manage',
     }),
+    action('management-staff-devices', 'Staff & devices', '/api/v1/management/accounts', {
+      section: 'Administration',
+      permission: 'device.manage',
+    }),
     action('management-remittance', 'Remittance review', '/api/v1/notifications', {
       section: 'Review',
       permission: 'remittance.view',
