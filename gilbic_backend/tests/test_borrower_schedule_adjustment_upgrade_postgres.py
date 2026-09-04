@@ -186,3 +186,22 @@ def test_management_no_collection_reversal_writes_event_date_after_0110() -> Non
         case.payment_start,
         adjustment_id,
     )
+
+
+def test_7x7_voluntary_completion_writes_event_date_after_0110() -> None:
+    assert DATABASE_URL is not None
+    _ensure_0110_installed()
+
+    cases.test_partial_then_same_day_full_nc_voluntary_completion_is_atomic_and_idempotent()
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        rows = connection.execute(
+            """
+            select no_collection_date, event_date
+            from lending.loan_schedule_adjustments
+            where adjustment_type = 'voluntary_completion'
+            order by created_at
+            """
+        ).fetchall()
+    assert rows
+    assert all(event_date == no_collection_date for no_collection_date, event_date in rows)
