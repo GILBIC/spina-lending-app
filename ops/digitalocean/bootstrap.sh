@@ -183,6 +183,9 @@ UNIT
 cat > /etc/caddy/Caddyfile <<CADDY
 {
   email gilbicsanjose@gmail.com
+  servers :443 {
+    protocols h1 h2
+  }
 }
 
 $HOSTNAME {

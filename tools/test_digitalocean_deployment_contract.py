@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -112,6 +113,13 @@ def main() -> None:
     require("chmod 600 /etc/spina/spina.env" in bootstrap, "runtime environment must be root-only")
     require("ufw --force enable" in bootstrap, "host firewall must be enabled")
     require("dl.cloudsmith.io/public/caddy/stable" in bootstrap, "official Caddy package repository is required")
+
+    caddy_h1_h2_only = re.search(r"^\s*protocols\s+h1\s+h2\s*$", bootstrap, re.MULTILINE)
+    udp_443_open = "ufw allow 443/udp" in bootstrap
+    require(
+        bool(caddy_h1_h2_only) or udp_443_open,
+        "Caddy HTTP/3 must not be advertised through a TCP-only firewall",
+    )
 
     require("wait_for_first_boot_packages" in bootstrap, "bootstrap must coordinate with Ubuntu first boot")
     require("cloud-init status --wait" in bootstrap, "bootstrap must wait for cloud-init")
