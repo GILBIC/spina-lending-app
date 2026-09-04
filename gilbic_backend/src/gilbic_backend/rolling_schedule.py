@@ -206,6 +206,92 @@ def plan_borrower_shortfall_shift(
     return tuple(planned)
 
 
+def plan_borrower_catchup_contraction(
+    *,
+    installments: Iterable[RollingScheduleInstallment],
+    active_extension_slots: int,
+    completed_catchup_installment_ids: Iterable[int],
+) -> tuple[RollingScheduleShift, ...]:
+    """Contract only the still-remaining schedule after completed catch-up rows.
+
+    Catch-up never rewrites already-reached/settled row history. Each additional
+    future installment fully covered as normal catch-up removes one active
+    borrower extension slot. Later remaining rows move backward by the same
+    number of existing operational positions, preserving Management-adjusted and
+    otherwise irregular operational spacing without inventing new dates.
+    """
+
+    if active_extension_slots < 0:
+        raise RollingScheduleError("Active borrower extension slots cannot be negative.")
+
+    completed_ids = tuple(dict.fromkeys(completed_catchup_installment_ids))
+    if active_extension_slots == 0 or not completed_ids:
+        return ()
+    if len(completed_ids) > active_extension_slots:
+        raise RollingScheduleError(
+            "Catch-up cannot remove more borrower extension slots than are active."
+        )
+
+    rows = tuple(
+        sorted(
+            installments,
+            key=lambda row: (
+                row.effective_due_date,
+                row.installment_number,
+                row.installment_id,
+            ),
+        )
+    )
+    positions_by_id = {row.installment_id: index for index, row in enumerate(rows)}
+    try:
+        completed_positions = tuple(positions_by_id[item_id] for item_id in completed_ids)
+    except KeyError as error:
+        raise RollingScheduleError(
+            "Catch-up references an installment outside the current operational schedule."
+        ) from error
+
+    ordered_positions = tuple(sorted(completed_positions))
+    if ordered_positions != tuple(
+        range(ordered_positions[0], ordered_positions[0] + len(ordered_positions))
+    ):
+        raise RollingScheduleError(
+            "Catch-up installments must be consecutive in operational order."
+        )
+
+    for position in ordered_positions:
+        if _money(rows[position].remaining_amount) > ZERO:
+            raise RollingScheduleError(
+                "A borrower extension slot can contract only after the catch-up installment is fully covered."
+            )
+
+    slots_removed = len(ordered_positions)
+    first_remaining_index = ordered_positions[-1] + 1
+    planned: list[RollingScheduleShift] = []
+    for index in range(first_remaining_index, len(rows)):
+        row = rows[index]
+        source_index = index - slots_removed
+        if source_index < 0:
+            raise RollingScheduleError(
+                "Catch-up contraction cannot move before the current operational schedule."
+            )
+        new_due_date = rows[source_index].effective_due_date
+        if new_due_date >= row.effective_due_date:
+            raise RollingScheduleError(
+                "Catch-up contraction must move every affected remaining row backward."
+            )
+        planned.append(
+            RollingScheduleShift(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                contractual_due_date=row.contractual_due_date,
+                prior_effective_due_date=row.effective_due_date,
+                new_effective_due_date=new_due_date,
+            )
+        )
+
+    return tuple(planned)
+
+
 def project_rolling_schedule(
     *,
     installments: Iterable[RollingScheduleInstallment],
