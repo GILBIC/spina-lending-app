@@ -1,0 +1,1 @@
+The CIF repository is being implemented under the approved origination-compliance design. This note will be removed before merge.
