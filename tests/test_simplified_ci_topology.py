@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 PRIMARY = WORKFLOWS / "spina-ci.yml"
+MOBILE_API_CONFIG = ROOT / "gilbic_mobile" / "lib" / "src" / "core" / "config" / "api_config.dart"
 PRODUCTION_API_URL = "https://spina.157-230-250-111.sslip.io"
 RETIRED = (
     "spina-code-quality.yml",
@@ -38,11 +39,12 @@ def test_primary_ci_has_three_clear_hosted_lanes() -> None:
     )
 
 
-def test_android_ci_artifact_targets_production_api() -> None:
-    source = PRIMARY.read_text(encoding="utf-8")
+def test_android_ci_artifact_defaults_to_production_api() -> None:
+    source = MOBILE_API_CONFIG.read_text(encoding="utf-8")
 
-    assert f"SPINA_API_URL: {PRODUCTION_API_URL}" in source
-    assert '--dart-define=GILBIC_API_URL="$SPINA_API_URL"' in source
+    assert "'GILBIC_API_URL'" in source
+    assert f"defaultValue: '{PRODUCTION_API_URL}'" in source
+    assert "defaultValue: 'http://10.0.2.2:8000'" not in source
 
 
 def test_hosted_ci_uses_current_node_24_action_runtimes() -> None:
