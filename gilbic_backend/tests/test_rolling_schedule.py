@@ -28,6 +28,21 @@ def _row(
     )
 
 
+def _operational_row(
+    number: int,
+    contractual_due_date: date,
+    effective_due_date: date,
+    remaining: str,
+) -> RollingScheduleInstallment:
+    return RollingScheduleInstallment(
+        installment_id=number,
+        installment_number=number,
+        contractual_due_date=contractual_due_date,
+        effective_due_date=effective_due_date,
+        remaining_amount=Decimal(remaining),
+    )
+
+
 def test_partial_prior_day_adds_one_daily_extension_slot() -> None:
     projection = project_rolling_schedule(
         installments=(
@@ -282,4 +297,80 @@ def test_borrower_shortfall_moves_current_and_later_rows_one_slot() -> None:
         (5, date(2026, 9, 5), date(2026, 9, 5), date(2026, 9, 6)),
         (6, date(2026, 9, 6), date(2026, 9, 6), date(2026, 9, 7)),
         (7, date(2026, 9, 7), date(2026, 9, 7), date(2026, 9, 8)),
+    ]
+
+
+def test_partial_shortfall_moves_the_schedule_but_fully_paid_date_does_not() -> None:
+    partial_rows = (
+        _row(5, date(2026, 9, 5), "40.00"),
+        _row(6, date(2026, 9, 6), "100.00"),
+    )
+    paid_rows = (
+        _row(5, date(2026, 9, 5), "0.00"),
+        _row(6, date(2026, 9, 6), "100.00"),
+    )
+
+    partial = rolling_schedule.plan_borrower_shortfall_shift(
+        installments=partial_rows,
+        business_date=date(2026, 9, 5),
+        payment_frequency="daily",
+    )
+    paid = rolling_schedule.plan_borrower_shortfall_shift(
+        installments=paid_rows,
+        business_date=date(2026, 9, 5),
+        payment_frequency="daily",
+    )
+
+    assert [item.new_effective_due_date for item in partial] == [
+        date(2026, 9, 6),
+        date(2026, 9, 7),
+    ]
+    assert paid == ()
+
+
+def test_repeated_shortfall_moves_the_same_unresolved_row_again() -> None:
+    already_shifted = (
+        _operational_row(5, date(2026, 9, 5), date(2026, 9, 6), "100.00"),
+        _operational_row(6, date(2026, 9, 6), date(2026, 9, 7), "100.00"),
+        _operational_row(7, date(2026, 9, 7), date(2026, 9, 8), "100.00"),
+    )
+
+    shifts = rolling_schedule.plan_borrower_shortfall_shift(
+        installments=already_shifted,
+        business_date=date(2026, 9, 6),
+        payment_frequency="daily",
+    )
+
+    assert [(item.installment_id, item.new_effective_due_date) for item in shifts] == [
+        (5, date(2026, 9, 7)),
+        (6, date(2026, 9, 8)),
+        (7, date(2026, 9, 9)),
+    ]
+
+
+def test_full_catchup_contracts_only_the_later_remaining_schedule() -> None:
+    rows = (
+        _operational_row(5, date(2026, 9, 5), date(2026, 9, 6), "0.00"),
+        _operational_row(6, date(2026, 9, 6), date(2026, 9, 7), "0.00"),
+        _operational_row(7, date(2026, 9, 7), date(2026, 9, 8), "100.00"),
+        _operational_row(8, date(2026, 9, 8), date(2026, 9, 9), "100.00"),
+    )
+
+    shifts = rolling_schedule.plan_borrower_catchup_contraction(
+        installments=rows,
+        active_extension_slots=1,
+        completed_catchup_installment_ids=(6,),
+    )
+
+    assert [
+        (
+            item.installment_id,
+            item.contractual_due_date,
+            item.prior_effective_due_date,
+            item.new_effective_due_date,
+        )
+        for item in shifts
+    ] == [
+        (7, date(2026, 9, 7), date(2026, 9, 8), date(2026, 9, 7)),
+        (8, date(2026, 9, 8), date(2026, 9, 9), date(2026, 9, 8)),
     ]
