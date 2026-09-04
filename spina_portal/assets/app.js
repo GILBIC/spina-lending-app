@@ -1,4 +1,5 @@
 import { SpinaApi } from './api.js';
+import { canMountCifWorkspace, mountCifWorkspace } from './cif-management.js';
 import { PORTAL_CONFIG } from './config.js';
 import { normalizeRole } from './roles.js';
 import { SessionStore } from './session.js';
@@ -68,6 +69,7 @@ async function mountCurrentWorkspace() {
   refreshButton.disabled = true;
   try {
     await currentMount(currentContext);
+    await mountCifWorkspace(currentContext);
   } catch (error) {
     roleContent.innerHTML = `<div class="error-card"><strong>The ${escapeHtml(currentContext.role)} workspace could not start.</strong><br>${escapeHtml(error.message || 'Unexpected error')}</div>`;
     showToast(error.message || 'Workspace failed to load.', 'error');
@@ -99,6 +101,7 @@ async function showAuthenticated(session) {
     collector: mountCollectorWorkspace,
     management: mountManagementWorkspace,
   };
+  const includeCif = canMountCifWorkspace(role, session);
   currentMount = mounts[role];
   currentContext = {
     root: roleContent,
@@ -106,7 +109,10 @@ async function showAuthenticated(session) {
     session,
     sessionStore,
     role,
-    setNavigation,
+    setNavigation: (items) => setNavigation([
+      ...items,
+      ...(includeCif ? [{ id: 'cif-workspace', label: 'Client information' }] : []),
+    ]),
     uncertainCollection: null,
   };
   await mountCurrentWorkspace();
