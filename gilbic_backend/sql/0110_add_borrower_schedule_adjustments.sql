@@ -10,8 +10,9 @@ ALTER TABLE lending.loan_schedule_operational_state
 ALTER TABLE lending.loan_schedule_adjustments
     ADD COLUMN IF NOT EXISTS event_date DATE;
 
--- Existing No Collection and reversal records already have the authoritative
--- event date in no_collection_date. Preserve that evidence during the upgrade.
+-- Existing No Collection, reversal, and voluntary-completion records already
+-- carry their authoritative event date in no_collection_date. Preserve that
+-- evidence during the upgrade.
 UPDATE lending.loan_schedule_adjustments
 SET event_date = no_collection_date
 WHERE event_date IS NULL;
@@ -20,8 +21,8 @@ ALTER TABLE lending.loan_schedule_adjustments
     ALTER COLUMN event_date SET NOT NULL;
 
 -- Borrower adjustments do not represent a Management No Collection day, so the
--- legacy field becomes nullable while remaining mandatory for the two existing
--- No Collection adjustment forms below.
+-- legacy field becomes nullable while remaining mandatory for existing
+-- No Collection-derived adjustment forms below.
 ALTER TABLE lending.loan_schedule_adjustments
     ALTER COLUMN no_collection_date DROP NOT NULL;
 
@@ -29,6 +30,8 @@ ALTER TABLE lending.loan_schedule_adjustments
     DROP CONSTRAINT IF EXISTS loan_schedule_adjustments_adjustment_type_check;
 ALTER TABLE lending.loan_schedule_adjustments
     DROP CONSTRAINT IF EXISTS loan_schedule_adjustments_check;
+ALTER TABLE lending.loan_schedule_adjustments
+    DROP CONSTRAINT IF EXISTS loan_schedule_adjustments_reference_semantics_check;
 ALTER TABLE lending.loan_schedule_adjustments
     DROP CONSTRAINT IF EXISTS loan_schedule_adjustments_type_evidence_check;
 
@@ -38,6 +41,7 @@ ALTER TABLE lending.loan_schedule_adjustments
         adjustment_type IN (
             'no_collection',
             'reversal',
+            'voluntary_completion',
             'borrower_shortfall',
             'borrower_catch_up'
         )
@@ -58,6 +62,13 @@ ALTER TABLE lending.loan_schedule_adjustments
             AND no_collection_date IS NOT NULL
             AND event_date = no_collection_date
             AND reverses_adjustment_id IS NOT NULL
+        )
+        OR
+        (
+            adjustment_type = 'voluntary_completion'
+            AND no_collection_date IS NOT NULL
+            AND event_date = no_collection_date
+            AND reverses_adjustment_id IS NULL
         )
         OR
         (
@@ -92,9 +103,9 @@ ALTER TABLE lending.loan_installment_payment_allocations
 COMMENT ON COLUMN lending.loan_schedule_operational_state.active_borrower_extension_slots IS
     'Count of active borrower-caused schedule extension slots. Management No Collection does not increment this count.';
 COMMENT ON COLUMN lending.loan_schedule_adjustments.event_date IS
-    'Generic audited date that caused an operational schedule adjustment. For No Collection and its reversal, event_date equals no_collection_date.';
+    'Generic audited date that caused an operational schedule adjustment. For No Collection-derived adjustments, event_date equals no_collection_date.';
 COMMENT ON TABLE lending.loan_schedule_adjustments IS
-    'Immutable versioned operational schedule-adjustment audit for Management No Collection/reversal and borrower shortfall/catch-up events.';
+    'Immutable versioned operational schedule-adjustment audit for Management No Collection/reversal/voluntary completion and borrower shortfall/catch-up events.';
 COMMENT ON COLUMN lending.loan_installment_payment_allocations.allocation_basis IS
     'Protected allocation purpose. borrower_catch_up_oldest_first is normal-payment catch-up against shifted chronological obligations before any true Advance or Principal Reduction.';
 
