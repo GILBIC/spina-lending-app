@@ -1,6 +1,12 @@
 import { buildManagementViewModel } from '../presenters.js';
 import { staffInviteMarkup, submitStaffInvitation } from '../staff-invite.js';
 import {
+  changeManagedDeviceStatus,
+  deviceAction,
+  loadManagedDevices,
+  renderManagedDevicePanel,
+} from '../management-devices.js';
+import {
   asArray,
   badge,
   emptyState,
@@ -72,9 +78,10 @@ function registrationQueue(items) {
   return `<div class="list-stack">${items.map((registration) => `<article class="list-item registration-card" data-registration-user-id="${escapeHtml(registration.user_id)}"><div class="section-heading"><div><strong>${escapeHtml(registration.full_name || registration.username)}</strong><div class="meta">${escapeHtml(registration.username || '')} · ${escapeHtml(registration.email || '')}</div></div>${badge(registration.registration_status)}</div><div class="detail-grid"><div class="detail-item"><span>Claimed Client code</span><strong>${escapeHtml(registration.claimed_client_code || '—')}</strong></div><div class="detail-item"><span>Claimed phone</span><strong>${escapeHtml(registration.claimed_phone_number || '—')}</strong></div><div class="detail-item"><span>Submitted</span><strong>${formatDateTime(registration.submitted_at)}</strong></div></div><form class="entry-form candidate-search-form"><label>Find borrower record<input name="query" minlength="2" required value="${escapeHtml(registration.claimed_client_code || registration.full_name || '')}" /></label><button class="button button-secondary" type="submit">Search candidates</button><button class="button button-outline reject-registration" type="button">Reject request</button></form><div class="candidate-results"></div></article>`).join('')}</div>`;
 }
 
-function staffRows(accounts) {
+function staffRows(accounts, canManageDevices) {
   if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Updated</th></tr></thead><tbody>${accounts.map((account) => `<tr><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 0)}</td><td>${formatDateTime(account.updated_at)}</td></tr>`).join('')}</tbody></table></div>`;
+  const actionLabel = canManageDevices ? 'Manage phones' : 'View';
+  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 0)}</td><td>${formatDateTime(account.updated_at)}</td><td><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function accountCard(account) {
@@ -105,6 +112,94 @@ function bindStaffInvite(context) {
       setButtonBusy(button, false);
     }
   });
+}
+
+function deviceConfirmation(account, device, action) {
+  const roles = asArray(account.roles).map((role) => String(role).trim().toLowerCase());
+  const platform = titleCase(device.platform || 'phone');
+  const current = titleCase(device.status || 'unknown');
+  const requested = titleCase(action.nextStatus);
+  let consequence = 'The phone keeps its current server-authoritative access rules.';
+  if (device.status === 'pending' && action.nextStatus === 'active' && roles.includes('collector')) {
+    consequence = 'Approving this phone may revoke another active Collector phone for this account.';
+  } else if (device.status === 'pending' && action.nextStatus === 'active') {
+    consequence = 'Approving this phone allows protected SPINA access for this account.';
+  } else if (device.status === 'active' && action.nextStatus === 'revoked') {
+    consequence = 'Revoking this phone blocks future protected requests from this device.';
+  } else if (device.status === 'revoked' && action.nextStatus === 'active') {
+    consequence = 'Restoring this phone allows protected requests again.';
+  }
+  return `${action.label} for ${account.full_name || account.username || 'this staff account'}?\n\nPhone: ${platform}\nCurrent: ${current}\nRequested: ${requested}\n\n${consequence}`;
+}
+
+function bindManagedDeviceActions(context, account, devices) {
+  const detail = context.root.querySelector('#management-staff-device-detail');
+  if (!detail) return;
+  for (const button of detail.querySelectorAll('.managed-device-action')) {
+    button.addEventListener('click', async () => {
+      const index = Number.parseInt(button.dataset.managedDeviceIndex || '', 10);
+      const device = Number.isInteger(index) ? devices[index] : null;
+      const action = device ? deviceAction(device.status) : null;
+      if (!device || !action) {
+        showToast('The registered phone state is stale. Open the staff record again.', 'error');
+        return;
+      }
+      if (!globalThis.confirm?.(deviceConfirmation(account, device, action))) return;
+      setButtonBusy(button, true, action.nextStatus === 'active' ? 'Saving…' : 'Revoking…');
+      try {
+        await changeManagedDeviceStatus(context.api, device.id, action.nextStatus);
+        const refreshed = await loadManagedDevices(context.api, account.id);
+        detail.innerHTML = renderManagedDevicePanel(account, refreshed, { canManageDevices: true });
+        bindManagedDeviceActions(context, account, refreshed);
+        showToast(
+          action.nextStatus === 'revoked'
+            ? 'Phone access revoked from the authoritative server record.'
+            : device.status === 'pending'
+              ? 'Phone approved from the authoritative server record.'
+              : 'Phone access restored from the authoritative server record.',
+          'success',
+        );
+      } catch (error) {
+        showToast(error.message, 'error');
+        setButtonBusy(button, false);
+      }
+    });
+  }
+}
+
+function bindStaffDevices(context, accounts) {
+  const detail = context.root.querySelector('#management-staff-device-detail');
+  if (!detail) return;
+  const canManageDevices = hasPermission(context.session, 'device.manage');
+  const accountById = new Map(
+    accounts.map((account) => [String(account.id || ''), account]),
+  );
+  for (const button of context.root.querySelectorAll('[data-manage-staff-id]')) {
+    button.addEventListener('click', async () => {
+      const account = accountById.get(String(button.dataset.manageStaffId || ''));
+      if (!account) {
+        detail.innerHTML = emptyState('The selected staff record is no longer available. Refresh Management.');
+        return;
+      }
+      if (!canManageDevices) {
+        detail.innerHTML = renderManagedDevicePanel(account, [], { canManageDevices: false });
+        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      setButtonBusy(button, true, 'Loading…');
+      detail.innerHTML = loadingPanel('Loading registered phones…');
+      try {
+        const devices = await loadManagedDevices(context.api, account.id);
+        detail.innerHTML = renderManagedDevicePanel(account, devices, { canManageDevices: true });
+        bindManagedDeviceActions(context, account, devices);
+        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (error) {
+        detail.innerHTML = errorCard(error);
+      } finally {
+        setButtonBusy(button, false);
+      }
+    });
+  }
 }
 
 function bindRenewals(context) {
@@ -230,7 +325,8 @@ export async function mountManagementWorkspace(context) {
   const canRenewals = hasPermission(session, 'renewal.manage');
   const canSupport = hasPermission(session, 'support.manage');
   const canManageAccounts = hasPermission(session, 'account.manage');
-  const canViewStaff = canManageAccounts || hasPermission(session, 'device.manage');
+  const canManageDevices = hasPermission(session, 'device.manage');
+  const canViewStaff = canManageAccounts || canManageDevices;
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
     { id: 'management-loans', label: 'Clients & loans' },
@@ -254,6 +350,7 @@ export async function mountManagementWorkspace(context) {
     canViewStaff ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
   ]);
   const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data, registrations: registrations.data });
+  const staffAccounts = asArray(staff.data.accounts);
 
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
@@ -262,7 +359,7 @@ export async function mountManagementWorkspace(context) {
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
   ${canManageAccounts ? `<section class="section-card" id="management-registrations"><div class="section-heading"><div><h2>Client registrations</h2><p>Verify identity, search the borrower record, then approve and link—or reject with a reason.</p></div></div>${registrations.error ? errorCard(registrations.error) : registrationQueue(model.pendingRegistrations)}</section>` : ''}
-  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff and review the permission-filtered directory.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(asArray(staff.data.accounts))}</section>` : ''}
+  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff, inspect registered phones, and apply only server-authorized device changes.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" style="margin-top:1rem">${emptyState('Select a staff account to review registered phones.')}</div></section>` : ''}
   <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
 
   bindLoanSearch(context);
@@ -270,4 +367,5 @@ export async function mountManagementWorkspace(context) {
   bindSupport(context);
   bindRegistrations(context);
   bindStaffInvite(context);
+  bindStaffDevices(context, staffAccounts);
 }
