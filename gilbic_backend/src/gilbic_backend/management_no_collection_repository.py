@@ -461,17 +461,19 @@ class PostgresManagementNoCollectionRepository:
                     schedule_id,
                     adjustment_type,
                     no_collection_date,
+                    event_date,
                     reason,
                     expected_operational_version,
                     resulting_operational_version,
                     actor_user_id
                 )
-                values (%s, %s, 'no_collection', %s, %s, %s, %s, %s)
+                values (%s, %s, 'no_collection', %s, %s, %s, %s, %s, %s)
                 returning id, created_at
                 """,
                 (
                     selection.loan_id,
                     schedule["schedule_id"],
+                    no_collection_date,
                     no_collection_date,
                     reason,
                     state_version,
