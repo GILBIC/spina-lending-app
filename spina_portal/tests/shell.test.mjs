@@ -6,32 +6,40 @@ async function text(relativePath) {
   return readFile(new URL(relativePath, import.meta.url), 'utf8');
 }
 
-test('portal shell includes login, Client registration, and accessible application roots', async () => {
+test('portal shell is a single Spina Lending Company sign-in surface', async () => {
   const html = await text('../index.html');
+  const app = await text('../assets/app.js');
 
+  assert.match(html, /<title>Spina Lending Company<\/title>/);
+  assert.match(html, />Spina Lending Company</);
   assert.match(html, /id="login-form"/);
-  assert.match(html, /id="registration-form"/);
+  assert.match(html, /<button[^>]*type="submit"[^>]*>Sign in<\/button>/);
   assert.match(html, /id="authenticated-app"/);
   assert.match(html, /id="role-navigation"/);
   assert.match(html, /id="role-content"/);
   assert.match(html, /aria-live="polite"/);
-  for (const role of ['Client', 'Employee', 'Collector', 'Management']) {
-    assert.match(html, new RegExp(role, 'i'));
-  }
+
+  assert.doesNotMatch(html, /id="registration-form"/);
+  assert.doesNotMatch(html, /Request an account/i);
+  assert.doesNotMatch(html, /Send registration request/i);
+  assert.doesNotMatch(html, /One secure workspace for every role/i);
+  assert.doesNotMatch(
+    html,
+    /Client, Employee, Collector, and Management use the same protected Spina backend and official records/i,
+  );
+  assert.doesNotMatch(html, /class="role-strip"/);
+  assert.doesNotMatch(html, /Collector phones may require Management device approval/i);
+  assert.doesNotMatch(html, /Sign in securely/i);
+  assert.doesNotMatch(app, /registration-form/);
 });
 
-test('user-facing branding uses Spina only', async () => {
+test('user-facing branding avoids legacy MVP wording', async () => {
   const html = await text('../index.html');
   const config = await text('../assets/config.js');
-  const manifest = JSON.parse(await text('../manifest.webmanifest'));
 
-  assert.match(html, /<title>Spina<\/title>/);
-  assert.match(html, />Spina</);
-  assert.doesNotMatch(html, /SPINA Lending Company|SPINA Lending|>MVP</i);
+  assert.match(html, /Spina Lending Company/);
+  assert.doesNotMatch(html, />MVP</i);
   assert.doesNotMatch(config, /Controlled MVP/);
-  assert.equal(manifest.name, 'Spina');
-  assert.equal(manifest.short_name, 'Spina');
-  assert.doesNotMatch(manifest.description, /SPINA Lending Company|SPINA Lending/);
 });
 
 test('PWA manifest is installable for browser and Windows app mode', async () => {
