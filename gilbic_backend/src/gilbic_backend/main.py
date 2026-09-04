@@ -6,6 +6,7 @@ from . import __version__
 from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
 from .auth_api import create_auth_router
+from .cif_api import create_cif_router
 from .client_gcash_api import create_client_gcash_router
 from .client_loan_api import create_client_loan_router
 from .client_payment_api import create_client_payment_router
@@ -101,6 +102,7 @@ from .renewal_treatment_decision_api import create_renewal_treatment_decision_ro
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
 from .renewal_workflow_api import create_renewal_workflow_router
 from .renewal_workflow_query_api import create_renewal_workflow_query_router
+from .restricted_identity_api import create_restricted_identity_router
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .seven_by_seven_journal_posting_api import (
     create_seven_by_seven_journal_posting_router,
@@ -120,11 +122,13 @@ _PORTAL_ALLOWED_HEADERS = [
     "Authorization",
     "Content-Type",
     "Idempotency-Key",
+    "X-Access-Purpose",
     "X-App-Platform",
     "X-App-Version",
     "X-Client-Transaction-Id",
     "X-Device-Id",
     "X-Gilbic-Contract-Version",
+    "X-Request-Id",
 ]
 
 
@@ -162,6 +166,8 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_cif_router())
+    app.include_router(create_restricted_identity_router())
     app.include_router(create_management_alerts_audit_router())
     app.include_router(create_management_dashboard_overview_router())
     app.include_router(create_management_employee_activity_router())
