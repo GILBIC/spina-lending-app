@@ -1,0 +1,72 @@
+name: CIF and Restricted Identity Disposable PostgreSQL
+
+on:
+  pull_request:
+    paths:
+      - "gilbic_backend/sql/0110_add_cif_and_restricted_identity_foundation.sql"
+      - "gilbic_backend/src/gilbic_backend/cif_*.py"
+      - "gilbic_backend/src/gilbic_backend/restricted_identity_*.py"
+      - "gilbic_backend/tests/test_cif_*.py"
+      - "gilbic_backend/tests/test_restricted_identity_*.py"
+      - "tools/run_0110_cif_restricted_identity_disposable_postgres_validation.py"
+      - ".github/workflows/cif-restricted-identity-disposable-postgres.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cif-restricted-identity:
+    name: cif-restricted-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      SPINA_DISPOSABLE_DATABASE: "1"
+      PYTHONPATH: gilbic_backend/src
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: gilbic_backend/pyproject.toml
+
+      - name: Install backend and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./gilbic_backend
+          python -m pip install pytest
+
+      - name: Run focused unit and contract tests
+        run: |
+          python -m pytest -q \
+            gilbic_backend/tests/test_cif_restricted_evidence_migration.py \
+            gilbic_backend/tests/test_cif_domain.py \
+            gilbic_backend/tests/test_cif_repository.py \
+            gilbic_backend/tests/test_cif_api.py \
+            gilbic_backend/tests/test_restricted_identity_repository.py \
+            gilbic_backend/tests/test_restricted_identity_api.py
+
+      - name: Run disposable PostgreSQL validation
+        run: >-
+          python
+          tools/run_0110_cif_restricted_identity_disposable_postgres_validation.py
