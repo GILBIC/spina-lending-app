@@ -2,67 +2,78 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-WORKFLOW = (ROOT / ".github" / "workflows" / "spina-ci.yml").read_text(
+CI_WORKFLOW = (ROOT / ".github" / "workflows" / "spina-ci.yml").read_text(
     encoding="utf-8"
 )
-LOWER = WORKFLOW.lower()
+MAINTENANCE_WORKFLOW = (
+    ROOT / ".github" / "workflows" / "spina-protected-maintenance.yml"
+).read_text(encoding="utf-8")
 
 
-def test_unified_ci_keeps_exact_pr_validation_reuse_fail_closed() -> None:
-    assert "tools\\reuse_validated_pr_ci.py" in WORKFLOW
-    assert "Prove exact successful PR validation" in WORKFLOW
-    assert "steps.validated_pr.outputs.reuse_validation != 'true'" in WORKFLOW
-    assert "Run backend and database tests" in WORKFLOW
-    assert "Run Flutter tests" in WORKFLOW
-    assert (
-        "Financial/database validation is owned by the separate "
-        "SPINA Financial and Database workflow."
-    ) in WORKFLOW
+def test_unified_ci_has_three_hosted_validation_lanes() -> None:
+    assert "name: SPINA CI" in CI_WORKFLOW
+    for job in ("backend", "client-apps", "financial-database"):
+        assert f"\n  {job}:\n" in CI_WORKFLOW
+    assert CI_WORKFLOW.count("runs-on: ubuntu-latest") == 3
+    assert "runs-on: [self-hosted" not in CI_WORKFLOW
 
 
-def test_completed_financial_live_verifiers_are_not_automatic_main_push_steps() -> None:
-    # The tools remain compilable historical utilities, but Core CI must not invoke
-    # their live migration commands. Protected live maintenance stays separately gated.
-    for step_name in (
-        "Protected opening-balance journal draft verification",
-        "Protected opening-balance journal posting verification",
-        "Protected cutover EIR snapshot verification",
-        "Protected Regular journal draft verification",
-        "Install Financial Accounting verifier dependencies",
-        "Compile Financial Accounting live verifiers",
+def test_unified_ci_keeps_backend_client_and_database_coverage() -> None:
+    for required in (
+        "python -m pytest -q",
+        "ruff check",
+        "pyright --outputjson",
+        "bandit -r",
+        "pip-audit --local",
+        "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz",
+        "npm test",
+        "flutter analyze --fatal-infos",
+        "flutter test",
+        "flutter build apk --debug",
+        "run_7x7_source_event_accounting_preview_disposable_postgres_validation.py",
+        "run_mvp_private_schema_barrier_validation.py",
     ):
-        assert step_name not in WORKFLOW
+        assert required in CI_WORKFLOW
 
+
+def test_completed_live_maintenance_is_not_owned_by_automatic_ci() -> None:
     for marker in (
-        "accounting-opening-journal-draft-live-migration.once",
-        "accounting-opening-journal-posting-live-migration.once",
-        "accounting-cutover-eir-snapshot-live-migration.once",
-        "accounting-regular-journal-draft-live-migration.once",
+        "stage5e2-import.once",
+        "stage5e3-live-migration.once",
+        "stage5e41-live-migration.once",
+        "stage5e43-live-migration.once",
+        "stage5e46a-live-migration.once",
+        "C:\\GitHub\\spina-lending-app-clean\\.env",
+        "C:\\SPINA_ONLINE\\spina_backend\\.env",
     ):
-        assert marker not in WORKFLOW
+        assert marker not in CI_WORKFLOW
 
 
-def test_legacy_stage5e_live_maintenance_stays_explicitly_manual() -> None:
-    assert "run_legacy_live_migrations:" in WORKFLOW
-    for step_name in (
-        "Manual Stage 5E.2 live historical import",
-        "Manual Stage 5E.3 live outcome-review migration",
-        "Manual Stage 5E.4.1 live contractual DPD migration",
-        "Manual Stage 5E.4.3 live verified contract registration migration",
-        "Manual Stage 5E.4.6A live per-loan activation schema migration",
-    ):
-        assert step_name in WORKFLOW
-    assert LOWER.count("github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations") == 5
+def test_legacy_stage5e_live_maintenance_is_manual_and_fail_closed() -> None:
+    trigger_block = MAINTENANCE_WORKFLOW.split("\njobs:", 1)[0]
+    assert "workflow_dispatch:" in trigger_block
+    assert "pull_request:" not in trigger_block
+    assert "\n  push:" not in trigger_block
+    assert '"refs/heads/main"' in MAINTENANCE_WORKFLOW
+    assert "confirm_protected_live_database" in MAINTENANCE_WORKFLOW
+    assert "SPINA-WINDOWS" in MAINTENANCE_WORKFLOW
+
+    expected = {
+        "stage5e2-history-import": "tools/stage5e2-import.once",
+        "stage5e3-outcome-review": "tools/stage5e3-live-migration.once",
+        "stage5e41-contractual-dpd": "tools/stage5e41-live-migration.once",
+        "stage5e43-contract-registration": "tools/stage5e43-live-migration.once",
+        "stage5e46a-contract-activation": "tools/stage5e46a-live-migration.once",
+    }
+    normalized = MAINTENANCE_WORKFLOW.replace("\\", "/")
+    for operation, marker in expected.items():
+        assert operation in MAINTENANCE_WORKFLOW
+        assert marker in normalized
 
 
-def test_unified_ci_has_no_automatic_live_database_env_dependency() -> None:
-    # Main push validation must not depend on local SPINA-WINDOWS env files after an
-    # exact PR suite has already passed. Those paths remain only inside manual Stage5E.
-    push_sections = []
-    for block in WORKFLOW.split("\n      - name: "):
-        if "if: github.event_name == 'push'" in block:
-            push_sections.append(block)
-    joined = "\n".join(push_sections).lower()
-    assert "--database-url-env gilbic_database_url" not in joined
-    assert "c:\\github\\spina-lending-app-clean\\.env" not in joined
-    assert "c:\\spina_online\\spina_backend\\.env" not in joined
+def test_automatic_ci_uses_loopback_disposable_postgres_only() -> None:
+    assert "services:\n      postgres:" in CI_WORKFLOW
+    assert "127.0.0.1:5432" in CI_WORKFLOW
+    assert "SPINA_ALLOW_DISPOSABLE_DATABASE" in CI_WORKFLOW
+    assert "GILBIC_DATABASE_URL" not in CI_WORKFLOW
+    assert "secrets.GILBIC_TEST_DATABASE_URL" not in CI_WORKFLOW

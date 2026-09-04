@@ -1,37 +1,66 @@
-# SPINA CI Deep Review
+# SPINA CI review guide
 
-SPINA keeps exactly five automatic validation lanes:
+SPINA broad validation is owned by one workflow: `.github/workflows/spina-ci.yml`.
+It runs on pull requests, pushes to `main`, and manual dispatches using three
+GitHub-hosted Ubuntu lanes.
 
-1. Core
-2. Financial & Database
-3. Code Quality
-4. Security & Compliance
-5. Reliability & Performance
+## 1. Backend, quality, and security
 
-GitHub Actions artifacts remain useful when storage is available, but they are not required for detailed review. The self-hosted Windows runner now keeps review reports under:
+The `backend` job:
 
-`C:\SPINA_CI_REPORTS\<exact-head-sha>\<lane>\`
+- compiles the desktop and backend Python sources;
+- runs Ruff lint and format, Pyright, Bandit, pip-audit, and pinned Gitleaks;
+- treats existing lint, typing, vulnerability, and secret findings as measured
+  baselines while scanner/runtime failures remain blocking; and
+- runs the Python suite once with coverage and slowest-test reporting.
 
-The report-producing lanes persist their raw scanner/test output locally after every run:
+Detailed redacted reports are uploaded as the `spina-ci-backend-<sha>` artifact
+for 14 days. CI no longer depends on the self-hosted
+`C:\SPINA_CI_REPORTS` directory.
 
-- `code-quality`: Ruff JSON, Ruff format output, Pyright JSON, coverage XML/JSON, summary
-- `security-compliance`: Bandit JSON, pip-audit JSON, summary
-- `reliability-performance`: focused pytest output with slowest-test timings
+## 2. Portal, Flutter, and Android
 
-Only the latest 50 exact commit directories are retained by default.
+The `client-apps` job:
 
-## Review behavior
+- tests the portal modules;
+- builds and checks the public portal output for backend-secret patterns;
+- runs Flutter package resolution, analysis, and tests; and
+- creates and verifies one generated-host Android debug APK with arm64 and x64
+  runtime coverage.
 
-Each report-producing automatic lane renders a review-safe detailed report into its normal GitHub Actions job log. That means a reviewer can inspect exact Ruff/Pyright diagnostics, coverage gaps, Bandit findings, dependency vulnerabilities, concurrency/idempotency tests, and timing data even when GitHub artifact storage is full.
+The internal review APK is uploaded for seven days. The generated Android host
+lives under the runner temporary directory and never modifies the committed
+Flutter application tree.
 
-`SPINA CI Deep Review (manual)` is a separate manual-only workflow. It can re-render any locally retained exact commit report without rerunning the validators. Leaving `commit_sha` blank uses the newest saved local report.
+## 3. Financial and disposable PostgreSQL
 
-The manual Deep Review workflow is not a sixth automatic CI lane.
+The `financial-database` job starts a PostgreSQL 17 service bound to loopback,
+creates an isolated database for each consolidated validator, and runs the
+existing 7x7, collection/renewal, delegated-area, capital, period-close,
+remittance, tax, and private-schema controls.
 
-## Secret handling
+This automatic workflow never reads a protected database URL, repository
+secret containing a database URL, or a workstation `.env` file.
 
-Gitleaks remains part of Security & Compliance, but raw detected secret values are deliberately not copied into `C:\SPINA_CI_REPORTS` and are never replayed by Deep Review. Review the redacted Gitleaks result in the Security & Compliance job log/summary.
+## Protected operations
 
-## Safety
+Live database maintenance remains separate in
+`.github/workflows/spina-protected-maintenance.yml`. It is manual-only and
+requires all of:
 
-Local report persistence and Deep Review are diagnostic only. They do not connect to a protected/live SPINA database, apply migrations, restart a backend, deploy an application, or alter lending/accounting records.
+- an explicit operation selection;
+- explicit protected-live-database confirmation;
+- the exact `main` branch;
+- the approved `SPINA-WINDOWS` runner; and
+- a committed one-time marker for legacy Stage 5E operations.
+
+Production deployment remains in the DigitalOcean deployment workflow and is
+not part of CI.
+
+## Pull-request review
+
+A pull request is ready for merge only when the exact head has successful
+`backend`, `client-apps`, and `financial-database` jobs. Review the job summary
+and the uploaded backend reports before approving a change that affects
+security, financial calculations, database migrations, authentication, or
+collection posting.

@@ -10,7 +10,7 @@ WORKFLOW = (
     Path(__file__).resolve().parents[2]
     / ".github"
     / "workflows"
-    / "spina-ci.yml"
+    / "spina-protected-maintenance.yml"
 ).read_text(encoding="utf-8")
 
 
@@ -59,11 +59,14 @@ def test_stage5e43_live_runner_keeps_default_ecl_and_posting_disabled() -> None:
 
 
 def test_workflow_runs_stage5e43_live_migration_only_by_manual_dispatch() -> None:
+    trigger_block = WORKFLOW.split("\njobs:", 1)[0]
+    assert "workflow_dispatch:" in trigger_block
+    assert "pull_request:" not in trigger_block
+    assert "\n  push:" not in trigger_block
+
     name = "Manual Stage 5E.4.3 live verified contract registration migration"
     assert name in WORKFLOW
     step = WORKFLOW.split(f"      - name: {name}", 1)[1].split("\n      - name:", 1)[0]
-    assert "github.event_name == 'workflow_dispatch'" in step
-    assert "inputs.run_legacy_live_migrations" in step
-    assert "github.event_name == 'push'" not in step
+    assert "inputs.operation == 'stage5e43-contract-registration'" in step
     assert "tools/stage5e43-live-migration.once" in step
     assert "tools\\apply_stage5e43_migration.py" in step
