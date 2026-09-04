@@ -33,7 +33,6 @@ const environmentLabel = document.getElementById('environment-label');
 const refreshButton = document.getElementById('refresh-workspace');
 const logoutButton = document.getElementById('logout-button');
 const loginForm = document.getElementById('login-form');
-const registrationForm = document.getElementById('registration-form');
 
 let currentMount = null;
 let currentContext = null;
@@ -128,29 +127,6 @@ loginForm.addEventListener('submit', async (event) => {
       ? 'This device is registered as pending. Management must approve it before Collector access is activated.'
       : error.message;
     showToast(message, 'error', 7600);
-  } finally {
-    setButtonBusy(button, false);
-  }
-});
-
-registrationForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const button = registrationForm.querySelector('button[type="submit"]');
-  const data = new FormData(registrationForm);
-  setButtonBusy(button, true, 'Sending…');
-  try {
-    const result = await api.register({
-      fullName: data.get('fullName'),
-      clientCode: data.get('clientCode'),
-      phoneNumber: data.get('phoneNumber'),
-      email: data.get('email'),
-      username: data.get('username'),
-      password: data.get('password'),
-    });
-    registrationForm.reset();
-    showToast(result.message || 'Registration received for Management review.', 'success', 9000);
-  } catch (error) {
-    showToast(error.message, 'error', 7600);
   } finally {
     setButtonBusy(button, false);
   }

@@ -8,16 +8,15 @@ async function text(relativePath) {
 
 const forbiddenLongBrand = /spina lending(?: company)?/i;
 
-test('public portal uses the exact product name Spina', async () => {
+test('public sign-in uses Spina Lending Company while installed product remains Spina', async () => {
   const html = await text('../index.html');
   const manifest = JSON.parse(await text('../manifest.webmanifest'));
 
-  assert.match(html, /<title>Spina<\/title>/);
-  assert.match(html, /<p class="eyebrow">Spina<\/p>/);
+  assert.match(html, /<title>Spina Lending Company<\/title>/);
+  assert.match(html, /<h1>Spina Lending Company<\/h1>/);
   assert.match(html, /<strong>Spina<\/strong>/);
   assert.equal(manifest.name, 'Spina');
   assert.equal(manifest.short_name, 'Spina');
-  assert.equal(forbiddenLongBrand.test(html), false);
   assert.equal(forbiddenLongBrand.test(JSON.stringify(manifest)), false);
 });
 
