@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 
+import gilbic_backend.rolling_schedule as rolling_schedule
 from gilbic_backend.rolling_schedule import (
     RollingScheduleError,
     RollingScheduleInstallment,
@@ -254,3 +255,31 @@ def test_projection_rejects_finalization_beyond_authoritative_as_of_date() -> No
             payment_frequency="daily",
             finalized_through_date=date(2026, 8, 27),
         )
+
+
+def test_borrower_shortfall_moves_current_and_later_rows_one_slot() -> None:
+    rows = (
+        _row(5, date(2026, 9, 5), "100.00"),
+        _row(6, date(2026, 9, 6), "100.00"),
+        _row(7, date(2026, 9, 7), "100.00"),
+    )
+
+    shifts = rolling_schedule.plan_borrower_shortfall_shift(
+        installments=rows,
+        business_date=date(2026, 9, 5),
+        payment_frequency="daily",
+    )
+
+    assert [
+        (
+            item.installment_id,
+            item.contractual_due_date,
+            item.prior_effective_due_date,
+            item.new_effective_due_date,
+        )
+        for item in shifts
+    ] == [
+        (5, date(2026, 9, 5), date(2026, 9, 5), date(2026, 9, 6)),
+        (6, date(2026, 9, 6), date(2026, 9, 6), date(2026, 9, 7)),
+        (7, date(2026, 9, 7), date(2026, 9, 7), date(2026, 9, 8)),
+    ]
