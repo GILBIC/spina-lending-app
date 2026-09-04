@@ -159,3 +159,32 @@ test('a Collector financial POST is attempted once and network uncertainty is ex
   assert.equal(calls, 1);
   assert.equal(store.load().access_token, 'access-token');
 });
+
+test('default browser fetch preserves the global receiver', async () => {
+  const originalFetch = globalThis.fetch;
+  let receiver = null;
+  globalThis.fetch = function () {
+    receiver = this;
+    if (this !== globalThis) {
+      throw new TypeError('Illegal invocation');
+    }
+    return Promise.resolve(
+      jsonResponse(200, { success: true, data: { status: 'ok' } }),
+    );
+  };
+
+  try {
+    const api = new SpinaApi({
+      apiBaseUrl: '',
+      appVersion: '0.1.0',
+      sessionStore: createStore(),
+    });
+
+    const data = await api.request('/health/live', { authenticated: false });
+
+    assert.equal(receiver, globalThis);
+    assert.deepEqual(data, { status: 'ok' });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
