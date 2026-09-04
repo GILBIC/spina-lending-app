@@ -24,6 +24,7 @@ concurrency:
 
 env:
   SPINA_PORTAL_URL: https://spina-lending-app-git-mvp-cross-platform-four-role-gilbic1.vercel.app
+  SPINA_API_URL: https://spina.157-230-250-111.sslip.io
   FLUTTER_VERSION: 3.44.7
 
 jobs:
@@ -139,8 +140,7 @@ jobs:
           cd "$RUNNER_TEMP/spina-android-host"
           flutter pub get
           flutter build apk --release --target-platform android-arm64,android-x64 --no-pub \
-            --dart-define=SPINA_API_BASE_URL="$SPINA_PORTAL_URL" \
-            --dart-define=GILBIC_API_BASE_URL="$SPINA_PORTAL_URL"
+            --dart-define=GILBIC_API_URL="$SPINA_API_URL"
       - name: Prepare and verify Android delivery
         shell: bash
         run: |
@@ -148,7 +148,7 @@ jobs:
           mkdir -p delivery/Spina-Android
           cp "$RUNNER_TEMP/spina-android-host/build/app/outputs/flutter-apk/app-release.apk" delivery/Spina-Android/Spina.apk
           sha256sum delivery/Spina-Android/Spina.apk > delivery/Spina-Android/SHA256.txt
-          printf '%s\n' "$SPINA_PORTAL_URL" > delivery/Spina-Android/SERVER.txt
+          printf '%s\n' "$SPINA_API_URL" > delivery/Spina-Android/SERVER.txt
           python - <<'PY'
           import pathlib
           import zipfile
