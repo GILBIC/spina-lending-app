@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
 
 import pytest
@@ -60,13 +61,10 @@ def test_verification_rejects_structured_sections_with_only_empty_values() -> No
 
 
 def test_same_as_present_normalization_copies_the_verified_address() -> None:
-    draft = _draft()
-    draft = CifDraftData(
-        **{
-            **draft.__dict__,
-            "permanent_address": {},
-            "same_as_present_address": True,
-        }
+    draft = replace(
+        _draft(),
+        permanent_address={},
+        same_as_present_address=True,
     )
 
     normalized = PostgresCifRepository._normalize_draft(draft)
