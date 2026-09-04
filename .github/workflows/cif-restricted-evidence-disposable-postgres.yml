@@ -58,6 +58,7 @@ jobs:
           python -m venv "%VENV%" || exit /b 1
           echo CIF_VENV=%VENV%>>"%GITHUB_ENV%"
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
 
       - name: Run CIF migration and constraints on disposable PostgreSQL
