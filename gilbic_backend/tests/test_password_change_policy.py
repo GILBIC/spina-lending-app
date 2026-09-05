@@ -120,10 +120,31 @@ class FakeManagementRepository:
     def __init__(self, target_role: str) -> None:
         self.target = _target_record(target_role)
         self.audit: tuple[UUID, UUID, bool] | None = None
+        self.list_call: dict[str, object] | None = None
 
     def get_account(self, *, target_user_id: UUID) -> AccountAdminRecord:
         assert target_user_id == TARGET_USER_ID
         return self.target
+
+    def list_accounts(
+        self,
+        *,
+        query: str | None = None,
+        role_code: str | None = None,
+        account_status: str | None = None,
+        staff_only: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[AccountAdminRecord]:
+        self.list_call = {
+            "query": query,
+            "role_code": role_code,
+            "account_status": account_status,
+            "staff_only": staff_only,
+            "limit": limit,
+            "offset": offset,
+        }
+        return [self.target]
 
     def record_password_reset(
         self,
@@ -205,6 +226,47 @@ def test_non_client_staff_can_change_only_their_own_password(role: str) -> None:
 
     assert response.status_code == 200
     assert auth.updated_password == ("access-token", "user-chosen-password-2")
+
+
+@pytest.mark.parametrize("actor_role", ["employee", "management"])
+def test_authorized_staff_can_search_only_client_accounts(actor_role: str) -> None:
+    client, _, _, management, _ = _client_for(
+        actor_role=actor_role,
+        target_role="client",
+    )
+
+    response = client.get(
+        "/api/v1/management/client-accounts?q=Target",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["accounts"][0]["id"] == str(TARGET_USER_ID)
+    assert payload["accounts"][0]["roles"] == ["client"]
+    assert management.list_call == {
+        "query": "Target",
+        "role_code": "client",
+        "account_status": None,
+        "staff_only": False,
+        "limit": 25,
+        "offset": 0,
+    }
+
+
+def test_collector_cannot_search_client_accounts_for_password_reset() -> None:
+    client, _, _, management, _ = _client_for(
+        actor_role="collector",
+        target_role="client",
+    )
+
+    response = client.get(
+        "/api/v1/management/client-accounts?q=Target",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert management.list_call is None
 
 
 def test_employee_can_generate_new_password_for_client_account_only() -> None:
