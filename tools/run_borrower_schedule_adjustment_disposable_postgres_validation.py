@@ -25,6 +25,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_voluntary_extra_receipt_application.py",
     TEST_ROOT / "test_regular_borrower_catchup_postgres.py",
     TEST_ROOT / "test_seven_by_seven_schedule_allocation.py",
+    TEST_ROOT / "test_seven_by_seven_borrower_catchup_postgres.py",
 )
 
 
@@ -74,7 +75,7 @@ def main() -> int:
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through both 0109 migrations, seed existing audited No Collection history, "
             "apply 0110 only inside the disposable test, and prove the upgrade preserves "
-            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence, elapsed-date finalization, Collector route refresh behavior, Regular protected/transactional catch-up allocation, and 7x7 catch-up schedule planning."
+            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence, elapsed-date finalization, Collector route refresh behavior, Regular protected/transactional catch-up allocation, and 7x7 catch-up planning/posting."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -135,8 +136,8 @@ def main() -> int:
             "upgraded with 0110 after existing audited No Collection history was created; "
             "event_date backfill, immutable evidence preservation, borrower schedule "
             "repository integration, elapsed-date finalization, Collector route refresh, "
-            "Regular protected/transactional catch-up allocation, and 7x7 catch-up schedule "
-            "planning were proven."
+            "Regular protected/transactional catch-up allocation, and 7x7 catch-up "
+            "planning/posting were proven."
         )
         return 0
     except psycopg.Error as error:
