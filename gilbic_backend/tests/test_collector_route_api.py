@@ -4,7 +4,6 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-import pytest
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import (
@@ -14,10 +13,10 @@ from gilbic_backend.account_repository import (
 )
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
-from gilbic_backend.borrower_schedule_finalization import PostgresBorrowerScheduleFinalizer
 from gilbic_backend.collector_route_api import (
     PHILIPPINES_TIMEZONE,
     _entry_payload,
+    borrower_schedule_finalizer_dependency,
     collector_route_renewal_repository_dependency,
     collector_route_repository_dependency,
 )
@@ -81,11 +80,28 @@ class FakeAccounts:
         return self.context
 
 
+class FakeFinalizer:
+    def __init__(self) -> None:
+        self.records: tuple[object, ...] = ()
+        self.request: tuple[UUID, tuple[UUID, ...], date] | None = None
+
+    def finalize_elapsed_for_loans(
+        self,
+        *,
+        actor_user_id: UUID,
+        loan_ids: tuple[UUID, ...],
+        business_date: date,
+    ) -> tuple[object, ...]:
+        self.request = (actor_user_id, loan_ids, business_date)
+        return self.records
+
+
 class FakeRoutes:
     def __init__(self) -> None:
         self.request: tuple[UUID, str, date] | None = None
         self.requests: list[tuple[UUID, str, date]] = []
         self.state_versions: list[int] = [7]
+        self.finalizer = FakeFinalizer()
 
     def get_today_route(
         self,
@@ -182,6 +198,9 @@ def client_with_fakes() -> tuple[TestClient, FakeAccounts, FakeRoutes]:
     app.dependency_overrides[auth_client_dependency] = lambda: auth
     app.dependency_overrides[account_repository_dependency] = lambda: accounts
     app.dependency_overrides[collector_route_repository_dependency] = lambda: routes
+    app.dependency_overrides[borrower_schedule_finalizer_dependency] = (
+        lambda: routes.finalizer
+    )
     app.dependency_overrides[collector_route_renewal_repository_dependency] = (
         lambda: renewals
     )
@@ -273,32 +292,17 @@ def test_collector_receives_only_server_assigned_route() -> None:
     assert routes.request[0] == COLLECTOR_USER_ID
     assert routes.request[1] == "Collector One"
     assert routes.request[2] == datetime.now(PHILIPPINES_TIMEZONE).date()
+    assert routes.finalizer.request == (
+        COLLECTOR_USER_ID,
+        (LOAN_ID,),
+        datetime.now(PHILIPPINES_TIMEZONE).date(),
+    )
 
 
-def test_route_refreshes_after_elapsed_schedule_finalization(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_route_refreshes_after_elapsed_schedule_finalization() -> None:
     client, _, routes = client_with_fakes()
     routes.state_versions = [7, 8]
-    seen: dict[str, object] = {}
-
-    def finalize_elapsed_for_loans(
-        self,
-        *,
-        actor_user_id: UUID,
-        loan_ids: tuple[UUID, ...],
-        business_date: date,
-    ):
-        seen["actor_user_id"] = actor_user_id
-        seen["loan_ids"] = loan_ids
-        seen["business_date"] = business_date
-        return (object(),)
-
-    monkeypatch.setattr(
-        PostgresBorrowerScheduleFinalizer,
-        "finalize_elapsed_for_loans",
-        finalize_elapsed_for_loans,
-    )
+    routes.finalizer.records = (object(),)
 
     response = client.get(
         "/api/mobile/v1/collector/routes/today",
@@ -306,38 +310,19 @@ def test_route_refreshes_after_elapsed_schedule_finalization(
     )
 
     assert response.status_code == 200
-    assert seen["actor_user_id"] == COLLECTOR_USER_ID
-    assert seen["loan_ids"] == (LOAN_ID,)
-    assert seen["business_date"] == datetime.now(PHILIPPINES_TIMEZONE).date()
+    assert routes.finalizer.request == (
+        COLLECTOR_USER_ID,
+        (LOAN_ID,),
+        datetime.now(PHILIPPINES_TIMEZONE).date(),
+    )
     assert len(routes.requests) == 2
     assert response.json()["data"]["entries"][0]["route_revision"] == (
         f"loan:{LOAN_ID}:v8"
     )
 
 
-def test_route_is_not_reloaded_when_elapsed_finalization_changes_nothing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_route_is_not_reloaded_when_elapsed_finalization_changes_nothing() -> None:
     client, _, routes = client_with_fakes()
-    seen: dict[str, object] = {}
-
-    def finalize_elapsed_for_loans(
-        self,
-        *,
-        actor_user_id: UUID,
-        loan_ids: tuple[UUID, ...],
-        business_date: date,
-    ):
-        seen["actor_user_id"] = actor_user_id
-        seen["loan_ids"] = loan_ids
-        seen["business_date"] = business_date
-        return ()
-
-    monkeypatch.setattr(
-        PostgresBorrowerScheduleFinalizer,
-        "finalize_elapsed_for_loans",
-        finalize_elapsed_for_loans,
-    )
 
     response = client.get(
         "/api/v1/collector/routes/today",
@@ -345,9 +330,11 @@ def test_route_is_not_reloaded_when_elapsed_finalization_changes_nothing(
     )
 
     assert response.status_code == 200
-    assert seen["actor_user_id"] == COLLECTOR_USER_ID
-    assert seen["loan_ids"] == (LOAN_ID,)
-    assert seen["business_date"] == datetime.now(PHILIPPINES_TIMEZONE).date()
+    assert routes.finalizer.request == (
+        COLLECTOR_USER_ID,
+        (LOAN_ID,),
+        datetime.now(PHILIPPINES_TIMEZONE).date(),
+    )
     assert len(routes.requests) == 1
     assert response.json()["data"]["entries"][0]["route_revision"] == (
         f"loan:{LOAN_ID}:v7"
