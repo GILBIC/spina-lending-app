@@ -3,20 +3,22 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-import gilbic_backend.management_api as management_api_module
 import pytest
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import AccountContext
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
+from gilbic_backend.client_account_api import (
+    client_account_repository_dependency,
+    client_credential_mailer_dependency,
+)
 from gilbic_backend.credential_mailer import CredentialDeliveryResult
 from gilbic_backend.main import create_app
 from gilbic_backend.management_api import (
     management_account_repository_dependency,
     management_auth_admin_dependency,
     management_auth_client_dependency,
-    management_repository_dependency,
 )
 from gilbic_backend.management_repository import AccountAdminRecord
 
@@ -38,7 +40,11 @@ def _actor_context(
         "client": ("loan.self.view",),
         "collector": ("route.view",),
         "employee": ("employee.portal.view", "client.credential.manage"),
-        "management": ("management.dashboard.view", "account.manage", "client.credential.manage"),
+        "management": (
+            "management.dashboard.view",
+            "account.manage",
+            "client.credential.manage",
+        ),
     }
     return AccountContext(
         user_id=ACTOR_USER_ID,
@@ -162,14 +168,8 @@ def _client_for(
     app.dependency_overrides[management_auth_client_dependency] = lambda: auth
     app.dependency_overrides[management_account_repository_dependency] = lambda: accounts
     app.dependency_overrides[management_auth_admin_dependency] = lambda: admin
-    app.dependency_overrides[management_repository_dependency] = lambda: management
-    mailer_dependency = getattr(
-        management_api_module,
-        "management_credential_mailer_dependency",
-        None,
-    )
-    if mailer_dependency is not None:
-        app.dependency_overrides[mailer_dependency] = lambda: mailer
+    app.dependency_overrides[client_account_repository_dependency] = lambda: management
+    app.dependency_overrides[client_credential_mailer_dependency] = lambda: mailer
     return TestClient(app), auth, admin, management, mailer
 
 
@@ -208,7 +208,10 @@ def test_non_client_staff_can_change_only_their_own_password(role: str) -> None:
 
 
 def test_employee_can_generate_new_password_for_client_account_only() -> None:
-    client, _, admin, management, mailer = _client_for(actor_role="employee", target_role="client")
+    client, _, admin, management, mailer = _client_for(
+        actor_role="employee",
+        target_role="client",
+    )
 
     response = client.post(
         f"/api/v1/management/accounts/{TARGET_USER_ID}/password/reset",
@@ -222,7 +225,10 @@ def test_employee_can_generate_new_password_for_client_account_only() -> None:
     assert management.audit == (ACTOR_USER_ID, TARGET_USER_ID, True)
     assert mailer.calls[0][3] == password
 
-    client, _, admin, management, _ = _client_for(actor_role="employee", target_role="collector")
+    client, _, admin, management, _ = _client_for(
+        actor_role="employee",
+        target_role="collector",
+    )
     response = client.post(
         f"/api/v1/management/accounts/{TARGET_USER_ID}/password/reset",
         headers=_headers(),
@@ -233,7 +239,10 @@ def test_employee_can_generate_new_password_for_client_account_only() -> None:
 
 
 def test_collector_cannot_reset_another_users_password() -> None:
-    client, _, admin, management, _ = _client_for(actor_role="collector", target_role="client")
+    client, _, admin, management, _ = _client_for(
+        actor_role="collector",
+        target_role="client",
+    )
 
     response = client.post(
         f"/api/v1/management/accounts/{TARGET_USER_ID}/password/reset",

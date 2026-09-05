@@ -50,6 +50,10 @@ class RefreshRequest(StrictRequest):
     refresh_token: str = Field(min_length=10, max_length=4096)
 
 
+class PasswordChangeRequest(StrictRequest):
+    password: str = Field(min_length=1, max_length=200)
+
+
 def auth_client_dependency() -> Generator[SupabaseAuthClient, None, None]:
     client = SupabaseAuthClient()
     try:
@@ -94,6 +98,16 @@ def _auth_exception(exc: SupabaseAuthError, *, login: bool = False) -> HTTPExcep
     if exc.status_code in {400, 409, 422}:
         return HTTPException(status_code=409, detail="An account with these credentials already exists.")
     return HTTPException(status_code=502, detail="Authentication service could not complete the request.")
+
+
+def _password_change_exception(exc: SupabaseAuthError) -> HTTPException:
+    if exc.status_code == 503:
+        return HTTPException(status_code=503, detail="Authentication service is unavailable.")
+    if exc.status_code in {400, 409, 422}:
+        return HTTPException(status_code=422, detail="Password change was rejected.")
+    if exc.status_code in {401, 403}:
+        return HTTPException(status_code=401, detail="Authentication is required.")
+    return HTTPException(status_code=502, detail="Password change could not be completed.")
 
 
 def _enforce_mobile_auth_version(
@@ -234,6 +248,32 @@ def create_auth_router() -> APIRouter:
             accounts=accounts,
         )
         return {"success": True, "data": {"user": _user_payload(context)}}
+
+    @router.patch("/api/v1/auth/password")
+    def change_password(
+        request: PasswordChangeRequest,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+    ) -> dict[str, bool]:
+        context = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        if "client" in context.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Client users cannot change their own password.",
+            )
+        token = bearer_token(authorization)
+        try:
+            auth.update_password(access_token=token, password=request.password)
+        except SupabaseAuthError as exc:
+            raise _password_change_exception(exc) from exc
+        return {"success": True}
 
     @router.post("/api/v1/auth/logout")
     @router.post("/api/mobile/v1/auth/logout", include_in_schema=False)

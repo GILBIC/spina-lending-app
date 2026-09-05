@@ -3,19 +3,21 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-import gilbic_backend.management_api as management_api_module
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import AccountConflict, AccountContext
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
+from gilbic_backend.client_account_api import (
+    client_account_repository_dependency,
+    client_credential_mailer_dependency,
+)
 from gilbic_backend.credential_mailer import CredentialDeliveryResult
 from gilbic_backend.main import create_app
 from gilbic_backend.management_api import (
     management_account_repository_dependency,
     management_auth_admin_dependency,
     management_auth_client_dependency,
-    management_repository_dependency,
 )
 from gilbic_backend.management_repository import AccountAdminRecord
 
@@ -194,14 +196,8 @@ def _client_with_fakes(*, mail_sent: bool = True):
     app.dependency_overrides[management_auth_client_dependency] = lambda: auth
     app.dependency_overrides[management_account_repository_dependency] = lambda: accounts
     app.dependency_overrides[management_auth_admin_dependency] = lambda: admin
-    app.dependency_overrides[management_repository_dependency] = lambda: management
-    mailer_dependency = getattr(
-        management_api_module,
-        "management_credential_mailer_dependency",
-        None,
-    )
-    if mailer_dependency is not None:
-        app.dependency_overrides[mailer_dependency] = lambda: mailer
+    app.dependency_overrides[client_account_repository_dependency] = lambda: management
+    app.dependency_overrides[client_credential_mailer_dependency] = lambda: mailer
     return TestClient(app), auth, accounts, admin, management, mailer
 
 
