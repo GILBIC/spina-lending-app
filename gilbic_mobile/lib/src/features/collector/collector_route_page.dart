@@ -355,19 +355,43 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         if (!mounted) {
           return;
         }
-        draft = await showModalBottomSheet<CombinedPaymentSubmissionDraft>(
-          context: context,
-          isScrollControlled: true,
-          useSafeArea: true,
-          builder: (context) => _CombinedPaymentReviewSheet(
-            session: widget.session,
-            client: client,
-            baseDraft: baseDraft,
-            repository: _combinedPaymentRepository,
-          ),
+        final preview = await _combinedPaymentRepository.preview(
+          widget.session,
+          baseDraft,
         );
-        if (draft == null || !mounted) {
+        if (!mounted) {
           return;
+        }
+        final cash = baseDraft.cashReceivedAmount;
+        final exactNormal =
+            preview.status == 'exact' &&
+            !preview.requiresReview &&
+            !preview.extraChoiceRequired &&
+            !preview.regularPastDueFollowupRequired &&
+            preview.shortAmount == 0 &&
+            preview.extraAmount == 0 &&
+            (preview.cashReceivedAmount - cash).abs() < 0.005 &&
+            (preview.expectedTotalAmount - cash).abs() < 0.005;
+        if (exactNormal) {
+          draft = baseDraft.withAllocationReview(
+            cashReceivedAmount: cash,
+            reviewedAllocationHash: preview.allocationHash,
+          );
+        } else {
+          draft = await showModalBottomSheet<CombinedPaymentSubmissionDraft>(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            builder: (context) => _CombinedPaymentReviewSheet(
+              session: widget.session,
+              client: client,
+              baseDraft: baseDraft,
+              repository: _combinedPaymentRepository,
+            ),
+          );
+          if (draft == null || !mounted) {
+            return;
+          }
         }
       }
       _pendingCombinedDrafts[client.clientId] = draft;
