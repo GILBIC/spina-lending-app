@@ -869,38 +869,6 @@ const CombinedPaymentAllocationPreview _extraChoicePreview =
       ],
     );
 
-const CombinedPaymentAllocationPreview _sevenAdvancePreview =
-    CombinedPaymentAllocationPreview(
-      status: 'allocated',
-      requiresReview: true,
-      allocationHash:
-          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-      cashReceivedAmount: 170,
-      expectedTotalAmount: 150,
-      shortAmount: 0,
-      extraAmount: 20,
-      extraChoiceRequired: false,
-      regularPastDueFollowupRequired: false,
-      message: '7x7 advance allocation ready for review.',
-      legs: <CombinedPaymentAllocationLeg>[
-        CombinedPaymentAllocationLeg(
-          loanId: 'loan-seven',
-          loanType: 'seven_by_seven',
-          scheduledAmount: 50,
-          extraAmount: 20,
-          totalAmount: 70,
-          projectedCoveredDates: <String>['2026-08-02', '2026-08-03'],
-        ),
-        CombinedPaymentAllocationLeg(
-          loanId: 'loan-regular',
-          loanType: 'regular',
-          scheduledAmount: 100,
-          extraAmount: 0,
-          totalAmount: 100,
-        ),
-      ],
-    );
-
 class _DelayedCombinedRepository
     implements CombinedPaymentSubmissionRepository {
   final List<CombinedPaymentSubmissionDraft> requests =
