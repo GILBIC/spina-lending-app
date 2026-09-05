@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -27,6 +27,12 @@ _spec = importlib.util.spec_from_file_location("client_schedule_cases", SOURCE_P
 assert _spec is not None and _spec.loader is not None
 cases = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cases)
+
+X7_SOURCE_PATH = TEST_DIR / "test_seven_by_seven_mobile_collection_postgres.py"
+_x7_spec = importlib.util.spec_from_file_location("client_x7_schedule_cases", X7_SOURCE_PATH)
+assert _x7_spec is not None and _x7_spec.loader is not None
+x7_cases = importlib.util.module_from_spec(_x7_spec)
+_x7_spec.loader.exec_module(x7_cases)
 
 SQL_0110 = (
     Path(__file__).resolve().parents[1]
@@ -58,14 +64,8 @@ def _ensure_0110_installed() -> None:
             connection.execute(_migration_body(SQL_0110))
 
 
-def test_linked_client_reads_persisted_shifted_regular_schedule() -> None:
+def _link_client_user(*, client_id, label: str):
     assert DATABASE_URL is not None
-    _ensure_0110_installed()
-    case = cases._setup_combined_case(
-        verified_regular_schedule=True,
-        regular_first_due=date(2097, 8, 2),
-    )
-
     suffix = uuid4().hex[:10]
     with psycopg.connect(DATABASE_URL) as connection:
         client_user_id = connection.execute(
@@ -74,7 +74,7 @@ def test_linked_client_reads_persisted_shifted_regular_schedule() -> None:
             values (%s, %s, 'active')
             returning id
             """,
-            (f"client-schedule-{suffix}", f"Client Schedule {suffix}"),
+            (f"client-schedule-{label}-{suffix}", f"Client Schedule {label} {suffix}"),
         ).fetchone()[0]
         connection.execute(
             """
@@ -82,8 +82,19 @@ def test_linked_client_reads_persisted_shifted_regular_schedule() -> None:
             set user_id = %s
             where id = %s
             """,
-            (client_user_id, case.client_id),
+            (client_user_id, client_id),
         )
+    return client_user_id
+
+
+def test_linked_client_reads_persisted_shifted_regular_schedule() -> None:
+    assert DATABASE_URL is not None
+    _ensure_0110_installed()
+    case = cases._setup_combined_case(
+        verified_regular_schedule=True,
+        regular_first_due=date(2097, 8, 2),
+    )
+    client_user_id = _link_client_user(client_id=case.client_id, label="regular")
 
     shortfall = PostgresBorrowerScheduleAdjustmentRepository().record_shortfall(
         actor_user_id=case.collector_id,
@@ -116,4 +127,45 @@ def test_linked_client_reads_persisted_shifted_regular_schedule() -> None:
         (date(2097, 8, 3), "Due Today", cases.Decimal("50.00")),
         (date(2097, 8, 4), "Scheduled", cases.Decimal("50.00")),
         (date(2097, 8, 5), "Scheduled", cases.Decimal("50.00")),
+    ]
+
+
+def test_linked_client_reads_persisted_shifted_7x7_schedule_separately() -> None:
+    assert DATABASE_URL is not None
+    _ensure_0110_installed()
+    case = x7_cases._setup_case(principal="5000.00")
+    x7_cases._register_verified_schedule(case)
+    client_user_id = _link_client_user(client_id=case.client_id, label="x7")
+
+    shortfall = PostgresBorrowerScheduleAdjustmentRepository().record_shortfall(
+        actor_user_id=case.collector_id,
+        loan_id=case.loan_id,
+        event_date=case.payment_start,
+        expected_operational_version=0,
+    )
+    assert shortfall.active_borrower_extension_slots_after == 1
+
+    schedule = PostgresClientLoanRepository().get_schedule_for_user(
+        user_id=client_user_id,
+        loan_id=case.loan_id,
+        as_of_date=case.payment_start + timedelta(days=1),
+    )
+
+    installment_rows = [row for row in schedule.rows if row.kind == "installment"]
+    assert schedule.client_id == case.client_id
+    assert schedule.loan_id == case.loan_id
+    assert schedule.calculation_mode == "seven_by_seven"
+    assert "7x7" in schedule.loan_type
+    assert schedule.schedule_extension_slots == 1
+    assert schedule.past_due_count == 0
+    assert schedule.base_maturity is not None
+    assert schedule.updated_maturity == schedule.base_maturity + timedelta(days=1)
+    assert schedule.maturity_projection_status == "extended"
+    assert [
+        (row.schedule_date, row.status, row.amount)
+        for row in installment_rows[:3]
+    ] == [
+        (case.payment_start + timedelta(days=1), "Due Today", x7_cases.Decimal("50.00")),
+        (case.payment_start + timedelta(days=2), "Scheduled", x7_cases.Decimal("50.00")),
+        (case.payment_start + timedelta(days=3), "Scheduled", x7_cases.Decimal("50.00")),
     ]
