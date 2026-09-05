@@ -6,11 +6,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
-import gilbic_backend.management_repository as management_repository_module
+import gilbic_backend.client_account_repository as client_account_repository_module
 import psycopg
 import pytest
 from gilbic_backend.account_repository import AccountConflict
-from gilbic_backend.management_repository import PostgresManagementRepository
+from gilbic_backend.client_account_repository import PostgresClientAccountRepository
 from psycopg.rows import dict_row
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
@@ -146,7 +146,7 @@ def client_account_case() -> ClientAccountCase:
 @pytest.fixture(autouse=True)
 def use_test_database(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        management_repository_module,
+        client_account_repository_module,
         "open_connection",
         _test_connection,
     )
@@ -155,7 +155,7 @@ def use_test_database(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_next_client_username_uses_client_code_and_suffixes_case_insensitive_collision(
     client_account_case: ClientAccountCase,
 ) -> None:
-    repository = PostgresManagementRepository()
+    repository = PostgresClientAccountRepository()
     expected_base = repository.next_client_username(
         client_id=client_account_case.active_client_id,
     )
@@ -186,7 +186,7 @@ def test_next_client_username_uses_client_code_and_suffixes_case_insensitive_col
 def test_create_client_account_profile_links_active_borrower_assigns_client_only_and_audits_without_password(
     client_account_case: ClientAccountCase,
 ) -> None:
-    repository = PostgresManagementRepository()
+    repository = PostgresClientAccountRepository()
     username = repository.next_client_username(client_id=client_account_case.active_client_id)
     auth_user_id = uuid4()
 
@@ -242,7 +242,7 @@ def test_create_client_account_profile_links_active_borrower_assigns_client_only
 def test_client_account_creation_rejects_inactive_or_already_linked_borrower(
     client_account_case: ClientAccountCase,
 ) -> None:
-    repository = PostgresManagementRepository()
+    repository = PostgresClientAccountRepository()
 
     with pytest.raises(AccountConflict, match="active"):
         repository.next_client_username(client_id=client_account_case.inactive_client_id)
