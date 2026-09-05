@@ -230,6 +230,7 @@ def plan_verified_seven_by_seven_scheduled_payment(
                 )
             )
 
+    # Source-contract invariant: effective_due_date <= collection_date defines due rows.
     due_rows = [row for row in unpaid_rows if row[2] <= collection_date]
     future_rows = [row for row in unpaid_rows if row[2] > collection_date]
     catchup_rows = future_rows[:active_slots]
