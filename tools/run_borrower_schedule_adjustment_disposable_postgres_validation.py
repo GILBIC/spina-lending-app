@@ -22,6 +22,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_borrower_schedule_adjustment_repository_postgres.py",
     TEST_ROOT / "test_borrower_schedule_finalization_postgres.py",
     TEST_ROOT / "test_collector_route_api.py",
+    TEST_ROOT / "test_voluntary_extra_receipt_application.py",
 )
 
 
@@ -71,7 +72,7 @@ def main() -> int:
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through both 0109 migrations, seed existing audited No Collection history, "
             "apply 0110 only inside the disposable test, and prove the upgrade preserves "
-            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence, elapsed-date finalization, and Collector route refresh behavior."
+            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence, elapsed-date finalization, Collector route refresh behavior, and the Regular posting bridge's protected catch-up allocation."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -131,8 +132,8 @@ def main() -> int:
             "Borrower-schedule disposable PostgreSQL validation passed: schema through 0109 "
             "upgraded with 0110 after existing audited No Collection history was created; "
             "event_date backfill, immutable evidence preservation, borrower schedule "
-            "repository integration, elapsed-date finalization, and Collector route refresh "
-            "behavior were proven."
+            "repository integration, elapsed-date finalization, Collector route refresh, "
+            "and Regular protected catch-up allocation were proven."
         )
         return 0
     except psycopg.Error as error:
