@@ -34,7 +34,8 @@ class VoluntaryExtraAwareCollectionPostingBridge(
 
     For an activated Regular contractual schedule, a PAYMENT clears every unpaid
     obligation due on or before the receipt date, oldest first. Only money left
-    after Past Due and Due Today are fully satisfied is genuine extra cash.
+    after Past Due, Due Today, and any active borrower catch-up capacity are
+    fully satisfied is genuine extra cash.
 
     Genuine extra is never guessed. The borrower must explicitly direct it to
     Advance or Principal Reduction. Advance applies to the oldest unpaid future
@@ -96,9 +97,29 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                 command=command,
             )
 
-        # Required cash is the complete unpaid amount already due, not merely
-        # one row. This makes Past Due -> newer Past Due -> Due Today the hard
-        # boundary before any cash can become genuine extra.
+        cursor.execute(
+            """
+            select coalesce(state.active_borrower_extension_slots, 0)
+                as active_borrower_extension_slots
+            from accounting.loan_contract_dpd_assessment assessment
+            left join lending.loan_schedule_operational_state state
+              on state.schedule_id = assessment.schedule_id
+            where assessment.loan_id = %s
+            limit 1
+            """,
+            (loan["loan_id"],),
+        )
+        state = cursor.fetchone()
+        active_slots = int(
+            state["active_borrower_extension_slots"]
+            if state and state["active_borrower_extension_slots"] is not None
+            else 0
+        )
+
+        # Required cash is every unpaid amount already due. If the borrower is
+        # behind, normal cash may additionally fill the oldest future unpaid
+        # rows up to the active borrower-extension count. That portion is
+        # catch-up, not genuine extra and never requires ADV intent.
         cursor.execute(
             """
             with due_rows as (
@@ -125,8 +146,59 @@ class VoluntaryExtraAwareCollectionPostingBridge(
             """,
             (loan["loan_id"], command.collection_date),
         )
-        row = cursor.fetchone()
-        return self._money(row["due_remaining"] if row else Decimal("0.00"))
+        due_row = cursor.fetchone()
+        due_remaining = self._money(
+            due_row["due_remaining"] if due_row else Decimal("0.00")
+        )
+        if active_slots <= 0:
+            return due_remaining
+
+        cursor.execute(
+            """
+            with future_balances as (
+                select
+                    installment.id,
+                    installment.installment_number,
+                    installment.effective_due_date,
+                    greatest(
+                        installment.contractual_amount
+                        - coalesce(sum(allocation.amount_applied) filter (
+                            where allocation_transaction.is_voided = false
+                        ), 0),
+                        0
+                    )::numeric(18,2) as remaining_amount
+                from accounting.loan_contract_dpd_assessment assessment
+                join lending.loan_contract_installments_operational installment
+                  on installment.schedule_id = assessment.schedule_id
+                left join lending.loan_installment_payment_allocations allocation
+                  on allocation.installment_id = installment.id
+                left join lending.collection_transactions allocation_transaction
+                  on allocation_transaction.id = allocation.transaction_id
+                where assessment.loan_id = %s
+                  and installment.effective_due_date > %s
+                group by
+                    installment.id,
+                    installment.installment_number,
+                    installment.effective_due_date,
+                    installment.contractual_amount
+            ), catchup_rows as (
+                select remaining_amount
+                from future_balances
+                where remaining_amount > 0
+                order by effective_due_date, installment_number, id
+                limit %s
+            )
+            select coalesce(sum(remaining_amount), 0)::numeric(18,2)
+                as catchup_remaining
+            from catchup_rows
+            """,
+            (loan["loan_id"], command.collection_date, active_slots),
+        )
+        catchup_row = cursor.fetchone()
+        catchup_remaining = self._money(
+            catchup_row["catchup_remaining"] if catchup_row else Decimal("0.00")
+        )
+        return self._money(due_remaining + catchup_remaining)
 
     def _finalize_contract_effects(
         self,
