@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const moduleUrl = new URL('../assets/client-account-admin.js', import.meta.url);
+const managementWorkspaceUrl = new URL('../assets/roles/management.js', import.meta.url);
 
 async function loadClientAccountAdmin() {
   assert.equal(
@@ -67,4 +68,14 @@ test('Generated Client credentials render once with delivery status and an expli
   assert.match(markup, /copy/i);
   assert.match(markup, /only once|one-time/i);
   assert.match(markup, /sent by email/i);
+});
+
+test('Management workspace mounts Client Accounts and retires the active registration queue', () => {
+  const source = readFileSync(managementWorkspaceUrl, 'utf8');
+
+  assert.match(source, /clientAccountAdminMarkup/);
+  assert.match(source, /bindClientAccountAdmin/);
+  assert.match(source, /management-client-accounts/);
+  assert.doesNotMatch(source, /\/api\/v1\/management\/client-registrations/);
+  assert.doesNotMatch(source, /bindRegistrations/);
 });
