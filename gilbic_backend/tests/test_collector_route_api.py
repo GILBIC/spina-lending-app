@@ -4,6 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import (
@@ -13,6 +14,7 @@ from gilbic_backend.account_repository import (
 )
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
+from gilbic_backend.borrower_schedule_finalization import PostgresBorrowerScheduleFinalizer
 from gilbic_backend.collector_route_api import (
     PHILIPPINES_TIMEZONE,
     _entry_payload,
@@ -82,6 +84,8 @@ class FakeAccounts:
 class FakeRoutes:
     def __init__(self) -> None:
         self.request: tuple[UUID, str, date] | None = None
+        self.requests: list[tuple[UUID, str, date]] = []
+        self.state_versions: list[int] = [7]
 
     def get_today_route(
         self,
@@ -91,6 +95,10 @@ class FakeRoutes:
         route_date: date,
     ) -> CollectorRouteRecord:
         self.request = (collector_user_id, collector_name, route_date)
+        self.requests.append(self.request)
+        state_version = self.state_versions[
+            min(len(self.requests) - 1, len(self.state_versions) - 1)
+        ]
         return CollectorRouteRecord(
             route_date=route_date,
             collector_name=collector_name,
@@ -110,7 +118,7 @@ class FakeRoutes:
                     advance_until=date(2026, 8, 3),
                     status="Recorded today",
                     note="Call before visiting",
-                    state_version=7,
+                    state_version=state_version,
                     is_reconciled=True,
                     mobile_collections_enabled=True,
                     mobile_balance_mode="direct_remaining_balance",
@@ -265,6 +273,85 @@ def test_collector_receives_only_server_assigned_route() -> None:
     assert routes.request[0] == COLLECTOR_USER_ID
     assert routes.request[1] == "Collector One"
     assert routes.request[2] == datetime.now(PHILIPPINES_TIMEZONE).date()
+
+
+def test_route_refreshes_after_elapsed_schedule_finalization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _, routes = client_with_fakes()
+    routes.state_versions = [7, 8]
+    seen: dict[str, object] = {}
+
+    def finalize_elapsed_for_loans(
+        self,
+        *,
+        actor_user_id: UUID,
+        loan_ids: tuple[UUID, ...],
+        business_date: date,
+    ):
+        seen["actor_user_id"] = actor_user_id
+        seen["loan_ids"] = loan_ids
+        seen["business_date"] = business_date
+        return (object(),)
+
+    monkeypatch.setattr(
+        PostgresBorrowerScheduleFinalizer,
+        "finalize_elapsed_for_loans",
+        finalize_elapsed_for_loans,
+    )
+
+    response = client.get(
+        "/api/mobile/v1/collector/routes/today",
+        headers=request_headers(),
+    )
+
+    assert response.status_code == 200
+    assert seen["actor_user_id"] == COLLECTOR_USER_ID
+    assert seen["loan_ids"] == (LOAN_ID,)
+    assert seen["business_date"] == datetime.now(PHILIPPINES_TIMEZONE).date()
+    assert len(routes.requests) == 2
+    assert response.json()["data"]["entries"][0]["route_revision"] == (
+        f"loan:{LOAN_ID}:v8"
+    )
+
+
+def test_route_is_not_reloaded_when_elapsed_finalization_changes_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _, routes = client_with_fakes()
+    seen: dict[str, object] = {}
+
+    def finalize_elapsed_for_loans(
+        self,
+        *,
+        actor_user_id: UUID,
+        loan_ids: tuple[UUID, ...],
+        business_date: date,
+    ):
+        seen["actor_user_id"] = actor_user_id
+        seen["loan_ids"] = loan_ids
+        seen["business_date"] = business_date
+        return ()
+
+    monkeypatch.setattr(
+        PostgresBorrowerScheduleFinalizer,
+        "finalize_elapsed_for_loans",
+        finalize_elapsed_for_loans,
+    )
+
+    response = client.get(
+        "/api/v1/collector/routes/today",
+        headers=request_headers(),
+    )
+
+    assert response.status_code == 200
+    assert seen["actor_user_id"] == COLLECTOR_USER_ID
+    assert seen["loan_ids"] == (LOAN_ID,)
+    assert seen["business_date"] == datetime.now(PHILIPPINES_TIMEZONE).date()
+    assert len(routes.requests) == 1
+    assert response.json()["data"]["entries"][0]["route_revision"] == (
+        f"loan:{LOAN_ID}:v7"
+    )
 
 
 def test_seven_by_seven_payload_needs_explicit_ready_route_coordinates() -> None:
