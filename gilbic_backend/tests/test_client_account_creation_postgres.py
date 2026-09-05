@@ -120,6 +120,11 @@ def _delete_case(case: ClientAccountCase) -> None:
         ).fetchall()
         target_user_ids = [row[0] for row in rows if row[0] is not None]
         audit_targets = [case.actor_user_id, *target_user_ids]
+        auth_rows = connection.execute(
+            "select external_auth_id from core.users where id = any(%s)",
+            (audit_targets,),
+        ).fetchall()
+        target_auth_ids = [row[0] for row in auth_rows if row[0] is not None]
         connection.execute(
             "delete from core.audit_logs where actor_user_id = %s or target_id = any(%s)",
             (case.actor_user_id, audit_targets),
@@ -132,6 +137,11 @@ def _delete_case(case: ClientAccountCase) -> None:
             "delete from core.users where id = any(%s)",
             (audit_targets,),
         )
+        if target_auth_ids:
+            connection.execute(
+                "delete from auth.users where id = any(%s)",
+                (target_auth_ids,),
+            )
 
 
 @pytest.fixture
@@ -190,6 +200,10 @@ def test_create_client_account_profile_links_active_borrower_assigns_client_only
     username = repository.next_client_username(client_id=client_account_case.active_client_id)
     auth_user_id = uuid4()
 
+    assert DATABASE_URL is not None
+    with psycopg.connect(DATABASE_URL) as connection:
+        connection.execute("insert into auth.users (id) values (%s)", (auth_user_id,))
+
     record = repository.create_client_account_profile(
         actor_user_id=client_account_case.actor_user_id,
         auth_user_id=auth_user_id,
@@ -203,7 +217,6 @@ def test_create_client_account_profile_links_active_borrower_assigns_client_only
     assert record.auth_user_id == auth_user_id
     assert record.full_name == "Maria Santos"
 
-    assert DATABASE_URL is not None
     with psycopg.connect(DATABASE_URL, row_factory=dict_row) as connection:
         linked = connection.execute(
             "select user_id from lending.clients where id = %s",
