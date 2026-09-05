@@ -82,7 +82,7 @@ def test_promise_deadline_status_is_kept_only_when_fully_satisfied() -> None:
     ) == "not_kept"
 
 
-def test_outer_collection_bridge_reconciles_existing_promise_before_new_past_due_capture(
+def test_outer_collection_bridge_contracts_catchup_before_existing_promise_progress_and_new_capture(
     monkeypatch,
 ) -> None:
     events: list[str] = []
@@ -98,6 +98,13 @@ def test_outer_collection_bridge_reconciles_existing_promise_before_new_past_due
         VoluntaryExtraAwareCollectionPostingBridge,
         "post_collection",
         lambda self, connection, actor, command: events.append("posted") or posted,
+    )
+    monkeypatch.setattr(
+        ConcurrentReceiptSafeCollectionPostingBridge,
+        "_apply_borrower_catchup_contraction",
+        lambda self, connection, *, actor, command, posted: events.append(
+            "catchup_contraction"
+        ),
     )
     monkeypatch.setattr(
         PastDuePromiseProgress,
@@ -123,4 +130,9 @@ def test_outer_collection_bridge_reconciles_existing_promise_before_new_past_due
     )
 
     assert result == posted
-    assert events == ["posted", "promise_progress", "new_past_due_capture"]
+    assert events == [
+        "posted",
+        "catchup_contraction",
+        "promise_progress",
+        "new_past_due_capture",
+    ]

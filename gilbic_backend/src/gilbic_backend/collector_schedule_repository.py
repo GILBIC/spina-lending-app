@@ -8,7 +8,6 @@ from uuid import UUID
 from psycopg.rows import dict_row
 
 from .database import open_connection
-from .rolling_schedule import RollingScheduleInstallment, project_rolling_schedule
 
 
 MONEY = Decimal("0.01")
@@ -185,17 +184,15 @@ def _build_installment_row(
 
 
 class PostgresCollectorScheduleRepository:
-    """Read one Collector-owned loan's current operational schedule.
+    """Read one Collector-owned loan's persisted operational schedule.
 
     Signed contractual due dates remain immutable evidence. Management-approved
-    No Collection shifts are read through the operational overlay. Regular
-    Principal Reduction is presented as the updated remaining schedule, while
-    Advance remains visible as prepayment against specific future rows.
+    No Collection, borrower shortfall/catch-up, Principal Reduction, and Advance
+    effects are read from their persisted operational/allocation evidence.
 
-    Rolling missed/partial schedule extension is derived from unresolved prior
-    scheduled rows instead of rewriting them. That lets the Collector see both
-    Past Due and the normal Due Today amount while current maturity extends, and
-    it lets a full catch-up restore maturity automatically.
+    The reader never invents another borrower shift or contraction. Past Due is
+    evaluated against persisted effective dates, while the active borrower
+    extension count comes from the versioned operational schedule state.
     """
 
     def get_schedule(
@@ -221,7 +218,15 @@ class PostgresCollectorScheduleRepository:
                         schedule.payment_frequency,
                         schedule.contract_reference,
                         schedule.settings,
-                        registration.id as registration_id
+                        registration.id as registration_id,
+                        coalesce(
+                            nullif(
+                                to_jsonb(operational_state)
+                                    ->> 'active_borrower_extension_slots',
+                                ''
+                            )::integer,
+                            0
+                        ) as active_borrower_extension_slots
                     from lending.loans loan
                     join lending.clients client
                       on client.id = loan.client_id
@@ -232,6 +237,8 @@ class PostgresCollectorScheduleRepository:
                      and schedule.status = 'active'
                     left join lending.loan_contract_schedule_registrations registration
                       on registration.schedule_id = schedule.id
+                    left join lending.loan_schedule_operational_state operational_state
+                      on operational_state.schedule_id = schedule.id
                     where loan.id = %s
                       and loan.status = 'active'
                       and client.status = 'active'
@@ -401,29 +408,34 @@ class PostgresCollectorScheduleRepository:
             if installment is not None:
                 rows.append(installment)
 
-        projection = project_rolling_schedule(
-            installments=tuple(
-                RollingScheduleInstallment(
-                    installment_id=int(item.installment_id),
-                    installment_number=int(item.installment_number),
-                    contractual_due_date=(
-                        item.contractual_due_date or item.schedule_date
-                    ),
-                    effective_due_date=item.schedule_date,
-                    remaining_amount=item.remaining_amount,
-                )
-                for item in rows
-                if item.kind == "installment"
-                and item.installment_id is not None
-                and item.installment_number is not None
-            ),
-            as_of_date=as_of_date,
-            payment_frequency=str(loan["payment_frequency"]),
-            blocked_dates=tuple(
-                item["no_collection_date"] for item in no_collection_rows
-            ),
-            semi_monthly_days=_semi_monthly_days(loan["settings"]),
+        installment_records = tuple(item for item in rows if item.kind == "installment")
+        past_due_rows = tuple(
+            item
+            for item in installment_records
+            if item.schedule_date < as_of_date and item.remaining_amount > ZERO
         )
+        past_due_amount = _money(
+            sum((item.remaining_amount for item in past_due_rows), ZERO)
+        )
+        active_extension_slots = int(loan["active_borrower_extension_slots"] or 0)
+        base_maturity = max(
+            (
+                item.contractual_due_date
+                for item in installment_records
+                if item.contractual_due_date is not None
+            ),
+            default=None,
+        )
+        updated_maturity = max(
+            (item.schedule_date for item in installment_records),
+            default=None,
+        )
+        if updated_maturity is None:
+            maturity_status = "no_current_installments"
+        elif active_extension_slots > 0:
+            maturity_status = "extended"
+        else:
+            maturity_status = "on_schedule"
 
         for row in no_collection_rows:
             rows.append(
@@ -460,10 +472,10 @@ class PostgresCollectorScheduleRepository:
             contract_reference=str(loan["contract_reference"] or ""),
             as_of_date=as_of_date,
             rows=tuple(rows),
-            past_due_amount=projection.past_due_amount,
-            past_due_count=projection.past_due_count,
-            schedule_extension_slots=projection.extension_slots,
-            base_maturity=projection.base_maturity,
-            updated_maturity=projection.updated_maturity,
-            maturity_projection_status=projection.projection_status,
+            past_due_amount=past_due_amount,
+            past_due_count=len(past_due_rows),
+            schedule_extension_slots=active_extension_slots,
+            base_maturity=base_maturity,
+            updated_maturity=updated_maturity,
+            maturity_projection_status=maturity_status,
         )

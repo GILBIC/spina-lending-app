@@ -1,0 +1,97 @@
+name: Borrower Schedule Disposable PostgreSQL
+
+on:
+  pull_request:
+    paths:
+      - 'gilbic_backend/sql/0110_add_borrower_schedule_adjustments.sql'
+      - 'gilbic_backend/src/gilbic_backend/management_no_collection_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_evidence.py'
+      - 'gilbic_backend/src/gilbic_backend/borrower_schedule_adjustment_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/borrower_schedule_finalization.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_route_api.py'
+      - 'gilbic_backend/src/gilbic_backend/voluntary_extra_collection_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/concurrent_receipt_collection_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_schedule_allocation.py'
+      - 'gilbic_backend/tests/test_borrower_schedule_adjustment_migration.py'
+      - 'gilbic_backend/tests/test_borrower_schedule_adjustment_upgrade_postgres.py'
+      - 'gilbic_backend/tests/test_borrower_schedule_adjustment_repository_postgres.py'
+      - 'gilbic_backend/tests/test_borrower_schedule_finalization_postgres.py'
+      - 'gilbic_backend/tests/test_collector_route_api.py'
+      - 'gilbic_backend/tests/test_voluntary_extra_receipt_application.py'
+      - 'gilbic_backend/tests/test_regular_borrower_catchup_postgres.py'
+      - 'gilbic_backend/tests/test_past_due_promise_progress.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_schedule_allocation.py'
+      - 'tools/run_borrower_schedule_adjustment_disposable_postgres_validation.py'
+      - '.github/workflows/borrower-schedule-disposable-postgres.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  borrower-schedule-upgrade:
+    name: Borrower schedule upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
+
+      - name: Install verifier dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check -e ./spina_backend_mobile -e './gilbic_backend[test]'
+
+      - name: Create disposable base database
+        shell: bash
+        run: createdb -h 127.0.0.1 -U postgres borrower_schedule_test
+        env:
+          PGPASSWORD: postgres
+
+      - name: Validate 0109 to 0110 upgrade
+        shell: bash
+        env:
+          SPINA_ALLOW_DISPOSABLE_DATABASE: '1'
+          BORROWER_SCHEDULE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/borrower_schedule_test?sslmode=disable
+        run: |
+          set -euo pipefail
+          python tools/run_borrower_schedule_adjustment_disposable_postgres_validation.py \
+            --database-url-env BORROWER_SCHEDULE_DATABASE_URL
+
+      - name: Require clean tracked files
+        if: always()
+        shell: bash
+        run: |
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code

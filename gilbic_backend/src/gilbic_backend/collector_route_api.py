@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Header
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .borrower_schedule_finalization import PostgresBorrowerScheduleFinalizer
 from .collector_route_cross_status_repository import (
     CollectorRouteCrossStatusRecord,
     PostgresCollectorRouteCrossStatusRepository,
@@ -33,6 +34,10 @@ PHILIPPINES_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Manila")
 
 def collector_route_repository_dependency() -> PostgresCollectorRouteRepository:
     return SevenBySevenGatedPostgresCollectorRouteRepository()
+
+
+def borrower_schedule_finalizer_dependency() -> PostgresBorrowerScheduleFinalizer:
+    return PostgresBorrowerScheduleFinalizer()
 
 
 def collector_route_cross_status_repository_dependency(
@@ -335,6 +340,9 @@ def create_collector_route_router() -> APIRouter:
         routes: PostgresCollectorRouteRepository = Depends(
             collector_route_repository_dependency
         ),
+        finalizer: PostgresBorrowerScheduleFinalizer = Depends(
+            borrower_schedule_finalizer_dependency
+        ),
         cross_statuses: PostgresCollectorRouteCrossStatusRepository = Depends(
             collector_route_cross_status_repository_dependency
         ),
@@ -350,11 +358,26 @@ def create_collector_route_router() -> APIRouter:
             permission="route.view",
             permission_error="Collector route permission is required.",
         )
+        route_date = datetime.now(PHILIPPINES_TIMEZONE).date()
         route = routes.get_today_route(
             collector_user_id=actor.user_id,
             collector_name=actor.full_name,
-            route_date=datetime.now(PHILIPPINES_TIMEZONE).date(),
+            route_date=route_date,
         )
+        loan_ids = tuple(dict.fromkeys(entry.loan_id for entry in route.entries))
+        if loan_ids:
+            adjustments = finalizer.finalize_elapsed_for_loans(
+                actor_user_id=actor.user_id,
+                loan_ids=loan_ids,
+                business_date=route_date,
+            )
+            if adjustments:
+                route = routes.get_today_route(
+                    collector_user_id=actor.user_id,
+                    collector_name=actor.full_name,
+                    route_date=route_date,
+                )
+
         transaction_ids = tuple(
             entry.today_transaction_id
             for entry in route.entries

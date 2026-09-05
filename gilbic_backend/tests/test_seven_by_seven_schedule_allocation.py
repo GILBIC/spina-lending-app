@@ -85,6 +85,33 @@ def test_scheduled_payment_clears_oldest_due_rows_without_spilling_future() -> N
     assert all(item.installment_id != 13 for item in plan)
 
 
+def test_scheduled_payment_uses_active_extension_as_normal_catchup() -> None:
+    cursor = FakeCursor(
+        schedule=(uuid4(), "daily"),
+        rows=(
+            _row(11, 1, date(2026, 8, 26), "50.00", "29.00", "21.00"),
+            _row(12, 2, date(2026, 8, 27), "50.00", "29.00", "21.00"),
+            _row(13, 3, date(2026, 8, 28), "50.00", "29.00", "21.00"),
+        ),
+    )
+
+    plan = plan_verified_seven_by_seven_scheduled_payment(
+        cursor,
+        loan_id=uuid4(),
+        collection_date=date(2026, 8, 26),
+        transaction_amount=Decimal("100.00"),
+        active_borrower_extension_slots=1,
+    )
+
+    assert [
+        (item.installment_id, item.amount_applied, item.allocation_basis)
+        for item in plan
+    ] == [
+        (11, Decimal("50.00"), "oldest_due_first"),
+        (12, Decimal("50.00"), "borrower_catch_up_oldest_first"),
+    ]
+
+
 def test_scheduled_payment_requires_borrower_choice_for_true_extra() -> None:
     cursor = FakeCursor(
         schedule=(uuid4(), "daily"),

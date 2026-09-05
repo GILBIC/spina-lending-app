@@ -254,18 +254,20 @@ class PostgresManagementNoCollectionRepository:
                         schedule_id,
                         adjustment_type,
                         no_collection_date,
+                        event_date,
                         reason,
                         expected_operational_version,
                         resulting_operational_version,
                         reverses_adjustment_id,
                         actor_user_id
                     )
-                    values (%s, %s, 'reversal', %s, %s, %s, %s, %s, %s)
+                    values (%s, %s, 'reversal', %s, %s, %s, %s, %s, %s, %s)
                     returning id, created_at
                     """,
                     (
                         original["loan_id"],
                         original["schedule_id"],
+                        original["no_collection_date"],
                         original["no_collection_date"],
                         normalized_reason,
                         state_version,
@@ -461,17 +463,19 @@ class PostgresManagementNoCollectionRepository:
                     schedule_id,
                     adjustment_type,
                     no_collection_date,
+                    event_date,
                     reason,
                     expected_operational_version,
                     resulting_operational_version,
                     actor_user_id
                 )
-                values (%s, %s, 'no_collection', %s, %s, %s, %s, %s)
+                values (%s, %s, 'no_collection', %s, %s, %s, %s, %s, %s)
                 returning id, created_at
                 """,
                 (
                     selection.loan_id,
                     schedule["schedule_id"],
+                    no_collection_date,
                     no_collection_date,
                     reason,
                     state_version,

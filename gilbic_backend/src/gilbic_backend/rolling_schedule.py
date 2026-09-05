@@ -25,6 +25,15 @@ class RollingScheduleInstallment:
 
 
 @dataclass(frozen=True, slots=True)
+class RollingScheduleShift:
+    installment_id: int
+    installment_number: int
+    contractual_due_date: date
+    prior_effective_due_date: date
+    new_effective_due_date: date
+
+
+@dataclass(frozen=True, slots=True)
 class RollingScheduleDayClose:
     business_date: date
     scheduled_count: int
@@ -106,6 +115,181 @@ def finalize_rolling_schedule_day(
         extension_slots_added=len(incomplete),
         close_status="shortfall",
     )
+
+
+def plan_borrower_shortfall_shift(
+    *,
+    installments: Iterable[RollingScheduleInstallment],
+    business_date: date,
+    payment_frequency: str,
+    blocked_dates: Iterable[date] = (),
+    semi_monthly_days: tuple[int, int] = (15, 30),
+) -> tuple[RollingScheduleShift, ...]:
+    """Move one unresolved operational date and every later row one slot.
+
+    The planner is intentionally pure. It plans changes to current effective
+    dates only and never rewrites contractual dates, installment identity, or
+    payment allocation evidence. Interior rows inherit the next row's current
+    effective date so existing operational spacing is preserved. Only the tail
+    needs cadence arithmetic.
+    """
+
+    rows = tuple(
+        sorted(
+            installments,
+            key=lambda row: (
+                row.effective_due_date,
+                row.installment_number,
+                row.installment_id,
+            ),
+        )
+    )
+    if not rows:
+        return ()
+
+    first_incomplete_index = next(
+        (
+            index
+            for index, row in enumerate(rows)
+            if row.effective_due_date == business_date
+            and _money(row.remaining_amount) > ZERO
+        ),
+        None,
+    )
+    if first_incomplete_index is None:
+        return ()
+
+    frequency = payment_frequency.strip().lower()
+    if frequency in {"balloon", "custom"}:
+        raise RollingScheduleError(
+            "Borrower shortfall shift requires a deterministic payment cadence."
+        )
+
+    blocked = set(blocked_dates)
+    monthly_anchor_day = rows[0].contractual_due_date.day
+    planned: list[RollingScheduleShift] = []
+
+    for index in range(first_incomplete_index, len(rows)):
+        row = rows[index]
+        if index + 1 < len(rows):
+            new_due_date = rows[index + 1].effective_due_date
+        else:
+            new_due_date = _advance_cadence(
+                row.effective_due_date,
+                payment_frequency=frequency,
+                semi_monthly_days=semi_monthly_days,
+                monthly_anchor_day=monthly_anchor_day,
+            )
+            while new_due_date in blocked:
+                new_due_date = _advance_cadence(
+                    new_due_date,
+                    payment_frequency=frequency,
+                    semi_monthly_days=semi_monthly_days,
+                    monthly_anchor_day=monthly_anchor_day,
+                )
+
+        if new_due_date <= row.effective_due_date:
+            raise RollingScheduleError(
+                "Borrower shortfall shift must move every affected row forward."
+            )
+
+        planned.append(
+            RollingScheduleShift(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                contractual_due_date=row.contractual_due_date,
+                prior_effective_due_date=row.effective_due_date,
+                new_effective_due_date=new_due_date,
+            )
+        )
+
+    return tuple(planned)
+
+
+def plan_borrower_catchup_contraction(
+    *,
+    installments: Iterable[RollingScheduleInstallment],
+    active_extension_slots: int,
+    completed_catchup_installment_ids: Iterable[int],
+) -> tuple[RollingScheduleShift, ...]:
+    """Contract only the still-remaining schedule after completed catch-up rows.
+
+    Catch-up never rewrites already-reached/settled row history. Each additional
+    future installment fully covered as normal catch-up removes one active
+    borrower extension slot. Later remaining rows move backward by the same
+    number of existing operational positions, preserving Management-adjusted and
+    otherwise irregular operational spacing without inventing new dates.
+    """
+
+    if active_extension_slots < 0:
+        raise RollingScheduleError("Active borrower extension slots cannot be negative.")
+
+    completed_ids = tuple(dict.fromkeys(completed_catchup_installment_ids))
+    if active_extension_slots == 0 or not completed_ids:
+        return ()
+    if len(completed_ids) > active_extension_slots:
+        raise RollingScheduleError(
+            "Catch-up cannot remove more borrower extension slots than are active."
+        )
+
+    rows = tuple(
+        sorted(
+            installments,
+            key=lambda row: (
+                row.effective_due_date,
+                row.installment_number,
+                row.installment_id,
+            ),
+        )
+    )
+    positions_by_id = {row.installment_id: index for index, row in enumerate(rows)}
+    try:
+        completed_positions = tuple(positions_by_id[item_id] for item_id in completed_ids)
+    except KeyError as error:
+        raise RollingScheduleError(
+            "Catch-up references an installment outside the current operational schedule."
+        ) from error
+
+    ordered_positions = tuple(sorted(completed_positions))
+    if ordered_positions != tuple(
+        range(ordered_positions[0], ordered_positions[0] + len(ordered_positions))
+    ):
+        raise RollingScheduleError(
+            "Catch-up installments must be consecutive in operational order."
+        )
+
+    for position in ordered_positions:
+        if _money(rows[position].remaining_amount) > ZERO:
+            raise RollingScheduleError(
+                "A borrower extension slot can contract only after the catch-up installment is fully covered."
+            )
+
+    slots_removed = len(ordered_positions)
+    first_remaining_index = ordered_positions[-1] + 1
+    planned: list[RollingScheduleShift] = []
+    for index in range(first_remaining_index, len(rows)):
+        row = rows[index]
+        source_index = index - slots_removed
+        if source_index < 0:
+            raise RollingScheduleError(
+                "Catch-up contraction cannot move before the current operational schedule."
+            )
+        new_due_date = rows[source_index].effective_due_date
+        if new_due_date >= row.effective_due_date:
+            raise RollingScheduleError(
+                "Catch-up contraction must move every affected remaining row backward."
+            )
+        planned.append(
+            RollingScheduleShift(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                contractual_due_date=row.contractual_due_date,
+                prior_effective_due_date=row.effective_due_date,
+                new_effective_due_date=new_due_date,
+            )
+        )
+
+    return tuple(planned)
 
 
 def project_rolling_schedule(

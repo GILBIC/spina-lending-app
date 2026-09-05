@@ -189,16 +189,18 @@ def store_no_collection_voluntary_completion(
             schedule_id,
             adjustment_type,
             no_collection_date,
+            event_date,
             reason,
             expected_operational_version,
             resulting_operational_version,
             actor_user_id
-        ) values (%s, %s, %s, 'voluntary_completion', %s, %s, %s, %s, %s)
+        ) values (%s, %s, %s, 'voluntary_completion', %s, %s, %s, %s, %s, %s)
         """,
         (
             completion_adjustment_id,
             loan_id,
             schedule_id,
+            no_collection_date,
             no_collection_date,
             "Borrower fully completed the affected installment voluntarily on the declared No Collection date.",
             expected_operational_version,

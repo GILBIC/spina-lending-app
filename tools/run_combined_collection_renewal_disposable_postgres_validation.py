@@ -28,12 +28,12 @@ TARGET_TESTS = (
     / "tests"
     / "test_seven_by_seven_no_collection_voluntary_postgres.py",
 )
-# The combined collection bridge and its 7x7 readers now depend on the
-# operational Extra Principal/active-Advance evidence introduced by 0106 and
-# the DPD reader alignment introduced by 0107 and the auditable 7x7 Extra
-# Principal reversal/refund bridge completed by 0108. The disposable schema
-# must match those current code dependencies before exercising production posting.
-BOOTSTRAP_THROUGH = 108
+# The current combined collection/renewal code now depends on borrower schedule
+# adjustment migration 0110 as well as the 7x7 operational reader work through
+# 0108. Migration 0110 preserves the existing No Collection semantics while
+# adding generic event_date evidence and borrower extension state, so this
+# production-code validation must exercise the current schema contract.
+BOOTSTRAP_THROUGH = 110
 REQUIRED_7X7_READER_RELATIONS = (
     "lending.seven_by_seven_extra_principal_adjustments",
     "lending.loan_contract_installments_operational",

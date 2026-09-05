@@ -14,6 +14,10 @@ from spina_mobile_collections.contracts import (
     PostedCollection,
 )
 
+from .borrower_schedule_adjustment_repository import (
+    BorrowerScheduleAdjustmentConflict,
+    PostgresBorrowerScheduleAdjustmentRepository,
+)
 from .collection_past_due_capture import CollectionPastDueCapture
 from .past_due_promise_progress import PastDuePromiseProgress
 from .voluntary_extra_collection_posting import (
@@ -37,11 +41,12 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
     conflict, which keeps schedule changes, No Collection changes, PASS entries,
     corrections, reversals and unknown state changes fail-closed.
 
-    After the protected product allocator succeeds, existing Past Due/promise
-    progress is reconciled from the allocator's actual installment rows. Only then
-    is any *new* Past Due remainder from this receipt captured. All three steps stay
-    inside the executor's same PostgreSQL transaction, so invalid follow-up evidence
-    rolls the whole collection back.
+    After the protected product allocator succeeds, a fully completed normal
+    borrower catch-up allocation contracts the remaining operational schedule in
+    this same PostgreSQL transaction. Existing Past Due/promise progress is then
+    reconciled from the allocator's actual installment rows, followed by capture of
+    any new Past Due remainder. Any failure rolls the receipt, allocations, schedule
+    contraction, and follow-up evidence back together.
     """
 
     def post_collection(
@@ -72,14 +77,14 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
         command: CollectionCommand,
         posted: PostedCollection,
     ) -> None:
-        """Reconcile existing follow-up progress before capturing new Past Due.
+        """Contract completed catch-up, then reconcile existing Past Due evidence."""
 
-        Keeping this transaction-local orchestration behind one method gives the
-        route-revision unit tests a clean seam: those tests can isolate rebasing
-        without constructing an official receipt or database-backed follow-up state.
-        Production always executes both layers through this method.
-        """
-
+        self._apply_borrower_catchup_contraction(
+            connection,
+            actor=actor,
+            command=command,
+            posted=posted,
+        )
         PastDuePromiseProgress().apply(
             connection,
             transaction_id=self._uuid(
@@ -93,6 +98,101 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
             actor=actor,
             command=command,
             posted=posted,
+        )
+
+    def _apply_borrower_catchup_contraction(
+        self,
+        connection: Connection[Any],
+        *,
+        actor: ActorContext,
+        command: CollectionCommand,
+        posted: PostedCollection,
+    ) -> None:
+        if command.entry_type is not CollectionEntryType.PAYMENT:
+            return
+
+        transaction_id = self._uuid(
+            posted.server_transaction_id,
+            "collection transaction",
+        )
+        with connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                select
+                    installment.schedule_id,
+                    installment.id as installment_id,
+                    installment.installment_number,
+                    greatest(
+                        installment.contractual_amount
+                        - coalesce(sum(allocation_all.amount_applied) filter (
+                            where allocation_transaction.is_voided = false
+                        ), 0),
+                        0
+                    )::numeric(18,2) as remaining_amount
+                from lending.loan_installment_payment_allocations catchup
+                join lending.loan_contract_installments installment
+                  on installment.id = catchup.installment_id
+                left join lending.loan_installment_payment_allocations allocation_all
+                  on allocation_all.installment_id = installment.id
+                left join lending.collection_transactions allocation_transaction
+                  on allocation_transaction.id = allocation_all.transaction_id
+                where catchup.transaction_id = %s
+                  and catchup.allocation_basis = 'borrower_catch_up_oldest_first'
+                group by
+                    installment.schedule_id,
+                    installment.id,
+                    installment.installment_number,
+                    installment.contractual_amount
+                having greatest(
+                    installment.contractual_amount
+                    - coalesce(sum(allocation_all.amount_applied) filter (
+                        where allocation_transaction.is_voided = false
+                    ), 0),
+                    0
+                ) = 0
+                order by installment.installment_number, installment.id
+                """,
+                (transaction_id,),
+            )
+            completed = cursor.fetchall()
+            if not completed:
+                return
+
+            schedule_ids = {row["schedule_id"] for row in completed}
+            if len(schedule_ids) != 1:
+                raise BorrowerScheduleAdjustmentConflict(
+                    "Borrower catch-up allocations must belong to one active schedule."
+                )
+            schedule_id = next(iter(schedule_ids))
+            cursor.execute(
+                """
+                select operational_version
+                from lending.loan_schedule_operational_state
+                where schedule_id = %s
+                for update
+                """,
+                (schedule_id,),
+            )
+            state = cursor.fetchone()
+            if state is None:
+                raise BorrowerScheduleAdjustmentConflict(
+                    "Borrower catch-up requires operational schedule state."
+                )
+            operational_version = int(state["operational_version"])
+
+        PostgresBorrowerScheduleAdjustmentRepository().record_catchup_in_transaction(
+            connection,
+            actor_user_id=self._uuid(actor.account_id, "authenticated collector"),
+            loan_id=self._uuid(command.loan_id, "loan"),
+            event_date=command.collection_date,
+            expected_operational_version=operational_version,
+            completed_catchup_installment_ids=tuple(
+                int(row["installment_id"]) for row in completed
+            ),
+            # The official payment already advances loan_collection_state once;
+            # keep that one revision as the identity of this atomic receipt +
+            # schedule mutation so the returned route_revision remains current.
+            invalidate_collection_state=False,
         )
 
     def _prepare_same_day_payment_revision(

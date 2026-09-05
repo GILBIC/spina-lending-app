@@ -157,3 +157,63 @@ def test_legacy_wrapper_remains_compatible_during_migration() -> None:
         voluntary_extra=True,
     )
     assert [row.installment_number for row in plan] == [1, 4]
+
+
+def test_normal_cash_uses_active_extension_as_catch_up_before_true_extra() -> None:
+    plan = plan_protected_regular_allocation(
+        transaction_amount=Decimal("200.00"),
+        collection_date=date(2026, 9, 6),
+        active_borrower_extension_slots=1,
+        installments=(
+            _installment(5, due_date=date(2026, 9, 6)),
+            _installment(6, due_date=date(2026, 9, 7)),
+            _installment(7, due_date=date(2026, 9, 8)),
+        ),
+    )
+
+    assert [
+        (row.installment_number, row.amount_applied, row.allocation_basis)
+        for row in plan
+    ] == [
+        (5, Decimal("100.00"), "oldest_due_first"),
+        (6, Decimal("100.00"), "borrower_catch_up_oldest_first"),
+    ]
+
+
+def test_partial_catch_up_allocates_but_does_not_skip_the_nearest_shifted_row() -> None:
+    plan = plan_protected_regular_allocation(
+        transaction_amount=Decimal("150.00"),
+        collection_date=date(2026, 9, 6),
+        active_borrower_extension_slots=1,
+        installments=(
+            _installment(5, due_date=date(2026, 9, 6)),
+            _installment(6, due_date=date(2026, 9, 7)),
+            _installment(7, due_date=date(2026, 9, 8)),
+        ),
+    )
+
+    assert [
+        (row.installment_number, row.amount_applied, row.allocation_basis)
+        for row in plan
+    ] == [
+        (5, Decimal("100.00"), "oldest_due_first"),
+        (6, Decimal("50.00"), "borrower_catch_up_oldest_first"),
+    ]
+
+
+def test_advance_is_unavailable_while_borrower_has_past_due_extension() -> None:
+    with pytest.raises(
+        PaymentAllocationError,
+        match="Advance is unavailable while Past Due",
+    ):
+        plan_protected_regular_allocation(
+            transaction_amount=Decimal("250.00"),
+            collection_date=date(2026, 9, 6),
+            active_borrower_extension_slots=1,
+            extra_choice="advance",
+            installments=(
+                _installment(5, due_date=date(2026, 9, 6)),
+                _installment(6, due_date=date(2026, 9, 7)),
+                _installment(7, due_date=date(2026, 9, 8)),
+            ),
+        )
