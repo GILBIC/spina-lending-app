@@ -70,6 +70,28 @@ def test_scheduled_cash_clears_multiple_past_due_rows_before_today() -> None:
     ]
 
 
+def test_scheduled_payment_uses_active_extension_slot_as_normal_catchup() -> None:
+    bridge = VoluntaryExtraAwareCollectionPostingBridge()
+    plan = bridge._plan_applied_contract_payment(
+        applied_amount=Decimal("200.00"),
+        installments=(
+            installment(1, date(2026, 8, 16)),
+            installment(2, date(2026, 8, 17)),
+            installment(3, date(2026, 8, 18)),
+        ),
+        collection_date=date(2026, 8, 16),
+        active_borrower_extension_slots=1,
+    )
+
+    assert [
+        (row.installment_number, row.amount_applied, row.allocation_basis)
+        for row in plan
+    ] == [
+        (1, Decimal("100.00"), "oldest_due_first"),
+        (2, Decimal("100.00"), "borrower_catch_up_oldest_first"),
+    ]
+
+
 def test_scheduled_extra_fails_closed_until_borrower_chooses() -> None:
     bridge = VoluntaryExtraAwareCollectionPostingBridge()
     with pytest.raises(CollectionRejected) as error:
