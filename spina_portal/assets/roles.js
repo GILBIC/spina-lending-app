@@ -60,6 +60,11 @@ export const ROLE_ENDPOINTS = Object.freeze({
       section: 'Review',
       permission: 'support.manage',
     }),
+    action('management-client-accounts', 'Client accounts', '/api/v1/management/client-accounts', {
+      section: 'Administration',
+      permission: 'account.manage',
+      method: 'POST',
+    }),
     action('management-staff-devices', 'Staff & devices', '/api/v1/management/accounts', {
       section: 'Administration',
       permission: 'device.manage',
@@ -67,10 +72,6 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('management-remittance', 'Remittance review', '/api/v1/notifications', {
       section: 'Review',
       permission: 'remittance.view',
-    }),
-    action('management-client-registration', 'Client registrations', '/api/v1/management/client-registrations', {
-      section: 'Review',
-      permission: 'client.registration.approve',
     }),
     action('management-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),

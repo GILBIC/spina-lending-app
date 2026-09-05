@@ -30,8 +30,27 @@ const _clientSession = UserSession(
   permissions: <String>['loan.self.view'],
 );
 
+UserSession _staffSession(AppRole role) {
+  final rawRole = switch (role) {
+    AppRole.collector => 'Collector',
+    AppRole.employee => 'Employee',
+    AppRole.management => 'Management',
+    AppRole.client => 'Client',
+  };
+  return UserSession(
+    userId: 'staff-${role.name}',
+    username: '${role.name}.one',
+    displayName: '$rawRole One',
+    role: role,
+    rawRole: rawRole,
+    accessToken: '${role.name}-token',
+    permissions: const <String>[],
+  );
+}
+
 class _FakeAccountRepository implements AccountRepository {
   var revoked = false;
+  String? changedPassword;
 
   @override
   Future<AccountOverview> fetch(UserSession session) async {
@@ -84,6 +103,11 @@ class _FakeAccountRepository implements AccountRepository {
       isCurrent: false,
     );
   }
+
+  @override
+  Future<void> changePassword(UserSession session, String password) async {
+    changedPassword = password;
+  }
 }
 
 DeviceIdentityProvider _identity() {
@@ -98,10 +122,53 @@ DeviceIdentityProvider _identity() {
 void main() {
   testWidgets('Client account explains personal access without permission jargon',
       (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountSettingsPage(
+          session: _clientSession,
+          repository: _FakeAccountRepository(),
+          deviceIdentityProvider: _identity(),
+          onSignOut: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your access'), findsOneWidget);
+    expect(
+      find.text('Only your own linked loan and account records'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('server permissions'), findsNothing);
+  });
+
+  testWidgets('Client does not receive a self-service password control',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountSettingsPage(
+          session: _clientSession,
+          repository: _FakeAccountRepository(),
+          deviceIdentityProvider: _identity(),
+          onSignOut: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('account-change-password')), findsNothing);
+  });
+
+  for (final role in <AppRole>[
+    AppRole.collector,
+    AppRole.employee,
+    AppRole.management,
+  ]) {
+    testWidgets('${role.name} receives own-password control', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: AccountSettingsPage(
-            session: _clientSession,
+            session: _staffSession(role),
             repository: _FakeAccountRepository(),
             deviceIdentityProvider: _identity(),
             onSignOut: () async {},
@@ -110,12 +177,56 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Your access'), findsOneWidget);
-      expect(
-        find.text('Only your own linked loan and account records'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('server permissions'), findsNothing);
+      expect(find.byKey(const Key('account-change-password')), findsOneWidget);
+      expect(find.text('Change my password'), findsOneWidget);
+    });
+  }
+
+  testWidgets('matching password confirmation changes only the signed-in staff password',
+      (tester) async {
+    final repository = _FakeAccountRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountSettingsPage(
+          session: _session,
+          repository: repository,
+          deviceIdentityProvider: _identity(),
+          onSignOut: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('account-change-password')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change my password'), findsWidgets);
+    expect(find.byKey(const Key('account-password-new')), findsOneWidget);
+    expect(find.byKey(const Key('account-password-confirm')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('account-password-new')),
+      'new-password-123',
+    );
+    await tester.enterText(
+      find.byKey(const Key('account-password-confirm')),
+      'different-password',
+    );
+    await tester.tap(find.byKey(const Key('account-password-submit')));
+    await tester.pumpAndSettle();
+
+    expect(repository.changedPassword, isNull);
+    expect(find.text('Passwords do not match.'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('account-password-confirm')),
+      'new-password-123',
+    );
+    await tester.tap(find.byKey(const Key('account-password-submit')));
+    await tester.pumpAndSettle();
+
+    expect(repository.changedPassword, 'new-password-123');
+    expect(find.text('Password changed.'), findsOneWidget);
   });
 
   testWidgets('shows profile, current session, and privacy-safe device state',

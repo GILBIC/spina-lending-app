@@ -139,6 +139,141 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
+  Future<void> _changePassword() async {
+    if (widget.session.role == AppRole.client) {
+      return;
+    }
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    var errorMessage = '';
+    var submitting = false;
+
+    final changed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !submitting,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> submit() async {
+            final password = passwordController.text;
+            if (password.isEmpty || password.length > 200) {
+              setDialogState(() {
+                errorMessage = 'Enter a valid new password.';
+              });
+              return;
+            }
+            if (password != confirmController.text) {
+              setDialogState(() {
+                errorMessage = 'Passwords do not match.';
+              });
+              return;
+            }
+            setDialogState(() {
+              submitting = true;
+              errorMessage = '';
+            });
+            try {
+              await _repository.changePassword(widget.session, password);
+              if (!dialogContext.mounted) {
+                return;
+              }
+              Navigator.of(dialogContext).pop(true);
+            } on SpinaApiException catch (error) {
+              if (!dialogContext.mounted) {
+                return;
+              }
+              setDialogState(() {
+                submitting = false;
+                errorMessage = error.message;
+              });
+            } on Exception {
+              if (!dialogContext.mounted) {
+                return;
+              }
+              setDialogState(() {
+                submitting = false;
+                errorMessage = 'Password could not be changed.';
+              });
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('Change my password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Choose a new password for your signed-in SPINA staff account.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    key: const Key('account-password-new'),
+                    controller: passwordController,
+                    enabled: !submitting,
+                    obscureText: true,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'New password',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('account-password-confirm'),
+                    controller: confirmController,
+                    enabled: !submitting,
+                    obscureText: true,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm new password',
+                    ),
+                  ),
+                  if (errorMessage.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMessage,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: const Key('account-password-submit'),
+                onPressed: submitting ? null : submit,
+                child: submitting
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Change password'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    passwordController.dispose();
+    confirmController.dispose();
+    if (changed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password changed.')),
+      );
+    }
+  }
+
   void _openRenewalSignatures() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -214,6 +349,22 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _passwordCard() {
+    return Card(
+      child: ListTile(
+        key: const Key('account-change-password'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: const Icon(Icons.password_outlined),
+        title: const Text('Change my password'),
+        subtitle: const Text(
+          'Changes only the password for your signed-in staff account.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _changePassword,
       ),
     );
   }
@@ -326,6 +477,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                       children: [
                         _profileCard(_overview!.profile),
                         _sessionCard(),
+                        if (widget.session.role != AppRole.client) _passwordCard(),
                         _renewalSignaturesCard(),
                         const SizedBox(height: 8),
                         Text(
