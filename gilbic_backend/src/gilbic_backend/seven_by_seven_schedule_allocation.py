@@ -51,7 +51,7 @@ def plan_verified_seven_by_seven_scheduled_payment(
     loan_id: UUID,
     collection_date: date,
     transaction_amount: Decimal | int | str,
-    active_borrower_extension_slots: int = 0,
+    active_borrower_extension_slots: int | None = None,
 ) -> tuple[SevenBySevenInstallmentAllocationInstruction, ...]:
     """Plan one normal 7x7 receipt against due rows plus approved catch-up capacity.
 
@@ -66,6 +66,11 @@ def plan_verified_seven_by_seven_scheduled_payment(
     active, normal non-ADV cash may then fill the same number of oldest unpaid
     future operational rows as catch-up. Any amount beyond due + catch-up capacity
     remains true extra and requires explicit Advance or Extra Principal intent.
+
+    When the caller does not provide ``active_borrower_extension_slots``, the
+    planner reads the authoritative slot count from the active verified schedule's
+    operational state. Explicit caller values remain supported for focused planning
+    tests and controlled replay helpers.
     """
 
     amount = money(transaction_amount)
@@ -73,7 +78,10 @@ def plan_verified_seven_by_seven_scheduled_payment(
         raise SevenBySevenScheduleAllocationConflict(
             "A scheduled 7x7 payment must be greater than zero."
         )
-    if active_borrower_extension_slots < 0:
+    if (
+        active_borrower_extension_slots is not None
+        and active_borrower_extension_slots < 0
+    ):
         raise SevenBySevenScheduleAllocationConflict(
             "Active borrower extension slots cannot be negative."
         )
@@ -82,10 +90,14 @@ def plan_verified_seven_by_seven_scheduled_payment(
         """
         select
             schedule.id,
-            schedule.payment_frequency
+            schedule.payment_frequency,
+            coalesce(operational_state.active_borrower_extension_slots, 0)
+                as active_borrower_extension_slots
         from lending.loan_contract_schedules schedule
         join lending.loan_contract_schedule_registrations registration
           on registration.schedule_id = schedule.id
+        left join lending.loan_schedule_operational_state operational_state
+          on operational_state.schedule_id = schedule.id
         where schedule.loan_id = %s
           and schedule.status = 'active'
         order by registration.verified_at desc
@@ -103,6 +115,17 @@ def plan_verified_seven_by_seven_scheduled_payment(
     payment_frequency = (
         schedule[1] if not isinstance(schedule, dict) else schedule["payment_frequency"]
     )
+    if active_borrower_extension_slots is None:
+        if isinstance(schedule, dict):
+            active_slots = int(schedule.get("active_borrower_extension_slots") or 0)
+        else:
+            active_slots = int(schedule[2]) if len(schedule) > 2 else 0
+    else:
+        active_slots = active_borrower_extension_slots
+    if active_slots < 0:
+        raise SevenBySevenScheduleAllocationConflict(
+            "Active borrower extension slots cannot be negative."
+        )
     if str(payment_frequency) != "daily":
         raise SevenBySevenScheduleAllocationConflict(
             "The active verified 7x7 schedule is not daily. Management review is required."
@@ -205,7 +228,7 @@ def plan_verified_seven_by_seven_scheduled_payment(
 
     due_rows = [row for row in unpaid_rows if row[2] <= collection_date]
     future_rows = [row for row in unpaid_rows if row[2] > collection_date]
-    catchup_rows = future_rows[:active_borrower_extension_slots]
+    catchup_rows = future_rows[:active_slots]
 
     due_capacity = money(sum((row[4] for row in due_rows), ZERO))
     catchup_capacity = money(sum((row[4] for row in catchup_rows), ZERO))
