@@ -10,6 +10,8 @@ from uuid import UUID
 MONEY = Decimal("0.01")
 ZERO = Decimal("0.00")
 FUTURE_ADVANCE_BASIS = "future_advance_oldest_first"
+DUE_BASIS = "oldest_due_first"
+BORROWER_CATCH_UP_BASIS = "borrower_catch_up_oldest_first"
 
 
 class SevenBySevenScheduleAllocationError(ValueError):
@@ -36,6 +38,7 @@ class SevenBySevenInstallmentAllocationInstruction:
     installment_number: int
     effective_due_date: date
     amount_applied: Decimal
+    allocation_basis: str = DUE_BASIS
 
 
 def money(value: Decimal | int | str) -> Decimal:
@@ -48,8 +51,9 @@ def plan_verified_seven_by_seven_scheduled_payment(
     loan_id: UUID,
     collection_date: date,
     transaction_amount: Decimal | int | str,
+    active_borrower_extension_slots: int = 0,
 ) -> tuple[SevenBySevenInstallmentAllocationInstruction, ...]:
-    """Plan one normal 7x7 receipt against currently collectible verified rows.
+    """Plan one normal 7x7 receipt against due rows plus approved catch-up capacity.
 
     Signed installment evidence stays immutable. Current collection capacity uses
     the operational amount overlay created by audited schedule adjustments. For
@@ -57,15 +61,21 @@ def plan_verified_seven_by_seven_scheduled_payment(
     only the active amount (gross Advance less Refund Due classifications) counts
     as current installment satisfaction.
 
-    Normal cash may clear only unpaid rows whose effective due date is on or
-    before the collection date, oldest first. It never spills into future rows
-    and therefore never silently creates an Advance.
+    Normal cash first clears unpaid rows whose effective due date is on or before
+    the collection date, oldest first. When borrower-caused extension slots are
+    active, normal non-ADV cash may then fill the same number of oldest unpaid
+    future operational rows as catch-up. Any amount beyond due + catch-up capacity
+    remains true extra and requires explicit Advance or Extra Principal intent.
     """
 
     amount = money(transaction_amount)
     if amount <= ZERO:
         raise SevenBySevenScheduleAllocationConflict(
             "A scheduled 7x7 payment must be greater than zero."
+        )
+    if active_borrower_extension_slots < 0:
+        raise SevenBySevenScheduleAllocationConflict(
+            "Active borrower extension slots cannot be negative."
         )
 
     cursor.execute(
@@ -142,7 +152,7 @@ def plan_verified_seven_by_seven_scheduled_payment(
             "The active verified 7x7 schedule has no installment rows."
         )
 
-    due_rows: list[tuple[int, int, date, Decimal, Decimal]] = []
+    unpaid_rows: list[tuple[int, int, date, Decimal, Decimal]] = []
     for row in rows:
         if isinstance(row, dict):
             installment_id = int(row["id"])
@@ -182,8 +192,8 @@ def plan_verified_seven_by_seven_scheduled_payment(
                 "A 7x7 operational row is over-allocated after Advance/Refund Due reconciliation. Management review is required."
             )
         remaining = money(operational_amount - allocated_amount)
-        if effective_due_date <= collection_date and remaining > ZERO:
-            due_rows.append(
+        if remaining > ZERO:
+            unpaid_rows.append(
                 (
                     installment_id,
                     installment_number,
@@ -193,38 +203,56 @@ def plan_verified_seven_by_seven_scheduled_payment(
                 )
             )
 
+    due_rows = [row for row in unpaid_rows if row[2] <= collection_date]
+    future_rows = [row for row in unpaid_rows if row[2] > collection_date]
+    catchup_rows = future_rows[:active_borrower_extension_slots]
+
     due_capacity = money(sum((row[4] for row in due_rows), ZERO))
-    if due_capacity <= ZERO:
+    catchup_capacity = money(sum((row[4] for row in catchup_rows), ZERO))
+    normal_capacity = money(due_capacity + catchup_capacity)
+    if due_capacity <= ZERO and catchup_capacity <= ZERO:
         raise SevenBySevenExtraAllocationChoiceRequired(
             "No unpaid 7x7 scheduled amount is due through this date. Use Details for an Advance or Extra Principal instruction."
         )
-    if amount > due_capacity:
-        extra = money(amount - due_capacity)
+    if amount > normal_capacity:
+        extra = money(amount - normal_capacity)
+        boundary = (
+            "Past Due, Due Today, and borrower catch-up"
+            if catchup_capacity > ZERO
+            else "Past Due and Due Today"
+        )
         raise SevenBySevenExtraAllocationChoiceRequired(
-            f"This payment includes {extra} beyond Past Due and Due Today. The borrower must choose Advance or Extra Principal."
+            f"This payment includes {extra} beyond {boundary}. The borrower must choose Advance or Extra Principal."
         )
 
     amount_left = amount
     instructions: list[SevenBySevenInstallmentAllocationInstruction] = []
-    for installment_id, installment_number, effective_due_date, _operational, remaining in due_rows:
+    for basis, planned_rows in (
+        (DUE_BASIS, due_rows),
+        (BORROWER_CATCH_UP_BASIS, catchup_rows),
+    ):
+        for installment_id, installment_number, effective_due_date, _operational, remaining in planned_rows:
+            if amount_left <= ZERO:
+                break
+            applied = money(min(amount_left, remaining))
+            if applied <= ZERO:
+                continue
+            instructions.append(
+                SevenBySevenInstallmentAllocationInstruction(
+                    installment_id=installment_id,
+                    installment_number=installment_number,
+                    effective_due_date=effective_due_date,
+                    amount_applied=applied,
+                    allocation_basis=basis,
+                )
+            )
+            amount_left = money(amount_left - applied)
         if amount_left <= ZERO:
             break
-        applied = money(min(amount_left, remaining))
-        if applied <= ZERO:
-            continue
-        instructions.append(
-            SevenBySevenInstallmentAllocationInstruction(
-                installment_id=installment_id,
-                installment_number=installment_number,
-                effective_due_date=effective_due_date,
-                amount_applied=applied,
-            )
-        )
-        amount_left = money(amount_left - applied)
 
     if amount_left != ZERO:
         raise SevenBySevenScheduleAllocationConflict(
-            "The 7x7 scheduled payment could not be fully allocated to due rows."
+            "The 7x7 scheduled payment could not be fully allocated to due/catch-up rows."
         )
     return tuple(instructions)
 
@@ -248,12 +276,13 @@ def store_verified_seven_by_seven_scheduled_payment_allocations(
                 allocation_basis,
                 allocation_reference,
                 created_by_user_id
-            ) values (%s, %s, %s, 'oldest_due_first', %s, %s)
+            ) values (%s, %s, %s, %s, %s, %s)
             """,
             (
                 instruction.installment_id,
                 transaction_id,
                 instruction.amount_applied,
+                instruction.allocation_basis,
                 f"seven-by-seven-scheduled:{transaction_id}",
                 actor_user_id,
             ),
