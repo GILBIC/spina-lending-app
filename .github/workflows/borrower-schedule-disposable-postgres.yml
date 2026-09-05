@@ -7,8 +7,11 @@ on:
       - 'gilbic_backend/src/gilbic_backend/management_no_collection_repository.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_evidence.py'
       - 'gilbic_backend/src/gilbic_backend/borrower_schedule_adjustment_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/borrower_schedule_finalization.py'
       - 'gilbic_backend/tests/test_borrower_schedule_adjustment_migration.py'
       - 'gilbic_backend/tests/test_borrower_schedule_adjustment_upgrade_postgres.py'
+      - 'gilbic_backend/tests/test_borrower_schedule_adjustment_repository_postgres.py'
+      - 'gilbic_backend/tests/test_borrower_schedule_finalization_postgres.py'
       - 'tools/run_borrower_schedule_adjustment_disposable_postgres_validation.py'
       - '.github/workflows/borrower-schedule-disposable-postgres.yml'
   workflow_dispatch:
