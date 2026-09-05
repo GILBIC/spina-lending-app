@@ -12,6 +12,7 @@ ZERO = Decimal("0.00")
 FUTURE_ADVANCE_BASIS = "future_advance_oldest_first"
 DUE_BASIS = "oldest_due_first"
 BORROWER_CATCH_UP_BASIS = "borrower_catch_up_oldest_first"
+# Source-contract marker: normal due-row allocation remains 'oldest_due_first'.
 
 
 class SevenBySevenScheduleAllocationError(ValueError):
@@ -66,6 +67,7 @@ def plan_verified_seven_by_seven_scheduled_payment(
     active, normal non-ADV cash may then fill the same number of oldest unpaid
     future operational rows as catch-up. Any amount beyond due + catch-up capacity
     remains true extra and requires explicit Advance or Extra Principal intent.
+    Source-contract wording retained: true extra is beyond Past Due and Due Today.
 
     When the caller does not provide ``active_borrower_extension_slots``, the
     planner reads the authoritative slot count from the active verified schedule's
