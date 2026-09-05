@@ -198,7 +198,12 @@ void main() {
     await tester.pumpAndSettle();
 
     final changePassword = find.byKey(const Key('account-change-password'));
-    await tester.ensureVisible(changePassword);
+    await tester.scrollUntilVisible(
+      changePassword,
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(changePassword);
     await tester.pumpAndSettle();
 
