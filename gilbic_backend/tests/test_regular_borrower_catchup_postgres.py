@@ -360,3 +360,139 @@ def test_forced_catchup_contraction_failure_rolls_back_receipt_and_allocations(
     assert state == (1, 1)
     assert catchup_adjustments == 0
     assert collection_state_version == route_state_version
+
+
+def test_regular_catchup_keeps_past_due_progress_on_the_missed_installment() -> None:
+    assert DATABASE_URL is not None
+    case, shortfall, route_state_version = _setup_regular_with_one_extension()
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        installments = connection.execute(
+            """
+            select id, installment_number
+            from lending.loan_contract_installments
+            where schedule_id = %s
+            order by installment_number
+            limit 2
+            """,
+            (shortfall.schedule_id,),
+        ).fetchall()
+        missed_installment_id = int(installments[0][0])
+        catchup_installment_id = int(installments[1][0])
+
+        obligation_id = connection.execute(
+            """
+            insert into lending.past_due_obligations (
+                client_id,
+                loan_id,
+                installment_id,
+                obligation_date,
+                original_past_due_amount,
+                remaining_past_due_amount,
+                event_kind,
+                source_transaction_id,
+                current_reason_code,
+                current_reason_note,
+                created_by_user_id
+            ) values (
+                %s, %s, %s, %s, 50.00, 50.00, 'unable_to_pay',
+                null, 'promised_to_pay_later', '', %s
+            )
+            returning id
+            """,
+            (
+                case.client_id,
+                case.regular_loan_id,
+                missed_installment_id,
+                date(2097, 8, 1),
+                case.collector_id,
+            ),
+        ).fetchone()[0]
+        promise_id = connection.execute(
+            """
+            insert into lending.payment_promises (
+                client_id,
+                loan_id,
+                promised_for_date,
+                initial_promised_amount,
+                promised_amount,
+                remaining_promised_amount,
+                status,
+                created_by_user_id
+            ) values (%s, %s, %s, 50.00, 50.00, 50.00, 'pending', %s)
+            returning id
+            """,
+            (
+                case.client_id,
+                case.regular_loan_id,
+                date(2097, 8, 2),
+                case.collector_id,
+            ),
+        ).fetchone()[0]
+        connection.execute(
+            """
+            insert into lending.payment_promise_obligations (
+                promise_id, past_due_obligation_id, target_amount
+            ) values (%s, %s, 50.00)
+            """,
+            (promise_id, obligation_id),
+        )
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        posted = ConcurrentReceiptSafeCollectionPostingBridge().post_collection(
+            connection,
+            case.actor,
+            _payment_command(
+                case,
+                amount="100.00",
+                route_state_version=route_state_version,
+            ),
+        )
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        obligation = connection.execute(
+            """
+            select remaining_past_due_amount, status
+            from lending.past_due_obligations
+            where id = %s
+            """,
+            (obligation_id,),
+        ).fetchone()
+        promise = connection.execute(
+            """
+            select remaining_promised_amount, status
+            from lending.payment_promises
+            where id = %s
+            """,
+            (promise_id,),
+        ).fetchone()
+        catchup_target_obligation_count = connection.execute(
+            """
+            select count(*)
+            from lending.past_due_obligations
+            where loan_id = %s
+              and installment_id = %s
+            """,
+            (case.regular_loan_id, catchup_installment_id),
+        ).fetchone()[0]
+        allocations = connection.execute(
+            """
+            select installment_id, amount_applied, allocation_basis
+            from lending.loan_installment_payment_allocations
+            where transaction_id = %s
+            order by installment_id
+            """,
+            (posted.server_transaction_id,),
+        ).fetchall()
+
+    assert obligation == (Decimal("0.00"), "paid")
+    assert promise == (Decimal("0.00"), "kept")
+    assert catchup_target_obligation_count == 0
+    assert allocations == [
+        (missed_installment_id, Decimal("50.00"), "oldest_due_first"),
+        (
+            catchup_installment_id,
+            Decimal("50.00"),
+            "borrower_catch_up_oldest_first",
+        ),
+    ]
