@@ -24,6 +24,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_collector_route_api.py",
     TEST_ROOT / "test_collector_schedule_repository.py",
     TEST_ROOT / "test_client_loan_api.py",
+    TEST_ROOT / "test_client_operational_schedule_repository_postgres.py",
     TEST_ROOT / "test_voluntary_extra_receipt_application.py",
     TEST_ROOT / "test_regular_borrower_catchup_postgres.py",
     TEST_ROOT / "test_seven_by_seven_schedule_allocation.py",
