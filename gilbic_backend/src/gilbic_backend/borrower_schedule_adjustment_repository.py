@@ -86,20 +86,7 @@ class PostgresBorrowerScheduleAdjustmentRepository:
                     cursor,
                     schedule_id=schedule["schedule_id"],
                 )
-                installments = tuple(
-                    RollingScheduleInstallment(
-                        installment_id=int(row["id"]),
-                        installment_number=int(row["installment_number"]),
-                        contractual_due_date=row["contractual_due_date"],
-                        effective_due_date=row["effective_due_date"],
-                        remaining_amount=max(
-                            Decimal(row["contractual_amount"])
-                            - Decimal(row["allocated_amount"]),
-                            Decimal("0.00"),
-                        ),
-                    )
-                    for row in rows
-                )
+                installments = self._rolling_installments(rows)
                 blocked_dates = self._active_no_collection_dates(
                     cursor,
                     schedule_id=schedule["schedule_id"],
@@ -153,37 +140,13 @@ class PostgresBorrowerScheduleAdjustmentRepository:
                         "Borrower shortfall audit record could not be created."
                     )
                 adjustment_id = created["id"]
-                amount_by_installment_id = {
-                    int(row["id"]): Decimal(row["contractual_amount"])
-                    for row in rows
-                }
-                shift_records: list[BorrowerScheduleShiftRecord] = []
-                for shift in planned:
-                    contractual_amount = amount_by_installment_id[shift.installment_id]
-                    self._insert_shift_item(
-                        cursor,
-                        adjustment_id=adjustment_id,
-                        shift=shift,
-                        contractual_amount=contractual_amount,
-                    )
-                    self._write_effective_date(
-                        cursor,
-                        installment_id=shift.installment_id,
-                        effective_due_date=shift.new_effective_due_date,
-                        adjustment_id=adjustment_id,
-                        actor_user_id=actor_user_id,
-                    )
-                    shift_records.append(
-                        BorrowerScheduleShiftRecord(
-                            installment_id=shift.installment_id,
-                            installment_number=shift.installment_number,
-                            contractual_due_date=shift.contractual_due_date,
-                            prior_effective_due_date=shift.prior_effective_due_date,
-                            new_effective_due_date=shift.new_effective_due_date,
-                            contractual_amount=contractual_amount,
-                        )
-                    )
-
+                shift_records = self._persist_shifts(
+                    cursor,
+                    adjustment_id=adjustment_id,
+                    planned=planned,
+                    rows=rows,
+                    actor_user_id=actor_user_id,
+                )
                 self._set_operational_state(
                     cursor,
                     schedule_id=schedule["schedule_id"],
@@ -205,7 +168,7 @@ class PostgresBorrowerScheduleAdjustmentRepository:
                     active_borrower_extension_slots_before=active_slots,
                     active_borrower_extension_slots_after=resulting_slots,
                     created_at=created["created_at"],
-                    shifts=tuple(shift_records),
+                    shifts=shift_records,
                 )
 
     def record_catchup(
@@ -217,6 +180,37 @@ class PostgresBorrowerScheduleAdjustmentRepository:
         expected_operational_version: int,
         completed_catchup_installment_ids: tuple[int, ...],
     ) -> BorrowerScheduleAdjustmentRecord:
+        """Persist a standalone borrower catch-up adjustment and invalidate route state."""
+
+        with open_connection() as connection:
+            return self.record_catchup_in_transaction(
+                connection,
+                actor_user_id=actor_user_id,
+                loan_id=loan_id,
+                event_date=event_date,
+                expected_operational_version=expected_operational_version,
+                completed_catchup_installment_ids=completed_catchup_installment_ids,
+                invalidate_collection_state=True,
+            )
+
+    def record_catchup_in_transaction(
+        self,
+        connection: Any,
+        *,
+        actor_user_id: UUID,
+        loan_id: UUID,
+        event_date: date,
+        expected_operational_version: int,
+        completed_catchup_installment_ids: tuple[int, ...],
+        invalidate_collection_state: bool = False,
+    ) -> BorrowerScheduleAdjustmentRecord:
+        """Persist catch-up using the caller's existing PostgreSQL transaction.
+
+        Payment posting uses this form so receipt allocation and schedule
+        contraction commit or roll back together. Standalone callers keep using
+        ``record_catchup()``, which also invalidates the collection route state.
+        """
+
         if expected_operational_version < 0:
             raise BorrowerScheduleAdjustmentConflict(
                 "Operational schedule version cannot be negative."
@@ -227,138 +221,161 @@ class PostgresBorrowerScheduleAdjustmentRepository:
                 "At least one completed catch-up installment is required."
             )
 
-        with open_connection() as connection:
-            with connection.cursor(row_factory=dict_row) as cursor:
-                self._lock_loan(cursor, loan_id=loan_id)
-                schedule = self._lock_active_registered_schedule(cursor, loan_id=loan_id)
-                state_version, active_slots = self._lock_operational_state(
-                    cursor,
-                    schedule_id=schedule["schedule_id"],
+        with connection.cursor(row_factory=dict_row) as cursor:
+            self._lock_loan(cursor, loan_id=loan_id)
+            schedule = self._lock_active_registered_schedule(cursor, loan_id=loan_id)
+            state_version, active_slots = self._lock_operational_state(
+                cursor,
+                schedule_id=schedule["schedule_id"],
+            )
+            if state_version != expected_operational_version:
+                raise BorrowerScheduleAdjustmentConflict(
+                    "The operational schedule changed. Refresh before recording borrower catch-up."
                 )
-                if state_version != expected_operational_version:
-                    raise BorrowerScheduleAdjustmentConflict(
-                        "The operational schedule changed. Refresh before recording borrower catch-up."
-                    )
-                if active_slots <= 0:
-                    raise BorrowerScheduleAdjustmentConflict(
-                        "Borrower catch-up requires an active borrower schedule extension."
-                    )
+            if active_slots <= 0:
+                raise BorrowerScheduleAdjustmentConflict(
+                    "Borrower catch-up requires an active borrower schedule extension."
+                )
 
-                rows = self._load_installments(
-                    cursor,
-                    schedule_id=schedule["schedule_id"],
+            rows = self._load_installments(
+                cursor,
+                schedule_id=schedule["schedule_id"],
+            )
+            installments = self._rolling_installments(rows)
+            try:
+                planned = plan_borrower_catchup_contraction(
+                    installments=installments,
+                    active_extension_slots=active_slots,
+                    completed_catchup_installment_ids=completed_ids,
                 )
-                installments = tuple(
-                    RollingScheduleInstallment(
-                        installment_id=int(row["id"]),
-                        installment_number=int(row["installment_number"]),
-                        contractual_due_date=row["contractual_due_date"],
-                        effective_due_date=row["effective_due_date"],
-                        remaining_amount=max(
-                            Decimal(row["contractual_amount"])
-                            - Decimal(row["allocated_amount"]),
-                            Decimal("0.00"),
-                        ),
-                    )
-                    for row in rows
-                )
-                try:
-                    planned = plan_borrower_catchup_contraction(
-                        installments=installments,
-                        active_extension_slots=active_slots,
-                        completed_catchup_installment_ids=completed_ids,
-                    )
-                except RollingScheduleError as error:
-                    raise BorrowerScheduleAdjustmentConflict(str(error)) from error
+            except RollingScheduleError as error:
+                raise BorrowerScheduleAdjustmentConflict(str(error)) from error
 
-                resulting_version = state_version + 1
-                resulting_slots = active_slots - len(completed_ids)
-                cursor.execute(
-                    """
-                    insert into lending.loan_schedule_adjustments (
-                        loan_id,
-                        schedule_id,
-                        adjustment_type,
-                        no_collection_date,
-                        event_date,
-                        reason,
-                        expected_operational_version,
-                        resulting_operational_version,
-                        actor_user_id
-                    )
-                    values (%s, %s, 'borrower_catch_up', null, %s, %s, %s, %s, %s)
-                    returning id, created_at
-                    """,
-                    (
-                        loan_id,
-                        schedule["schedule_id"],
-                        event_date,
-                        "Borrower completed normal catch-up installment; remaining schedule contracted.",
-                        state_version,
-                        resulting_version,
-                        actor_user_id,
-                    ),
+            resulting_version = state_version + 1
+            resulting_slots = active_slots - len(completed_ids)
+            cursor.execute(
+                """
+                insert into lending.loan_schedule_adjustments (
+                    loan_id,
+                    schedule_id,
+                    adjustment_type,
+                    no_collection_date,
+                    event_date,
+                    reason,
+                    expected_operational_version,
+                    resulting_operational_version,
+                    actor_user_id
                 )
-                created = cursor.fetchone()
-                if created is None:
-                    raise BorrowerScheduleAdjustmentConflict(
-                        "Borrower catch-up audit record could not be created."
-                    )
-                adjustment_id = created["id"]
-                amount_by_installment_id = {
-                    int(row["id"]): Decimal(row["contractual_amount"])
-                    for row in rows
-                }
-                shift_records: list[BorrowerScheduleShiftRecord] = []
-                for shift in planned:
-                    contractual_amount = amount_by_installment_id[shift.installment_id]
-                    self._insert_shift_item(
-                        cursor,
-                        adjustment_id=adjustment_id,
-                        shift=shift,
-                        contractual_amount=contractual_amount,
-                    )
-                    self._write_effective_date(
-                        cursor,
-                        installment_id=shift.installment_id,
-                        effective_due_date=shift.new_effective_due_date,
-                        adjustment_id=adjustment_id,
-                        actor_user_id=actor_user_id,
-                    )
-                    shift_records.append(
-                        BorrowerScheduleShiftRecord(
-                            installment_id=shift.installment_id,
-                            installment_number=shift.installment_number,
-                            contractual_due_date=shift.contractual_due_date,
-                            prior_effective_due_date=shift.prior_effective_due_date,
-                            new_effective_due_date=shift.new_effective_due_date,
-                            contractual_amount=contractual_amount,
-                        )
-                    )
-
-                self._set_operational_state(
-                    cursor,
-                    schedule_id=schedule["schedule_id"],
-                    expected_version=state_version,
-                    resulting_version=resulting_version,
-                    active_borrower_extension_slots=resulting_slots,
-                    actor_user_id=actor_user_id,
+                values (%s, %s, 'borrower_catch_up', null, %s, %s, %s, %s, %s)
+                returning id, created_at
+                """,
+                (
+                    loan_id,
+                    schedule["schedule_id"],
+                    event_date,
+                    "Borrower completed normal catch-up installment; remaining schedule contracted.",
+                    state_version,
+                    resulting_version,
+                    actor_user_id,
+                ),
+            )
+            created = cursor.fetchone()
+            if created is None:
+                raise BorrowerScheduleAdjustmentConflict(
+                    "Borrower catch-up audit record could not be created."
                 )
+            adjustment_id = created["id"]
+            shift_records = self._persist_shifts(
+                cursor,
+                adjustment_id=adjustment_id,
+                planned=planned,
+                rows=rows,
+                actor_user_id=actor_user_id,
+            )
+            self._set_operational_state(
+                cursor,
+                schedule_id=schedule["schedule_id"],
+                expected_version=state_version,
+                resulting_version=resulting_version,
+                active_borrower_extension_slots=resulting_slots,
+                actor_user_id=actor_user_id,
+            )
+            if invalidate_collection_state:
                 self._invalidate_collection_state(cursor, loan_id=loan_id)
 
-                return BorrowerScheduleAdjustmentRecord(
-                    adjustment_id=adjustment_id,
-                    loan_id=loan_id,
-                    schedule_id=schedule["schedule_id"],
-                    adjustment_type="borrower_catch_up",
-                    event_date=event_date,
-                    expected_operational_version=state_version,
-                    resulting_operational_version=resulting_version,
-                    active_borrower_extension_slots_before=active_slots,
-                    active_borrower_extension_slots_after=resulting_slots,
-                    created_at=created["created_at"],
-                    shifts=tuple(shift_records),
+            return BorrowerScheduleAdjustmentRecord(
+                adjustment_id=adjustment_id,
+                loan_id=loan_id,
+                schedule_id=schedule["schedule_id"],
+                adjustment_type="borrower_catch_up",
+                event_date=event_date,
+                expected_operational_version=state_version,
+                resulting_operational_version=resulting_version,
+                active_borrower_extension_slots_before=active_slots,
+                active_borrower_extension_slots_after=resulting_slots,
+                created_at=created["created_at"],
+                shifts=shift_records,
+            )
+
+    @staticmethod
+    def _rolling_installments(
+        rows: list[dict[str, Any]],
+    ) -> tuple[RollingScheduleInstallment, ...]:
+        return tuple(
+            RollingScheduleInstallment(
+                installment_id=int(row["id"]),
+                installment_number=int(row["installment_number"]),
+                contractual_due_date=row["contractual_due_date"],
+                effective_due_date=row["effective_due_date"],
+                remaining_amount=max(
+                    Decimal(row["contractual_amount"])
+                    - Decimal(row["allocated_amount"]),
+                    Decimal("0.00"),
+                ),
+            )
+            for row in rows
+        )
+
+    def _persist_shifts(
+        self,
+        cursor: Any,
+        *,
+        adjustment_id: UUID,
+        planned: tuple[RollingScheduleShift, ...],
+        rows: list[dict[str, Any]],
+        actor_user_id: UUID,
+    ) -> tuple[BorrowerScheduleShiftRecord, ...]:
+        amount_by_installment_id = {
+            int(row["id"]): Decimal(row["contractual_amount"])
+            for row in rows
+        }
+        records: list[BorrowerScheduleShiftRecord] = []
+        for shift in planned:
+            contractual_amount = amount_by_installment_id[shift.installment_id]
+            self._insert_shift_item(
+                cursor,
+                adjustment_id=adjustment_id,
+                shift=shift,
+                contractual_amount=contractual_amount,
+            )
+            self._write_effective_date(
+                cursor,
+                installment_id=shift.installment_id,
+                effective_due_date=shift.new_effective_due_date,
+                adjustment_id=adjustment_id,
+                actor_user_id=actor_user_id,
+            )
+            records.append(
+                BorrowerScheduleShiftRecord(
+                    installment_id=shift.installment_id,
+                    installment_number=shift.installment_number,
+                    contractual_due_date=shift.contractual_due_date,
+                    prior_effective_due_date=shift.prior_effective_due_date,
+                    new_effective_due_date=shift.new_effective_due_date,
+                    contractual_amount=contractual_amount,
                 )
+            )
+        return tuple(records)
 
     @staticmethod
     def _lock_loan(cursor: Any, *, loan_id: UUID) -> None:
@@ -587,7 +604,7 @@ class PostgresBorrowerScheduleAdjustmentRepository:
         )
         if cursor.rowcount != 1:
             raise BorrowerScheduleAdjustmentConflict(
-                "The operational schedule changed while borrower shortfall was being saved."
+                "The operational schedule changed while borrower adjustment was being saved."
             )
 
     @staticmethod
