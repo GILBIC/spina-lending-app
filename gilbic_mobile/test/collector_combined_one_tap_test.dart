@@ -32,7 +32,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       expect(repository.previews, hasLength(1));
       expect(repository.previews.single.cashReceivedAmount, 150);
