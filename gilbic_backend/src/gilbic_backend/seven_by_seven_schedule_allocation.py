@@ -91,8 +91,10 @@ def plan_verified_seven_by_seven_scheduled_payment(
         select
             schedule.id,
             schedule.payment_frequency,
-            coalesce(operational_state.active_borrower_extension_slots, 0)
-                as active_borrower_extension_slots
+            coalesce(
+                (to_jsonb(operational_state) ->> 'active_borrower_extension_slots')::integer,
+                0
+            ) as active_borrower_extension_slots
         from lending.loan_contract_schedules schedule
         join lending.loan_contract_schedule_registrations registration
           on registration.schedule_id = schedule.id
