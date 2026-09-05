@@ -30,6 +30,24 @@ const _clientSession = UserSession(
   permissions: <String>['loan.self.view'],
 );
 
+UserSession _staffSession(AppRole role) {
+  final rawRole = switch (role) {
+    AppRole.collector => 'Collector',
+    AppRole.employee => 'Employee',
+    AppRole.management => 'Management',
+    AppRole.client => 'Client',
+  };
+  return UserSession(
+    userId: 'staff-${role.name}',
+    username: '${role.name}.one',
+    displayName: '$rawRole One',
+    role: role,
+    rawRole: rawRole,
+    accessToken: '${role.name}-token',
+    permissions: const <String>[],
+  );
+}
+
 class _FakeAccountRepository implements AccountRepository {
   var revoked = false;
 
@@ -117,6 +135,46 @@ void main() {
       );
       expect(find.textContaining('server permissions'), findsNothing);
   });
+
+  testWidgets('Client does not receive a self-service password control',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountSettingsPage(
+          session: _clientSession,
+          repository: _FakeAccountRepository(),
+          deviceIdentityProvider: _identity(),
+          onSignOut: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('account-change-password')), findsNothing);
+  });
+
+  for (final role in <AppRole>[
+    AppRole.collector,
+    AppRole.employee,
+    AppRole.management,
+  ]) {
+    testWidgets('${role.name} receives own-password control', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AccountSettingsPage(
+            session: _staffSession(role),
+            repository: _FakeAccountRepository(),
+            deviceIdentityProvider: _identity(),
+            onSignOut: () async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('account-change-password')), findsOneWidget);
+      expect(find.text('Change my password'), findsOneWidget);
+    });
+  }
 
   testWidgets('shows profile, current session, and privacy-safe device state',
       (tester) async {
