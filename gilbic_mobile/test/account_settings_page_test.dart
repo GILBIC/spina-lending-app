@@ -197,7 +197,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('account-change-password')));
+    final changePassword = find.byKey(const Key('account-change-password'));
+    await tester.ensureVisible(changePassword);
+    await tester.tap(changePassword);
     await tester.pumpAndSettle();
 
     expect(find.text('Change my password'), findsWidgets);
