@@ -323,7 +323,7 @@ void main() {
   });
 
   testWidgets(
-    'combined Pay previews one total on the server before atomic save',
+    'combined Pay silently previews one total then saves atomically',
     (tester) async {
       final repository = _CombinedRecordingRepository();
       await tester.binding.setSurfaceSize(const Size(430, 1100));
@@ -342,16 +342,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pump();
+      await _pumpCombinedSheet(tester);
 
-      expect(find.byKey(const Key('combined-payment-total')), findsOneWidget);
-      expect(find.text('Server allocation preview'), findsOneWidget);
-      expect(find.text('7x7 scheduled'), findsOneWidget);
-      expect(find.text('Regular scheduled'), findsOneWidget);
-      expect(find.text('₱50.00'), findsOneWidget);
-      expect(find.text('₱100.00'), findsOneWidget);
+      expect(find.byKey(const Key('combined-payment-total')), findsNothing);
       expect(repository.previews, hasLength(1));
       expect(repository.previews.single.cashReceivedAmount, 150);
       expect(
@@ -360,10 +353,6 @@ void main() {
         ),
         isFalse,
       );
-
-      await tester.tap(find.byKey(const Key('combined-confirm-payment')));
-      await tester.pumpAndSettle();
-
       expect(repository.submissions, hasLength(1));
       expect(
         repository.submissions.single.reviewedAllocationHash,
@@ -373,7 +362,7 @@ void main() {
   );
 
   testWidgets(
-    'combined Pay ignores a preview that completed after the cash total changed',
+    'combined Pay waits for preview and sends changed server state to details',
     (tester) async {
       final repository = _DelayedCombinedRepository();
       await tester.binding.setSurfaceSize(const Size(430, 1100));
@@ -393,31 +382,22 @@ void main() {
 
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
       expect(repository.requests, hasLength(1));
+      expect(find.byKey(const Key('combined-payment-total')), findsNothing);
 
-      await tester.enterText(
-        find.byKey(const Key('combined-payment-total')),
-        '140',
+      repository.completers.first.complete(_shortCombinedPreview);
+      await _pumpCombinedSheet(tester);
+
+      expect(find.byKey(const Key('combined-payment-total')), findsNothing);
+      expect(
+        find.textContaining('Payment details / other amount'),
+        findsOneWidget,
       );
-      repository.completers.first.complete(_exactCombinedPreview);
-      await tester.pump();
-      expect(find.text('Server allocation preview'), findsNothing);
-
-      await tester.tap(find.byKey(const Key('combined-preview-allocation')));
-      await tester.pump();
-      expect(repository.requests, hasLength(2));
-      expect(repository.requests.last.cashReceivedAmount, 140);
-      repository.completers.last.complete(_shortCombinedPreview);
-      await tester.pump();
-
-      expect(find.text('Short preview for the updated total.'), findsOneWidget);
-      expect(find.text('Exact Regular + 7x7 amount.'), findsNothing);
     },
   );
 
   testWidgets(
-    'combined Pay surfaces a server cash custody review instead of generic success',
+    'combined Pay surfaces a server cash custody review in one tap',
     (tester) async {
       final repository = _CombinedCustodyReviewRepository();
       await tester.binding.setSurfaceSize(const Size(430, 1100));
@@ -436,8 +416,6 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
       await _pumpCombinedSheet(tester);
-      await tester.tap(find.byKey(const Key('combined-confirm-payment')));
-      await _pumpCombinedSheet(tester);
 
       expect(
         find.textContaining('CASH CUSTODY REVIEW REQUIRED'),
@@ -449,7 +427,7 @@ void main() {
   );
 
   testWidgets(
-    'combined Pay recovers from a rejected extra choice and shows 7x7 advance dates',
+    'combined Pay leaves true-extra borrower choices to payment details',
     (tester) async {
       final repository = _RecoverableExtraChoiceRepository();
       await tester.binding.setSurfaceSize(const Size(430, 1100));
@@ -469,34 +447,12 @@ void main() {
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
       await _pumpCombinedSheet(tester);
 
-      await tester.enterText(
-        find.byKey(const Key('combined-payment-total')),
-        '170',
-      );
-      await tester.tap(find.byKey(const Key('combined-preview-allocation')));
-      await _pumpCombinedSheet(tester);
-      expect(find.byKey(const Key('combined-extra-choice')), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('combined-extra-choice')));
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.tap(find.text('Regular Principal Reduction').last);
-      await _pumpCombinedSheet(tester);
-      expect(find.textContaining('not available'), findsOneWidget);
-      expect(find.byKey(const Key('combined-extra-choice')), findsNothing);
-
-      await tester.tap(find.byKey(const Key('combined-preview-allocation')));
-      await _pumpCombinedSheet(tester);
-      expect(find.byKey(const Key('combined-extra-choice')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('combined-extra-choice')));
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.tap(find.text('7x7 Advance').last);
-      await _pumpCombinedSheet(tester);
-
+      expect(find.byKey(const Key('combined-payment-total')), findsNothing);
       expect(
-        find.byKey(const Key('combined-seven-advance-dates')),
+        find.textContaining('Payment details / other amount'),
         findsOneWidget,
       );
-      expect(find.textContaining('2026-08-02, 2026-08-03'), findsOneWidget);
+      expect(repository.submitCount, 0);
     },
   );
 
@@ -524,10 +480,7 @@ void main() {
 
       expect(repository.previewCount, 1);
       expect(find.textContaining('backend update is required'), findsOneWidget);
-      final confirm = tester.widget<FilledButton>(
-        find.byKey(const Key('combined-confirm-payment')),
-      );
-      expect(confirm.onPressed, isNull);
+      expect(find.byKey(const Key('combined-payment-total')), findsNothing);
       expect(repository.submitCount, 0);
     },
   );
@@ -916,38 +869,6 @@ const CombinedPaymentAllocationPreview _extraChoicePreview =
       ],
     );
 
-const CombinedPaymentAllocationPreview _sevenAdvancePreview =
-    CombinedPaymentAllocationPreview(
-      status: 'allocated',
-      requiresReview: true,
-      allocationHash:
-          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-      cashReceivedAmount: 170,
-      expectedTotalAmount: 150,
-      shortAmount: 0,
-      extraAmount: 20,
-      extraChoiceRequired: false,
-      regularPastDueFollowupRequired: false,
-      message: '7x7 advance allocation ready for review.',
-      legs: <CombinedPaymentAllocationLeg>[
-        CombinedPaymentAllocationLeg(
-          loanId: 'loan-seven',
-          loanType: 'seven_by_seven',
-          scheduledAmount: 50,
-          extraAmount: 20,
-          totalAmount: 70,
-          projectedCoveredDates: <String>['2026-08-02', '2026-08-03'],
-        ),
-        CombinedPaymentAllocationLeg(
-          loanId: 'loan-regular',
-          loanType: 'regular',
-          scheduledAmount: 100,
-          extraAmount: 0,
-          totalAmount: 100,
-        ),
-      ],
-    );
-
 class _DelayedCombinedRepository
     implements CombinedPaymentSubmissionRepository {
   final List<CombinedPaymentSubmissionDraft> requests =
@@ -1102,40 +1023,20 @@ class _CombinedCustodyReviewRepository
 
 class _RecoverableExtraChoiceRepository
     implements CombinedPaymentSubmissionRepository {
+  int submitCount = 0;
+
   @override
   Future<CombinedPaymentAllocationPreview> preview(
     UserSession session,
     CombinedPaymentSubmissionDraft draft,
-  ) async {
-    if (draft.cashReceivedAmount != 170) {
-      return _exactCombinedPreview;
-    }
-    switch (draft.extraAllocationChoice) {
-      case null:
-        return _extraChoicePreview;
-      case CombinedExtraAllocationChoice.regularPrincipalReduction:
-        throw const SpinaApiException(
-          'Regular Principal Reduction is not available for this schedule.',
-          statusCode: 422,
-          code: 'combined_extra_choice_unavailable',
-        );
-      case CombinedExtraAllocationChoice.sevenBySevenAdvance:
-        return _sevenAdvancePreview;
-      case CombinedExtraAllocationChoice.sevenBySevenExtraPrincipal:
-      case CombinedExtraAllocationChoice.regularAdvance:
-        throw const SpinaApiException(
-          'That extra choice is not available for this test.',
-          statusCode: 422,
-          code: 'combined_extra_choice_unavailable',
-        );
-    }
-  }
+  ) async => _extraChoicePreview;
 
   @override
   Future<CombinedPaymentSubmissionResult> submit(
     UserSession session,
     CombinedPaymentSubmissionDraft draft,
   ) {
-    throw UnimplementedError('The recoverable-choice test never submits.');
+    submitCount += 1;
+    throw StateError('A true-extra preview must never auto-submit.');
   }
 }
