@@ -60,6 +60,10 @@ export const ROLE_ENDPOINTS = Object.freeze({
       section: 'Review',
       permission: 'support.manage',
     }),
+    action('management-client-invite', 'Invite Client account', '/api/v1/management/client-accounts/invite', {
+      section: 'Administration',
+      permission: 'account.manage',
+    }),
     action('management-staff-devices', 'Staff & devices', '/api/v1/management/accounts', {
       section: 'Administration',
       permission: 'device.manage',
