@@ -7,7 +7,16 @@ from uuid import UUID
 
 from psycopg.rows import dict_row
 
+from .collector_schedule_repository import (
+    CollectorScheduleRecord,
+    CollectorScheduleRowRecord,
+    _build_installment_row,
+    _money,
+)
 from .database import open_connection
+
+
+ZERO = Decimal("0.00")
 
 
 class ClientLoanError(RuntimeError):
@@ -16,6 +25,14 @@ class ClientLoanError(RuntimeError):
 
 class ClientBorrowerNotLinked(ClientLoanError):
     code = "client_borrower_not_linked"
+
+
+class ClientLoanNotFound(ClientLoanError):
+    code = "client_loan_not_found"
+
+
+class ClientLoanScheduleUnavailable(ClientLoanError):
+    code = "client_loan_schedule_unavailable"
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +142,301 @@ class PostgresClientLoanRepository:
             area=str(client["area"]) if client["area"] else None,
             client_status=str(client["status"]),
             loans=tuple(self._loan_from_row(row) for row in rows),
+        )
+
+    def get_schedule_for_user(
+        self,
+        *,
+        user_id: UUID,
+        loan_id: UUID,
+        as_of_date: date,
+    ) -> CollectorScheduleRecord:
+        """Read the linked client's persisted operational schedule.
+
+        This path never derives a second schedule. It reads the same
+        ``loan_contract_installments_operational`` source and uses the same row
+        status builder as Collector View Schedule, with client ownership replacing
+        Collector-area authorization.
+        """
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    """
+                    select id
+                    from lending.clients
+                    where user_id = %s
+                    limit 1
+                    """,
+                    (user_id,),
+                )
+                linked_client = cursor.fetchone()
+                if linked_client is None:
+                    raise ClientBorrowerNotLinked(
+                        "This client account is not linked to a borrower record."
+                    )
+
+                cursor.execute(
+                    """
+                    select
+                        loan.id as loan_id,
+                        loan.loan_number,
+                        client.id as client_id,
+                        client.full_name as client_name,
+                        coalesce(nullif(btrim(loan_type.name), ''), 'Loan') as loan_type,
+                        loan_type.calculation_mode,
+                        schedule.id as schedule_id,
+                        schedule.schedule_version,
+                        schedule.payment_frequency,
+                        schedule.contract_reference,
+                        registration.id as registration_id,
+                        coalesce(
+                            nullif(
+                                to_jsonb(operational_state)
+                                    ->> 'active_borrower_extension_slots',
+                                ''
+                            )::integer,
+                            0
+                        ) as active_borrower_extension_slots
+                    from lending.clients client
+                    join lending.loans loan
+                      on loan.client_id = client.id
+                    left join lending.loan_types loan_type
+                      on loan_type.id = loan.loan_type_id
+                    left join lending.loan_contract_schedules schedule
+                      on schedule.loan_id = loan.id
+                     and schedule.status = 'active'
+                    left join lending.loan_contract_schedule_registrations registration
+                      on registration.schedule_id = schedule.id
+                    left join lending.loan_schedule_operational_state operational_state
+                      on operational_state.schedule_id = schedule.id
+                    where client.id = %s
+                      and loan.id = %s
+                    order by registration.verified_at desc nulls last
+                    limit 1
+                    """,
+                    (linked_client["id"], loan_id),
+                )
+                loan = cursor.fetchone()
+                if loan is None:
+                    raise ClientLoanNotFound(
+                        "This loan is not linked to the authenticated client account."
+                    )
+                if loan["schedule_id"] is None or loan["registration_id"] is None:
+                    raise ClientLoanScheduleUnavailable(
+                        "A verified contractual schedule is not yet available for this loan."
+                    )
+
+                cursor.execute(
+                    """
+                    select
+                        installment.id,
+                        installment.installment_number,
+                        installment.contractual_due_date,
+                        installment.effective_due_date,
+                        installment.contractual_amount,
+                        installment.principal_component,
+                        installment.interest_component,
+                        coalesce(allocation.paid_amount, 0)::numeric(18,2)
+                            as paid_amount,
+                        coalesce(allocation.prepaid_amount, 0)::numeric(18,2)
+                            as prepaid_amount,
+                        coalesce(allocation.principal_reduction_amount, 0)::numeric(18,2)
+                            as principal_reduction_amount,
+                        coalesce(past_due.current_reason_code, '') as past_due_reason_code,
+                        coalesce(past_due.current_reason_note, '') as past_due_reason_note,
+                        promise.promised_for_date,
+                        coalesce(promise.remaining_promised_amount, 0)::numeric(18,2)
+                            as promise_remaining_amount,
+                        coalesce(promise.status, '') as promise_status
+                    from lending.loan_contract_installments_operational installment
+                    left join lateral (
+                        select
+                            coalesce(sum(item.amount_applied) filter (
+                                where transaction.is_voided = false
+                                  and item.allocation_basis <> 'voluntary_extra_tail'
+                            ), 0)::numeric(18,2) as paid_amount,
+                            coalesce(sum(item.amount_applied) filter (
+                                where transaction.is_voided = false
+                                  and item.allocation_basis <> 'voluntary_extra_tail'
+                                  and transaction.collection_date
+                                      < installment.effective_due_date
+                            ), 0)::numeric(18,2) as prepaid_amount,
+                            coalesce(sum(item.amount_applied) filter (
+                                where transaction.is_voided = false
+                                  and item.allocation_basis = 'voluntary_extra_tail'
+                            ), 0)::numeric(18,2) as principal_reduction_amount
+                        from lending.loan_installment_payment_allocations item
+                        join lending.collection_transactions transaction
+                          on transaction.id = item.transaction_id
+                        where item.installment_id = installment.id
+                    ) allocation on true
+                    left join lateral (
+                        select
+                            obligation.id,
+                            obligation.current_reason_code,
+                            obligation.current_reason_note
+                        from lending.past_due_obligations obligation
+                        where obligation.installment_id = installment.id
+                          and obligation.remaining_past_due_amount > 0
+                        order by
+                            obligation.obligation_date desc,
+                            obligation.created_at desc,
+                            obligation.id desc
+                        limit 1
+                    ) past_due on true
+                    left join lateral (
+                        select
+                            current_promise.promised_for_date,
+                            current_promise.remaining_promised_amount,
+                            current_promise.status
+                        from lending.payment_promises current_promise
+                        join lending.payment_promise_obligations link
+                          on link.promise_id = current_promise.id
+                        join lending.past_due_obligations obligation
+                          on obligation.id = link.past_due_obligation_id
+                        where obligation.installment_id = installment.id
+                          and current_promise.status = 'pending'
+                          and current_promise.remaining_promised_amount > 0
+                        order by
+                            current_promise.created_at desc,
+                            current_promise.id desc
+                        limit 1
+                    ) promise on true
+                    where installment.schedule_id = %s
+                    order by
+                        installment.effective_due_date,
+                        installment.installment_number,
+                        installment.id
+                    """,
+                    (loan["schedule_id"],),
+                )
+                installment_rows = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    select distinct on (adjustment.no_collection_date)
+                        adjustment.no_collection_date,
+                        adjustment.reason,
+                        adjustment.created_at
+                    from lending.loan_schedule_adjustments adjustment
+                    where adjustment.schedule_id = %s
+                      and adjustment.adjustment_type = 'no_collection'
+                      and not exists (
+                            select 1
+                            from lending.loan_schedule_adjustments reversal
+                            where reversal.reverses_adjustment_id = adjustment.id
+                      )
+                    order by
+                        adjustment.no_collection_date,
+                        adjustment.created_at desc,
+                        adjustment.id desc
+                    """,
+                    (loan["schedule_id"],),
+                )
+                no_collection_rows = cursor.fetchall()
+
+        rows: list[CollectorScheduleRowRecord] = []
+        for row in installment_rows:
+            installment = _build_installment_row(
+                as_of_date=as_of_date,
+                installment_id=int(row["id"]),
+                installment_number=int(row["installment_number"]),
+                contractual_due_date=row["contractual_due_date"],
+                effective_due_date=row["effective_due_date"],
+                contractual_amount=_money(row["contractual_amount"]),
+                paid_amount=_money(row["paid_amount"]),
+                prepaid_amount=_money(row["prepaid_amount"]),
+                principal_reduction_amount=_money(row["principal_reduction_amount"]),
+                principal_component=(
+                    _money(row["principal_component"])
+                    if row["principal_component"] is not None
+                    else None
+                ),
+                interest_component=(
+                    _money(row["interest_component"])
+                    if row["interest_component"] is not None
+                    else None
+                ),
+                past_due_reason_code=str(row["past_due_reason_code"] or ""),
+                past_due_reason_note=str(row["past_due_reason_note"] or ""),
+                promised_for_date=row["promised_for_date"],
+                promise_remaining_amount=_money(row["promise_remaining_amount"]),
+                promise_status=str(row["promise_status"] or ""),
+            )
+            if installment is not None:
+                rows.append(installment)
+
+        installment_records = tuple(item for item in rows if item.kind == "installment")
+        past_due_rows = tuple(
+            item
+            for item in installment_records
+            if item.schedule_date < as_of_date and item.remaining_amount > ZERO
+        )
+        past_due_amount = _money(
+            sum((item.remaining_amount for item in past_due_rows), ZERO)
+        )
+        active_extension_slots = int(loan["active_borrower_extension_slots"] or 0)
+        base_maturity = max(
+            (
+                item.contractual_due_date
+                for item in installment_records
+                if item.contractual_due_date is not None
+            ),
+            default=None,
+        )
+        updated_maturity = max(
+            (item.schedule_date for item in installment_records),
+            default=None,
+        )
+        if updated_maturity is None:
+            maturity_status = "no_current_installments"
+        elif active_extension_slots > 0:
+            maturity_status = "extended"
+        else:
+            maturity_status = "on_schedule"
+
+        for row in no_collection_rows:
+            rows.append(
+                CollectorScheduleRowRecord(
+                    kind="no_collection",
+                    schedule_date=row["no_collection_date"],
+                    status="No Collection",
+                    amount=ZERO,
+                    contractual_amount=ZERO,
+                    paid_amount=ZERO,
+                    prepaid_amount=ZERO,
+                    remaining_amount=ZERO,
+                    no_collection_reason=str(row["reason"] or ""),
+                )
+            )
+
+        rows.sort(
+            key=lambda item: (
+                item.schedule_date,
+                0 if item.kind == "no_collection" else 1,
+                item.installment_number or 0,
+            )
+        )
+        return CollectorScheduleRecord(
+            loan_id=loan["loan_id"],
+            loan_number=str(loan["loan_number"]),
+            client_id=loan["client_id"],
+            client_name=str(loan["client_name"]),
+            loan_type=str(loan["loan_type"]),
+            calculation_mode=str(loan["calculation_mode"] or ""),
+            schedule_id=loan["schedule_id"],
+            schedule_version=int(loan["schedule_version"]),
+            payment_frequency=str(loan["payment_frequency"]),
+            contract_reference=str(loan["contract_reference"] or ""),
+            as_of_date=as_of_date,
+            rows=tuple(rows),
+            past_due_amount=past_due_amount,
+            past_due_count=len(past_due_rows),
+            schedule_extension_slots=active_extension_slots,
+            base_maturity=base_maturity,
+            updated_maturity=updated_maturity,
+            maturity_projection_status=maturity_status,
         )
 
     @staticmethod
