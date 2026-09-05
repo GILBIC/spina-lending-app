@@ -11,6 +11,7 @@ from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .client_loan_repository import (
     ClientBorrowerNotLinked,
+    ClientLoanNotFound,
     ClientLoanPortfolio,
     ClientLoanRecord,
     PostgresClientLoanRepository,
@@ -203,7 +204,7 @@ def create_client_loan_router() -> APIRouter:
                 loan_id=loan_id,
                 as_of_date=datetime.now(PHILIPPINES_TIMEZONE).date(),
             )
-        except ClientBorrowerNotLinked as error:
+        except (ClientBorrowerNotLinked, ClientLoanNotFound) as error:
             raise HTTPException(
                 status_code=404,
                 detail={"code": error.code, "message": str(error)},
