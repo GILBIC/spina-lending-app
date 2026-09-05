@@ -252,6 +252,22 @@ class VoluntaryExtraAwareCollectionPostingBridge(
 
             cursor.execute(
                 """
+                select active_borrower_extension_slots
+                from lending.loan_schedule_operational_state
+                where schedule_id = %s
+                for update
+                """,
+                (gate.schedule_id,),
+            )
+            operational_state = cursor.fetchone()
+            active_borrower_extension_slots = int(
+                operational_state["active_borrower_extension_slots"]
+                if operational_state is not None
+                else 0
+            )
+
+            cursor.execute(
+                """
                 select
                     installment.id,
                     installment.installment_number,
@@ -294,6 +310,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                 installments=outstanding,
                 collection_date=command.collection_date,
                 allocation_intent=command.payment_allocation_intent,
+                active_borrower_extension_slots=active_borrower_extension_slots,
             )
 
             for instruction in plan:
