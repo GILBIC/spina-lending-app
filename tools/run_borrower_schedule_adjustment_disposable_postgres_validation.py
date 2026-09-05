@@ -19,6 +19,7 @@ BOOTSTRAP_THROUGH = 109
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_borrower_schedule_adjustment_upgrade_postgres.py",
+    TEST_ROOT / "test_borrower_schedule_adjustment_repository_postgres.py",
 )
 
 
@@ -68,7 +69,7 @@ def main() -> int:
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through both 0109 migrations, seed existing audited No Collection history, "
             "apply 0110 only inside the disposable test, and prove the upgrade preserves "
-            "immutable schedule-adjustment evidence while backfilling generic event_date."
+            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -127,7 +128,8 @@ def main() -> int:
         print(
             "Borrower-schedule disposable PostgreSQL validation passed: schema through 0109 "
             "upgraded with 0110 after existing audited No Collection history was created; "
-            "event_date backfill and immutable evidence preservation were proven."
+            "event_date backfill, immutable evidence preservation, and borrower schedule "
+            "repository integration were proven."
         )
         return 0
     except psycopg.Error as error:
