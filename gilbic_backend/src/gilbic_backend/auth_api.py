@@ -33,50 +33,6 @@ class StrictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class RegisterRequest(StrictRequest):
-    username: str = Field(min_length=3, max_length=80)
-    email: str = Field(min_length=5, max_length=320)
-    full_name: str = Field(min_length=2, max_length=200)
-    client_code: str = Field(min_length=2, max_length=100)
-    phone_number: str | None = Field(default=None, max_length=30)
-    password: str = Field(min_length=8, max_length=200)
-
-    @field_validator("username")
-    @classmethod
-    def normalize_username(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized or any(ch.isspace() for ch in normalized):
-            raise ValueError("Username cannot contain spaces.")
-        return normalized
-
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if "@" not in normalized:
-            raise ValueError("Enter a valid email address.")
-        return normalized
-
-    @field_validator("full_name")
-    @classmethod
-    def normalize_full_name(cls, value: str) -> str:
-        return " ".join(value.split())
-
-    @field_validator("client_code")
-    @classmethod
-    def normalize_client_code(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("Client code is required.")
-        return normalized
-
-    @field_validator("phone_number")
-    @classmethod
-    def normalize_phone_number(cls, value: str | None) -> str | None:
-        normalized = (value or "").strip()
-        return normalized or None
-
-
 class LoginRequest(StrictRequest):
     username: str = Field(min_length=1, max_length=320)
     password: str = Field(min_length=1, max_length=200)
@@ -167,56 +123,17 @@ def _enforce_mobile_auth_version(
 def create_auth_router() -> APIRouter:
     router = APIRouter(tags=["authentication"])
 
-    @router.post("/api/v1/auth/register", status_code=status.HTTP_201_CREATED)
+    @router.post("/api/v1/auth/register", status_code=status.HTTP_410_GONE)
     @router.post(
         "/api/mobile/v1/auth/register",
-        status_code=status.HTTP_201_CREATED,
+        status_code=status.HTTP_410_GONE,
         include_in_schema=False,
     )
-    def register(
-        request: RegisterRequest,
-        http_request: Request,
-        x_app_platform: str | None = Header(default=None, alias="X-App-Platform"),
-        x_app_version: str | None = Header(default=None, alias="X-App-Version"),
-        auth: SupabaseAuthClient = Depends(auth_client_dependency),
-        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        settings: Settings = Depends(get_settings),
-    ) -> dict[str, object]:
-        _enforce_mobile_auth_version(
-            http_request,
-            platform=x_app_platform,
-            app_version=x_app_version,
-            settings=settings,
+    def retired_client_registration() -> None:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Client accounts are created by SPINA Management.",
         )
-        if accounts.username_exists(request.username):
-            raise HTTPException(status_code=409, detail="Username is already in use.")
-        try:
-            session = auth.sign_up(email=request.email, password=request.password)
-            context = accounts.create_client_profile(
-                auth_user_id=session.auth_user_id,
-                username=request.username,
-                email=request.email,
-                full_name=request.full_name,
-                claimed_client_code=request.client_code,
-                claimed_phone_number=request.phone_number,
-            )
-        except SupabaseAuthError as exc:
-            raise _auth_exception(exc) from exc
-        except AccountConflict as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-        return {
-            "success": True,
-            "data": {
-                "requires_email_confirmation": session.access_token is None,
-                "approval_status": "pending",
-                "message": (
-                    "Registration received. Management must approve and link "
-                    "your account to your borrower record before you can sign in."
-                ),
-                "user": _user_payload(context),
-            },
-        }
 
     @router.post("/api/v1/auth/login")
     @router.post("/api/mobile/v1/auth/login", include_in_schema=False)
