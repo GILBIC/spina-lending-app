@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -101,7 +102,7 @@ def test_regular_normal_payment_catches_up_and_contracts_in_same_transaction() -
                 loan_id=str(case.regular_loan_id),
                 collection_date=date(2097, 8, 2),
                 entry_type=CollectionEntryType.PAYMENT,
-                amount=cases.Decimal("100.00"),
+                amount=Decimal("100.00"),
                 recorded_at=datetime(2097, 8, 2, 1, 0, tzinfo=UTC),
                 device_id=case.installation_id,
                 device_sequence=1,
@@ -157,13 +158,15 @@ def test_regular_normal_payment_catches_up_and_contracts_in_same_transaction() -
         ).fetchall()
 
     assert allocations == [
-        (1, cases.Decimal("50.00"), "oldest_due_first"),
-        (2, cases.Decimal("50.00"), "borrower_catch_up_oldest_first"),
+        (1, Decimal("50.00"), "oldest_due_first"),
+        (2, Decimal("50.00"), "borrower_catch_up_oldest_first"),
     ]
     assert state == (2, 0)
     assert catchup_adjustments == 1
+    # Settled rows retain their reached/paid operational history. The remaining
+    # unpaid schedule is what contracts: installment 3 moves Aug 4 -> Aug 3.
     assert effective_dates == [
         (1, date(2097, 8, 2)),
         (2, date(2097, 8, 3)),
-        (3, date(2097, 8, 4)),
+        (3, date(2097, 8, 3)),
     ]
