@@ -278,6 +278,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
         installments: tuple[OutstandingInstallment, ...],
         collection_date,
         allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED,
+        active_borrower_extension_slots: int = 0,
         voluntary_extra: bool | None = None,
     ) -> tuple[AllocationInstruction, ...]:
         """Return the protected Regular allocation for one applied receipt.
@@ -310,6 +311,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                 installments=installments,
                 collection_date=collection_date,
                 extra_choice=extra_choice,
+                active_borrower_extension_slots=active_borrower_extension_slots,
             )
         except PaymentAllocationError as error:
             message = str(error)
