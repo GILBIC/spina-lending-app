@@ -46,7 +46,7 @@ def valid_payload() -> dict[str, object]:
         "national_id_egov_evidence_reference": "FAKE-EGOV-NATIONAL-ID-VERIFIED",
         "tin_id_egov_evidence_reference": "FAKE-EGOV-TIN-ID-VERIFIED",
         "meralco_bill_evidence_reference": "FAKE-MERALCO-BILL-EVIDENCE",
-        "selfie_evidence_reference": "FAKE-SELFIE-EVIDENCE",
+        "baseline_face_scan_evidence_reference": "FAKE-BASELINE-FACE-SCAN-EVIDENCE",
         "privacy_consent": True,
         "accuracy_declaration": True,
     }
@@ -107,7 +107,10 @@ def test_public_guest_submission_is_normalized_and_pre_account() -> None:
         repository.submitted["meralco_bill_evidence_reference"]
         == "FAKE-MERALCO-BILL-EVIDENCE"
     )
-    assert repository.submitted["selfie_evidence_reference"] == "FAKE-SELFIE-EVIDENCE"
+    assert (
+        repository.submitted["baseline_face_scan_evidence_reference"]
+        == "FAKE-BASELINE-FACE-SCAN-EVIDENCE"
+    )
 
 
 def test_public_guest_submission_forbids_extra_input() -> None:
@@ -134,7 +137,7 @@ def test_public_guest_submission_forbids_extra_input() -> None:
         ("national_id_egov_evidence_reference", ""),
         ("tin_id_egov_evidence_reference", ""),
         ("meralco_bill_evidence_reference", ""),
-        ("selfie_evidence_reference", ""),
+        ("baseline_face_scan_evidence_reference", ""),
     ],
 )
 def test_public_guest_submission_rejects_invalid_required_values(
