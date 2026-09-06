@@ -12,7 +12,7 @@
 
 ## Current checkpoint — 2026-09-06
 
-Task 1 is complete and exact-head SPINA CI #1860 is fully green on `7831035fbe68341a55fb13e669606d66d7f90d5f`. Task 2 has entered RED on `08b0728c8924cab811878cc65146b5e8c8a5b059` with focused public guest-submission API contract tests; the guest API/repository are intentionally not implemented yet.
+Task 1 is complete and exact-head SPINA CI #1860 is fully green on `7831035fbe68341a55fb13e669606d66d7f90d5f`. Task 2 has entered RED on current Draft head with focused public guest-submission API contract tests; the guest API/repository are intentionally not implemented yet.
 
 ## Global Constraints
 
