@@ -20,7 +20,9 @@ The new-borrower flow is:
 
 A rejected application never creates a Client account.
 
-## Lean data boundary
+## New-client CIF boundary
+
+The full CIF is required **only for a brand-new Client**. Existing Clients do not repeat the CIF on renewal.
 
 The Guest CIF is a staging intake snapshot, not an official `lending.clients` row and not a `core.users` account. It stores only data materially needed to identify/contact the applicant, evaluate the request, and review required KYC evidence.
 
@@ -31,16 +33,41 @@ Minimum intake categories:
 - basic employment/livelihood information;
 - declared current income, essential expenses, and current debt payments needed for affordability review;
 - requested loan product, amount, term, and purpose;
-- references to National ID, TIN ID, and verified-selfie evidence;
+- evidence reference for an **eGov-verified National ID**;
+- evidence reference for an **eGov-verified TIN ID**;
+- **Meralco bill** evidence reference for address/location proof;
+- **baseline face selfie scan** evidence reference from a live face scan that passes liveness checking;
 - privacy/accuracy/consent acknowledgements.
+
+The baseline face scan captured during the first CIF becomes the identity baseline used for later renewal face matching.
 
 Do not revive the earlier overbuilt CIF. Do not collect extra personal data merely because a previous form contained it.
 
+## Renewal identity requirements
+
+A renewal is **not another CIF**.
+
+The borrower renewal requirements are only:
+
+1. **Signature**; and
+2. **Face selfie scan**.
+
+The renewal face selfie scan must:
+
+- pass liveness checking; and
+- match the baseline face scan enrolled from the Client's original new-client CIF.
+
+Do not require the Client to submit the CIF, eGov-verified National ID, eGov-verified TIN ID, or Meralco bill again merely because the Client is renewing.
+
+This design records the renewal rule now so later renewal work uses the same identity baseline. #419 remains focused on new-client intake and does not expand Task 2 into a renewal subsystem.
+
 ## Restricted evidence rule
 
-Normal application rows store only evidence references/metadata needed to connect the application to a separately controlled evidence object. They do not store passwords, OTPs, MPINs, phone contacts, full unnecessary government-ID data, or raw binary identity/selfie files.
+Normal application rows store only controlled evidence references/metadata needed to connect the application to separately protected evidence. They do not store passwords, OTPs, MPINs, phone contacts, full unnecessary government-ID data, raw identity documents, raw face-scan media, or reusable biometric templates in the ordinary application row.
 
-Real evidence upload/custody remains blocked until the restricted repository/privacy/retention/access controls tracked by the CIF evidence work are separately approved. Development tests use fake references only.
+For the new-client face scan, the normal Guest Application row stores only `baseline_face_scan_evidence_reference`. The protected evidence service may later retain the minimum approved matching artifact needed for renewal verification, subject to the separate privacy/retention/access controls.
+
+Real evidence upload/custody and live eGov/face-verification provider integration remain blocked until the restricted repository/privacy/retention/access controls are separately approved. Development tests use fake evidence references only.
 
 ## Persistence model
 
@@ -61,6 +88,13 @@ Review timestamps and the Management reviewer are recorded separately from appli
 
 Expose a public FastAPI route dedicated to guest applications. It accepts only the approved lean fields, uses strict Pydantic input (`extra="forbid"`), normalizes obvious text/contact input, and persists one submitted application.
 
+The required identity/address evidence inputs for a new applicant are references representing:
+
+- eGov-verified National ID;
+- eGov-verified TIN ID;
+- Meralco bill; and
+- baseline live face selfie scan.
+
 Successful submission returns only:
 
 - the application reference;
@@ -79,7 +113,7 @@ Submission must not create:
 
 Public status lookup is never reference-only. The application reference first enters a one-time verification flow using an injectable verifier/OTP adapter. Development uses a fake adapter; no live SMS/email provider or real applicant communication is authorized by this feature branch.
 
-After verification, the safe response contains only the reference, high-level status, submitted/reviewed timestamps, and a short safe Management note when appropriate. It must not expose KYC evidence, government-ID metadata, affordability inputs, reviewer internals, borrower/client IDs, or credentials.
+After verification, the safe response contains only the reference, high-level status, submitted/reviewed timestamps, and a short safe Management note when appropriate. It must not expose KYC evidence, government-ID metadata, affordability inputs, reviewer internals, borrower/client IDs, biometric matching data, or credentials.
 
 ## Management review
 
@@ -102,11 +136,11 @@ Client credentials remain owned by the already-merged Priority #3 pathway. After
 
 Requested loan terms in the guest application are intake/request data only. Approval of the guest application is not approval of a financial loan and must not create `lending.loans` or any accounting/disbursement record.
 
-The formal per-loan/per-renewal Loan Application and lawyer-approved contract/disclosure work remain separate. No legal wording is finalized here.
+The formal per-loan/per-renewal Loan Application and lawyer-approved contract/disclosure work remain separate. Renewal identity evidence is limited to signature + live face scan as defined above, but no legal wording is finalized here.
 
 ## UI scope
 
-Implement the smallest complete surfaces needed for the approved flow:
+Implement the smallest complete surfaces needed for the approved new-client flow:
 
 - signed-out Web/Mobile entry points;
 - guest application form;
@@ -114,7 +148,7 @@ Implement the smallest complete surfaces needed for the approved flow:
 - Management review queue/detail/decision;
 - handoff from approved application to existing Client-account creation.
 
-Reuse current SPINA components and API patterns. Do not add a new framework, workflow engine, generic form builder, or separate authentication system.
+Reuse current SPINA components and API patterns. Do not add a new framework, workflow engine, generic form builder, separate authentication system, or renewal engine to #419.
 
 ## Testing and release boundary
 
@@ -123,6 +157,7 @@ Use strict RED -> GREEN TDD. The first RED slice proves the database separation 
 Required proof before merge includes:
 
 - schema tests proving guest applications are separate from users/clients;
+- new-client schema/API contracts for eGov National ID evidence, eGov TIN ID evidence, Meralco bill evidence, and baseline face-scan evidence reference;
 - submission API tests proving no Auth/Client side effect;
 - safe status-verification tests;
 - Management-only review/decision tests;
@@ -131,4 +166,4 @@ Required proof before merge includes:
 - disposable PostgreSQL validation;
 - full SPINA CI on the exact PR head.
 
-This branch does not authorize production deployment, live applicant data, live identity/selfie upload, live OTP/email/SMS delivery, live database/Auth mutation, loan creation, contract execution, or release.
+This branch does not authorize production deployment, live applicant data, live identity/face upload, live eGov verification, live face-match provider calls, live OTP/email/SMS delivery, live database/Auth mutation, loan creation, contract execution, renewal execution, or release.
