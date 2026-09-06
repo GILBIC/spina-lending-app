@@ -18,7 +18,7 @@ def test_guest_application_is_pre_account_and_management_reviewed() -> None:
     assert "national_id_egov_evidence_reference text not null" in sql
     assert "tin_id_egov_evidence_reference text not null" in sql
     assert "meralco_bill_evidence_reference text not null" in sql
-    assert "selfie_evidence_reference text not null" in sql
+    assert "baseline_face_scan_evidence_reference text not null" in sql
     assert "promoted_client_id uuid unique" in sql
     assert "references lending.clients(id)" in sql
     assert "reviewed_by_user_id uuid" in sql
