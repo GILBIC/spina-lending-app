@@ -43,8 +43,9 @@ def valid_payload() -> dict[str, object]:
         "requested_amount": 5000,
         "requested_term_days": 120,
         "loan_purpose": "Working capital",
-        "national_id_evidence_reference": "FAKE-NATIONAL-ID-EVIDENCE",
-        "tin_id_evidence_reference": "FAKE-TIN-ID-EVIDENCE",
+        "national_id_egov_evidence_reference": "FAKE-EGOV-NATIONAL-ID-VERIFIED",
+        "tin_id_egov_evidence_reference": "FAKE-EGOV-TIN-ID-VERIFIED",
+        "meralco_bill_evidence_reference": "FAKE-MERALCO-BILL-EVIDENCE",
         "selfie_evidence_reference": "FAKE-SELFIE-EVIDENCE",
         "privacy_consent": True,
         "accuracy_declaration": True,
@@ -94,8 +95,18 @@ def test_public_guest_submission_is_normalized_and_pre_account() -> None:
     assert repository.submitted["email"] == "juan@example.com"
     assert repository.submitted["present_address"] == "Cardona, Rizal"
     assert repository.submitted["requested_loan_type"] == "regular"
-    assert repository.submitted["national_id_evidence_reference"] == "FAKE-NATIONAL-ID-EVIDENCE"
-    assert repository.submitted["tin_id_evidence_reference"] == "FAKE-TIN-ID-EVIDENCE"
+    assert (
+        repository.submitted["national_id_egov_evidence_reference"]
+        == "FAKE-EGOV-NATIONAL-ID-VERIFIED"
+    )
+    assert (
+        repository.submitted["tin_id_egov_evidence_reference"]
+        == "FAKE-EGOV-TIN-ID-VERIFIED"
+    )
+    assert (
+        repository.submitted["meralco_bill_evidence_reference"]
+        == "FAKE-MERALCO-BILL-EVIDENCE"
+    )
     assert repository.submitted["selfie_evidence_reference"] == "FAKE-SELFIE-EVIDENCE"
 
 
@@ -120,6 +131,10 @@ def test_public_guest_submission_forbids_extra_input() -> None:
         ("declared_monthly_debt_payments", -1),
         ("requested_amount", 0),
         ("requested_term_days", 0),
+        ("national_id_egov_evidence_reference", ""),
+        ("tin_id_egov_evidence_reference", ""),
+        ("meralco_bill_evidence_reference", ""),
+        ("selfie_evidence_reference", ""),
     ],
 )
 def test_public_guest_submission_rejects_invalid_required_values(
