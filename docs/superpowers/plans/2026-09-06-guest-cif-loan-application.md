@@ -10,6 +10,10 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-06-guest-cif-loan-application-design.md`
 
+## Current checkpoint — 2026-09-06
+
+Task 1 is complete and exact-head SPINA CI #1860 is fully green on `7831035fbe68341a55fb13e669606d66d7f90d5f`. Task 2 has entered RED on `08b0728c8924cab811878cc65146b5e8c8a5b059` with focused public guest-submission API contract tests; the guest API/repository are intentionally not implemented yet.
+
 ## Global Constraints
 
 - Do not create `core.users` or Client permissions from public guest submission.
@@ -34,7 +38,7 @@
 - Produces: `lending.guest_loan_applications` and `lending.guest_loan_application_reference_seq`.
 - Produces permission: `loan_application.manage`, Management only.
 
-- [ ] **Step 1: Add the failing migration contract test**
+- [x] **Step 1: Add the failing migration contract test**
 
 ```python
 from pathlib import Path
@@ -61,13 +65,13 @@ def test_guest_application_is_pre_account_and_management_reviewed() -> None:
     assert "('client', 'loan_application.manage')" not in sql
 ```
 
-- [ ] **Step 2: Run only the test and verify RED**
+- [x] **Step 2: Run only the test and verify RED**
 
 Run: `python -m pytest gilbic_backend/tests/test_guest_loan_application_migration.py -q`
 
 Expected: FAIL because `0112_add_guest_loan_applications.sql` does not exist.
 
-- [ ] **Step 3: Add the minimum additive migration**
+- [x] **Step 3: Add the minimum additive migration**
 
 Create one idempotent `BEGIN/COMMIT` migration with these columns:
 
@@ -114,13 +118,13 @@ CREATE TABLE IF NOT EXISTS lending.guest_loan_applications (
 
 Add indexes on `(status, submitted_at DESC)` and lower-cased application reference, then add `loan_application.manage` to `core.permissions` and only the Management role.
 
-- [ ] **Step 4: Re-run migration contract test**
+- [x] **Step 4: Re-run migration contract test**
 
 Run: `python -m pytest gilbic_backend/tests/test_guest_loan_application_migration.py -q`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add gilbic_backend/tests/test_guest_loan_application_migration.py gilbic_backend/sql/0112_add_guest_loan_applications.sql
@@ -143,7 +147,7 @@ git commit -m "feat: add guest loan application persistence"
 - Produces: `GuestLoanApplicationRepository.submit(...) -> GuestLoanApplicationRecord`.
 - Submission response contains only `application_reference`, `status`, `detail`.
 
-- [ ] **Step 1: Write failing API tests** proving strict input, normalized email/phone/text, fake evidence references accepted, and no Auth/Client dependency is called.
+- [x] **Step 1: Write failing API tests** proving strict input, normalized email/phone/text, fake evidence references accepted, and no Auth/Client dependency is called.
 - [ ] **Step 2: Verify RED** with `python -m pytest gilbic_backend/tests/test_guest_loan_application_api.py -q`.
 - [ ] **Step 3: Implement repository reference generation** using one PostgreSQL `nextval('lending.guest_loan_application_reference_seq')` and `APP-{UTC_YEAR}-{sequence:06d}`; insert the submitted row in one transaction.
 - [ ] **Step 4: Implement strict Pydantic request** with bounded strings, positive requested amount/term, non-negative affordability values, required `privacy_consent=True`, required `accuracy_declaration=True`, and `requested_loan_type` normalized to `regular` or `7x7`.
