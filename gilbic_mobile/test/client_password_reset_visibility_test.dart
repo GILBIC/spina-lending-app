@@ -81,14 +81,27 @@ void main() {
         _session(role, permissions: const <String>['client.credential.manage']),
       );
 
-      expect(find.byKey(const Key('account-reset-client-password')), findsOneWidget);
+      await tester.drag(find.byType(ListView), const Offset(0, -320));
+      await tester.pumpAndSettle();
+
+      final resetControl = find.byKey(const Key('account-reset-client-password'));
+      expect(resetControl, findsOneWidget);
       expect(find.text('Reset Client password'), findsOneWidget);
+
+      await tester.tap(resetControl);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('client-password-reset-page')), findsOneWidget);
+      expect(find.text('Search Client accounts by name, username, or email.'), findsOneWidget);
     });
   }
 
   for (final role in <AppRole>[AppRole.client, AppRole.collector]) {
     testWidgets('${role.name} cannot see Client password reset', (tester) async {
       await _pump(tester, _session(role, permissions: const <String>[]));
+
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('account-reset-client-password')), findsNothing);
     });
