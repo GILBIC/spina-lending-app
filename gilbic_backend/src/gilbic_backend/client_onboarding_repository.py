@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from .database import open_connection
@@ -231,6 +231,96 @@ class PostgresClientOnboardingRepository:
             status=cast(ClientOnboardingStatus, str(row[1])),
         )
 
+    def _promote_locked(
+        self,
+        *,
+        cursor: Any,
+        actor_user_id: UUID,
+        applicant_id: UUID,
+        application_reference: str,
+        full_name: str,
+        phone_number: str,
+    ) -> ClientOnboardingRecord:
+        client_code = application_reference.replace("APP-", "CLIENT-", 1)
+        cursor.execute(
+            """
+            insert into lending.clients (
+                client_code,
+                full_name,
+                phone_number,
+                area,
+                status,
+                user_id
+            )
+            values (%s, %s, %s, null, 'inactive', null)
+            returning id
+            """,
+            (client_code, full_name, phone_number),
+        )
+        client_row = cursor.fetchone()
+        if client_row is None:
+            raise RuntimeError("Unable to create Client identity.")
+        client_id = client_row[0]
+
+        cursor.execute(
+            """
+            update lending.client_onboarding_applicants
+            set
+                status = 'eligible_for_cif',
+                promoted_client_id = %s,
+                eligibility_reviewed_by_user_id = %s,
+                eligibility_reviewed_at = now(),
+                updated_at = now()
+            where id = %s
+            """,
+            (client_id, actor_user_id, applicant_id),
+        )
+
+        cursor.execute(
+            """
+            insert into core.audit_logs (
+                actor_user_id,
+                action,
+                target_type,
+                target_id,
+                details
+            )
+            values (
+                %s,
+                'client_onboarding.eligibility_approved',
+                'client_onboarding_applicant',
+                %s,
+                jsonb_build_object('client_id', %s::text)
+            )
+            """,
+            (actor_user_id, applicant_id, client_id),
+        )
+        cursor.execute(
+            """
+            insert into core.audit_logs (
+                actor_user_id,
+                action,
+                target_type,
+                target_id,
+                details
+            )
+            values (
+                %s,
+                'client_onboarding.client_created',
+                'client',
+                %s,
+                jsonb_build_object('application_reference', %s::text)
+            )
+            """,
+            (actor_user_id, client_id, application_reference),
+        )
+
+        return ClientOnboardingRecord(
+            application_reference=application_reference,
+            status="eligible_for_cif",
+            promoted_client_id=client_id,
+        )
+
     def approve_normal_eligibility(
         self,
         *,
@@ -278,41 +368,99 @@ class PostgresClientOnboardingRepository:
                         status=current_status,
                     )
 
-                client_code = application_reference.replace("APP-", "CLIENT-", 1)
+                return self._promote_locked(
+                    cursor=cursor,
+                    actor_user_id=actor_user_id,
+                    applicant_id=applicant_id,
+                    application_reference=application_reference,
+                    full_name=str(row[2]),
+                    phone_number=str(row[3]),
+                )
+
+    def bypass_and_approve_eligibility(
+        self,
+        *,
+        actor_user_id: UUID,
+        applicant_id: UUID,
+        bypassed_requirements: list[str] | tuple[str, ...],
+        reason: str,
+    ) -> ClientOnboardingRecord:
+        with open_connection() as connection:
+            with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    insert into lending.clients (
-                        client_code,
+                    select
+                        application_reference,
+                        status,
                         full_name,
                         phone_number,
-                        area,
-                        status,
-                        user_id
-                    )
-                    values (%s, %s, %s, null, 'inactive', null)
-                    returning id
+                        national_id_status,
+                        tin_id_status,
+                        meralco_bill_status,
+                        collector_visit_status,
+                        promoted_client_id
+                    from lending.client_onboarding_applicants
+                    where id = %s
+                    for update
                     """,
-                    (client_code, str(row[2]), str(row[3])),
+                    (applicant_id,),
                 )
-                client_row = cursor.fetchone()
-                if client_row is None:
-                    raise RuntimeError("Unable to create Client identity.")
-                client_id = client_row[0]
+                row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError("Onboarding applicant was not found.")
+
+                application_reference = str(row[0])
+                current_status = cast(ClientOnboardingStatus, str(row[1]))
+                promoted_client_id = row[8]
+                if current_status == "eligible_for_cif" and promoted_client_id is not None:
+                    return ClientOnboardingRecord(
+                        application_reference=application_reference,
+                        status=current_status,
+                        promoted_client_id=promoted_client_id,
+                    )
+
+                requirements_by_name = {
+                    "national_id": str(row[4]),
+                    "tin_id": str(row[5]),
+                    "meralco_bill": str(row[6]),
+                    "collector_visit": str(row[7]),
+                }
+                non_passed = {
+                    name
+                    for name, requirement_status in requirements_by_name.items()
+                    if requirement_status != "passed"
+                }
+                normalized_requirements = sorted(set(bypassed_requirements))
+                normalized_reason = " ".join(reason.split())
+
+                if (
+                    not non_passed
+                    or set(normalized_requirements) != non_passed
+                    or len(normalized_reason) < 3
+                ):
+                    return ClientOnboardingRecord(
+                        application_reference=application_reference,
+                        status=current_status,
+                    )
 
                 cursor.execute(
                     """
                     update lending.client_onboarding_applicants
                     set
-                        status = 'eligible_for_cif',
-                        promoted_client_id = %s,
-                        eligibility_reviewed_by_user_id = %s,
-                        eligibility_reviewed_at = now(),
+                        bypassed_requirements = %s::text[],
+                        bypass_reason = %s,
+                        bypassed_by_user_id = %s,
+                        bypassed_at = now(),
                         updated_at = now()
                     where id = %s
                     """,
-                    (client_id, actor_user_id, applicant_id),
+                    (
+                        normalized_requirements,
+                        normalized_reason,
+                        actor_user_id,
+                        applicant_id,
+                    ),
                 )
-
                 cursor.execute(
                     """
                     insert into core.audit_logs (
@@ -324,36 +472,28 @@ class PostgresClientOnboardingRepository:
                     )
                     values (
                         %s,
-                        'client_onboarding.eligibility_approved',
+                        'client_onboarding.requirements_bypassed',
                         'client_onboarding_applicant',
                         %s,
-                        jsonb_build_object('client_id', %s::text)
+                        jsonb_build_object(
+                            'bypassed_requirements', to_jsonb(%s::text[]),
+                            'reason', %s::text
+                        )
                     )
                     """,
-                    (actor_user_id, applicant_id, client_id),
-                )
-                cursor.execute(
-                    """
-                    insert into core.audit_logs (
+                    (
                         actor_user_id,
-                        action,
-                        target_type,
-                        target_id,
-                        details
-                    )
-                    values (
-                        %s,
-                        'client_onboarding.client_created',
-                        'client',
-                        %s,
-                        jsonb_build_object('application_reference', %s::text)
-                    )
-                    """,
-                    (actor_user_id, client_id, application_reference),
+                        applicant_id,
+                        normalized_requirements,
+                        normalized_reason,
+                    ),
                 )
 
-        return ClientOnboardingRecord(
-            application_reference=application_reference,
-            status="eligible_for_cif",
-            promoted_client_id=client_id,
-        )
+                return self._promote_locked(
+                    cursor=cursor,
+                    actor_user_id=actor_user_id,
+                    applicant_id=applicant_id,
+                    application_reference=application_reference,
+                    full_name=str(row[2]),
+                    phone_number=str(row[3]),
+                )

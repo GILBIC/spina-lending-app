@@ -13,6 +13,14 @@ from .client_onboarding_repository import PostgresClientOnboardingRepository
 from .request_auth import authenticated_device_context
 
 
+BypassRequirement = Literal[
+    "national_id",
+    "tin_id",
+    "meralco_bill",
+    "collector_visit",
+]
+
+
 def _normalize_text(value: str) -> str:
     return " ".join(value.split())
 
@@ -104,6 +112,27 @@ class CollectorVisitRequest(StrictOnboardingRequest):
             return None
         normalized = value.strip()
         return normalized or None
+
+
+class ManagementBypassRequest(StrictOnboardingRequest):
+    bypassed_requirements: list[BypassRequirement] = Field(min_length=1, max_length=4)
+    reason: str = Field(min_length=3, max_length=500)
+
+    @field_validator("bypassed_requirements")
+    @classmethod
+    def normalize_bypassed_requirements(
+        cls,
+        value: list[BypassRequirement],
+    ) -> list[BypassRequirement]:
+        return sorted(set(value))
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        normalized = _normalize_text(value)
+        if len(normalized) < 3:
+            raise ValueError("A bypass reason of at least 3 characters is required.")
+        return normalized
 
 
 def client_onboarding_repository_dependency() -> PostgresClientOnboardingRepository:
@@ -249,6 +278,54 @@ def create_client_onboarding_router() -> APIRouter:
                 detail=(
                     "All four pre-CIF requirements must be passed "
                     "before normal eligibility."
+                ),
+            )
+
+        return {
+            "status": record.status,
+            "client_id": str(record.promoted_client_id),
+        }
+
+    @router.post(
+        "/api/v1/management/onboarding/applicants/{applicant_id}/eligibility/bypass"
+    )
+    def bypass_and_approve_eligibility(
+        applicant_id: UUID,
+        body: ManagementBypassRequest,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        onboarding: PostgresClientOnboardingRepository = Depends(
+            client_onboarding_repository_dependency
+        ),
+    ) -> dict[str, str]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="client_onboarding.bypass",
+            permission_error="Management onboarding bypass permission is required.",
+        )
+        if "management" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Management role is required to bypass onboarding requirements.",
+            )
+
+        record = onboarding.bypass_and_approve_eligibility(
+            actor_user_id=actor.user_id,
+            applicant_id=applicant_id,
+            bypassed_requirements=body.bypassed_requirements,
+            reason=body.reason,
+        )
+        if record.status != "eligible_for_cif" or record.promoted_client_id is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Bypassed requirements must exactly match the current non-passed "
+                    "requirements; if all four are already passed, use normal eligibility."
                 ),
             )
 
