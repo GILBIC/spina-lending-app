@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/account/account_repository.dart';
@@ -6,6 +8,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/account/client_password_reset_page.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 final _now = DateTime.utc(2026, 9, 6, 1);
 
@@ -114,6 +118,69 @@ void main() {
     expect(find.byKey(const Key('client-password-search')), findsOneWidget);
     expect(find.byKey(const Key('client-password-search-submit')), findsOneWidget);
     expect(find.text('Search'), findsOneWidget);
+  });
+
+  testWidgets('Client password search uses the protected scoped endpoint and shows results',
+      (tester) async {
+    var requests = 0;
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ClientPasswordResetPage(
+              session: _session(
+                AppRole.employee,
+                permissions: const <String>['client.credential.manage'],
+              ),
+              deviceIdentityProvider: _identity(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('client-password-search')),
+          '  Maria Santos  ',
+        );
+        await tester.tap(find.byKey(const Key('client-password-search-submit')));
+        await tester.pumpAndSettle();
+
+        expect(requests, 1);
+        expect(find.text('Maria Santos'), findsOneWidget);
+        expect(find.text('spina.c.001'), findsOneWidget);
+        expect(find.text('client@example.com'), findsOneWidget);
+      },
+      () => MockClient((request) async {
+        requests += 1;
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/v1/management/client-accounts');
+        expect(request.url.queryParameters['q'], 'Maria Santos');
+        expect(request.headers['Authorization'], 'Bearer employee-token');
+        expect(request.headers['X-Device-Id'], startsWith('gilbic-'));
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'accounts': <Object?>[
+                <String, Object?>{
+                  'id': '33333333-3333-4333-8333-333333333333',
+                  'username': 'spina.c.001',
+                  'email': 'client@example.com',
+                  'full_name': 'Maria Santos',
+                  'status': 'active',
+                  'roles': <String>['client'],
+                  'device_count': 0,
+                  'created_at': '2026-09-05T13:00:00Z',
+                  'updated_at': '2026-09-05T13:00:00Z',
+                },
+              ],
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
   });
 
   for (final role in <AppRole>[AppRole.client, AppRole.collector]) {
