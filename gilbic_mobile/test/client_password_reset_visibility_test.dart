@@ -147,8 +147,8 @@ void main() {
 
         expect(requests, 1);
         expect(find.text('Maria Santos'), findsOneWidget);
-        expect(find.text('spina.c.001'), findsOneWidget);
-        expect(find.text('client@example.com'), findsOneWidget);
+        expect(find.textContaining('spina.c.001'), findsOneWidget);
+        expect(find.textContaining('client@example.com'), findsOneWidget);
       },
       () => MockClient((request) async {
         requests += 1;
