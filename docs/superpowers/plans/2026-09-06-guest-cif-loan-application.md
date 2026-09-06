@@ -12,18 +12,32 @@
 
 ## Current checkpoint — 2026-09-06
 
-Task 1 is complete and exact-head SPINA CI #1860 is fully green on `7831035fbe68341a55fb13e669606d66d7f90d5f`. Task 2 has entered RED on current Draft head with focused public guest-submission API contract tests; the guest API/repository are intentionally not implemented yet.
+Task 1 originally passed exact-head SPINA CI #1860 on `7831035fbe68341a55fb13e669606d66d7f90d5f`. Management then refined the new-client identity requirements, so the schema contract is intentionally reopened to **RED** before production migration changes are made. Task 2 public submission is also intentionally RED because the guest API/repository do not exist yet.
+
+Approved identity boundary now is:
+
+- full CIF only for a brand-new Client;
+- new-client CIF requires eGov-verified National ID evidence, eGov-verified TIN ID evidence, Meralco bill evidence for address/location proof, and a baseline live face selfie scan evidence reference;
+- the original CIF face scan must pass liveness and becomes the Client's baseline identity reference;
+- renewal is not another CIF and requires only signature + live face selfie scan;
+- a renewal face scan must pass liveness and match the original baseline;
+- do not repeat CIF, National ID, TIN ID, or Meralco bill merely because the Client renews.
+
+The renewal rule is recorded for continuity only. #419 remains focused on new-client onboarding and must not grow into a renewal engine or biometric-provider integration.
 
 ## Global Constraints
 
 - Do not create `core.users` or Client permissions from public guest submission.
 - Do not create `lending.loans`, schedules, journals, contracts, disbursements, or releases from #419.
 - Keep CIF lean; do not restore the abandoned overbuilt CIF.
-- Store only identity/selfie evidence references in the normal application row; no raw binary evidence or unnecessary government-ID values.
+- Full CIF is new-client-only; do not require it again on renewal.
+- New-client identity/address evidence references are specifically: eGov National ID, eGov TIN ID, Meralco bill, and baseline live face scan.
+- Store only controlled evidence references in the normal application row; no raw binary identity documents, raw face-scan media, reusable biometric templates, or unnecessary government-ID values.
+- Renewal requirements are only signature + live face selfie scan; later renewal implementation must enforce liveness + match to the original baseline.
 - Public status is reference + verified one-time challenge, never reference-only.
 - Review/decision is Management-only in this version.
 - Reuse `/api/v1/management/client-accounts` for credentials after borrower promotion; do not duplicate Auth logic.
-- Development uses fake applicant/evidence/OTP values only. No production deployment, live credential delivery, live applicant communication, live DB/Auth mutation, or real identity upload.
+- Development uses fake applicant/evidence/OTP values only. No production deployment, live credential delivery, live applicant communication, live DB/Auth mutation, real identity upload, live eGov verification, or live biometric provider call.
 - TDD is strict RED -> GREEN for every behavior.
 
 ---
@@ -39,97 +53,32 @@ Task 1 is complete and exact-head SPINA CI #1860 is fully green on `7831035fbe68
 - Produces permission: `loan_application.manage`, Management only.
 
 - [x] **Step 1: Add the failing migration contract test**
+- [x] **Step 2: Verify the original RED** because `0112_add_guest_loan_applications.sql` did not exist.
+- [x] **Step 3: Add the original minimum additive migration.**
+- [x] **Step 4: Re-run original migration contract GREEN.**
+- [x] **Step 5: Commit original persistence slice** as `feat: add guest loan application persistence`.
 
-```python
-from pathlib import Path
+Original persistence slice was hosted-GREEN in SPINA CI #1860 on `7831035fbe68341a55fb13e669606d66d7f90d5f`.
 
-SQL_PATH = Path(__file__).resolve().parents[1] / "sql" / "0112_add_guest_loan_applications.sql"
+#### Task 1A: Refined new-client identity evidence contract
 
+Management later refined the evidence requirements. Preserve the previous green checkpoint as history, but reopen the schema contract under TDD rather than editing production first.
 
-def test_guest_application_is_pre_account_and_management_reviewed() -> None:
-    sql = SQL_PATH.read_text(encoding="utf-8").lower()
-    assert "create table if not exists lending.guest_loan_applications" in sql
-    assert "guest_loan_application_reference_seq" in sql
-    assert "application_reference text not null unique" in sql
-    assert "status in ('submitted', 'under_review', 'approved', 'rejected')" in sql
-    assert "promoted_client_id uuid unique" in sql
-    assert "references lending.clients(id)" in sql
-    assert "reviewed_by_user_id uuid" in sql
-    assert "references core.users(id)" in sql
-    assert "user_id uuid" not in sql.replace("reviewed_by_user_id uuid", "")
-    assert "client.credential.manage" not in sql
-    assert "loan_application.manage" in sql
-    assert "('management', 'loan_application.manage')" in sql
-    assert "('employee', 'loan_application.manage')" not in sql
-    assert "('collector', 'loan_application.manage')" not in sql
-    assert "('client', 'loan_application.manage')" not in sql
-```
-
-- [x] **Step 2: Run only the test and verify RED**
-
-Run: `python -m pytest gilbic_backend/tests/test_guest_loan_application_migration.py -q`
-
-Expected: FAIL because `0112_add_guest_loan_applications.sql` does not exist.
-
-- [x] **Step 3: Add the minimum additive migration**
-
-Create one idempotent `BEGIN/COMMIT` migration with these columns:
+Required new-client columns after GREEN:
 
 ```sql
-CREATE SEQUENCE IF NOT EXISTS lending.guest_loan_application_reference_seq;
-
-CREATE TABLE IF NOT EXISTS lending.guest_loan_applications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    application_reference TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL DEFAULT 'submitted'
-        CHECK (status IN ('submitted', 'under_review', 'approved', 'rejected')),
-    full_name TEXT NOT NULL,
-    phone_number TEXT NOT NULL,
-    email TEXT,
-    present_address TEXT NOT NULL,
-    permanent_address TEXT NOT NULL,
-    livelihood_type TEXT NOT NULL,
-    livelihood_details TEXT,
-    declared_monthly_income NUMERIC(18,2) NOT NULL CHECK (declared_monthly_income >= 0),
-    declared_monthly_expenses NUMERIC(18,2) NOT NULL CHECK (declared_monthly_expenses >= 0),
-    declared_monthly_debt_payments NUMERIC(18,2) NOT NULL CHECK (declared_monthly_debt_payments >= 0),
-    requested_loan_type TEXT NOT NULL CHECK (requested_loan_type IN ('regular', '7x7')),
-    requested_amount NUMERIC(18,2) NOT NULL CHECK (requested_amount > 0),
-    requested_term_days INTEGER NOT NULL CHECK (requested_term_days > 0),
-    loan_purpose TEXT NOT NULL,
-    national_id_evidence_reference TEXT NOT NULL,
-    tin_id_evidence_reference TEXT NOT NULL,
-    selfie_evidence_reference TEXT NOT NULL,
-    privacy_consent BOOLEAN NOT NULL CHECK (privacy_consent),
-    accuracy_declaration BOOLEAN NOT NULL CHECK (accuracy_declaration),
-    applicant_status_note TEXT,
-    internal_review_note TEXT,
-    submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    review_started_at TIMESTAMPTZ,
-    reviewed_at TIMESTAMPTZ,
-    reviewed_by_user_id UUID REFERENCES core.users(id) ON DELETE SET NULL,
-    promoted_client_id UUID UNIQUE REFERENCES lending.clients(id) ON DELETE RESTRICT,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (btrim(application_reference) <> ''),
-    CHECK (btrim(full_name) <> ''),
-    CHECK (btrim(phone_number) <> '')
-);
+national_id_egov_evidence_reference TEXT NOT NULL,
+tin_id_egov_evidence_reference TEXT NOT NULL,
+meralco_bill_evidence_reference TEXT NOT NULL,
+baseline_face_scan_evidence_reference TEXT NOT NULL,
 ```
 
-Add indexes on `(status, submitted_at DESC)` and lower-cased application reference, then add `loan_application.manage` to `core.permissions` and only the Management role.
+The normal row stores references only. `baseline_face_scan_evidence_reference` represents the approved live baseline enrollment evidence; no raw biometric template belongs in this table.
 
-- [x] **Step 4: Re-run migration contract test**
-
-Run: `python -m pytest gilbic_backend/tests/test_guest_loan_application_migration.py -q`
-
-Expected: PASS.
-
-- [x] **Step 5: Commit**
-
-```bash
-git add gilbic_backend/tests/test_guest_loan_application_migration.py gilbic_backend/sql/0112_add_guest_loan_applications.sql
-git commit -m "feat: add guest loan application persistence"
-```
+- [x] **Step 1A.1: Update migration contract test first** to require the four approved evidence references.
+- [ ] **Step 1A.2: Verify revised RED** against the still-old production migration.
+- [ ] **Step 1A.3: Make the minimum migration adjustment** only after RED is observed. Rename/replace the old generic National/TIN/selfie reference fields with the approved eGov/Meralco/baseline-face names without adding unrelated identity fields.
+- [ ] **Step 1A.4: Re-run focused migration contract GREEN.**
 
 ---
 
@@ -147,13 +96,15 @@ git commit -m "feat: add guest loan application persistence"
 - Produces: `GuestLoanApplicationRepository.submit(...) -> GuestLoanApplicationRecord`.
 - Submission response contains only `application_reference`, `status`, `detail`.
 
-- [x] **Step 1: Write failing API tests** proving strict input, normalized email/phone/text, fake evidence references accepted, and no Auth/Client dependency is called.
+- [x] **Step 1: Write failing API tests** proving strict input, normalized email/phone/text, required fake eGov National ID/TIN, Meralco bill, and baseline-face evidence references, and no Auth/Client dependency is called.
 - [ ] **Step 2: Verify RED** with `python -m pytest gilbic_backend/tests/test_guest_loan_application_api.py -q`.
 - [ ] **Step 3: Implement repository reference generation** using one PostgreSQL `nextval('lending.guest_loan_application_reference_seq')` and `APP-{UTC_YEAR}-{sequence:06d}`; insert the submitted row in one transaction.
-- [ ] **Step 4: Implement strict Pydantic request** with bounded strings, positive requested amount/term, non-negative affordability values, required `privacy_consent=True`, required `accuracy_declaration=True`, and `requested_loan_type` normalized to `regular` or `7x7`.
+- [ ] **Step 4: Implement strict Pydantic request** with bounded strings, positive requested amount/term, non-negative affordability values, required `privacy_consent=True`, required `accuracy_declaration=True`, `requested_loan_type` normalized to `regular` or `7x7`, and non-empty `national_id_egov_evidence_reference`, `tin_id_egov_evidence_reference`, `meralco_bill_evidence_reference`, and `baseline_face_scan_evidence_reference`.
 - [ ] **Step 5: Mount the router** in `main.py` and return HTTP 201 with no authentication or device requirement.
 - [ ] **Step 6: Add disposable PostgreSQL repository test** proving one submission creates exactly one guest row and zero `core.users`, zero `lending.clients`, and zero `lending.loans` rows.
 - [ ] **Step 7: Run focused tests GREEN** and commit `feat: add public guest loan submission`.
+
+Do not implement live eGov validation, face-liveness provider calls, face matching, or renewal in Task 2. The API accepts controlled evidence references produced by the separately approved evidence boundary.
 
 ---
 
@@ -173,7 +124,7 @@ git commit -m "feat: add guest loan application persistence"
 
 - [ ] **Step 1: RED tests** prove reference-only lookup does not exist, invalid challenge/code reveals no application, and verified lookup returns only `application_reference`, `status`, `submitted_at`, `reviewed_at`, `applicant_status_note`.
 - [ ] **Step 2: Implement an injectable verifier protocol** plus a disabled default adapter that returns 503 when no approved provider is configured. Tests override the dependency with an in-memory fake; no live SMS/email is sent.
-- [ ] **Step 3: Add repository safe-status projection** that never selects evidence refs, affordability values, internal notes, reviewer ID, promoted client ID, or credentials.
+- [ ] **Step 3: Add repository safe-status projection** that never selects evidence refs, affordability values, internal notes, reviewer ID, promoted client ID, biometric data, or credentials.
 - [ ] **Step 4: Run focused status tests GREEN** and commit `feat: add verified guest application status lookup`.
 
 ---
@@ -200,6 +151,8 @@ git commit -m "feat: add guest loan application persistence"
 - [ ] **Step 6: Implement rejection** with safe applicant note + internal note and no borrower/account creation.
 - [ ] **Step 7: Run focused API/PostgreSQL tests GREEN** and commit `feat: add management guest application review`.
 
+Promotion must preserve the baseline face-scan evidence relationship needed for later renewal identity checks, but #419 must not add the renewal execution flow itself.
+
 ---
 
 ### Task 5: Signed-out Web and Mobile entry surfaces
@@ -217,7 +170,7 @@ git commit -m "feat: add guest loan application persistence"
 
 **Interfaces:**
 - Signed-out surface exposes exactly `Sign in`, `Apply for a loan`, `Check application status`.
-- Web/Mobile form submits only the public API fields from Task 2.
+- Web/Mobile new-client form submits only the public API fields from Task 2, including the four approved evidence references.
 - Status page uses Task 3 challenge + verification flow.
 
 - [ ] **Step 1: RED Web tests** assert the three entry actions and no Client self-registration action.
@@ -225,6 +178,8 @@ git commit -m "feat: add guest loan application persistence"
 - [ ] **Step 3: RED Flutter tests** assert the same three actions and navigation.
 - [ ] **Step 4: Add minimal Flutter pages** using existing API/config/session conventions; do not persist sensitive evidence values beyond the active form submission.
 - [ ] **Step 5: Run Node and Flutter focused tests GREEN** and commit `feat: add guest application entry surfaces`.
+
+Do not place renewal signature/face-scan UI into the Guest CIF form. Renewal is a separate existing-client path.
 
 ---
 
@@ -248,3 +203,13 @@ git commit -m "feat: add guest loan application persistence"
 - [ ] **Step 4: Run disposable PostgreSQL proof** for submit -> review -> approve -> single borrower, with zero user/loan side effects before the separate account step.
 - [ ] **Step 5: Run the repository's normal unified validation locally when available, then rely on exact-head SPINA CI for hosted proof.**
 - [ ] **Step 6: Update GitHub #419, Notion current-state checkpoint, and Create State with the exact head/CI state. No merge until explicit Management approval.**
+
+---
+
+### Deferred renewal identity contract
+
+This is an approved product rule, not part of #419 implementation scope:
+
+`Existing Client renewal -> signature -> live face selfie scan -> liveness pass -> face match against original CIF baseline -> continue renewal review`
+
+Only signature and the live face selfie scan are renewal requirements. Do not automatically add repeat CIF, eGov ID, TIN ID, Meralco bill, or other KYC documents to renewal. Implement this later under its own RED -> GREEN slice against the existing renewal workflow.
