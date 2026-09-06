@@ -241,6 +241,22 @@ def create_client_account_router() -> APIRouter:
                 detail="The selected SPINA account has no authentication identity.",
             )
 
+        try:
+            repository.record_password_reset_requested(
+                actor_user_id=actor.user_id,
+                target_user_id=target_user_id,
+            )
+        except (AccountConflict, AccountNotFound) as exc:
+            raise _repository_exception(exc) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "SPINA could not record the password reset audit. "
+                    "No password was changed."
+                ),
+            ) from exc
+
         password = generate_password()
         try:
             auth_admin.update_user_password(
@@ -280,8 +296,8 @@ def create_client_account_router() -> APIRouter:
                 delivery_sent=delivery.sent,
             )
         except Exception:
-            # Supabase already accepted the new password. Never hide that now-active
-            # credential from Management merely because the secondary audit write failed.
+            # The pre-reset audit preserves who requested the mutation. Supabase already
+            # accepted this generated password, so still return it exactly once.
             audit_recorded = False
 
         return {
