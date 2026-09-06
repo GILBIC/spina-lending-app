@@ -201,6 +201,21 @@ class SupabaseAuthClient:
         self._raise_for_error(response)
         return self._session_from_payload(response.json())
 
+    def update_password(self, *, access_token: str, password: str) -> None:
+        try:
+            response = self._client.put(
+                "/auth/v1/user",
+                headers=self._headers(access_token=access_token),
+                json={"password": password},
+            )
+        except httpx.HTTPError as exc:
+            raise SupabaseAuthError(
+                "Authentication service is unavailable.",
+                status_code=503,
+                code="auth_unavailable",
+            ) from exc
+        self._raise_for_error(response)
+
     def sign_out(self, *, access_token: str) -> None:
         try:
             response = self._client.post(

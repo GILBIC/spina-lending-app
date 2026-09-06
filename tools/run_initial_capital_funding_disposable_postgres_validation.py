@@ -20,6 +20,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_initial_capital_funding_migration.py",
     TEST_ROOT / "test_initial_capital_funding_api_contract.py",
     TEST_ROOT / "test_initial_capital_funding_upgrade_postgres.py",
+    TEST_ROOT / "test_client_account_creation_postgres.py",
 )
 
 
@@ -52,8 +53,9 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
             "SPINA schema through 0080, apply 0081 only inside rollback-isolated tests, "
-            "and prove protected evidence-backed initial-capital funding through the "
-            "existing General Journal without synthetic opening balances or automatic posting."
+            "prove protected evidence-backed initial-capital funding through the existing "
+            "General Journal, and exercise Management-created Client account repository "
+            "behavior against the same disposable schema."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -114,8 +116,9 @@ def main() -> int:
             "through 0080 upgraded with 0081 inside rollback-isolated tests; exact "
             "retained funding evidence, Management permissions, Dr selected Cash/Bank "
             "/ Cr Capital 3000, exact retry/different-retry rejection, protected General "
-            "Journal reuse, manual bypass/reversal guards, and forced-audit atomic rollback "
-            "were proven. No opening-balance workbook or automatic source posting was used."
+            "Journal reuse, manual bypass/reversal guards, forced-audit atomic rollback, "
+            "and Management-created Client borrower-link repository behavior were proven. "
+            "No opening-balance workbook or automatic source posting was used."
         )
         return 0
     except psycopg.Error as error:

@@ -126,4 +126,31 @@ void main() {
     expect(device.status, 'revoked');
     expect(device.isCurrent, isFalse);
   });
+
+  test('changes own password through the protected canonical endpoint', () async {
+    final repository = SpinaAccountRepository(
+      accountUri: Uri.parse('https://spina.test/account'),
+      deviceIdentityProvider: _identity(),
+      client: MockClient((request) async {
+        expect(request.method, 'PATCH');
+        expect(request.url.path, '/api/v1/auth/password');
+        expect(request.headers['Authorization'], 'Bearer access-token');
+        expect(
+          request.headers['X-Device-Id'],
+          'gilbic-050505050505050505050505050505050505050505050505',
+        );
+        expect(request.headers['content-type'], contains('application/json'));
+        expect(
+          jsonDecode(request.body),
+          <String, Object?>{'password': 'new-password-123'},
+        );
+        return http.Response(
+          jsonEncode(<String, Object?>{'success': true}),
+          200,
+        );
+      }),
+    );
+
+    await repository.changePassword(_session, 'new-password-123');
+  });
 }

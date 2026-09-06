@@ -61,6 +61,18 @@ class Settings(BaseSettings):
     mobile_android_minimum_version: str = ""
     mobile_ios_minimum_version: str = ""
 
+    # Client credential email boundary. The Gmail identity and site are placeholders;
+    # all transport values remain configuration so a future SPINA domain/provider can
+    # replace them without changing account business logic.
+    credential_email_sender_name: str = "SPINA Lending Company"
+    credential_email_from_address: str = "spinalendingcompany@gmail.com"
+    credential_email_site_label: str = "spina.com.ph"
+    credential_smtp_host: str = "smtp.gmail.com"
+    credential_smtp_port: int = 587
+    credential_smtp_username: str = "spinalendingcompany@gmail.com"
+    credential_smtp_password: str = Field(default="", repr=False)
+    credential_smtp_timeout_seconds: float = 10.0
+
     # Provider-neutral GCash boundary. Credentials stay on the backend only.
     # V1 defaults to disabled until Management receives a business provider API.
     gcash_mode: str = "disabled"
@@ -83,6 +95,15 @@ class Settings(BaseSettings):
     @property
     def supabase_admin_configured(self) -> bool:
         return bool(self.supabase_url.strip() and self.supabase_secret_key.strip())
+
+    @property
+    def credential_smtp_configured(self) -> bool:
+        return bool(
+            self.credential_smtp_host.strip()
+            and self.credential_smtp_username.strip()
+            and self.credential_smtp_password.strip()
+            and self.credential_email_from_address.strip()
+        )
 
 
 @lru_cache(maxsize=1)

@@ -160,8 +160,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ManagementAlertsAuditNavigation.staffDevices =>
         session.hasPermission('account.manage') ||
             session.hasPermission('device.manage'),
-      ManagementAlertsAuditNavigation.clientRegistrations =>
-        session.hasPermission('account.manage'),
+      ManagementAlertsAuditNavigation.clientRegistrations => false,
       ManagementAlertsAuditNavigation.renewals => session.hasPermission(
         'renewal.manage',
       ),
@@ -897,7 +896,6 @@ const _attentionMetricKeys = <ManagementDashboardMetricKey>[
   ManagementDashboardMetricKey.assignedRemittances,
   ManagementDashboardMetricKey.protectedRenewals,
   ManagementDashboardMetricKey.staffRegistrations,
-  ManagementDashboardMetricKey.clientRegistrations,
   ManagementDashboardMetricKey.collectorMobileDevices,
   ManagementDashboardMetricKey.borrowerSupport,
   ManagementDashboardMetricKey.unreadActivity,
@@ -1246,8 +1244,6 @@ const _metricActions = <ManagementDashboardMetricKey, _ManagementAction>{
   ManagementDashboardMetricKey.protectedRenewals: _ManagementAction.renewals,
   ManagementDashboardMetricKey.staffRegistrations:
       _ManagementAction.staffDevices,
-  ManagementDashboardMetricKey.clientRegistrations:
-      _ManagementAction.clientRegistrationApprovals,
   ManagementDashboardMetricKey.collectorMobileDevices:
       _ManagementAction.staffDevices,
   ManagementDashboardMetricKey.borrowerSupport: _ManagementAction.support,
@@ -1300,7 +1296,11 @@ class _ManagementSection {
       title: title,
       description: description,
       modules: modules
-          .where((module) => module.isAvailableFor(session))
+          .where(
+            (module) =>
+                module.action != _ManagementAction.clientRegistrationApprovals &&
+                module.isAvailableFor(session),
+          )
           .toList(growable: false),
     );
   }

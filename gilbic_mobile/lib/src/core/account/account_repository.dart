@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -80,6 +82,11 @@ abstract interface class AccountRepository {
     UserSession session,
     String deviceId,
   );
+
+  Future<void> changePassword(
+    UserSession session,
+    String password,
+  );
 }
 
 class SpinaAccountRepository implements AccountRepository {
@@ -151,6 +158,43 @@ class SpinaAccountRepository implements AccountRepository {
       );
     }
     return _device(device);
+  }
+
+  @override
+  Future<void> changePassword(
+    UserSession session,
+    String password,
+  ) async {
+    if (password.isEmpty || password.length > 200) {
+      throw const SpinaApiException('Enter a valid new password.');
+    }
+    final identity = await _loadDeviceIdentity();
+    final headers = _headers(session, identity)
+      ..['Content-Type'] = 'application/json';
+    final response = await _send(
+      () => _client.patch(
+        ApiConfig.endpoint('/api/v1/auth/password'),
+        headers: headers,
+        body: jsonEncode(<String, String>{'password': password}),
+      ),
+      offlineMessage:
+          'Gilbic could not change your password. Check the connection and try again.',
+    );
+    Map<String, dynamic> payload;
+    try {
+      payload = decodeJsonObject(response.body);
+    } on Object {
+      throw SpinaApiException(
+        'The SPINA server returned unreadable account data.',
+        statusCode: response.statusCode,
+      );
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw SpinaApiException(
+        apiErrorMessage(payload, statusCode: response.statusCode),
+        statusCode: response.statusCode,
+      );
+    }
   }
 
   Future<DeviceIdentity> _loadDeviceIdentity() async {

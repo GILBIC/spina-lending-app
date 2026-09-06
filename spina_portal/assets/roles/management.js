@@ -1,4 +1,8 @@
 import { buildManagementViewModel } from '../presenters.js';
+import {
+  bindClientAccountAdmin,
+  clientAccountAdminMarkup,
+} from '../client-account-admin.js';
 import { staffInviteMarkup, submitStaffInvitation } from '../staff-invite.js';
 import {
   changeManagedDeviceStatus,
@@ -71,11 +75,6 @@ function renewalQueue(items) {
 function supportQueue(items) {
   if (!items.length) return emptyState('No open support request requires review.');
   return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div></div>${badge(request.status)}</div><p>${escapeHtml(request.message || '')}</p>${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}<form class="entry-form management-support-review" data-request-id="${escapeHtml(request.request_id)}"><label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label><label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label><button class="button button-primary" type="submit">Save response</button></form></article>`).join('')}</div>`;
-}
-
-function registrationQueue(items) {
-  if (!items.length) return emptyState('No pending Client registration requires review.');
-  return `<div class="list-stack">${items.map((registration) => `<article class="list-item registration-card" data-registration-user-id="${escapeHtml(registration.user_id)}"><div class="section-heading"><div><strong>${escapeHtml(registration.full_name || registration.username)}</strong><div class="meta">${escapeHtml(registration.username || '')} · ${escapeHtml(registration.email || '')}</div></div>${badge(registration.registration_status)}</div><div class="detail-grid"><div class="detail-item"><span>Claimed Client code</span><strong>${escapeHtml(registration.claimed_client_code || '—')}</strong></div><div class="detail-item"><span>Claimed phone</span><strong>${escapeHtml(registration.claimed_phone_number || '—')}</strong></div><div class="detail-item"><span>Submitted</span><strong>${formatDateTime(registration.submitted_at)}</strong></div></div><form class="entry-form candidate-search-form"><label>Find borrower record<input name="query" minlength="2" required value="${escapeHtml(registration.claimed_client_code || registration.full_name || '')}" /></label><button class="button button-secondary" type="submit">Search candidates</button><button class="button button-outline reject-registration" type="button">Reject request</button></form><div class="candidate-results"></div></article>`).join('')}</div>`;
 }
 
 function staffRows(accounts, canManageDevices) {
@@ -247,58 +246,6 @@ function bindSupport(context) {
   }
 }
 
-function bindRegistrations(context) {
-  for (const form of context.root.querySelectorAll('.candidate-search-form')) {
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const card = form.closest('.registration-card');
-      const results = card.querySelector('.candidate-results');
-      const query = String(new FormData(form).get('query') || '').trim();
-      const button = form.querySelector('button[type="submit"]');
-      setButtonBusy(button, true, 'Searching…');
-      try {
-        const data = await context.api.request(`/api/v1/management/client-link-candidates?q=${encodeURIComponent(query)}`);
-        const clients = asArray(data.clients);
-        results.innerHTML = clients.length ? `<div class="list-stack">${clients.map((client) => `<div class="list-item"><div class="section-heading"><div><strong>${escapeHtml(client.full_name)}</strong><div class="meta">${escapeHtml(client.client_code)} · ${escapeHtml(client.area || '')} · ${escapeHtml(client.phone_number || '')}</div></div>${badge(client.status)}</div><button class="button button-primary button-small approve-registration" type="button" data-client-id="${escapeHtml(client.id)}">Approve and link this record</button></div>`).join('')}</div>` : emptyState('No matching borrower record was found.');
-        for (const approveButton of results.querySelectorAll('.approve-registration')) {
-          approveButton.addEventListener('click', async () => {
-            if (!globalThis.confirm?.('Approve this account and link it to the selected borrower record?')) return;
-            setButtonBusy(approveButton, true, 'Approving…');
-            try {
-              await context.api.request(`/api/v1/management/client-registrations/${encodeURIComponent(card.dataset.registrationUserId)}/approve`, { method: 'POST', body: { client_id: approveButton.dataset.clientId, review_note: 'Identity and borrower record reviewed in Spina.' } });
-              showToast('Client account approved and linked.', 'success');
-              await mountManagementWorkspace(context);
-            } catch (error) {
-              showToast(error.message, 'error');
-              setButtonBusy(approveButton, false);
-            }
-          });
-        }
-      } catch (error) {
-        results.innerHTML = errorCard(error);
-      } finally {
-        setButtonBusy(button, false);
-      }
-    });
-
-    const rejectButton = form.querySelector('.reject-registration');
-    rejectButton?.addEventListener('click', async () => {
-      const card = form.closest('.registration-card');
-      const reason = globalThis.prompt?.('Enter the rejection reason:')?.trim();
-      if (!reason || reason.length < 3) return;
-      setButtonBusy(rejectButton, true, 'Rejecting…');
-      try {
-        await context.api.request(`/api/v1/management/client-registrations/${encodeURIComponent(card.dataset.registrationUserId)}/reject`, { method: 'POST', body: { review_note: reason } });
-        showToast('Client registration rejected with retained reason.', 'success');
-        await mountManagementWorkspace(context);
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(rejectButton, false);
-      }
-    });
-  }
-}
-
 function bindLoanSearch(context) {
   const form = context.root.querySelector('#management-loan-search');
   form?.addEventListener('submit', async (event) => {
@@ -333,23 +280,22 @@ export async function mountManagementWorkspace(context) {
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
     ...(canSupport ? [{ id: 'management-support', label: 'Support' }] : []),
-    ...(canManageAccounts ? [{ id: 'management-registrations', label: 'Client registrations' }] : []),
+    ...(canManageAccounts ? [{ id: 'management-client-accounts', label: 'Client accounts' }] : []),
     ...(canViewStaff ? [{ id: 'management-staff', label: 'Staff & devices' }] : []),
     { id: 'management-account', label: 'My account' },
   ]);
   root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
 
-  const [account, overview, loans, alerts, renewals, support, registrations, staff] = await Promise.all([
+  const [account, overview, loans, alerts, renewals, support, staff] = await Promise.all([
     settledRequest(api, '/api/v1/account', {}, {}),
     canDashboard ? settledRequest(api, '/api/v1/management/dashboard-overview', {}, { metrics: [] }) : Promise.resolve({ data: { metrics: [] }, error: null }),
     settledRequest(api, '/api/v1/management/loans?status=active', {}, { summary: {}, loans: [] }),
     canDashboard ? settledRequest(api, '/api/v1/management/alerts-audit?window_days=30&limit=100', {}, { alerts: [], events: [] }) : Promise.resolve({ data: { alerts: [], events: [] }, error: null }),
     canRenewals ? settledRequest(api, '/api/v1/management/renewals?status=pending', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
     canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
-    canManageAccounts ? settledRequest(api, '/api/v1/management/client-registrations?status=pending', {}, { registrations: [] }) : Promise.resolve({ data: { registrations: [] }, error: null }),
     canViewStaff ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
   ]);
-  const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data, registrations: registrations.data });
+  const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data });
   const staffAccounts = asArray(staff.data.accounts);
 
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
@@ -358,14 +304,14 @@ export async function mountManagementWorkspace(context) {
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
-  ${canManageAccounts ? `<section class="section-card" id="management-registrations"><div class="section-heading"><div><h2>Client registrations</h2><p>Verify identity, search the borrower record, then approve and link—or reject with a reason.</p></div></div>${registrations.error ? errorCard(registrations.error) : registrationQueue(model.pendingRegistrations)}</section>` : ''}
+  ${canManageAccounts ? `<section class="section-card" id="management-client-accounts"><div class="section-heading"><div><h2>Client accounts</h2><p>Select an existing borrower record, enter the borrower's email, and let SPINA generate the credentials.</p></div></div>${clientAccountAdminMarkup()}</section>` : ''}
   ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff, inspect registered phones, and apply only server-authorized device changes.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" style="margin-top:1rem">${emptyState('Select a staff account to review registered phones.')}</div></section>` : ''}
   <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
 
   bindLoanSearch(context);
   bindRenewals(context);
   bindSupport(context);
-  bindRegistrations(context);
+  bindClientAccountAdmin(context);
   bindStaffInvite(context);
   bindStaffDevices(context, staffAccounts);
 }

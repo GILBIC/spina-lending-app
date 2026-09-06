@@ -63,8 +63,10 @@ def context(
 class FakeAuthClient:
     def __init__(self) -> None:
         self.logout_token: str | None = None
+        self.sign_up_calls = 0
 
     def sign_up(self, *, email: str, password: str) -> AuthSession:
+        self.sign_up_calls += 1
         assert email == "client@example.com"
         assert password == "strong-pass-123"
         return AuthSession(
@@ -219,8 +221,8 @@ def device_headers() -> dict[str, str]:
     }
 
 
-def test_public_registration_is_client_only_and_pending_approval() -> None:
-    client, _, accounts = client_with_fakes()
+def test_public_client_registration_is_retired_without_side_effects() -> None:
+    client, auth, accounts = client_with_fakes()
 
     response = client.post(
         "/api/v1/auth/register",
@@ -234,19 +236,14 @@ def test_public_registration_is_client_only_and_pending_approval() -> None:
         },
     )
 
-    assert response.status_code == 201
-    data = response.json()["data"]
-    assert data["requires_email_confirmation"] is True
-    assert data["approval_status"] == "pending"
-    assert "Management must approve" in data["message"]
-    assert data["user"]["role"] == "Client"
-    assert data["user"]["roles"] == ["client"]
-    assert data["user"]["permissions"] == ["loan.self.view"]
-    assert accounts.registration_claim == ("CLIENT-001", "09171234567")
+    assert response.status_code == 410
+    assert response.json()["detail"] == "Client accounts are created by SPINA Management."
+    assert auth.sign_up_calls == 0
+    assert accounts.registration_claim is None
 
 
-def test_registration_rejects_role_injection() -> None:
-    client, _, _ = client_with_fakes()
+def test_retired_registration_does_not_validate_or_accept_role_injection() -> None:
+    client, auth, accounts = client_with_fakes()
 
     response = client.post(
         "/api/v1/auth/register",
@@ -260,7 +257,9 @@ def test_registration_rejects_role_injection() -> None:
         },
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 410
+    assert auth.sign_up_calls == 0
+    assert accounts.registration_claim is None
 
 
 def test_existing_mobile_login_contract_returns_server_role() -> None:
