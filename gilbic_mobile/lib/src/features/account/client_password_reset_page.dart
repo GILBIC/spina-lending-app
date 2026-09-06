@@ -20,13 +20,31 @@ class ClientPasswordResetPage extends StatelessWidget {
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
-          children: const [
-            Text(
+          children: [
+            const Text(
               'Client password reset',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 8),
-            Text('Search Client accounts by name, username, or email.'),
+            const SizedBox(height: 8),
+            const Text('Search Client accounts by name, username, or email.'),
+            const SizedBox(height: 16),
+            const TextField(
+              key: Key('client-password-search'),
+              decoration: InputDecoration(
+                labelText: 'Client',
+                hintText: 'Name, username, or email',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                key: const Key('client-password-search-submit'),
+                onPressed: () {},
+                icon: const Icon(Icons.search),
+                label: const Text('Search'),
+              ),
+            ),
           ],
         ),
       ),
