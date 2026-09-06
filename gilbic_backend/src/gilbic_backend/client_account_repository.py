@@ -142,6 +142,25 @@ class PostgresClientAccountRepository(PostgresManagementRepository):
         with open_connection() as connection:
             return self._load_account(connection, target_user_id)
 
+    def record_password_reset_requested(
+        self,
+        *,
+        actor_user_id: UUID,
+        target_user_id: UUID,
+    ) -> None:
+        with open_connection() as connection:
+            with connection.transaction():
+                self._lock_user(connection, target_user_id)
+                account = self._load_account(connection, target_user_id)
+                self._audit(
+                    connection,
+                    actor_user_id=actor_user_id,
+                    action="account.password_reset.requested",
+                    target_type="user",
+                    target_id=target_user_id,
+                    details={"roles": list(account.roles)},
+                )
+
     def record_password_reset(
         self,
         *,
