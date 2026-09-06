@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import AccountConflict, AccountNotFound, PostgresAccountRepository
@@ -76,6 +76,43 @@ def _auth_admin_exception(exc: SupabaseAuthError, *, action: str) -> HTTPExcepti
 
 def create_client_account_router() -> APIRouter:
     router = APIRouter(prefix="/api/v1/management", tags=["management"])
+
+    @router.get("/client-accounts")
+    def list_client_accounts(
+        q: str | None = Query(default=None, max_length=200),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
+        repository: PostgresClientAccountRepository = Depends(
+            client_account_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = _management_actor(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            permission="client.credential.manage",
+            auth=auth,
+            accounts=accounts,
+        )
+        if not any(role in actor.roles for role in ("employee", "management")):
+            raise HTTPException(
+                status_code=403,
+                detail="Employee or Management role is required to manage Client credentials.",
+            )
+        normalized_query = " ".join(q.split()) if q else None
+        records = repository.list_accounts(
+            query=normalized_query or None,
+            role_code="client",
+            account_status=None,
+            staff_only=False,
+            limit=25,
+            offset=0,
+        )
+        return {
+            "success": True,
+            "data": {"accounts": [_account_payload(record) for record in records]},
+        }
 
     @router.post("/client-accounts", status_code=status.HTTP_201_CREATED)
     def create_client_account(
