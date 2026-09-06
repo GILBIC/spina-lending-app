@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/account/client_password_reset_page.dart';
 import 'package:gilbic_mobile/src/features/renewals/renewal_signature_tasks_page.dart';
 
 class AccountSettingsPage extends StatefulWidget {
@@ -30,6 +31,12 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   String? _error;
   String? _revokingDeviceId;
   bool _loading = true;
+
+  bool get _canResetClientPassword {
+    final role = widget.session.role;
+    return widget.session.permissions.contains('client.credential.manage') &&
+        (role == AppRole.employee || role == AppRole.management);
+  }
 
   @override
   void initState() {
@@ -143,135 +150,33 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     if (widget.session.role == AppRole.client) {
       return;
     }
-    final passwordController = TextEditingController();
-    final confirmController = TextEditingController();
-    var errorMessage = '';
-    var submitting = false;
-
     final changed = await showDialog<bool>(
       context: context,
-      barrierDismissible: !submitting,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          Future<void> submit() async {
-            final password = passwordController.text;
-            if (password.isEmpty || password.length > 200) {
-              setDialogState(() {
-                errorMessage = 'Enter a valid new password.';
-              });
-              return;
-            }
-            if (password != confirmController.text) {
-              setDialogState(() {
-                errorMessage = 'Passwords do not match.';
-              });
-              return;
-            }
-            setDialogState(() {
-              submitting = true;
-              errorMessage = '';
-            });
-            try {
-              await _repository.changePassword(widget.session, password);
-              if (!dialogContext.mounted) {
-                return;
-              }
-              Navigator.of(dialogContext).pop(true);
-            } on SpinaApiException catch (error) {
-              if (!dialogContext.mounted) {
-                return;
-              }
-              setDialogState(() {
-                submitting = false;
-                errorMessage = error.message;
-              });
-            } on Exception {
-              if (!dialogContext.mounted) {
-                return;
-              }
-              setDialogState(() {
-                submitting = false;
-                errorMessage = 'Password could not be changed.';
-              });
-            }
-          }
-
-          return AlertDialog(
-            title: const Text('Change my password'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Choose a new password for your signed-in SPINA staff account.',
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    key: const Key('account-password-new'),
-                    controller: passwordController,
-                    enabled: !submitting,
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'New password',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    key: const Key('account-password-confirm'),
-                    controller: confirmController,
-                    enabled: !submitting,
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm new password',
-                    ),
-                  ),
-                  if (errorMessage.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      errorMessage,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: submitting
-                    ? null
-                    : () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                key: const Key('account-password-submit'),
-                onPressed: submitting ? null : submit,
-                child: submitting
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Change password'),
-              ),
-            ],
-          );
-        },
+      barrierDismissible: false,
+      builder: (context) => _ChangePasswordDialog(
+        session: widget.session,
+        repository: _repository,
       ),
     );
-
-    passwordController.dispose();
-    confirmController.dispose();
     if (changed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password changed.')),
       );
     }
+  }
+
+  void _openClientPasswordReset() {
+    if (!_canResetClientPassword) {
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ClientPasswordResetPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+        ),
+      ),
+    );
   }
 
   void _openRenewalSignatures() {
@@ -365,6 +270,22 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: _changePassword,
+      ),
+    );
+  }
+
+  Widget _clientPasswordResetCard() {
+    return Card(
+      child: ListTile(
+        key: const Key('account-reset-client-password'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: const Icon(Icons.manage_accounts_outlined),
+        title: const Text('Reset Client password'),
+        subtitle: const Text(
+          'Find an existing Client account and generate a new borrower password.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _openClientPasswordReset,
       ),
     );
   }
@@ -478,6 +399,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                         _profileCard(_overview!.profile),
                         _sessionCard(),
                         if (widget.session.role != AppRole.client) _passwordCard(),
+                        if (_canResetClientPassword) _clientPasswordResetCard(),
                         _renewalSignaturesCard(),
                         const SizedBox(height: 8),
                         Text(
@@ -503,6 +425,136 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                       ],
                     ),
                   ),
+      ),
+    );
+  }
+}
+
+class _ChangePasswordDialog extends StatefulWidget {
+  const _ChangePasswordDialog({
+    required this.session,
+    required this.repository,
+  });
+
+  final UserSession session;
+  final AccountRepository repository;
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmController = TextEditingController();
+  String _errorMessage = '';
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final password = _passwordController.text;
+    if (password.isEmpty || password.length > 200) {
+      setState(() => _errorMessage = 'Enter a valid new password.');
+      return;
+    }
+    if (password != _confirmController.text) {
+      setState(() => _errorMessage = 'Passwords do not match.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _errorMessage = '';
+    });
+    try {
+      await widget.repository.changePassword(widget.session, password);
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(true);
+    } on SpinaApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _submitting = false;
+        _errorMessage = error.message;
+      });
+    } on Exception {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _submitting = false;
+        _errorMessage = 'Password could not be changed.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_submitting,
+      child: AlertDialog(
+        title: const Text('Change my password'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Choose a new password for your signed-in SPINA staff account.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                key: const Key('account-password-new'),
+                controller: _passwordController,
+                enabled: !_submitting,
+                obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
+                decoration: const InputDecoration(labelText: 'New password'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('account-password-confirm'),
+                controller: _confirmController,
+                enabled: !_submitting,
+                obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
+                decoration: const InputDecoration(labelText: 'Confirm new password'),
+              ),
+              if (_errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('account-password-submit'),
+            onPressed: _submitting ? null : _submit,
+            child: _submitting
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Change password'),
+          ),
+        ],
       ),
     );
   }
