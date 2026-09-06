@@ -110,6 +110,29 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
     }
   }
 
+  Future<void> _confirmReset(_ClientCredentialAccount account) async {
+    await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Client password?'),
+        content: Text(
+          'SPINA will generate a new password for ${account.fullName}. '
+          'The old password cannot be recovered, and the borrower cannot reset it themselves.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Reset password'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,6 +199,11 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
                         if (account.email != null) account.email!,
                         'Status: ${account.status}',
                       ].join('\n'),
+                    ),
+                    trailing: TextButton(
+                      key: Key('client-password-reset-${account.id}'),
+                      onPressed: () => _confirmReset(account),
+                      child: const Text('Reset password'),
                     ),
                   ),
                 ),
