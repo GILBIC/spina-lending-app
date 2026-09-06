@@ -146,13 +146,16 @@ def create_client_account_router() -> APIRouter:
             raise _repository_exception(exc) from exc
 
         password = generate_password()
-        auth_user_id: UUID | None = None
         try:
             auth_user_id = auth_admin.create_user(
                 email=request.email,
                 password=password,
                 email_confirm=True,
             )
+        except SupabaseAuthError as exc:
+            raise _auth_admin_exception(exc, action="account creation") from exc
+
+        try:
             record = repository.create_client_account_profile(
                 actor_user_id=actor.user_id,
                 auth_user_id=auth_user_id,
@@ -160,15 +163,24 @@ def create_client_account_router() -> APIRouter:
                 email=request.email,
                 client_id=request.client_id,
             )
-        except SupabaseAuthError as exc:
-            raise _auth_admin_exception(exc, action="account creation") from exc
         except (AccountConflict, AccountNotFound) as exc:
-            if auth_user_id is not None:
-                try:
-                    auth_admin.delete_user(auth_user_id=auth_user_id)
-                except SupabaseAuthError:
-                    pass
+            try:
+                auth_admin.delete_user(auth_user_id=auth_user_id)
+            except SupabaseAuthError:
+                pass
             raise _repository_exception(exc) from exc
+        except Exception as exc:
+            try:
+                auth_admin.delete_user(auth_user_id=auth_user_id)
+            except SupabaseAuthError:
+                pass
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Client account could not be saved. "
+                    "No active SPINA account was created."
+                ),
+            ) from exc
 
         try:
             delivery = mailer.send_client_credentials(
