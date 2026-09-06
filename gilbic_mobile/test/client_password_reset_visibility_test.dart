@@ -77,6 +77,25 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+Map<String, Object?> _clientSearchResponse() => <String, Object?>{
+      'success': true,
+      'data': <String, Object?>{
+        'accounts': <Object?>[
+          <String, Object?>{
+            'id': '33333333-3333-4333-8333-333333333333',
+            'username': 'spina.c.001',
+            'email': 'client@example.com',
+            'full_name': 'Maria Santos',
+            'status': 'active',
+            'roles': <String>['client'],
+            'device_count': 0,
+            'created_at': '2026-09-05T13:00:00Z',
+            'updated_at': '2026-09-05T13:00:00Z',
+          },
+        ],
+      },
+    };
+
 void main() {
   for (final role in <AppRole>[AppRole.employee, AppRole.management]) {
     testWidgets('${role.name} with client.credential.manage can open Client password reset',
@@ -158,24 +177,65 @@ void main() {
         expect(request.headers['Authorization'], 'Bearer employee-token');
         expect(request.headers['X-Device-Id'], startsWith('gilbic-'));
         return http.Response(
-          jsonEncode(<String, Object?>{
-            'success': true,
-            'data': <String, Object?>{
-              'accounts': <Object?>[
-                <String, Object?>{
-                  'id': '33333333-3333-4333-8333-333333333333',
-                  'username': 'spina.c.001',
-                  'email': 'client@example.com',
-                  'full_name': 'Maria Santos',
-                  'status': 'active',
-                  'roles': <String>['client'],
-                  'device_count': 0,
-                  'created_at': '2026-09-05T13:00:00Z',
-                  'updated_at': '2026-09-05T13:00:00Z',
-                },
-              ],
-            },
-          }),
+          jsonEncode(_clientSearchResponse()),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+  });
+
+  testWidgets('Client password reset requires confirmation and cancellation makes no reset request',
+      (tester) async {
+    var resetRequests = 0;
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ClientPasswordResetPage(
+              session: _session(
+                AppRole.employee,
+                permissions: const <String>['client.credential.manage'],
+              ),
+              deviceIdentityProvider: _identity(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('client-password-search')),
+          'Maria Santos',
+        );
+        await tester.tap(find.byKey(const Key('client-password-search-submit')));
+        await tester.pumpAndSettle();
+
+        final resetButton = find.byKey(
+          const Key('client-password-reset-33333333-3333-4333-8333-333333333333'),
+        );
+        expect(resetButton, findsOneWidget);
+
+        await tester.tap(resetButton);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Reset Client password?'), findsOneWidget);
+        expect(
+          find.textContaining('old password cannot be recovered'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(resetRequests, 0);
+      },
+      () => MockClient((request) async {
+        if (request.method == 'POST') {
+          resetRequests += 1;
+          return http.Response('{}', 500);
+        }
+        expect(request.method, 'GET');
+        return http.Response(
+          jsonEncode(_clientSearchResponse()),
           200,
           headers: const <String, String>{'content-type': 'application/json'},
         );
