@@ -11,7 +11,6 @@ import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
-import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_alerts_audit_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
@@ -408,10 +407,6 @@ void main() {
         ManagementStaffDevicesPage,
       ),
       (
-        ManagementDashboardMetricKey.clientRegistrations,
-        ClientRegistrationApprovalsPage,
-      ),
-      (
         ManagementDashboardMetricKey.collectorMobileDevices,
         ManagementStaffDevicesPage,
       ),
@@ -642,10 +637,6 @@ final _completeOverview = _overview(
       count: 3,
     ),
     ManagementDashboardMetric(
-      key: ManagementDashboardMetricKey.clientRegistrations,
-      count: 4,
-    ),
-    ManagementDashboardMetric(
       key: ManagementDashboardMetricKey.collectorMobileDevices,
       count: 1,
     ),
@@ -670,10 +661,6 @@ final _allAttentionOverview = _overview(
     ManagementDashboardMetric(
       key: ManagementDashboardMetricKey.staffRegistrations,
       count: 3,
-    ),
-    ManagementDashboardMetric(
-      key: ManagementDashboardMetricKey.clientRegistrations,
-      count: 4,
     ),
     ManagementDashboardMetric(
       key: ManagementDashboardMetricKey.collectorMobileDevices,
