@@ -146,6 +146,15 @@ class FakeManagementRepository:
         }
         return [self.target]
 
+    def record_password_reset_requested(
+        self,
+        *,
+        actor_user_id: UUID,
+        target_user_id: UUID,
+    ) -> None:
+        assert actor_user_id == ACTOR_USER_ID
+        assert target_user_id == TARGET_USER_ID
+
     def record_password_reset(
         self,
         *,
