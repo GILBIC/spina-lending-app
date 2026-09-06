@@ -16,7 +16,6 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dart';
-import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_alerts_audit_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
@@ -58,7 +57,6 @@ const _managementDestinations = <(String, Type)>[
   ),
   ('management-renewals', ManagementRenewalRequestsPage),
   ('management-support', ManagementSupportRequestsPage),
-  ('client-registration-approvals', ClientRegistrationApprovalsPage),
   ('management-my-account-devices', AccountSettingsPage),
   ('management-offline-policy', MobileOfflinePolicyPage),
   ('management-financial-accounting', ManagementFinancialAccountingPage),
