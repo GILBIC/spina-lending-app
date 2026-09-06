@@ -76,9 +76,17 @@ Example:
 
 `Cardona -> Calahan -> Balayong -> Mabini Street -> Purok 2 -> Riverside -> Block A`
 
+For newly managed hierarchy:
+
+- root node = City/Municipality;
+- direct child of the City/Municipality = Barangay;
+- every level below Barangay = generic operational Subarea.
+
 After Barangay, there is no fixed depth and no numbered Subarea columns. Any node may receive another child node when operations need a finer route section.
 
 Typical child names may represent a sitio, purok, street, subdivision, compound, market cluster, local zone, or another practical collection section. SPINA does not need to falsely claim that every operational node is an official LGU level.
+
+Legacy flat Areas may remain temporarily as unmapped roots during migration. SPINA must not guess their hierarchy; Staff can place them correctly later.
 
 ## 2. Authoritative Area tree
 
@@ -133,8 +141,9 @@ The tree provides:
 
 - search by Area or Collector;
 - expand/collapse branches;
-- `+ Add Area` at the root;
-- `+ Add Subarea` from any selected node;
+- `+ Add City/Municipality` at the root;
+- `+ Add Barangay` under a City/Municipality;
+- `+ Add Subarea` under a Barangay or any deeper Subarea;
 - visible effective/inherited Collector context where useful;
 - manual sibling ordering.
 
@@ -153,13 +162,23 @@ The selected node shows:
 
 Primary actions:
 
-- Add Subarea;
+- Add child Area using the context-appropriate label;
 - Assign/Reassign Collector;
 - Rename;
 - Move;
 - Reorder;
-- Retire;
-- Reactivate when authorized.
+- Retire when Management-authorized;
+- Reactivate when Management-authorized.
+
+### Authority inside Area Management
+
+For normal Priority #5 operations:
+
+- **Staff/Employee and Management** may create, rename, move, and reorder active Area nodes and may assign/reassign permanent Areas to Collectors through the authenticated/permission-controlled server boundary.
+- **Management only** may retire or reactivate an Area. This preserves the separately approved retirement safety rule and is not superseded by the simplified Staff/Management assignment model.
+- **Collectors** may not change permanent Area structure or their own permanent Area ownership.
+
+Every meaningful mutation is server-authorized and audited.
 
 ### Manual route ordering
 
@@ -276,6 +295,8 @@ A Client must never appear as an active permanent route Client for two Collector
 
 Used Areas are retired/inactivated, not hard deleted.
 
+Retirement and reactivation are Management-only actions.
+
 Before retirement:
 
 - current Clients under the retiring branch must be reassigned/resolved;
@@ -287,7 +308,7 @@ Retired Areas:
 - remain available for historical reporting and audit;
 - cannot receive new Client or Collector assignments;
 - keep historical transactions untouched;
-- may be reactivated through the authorized workflow.
+- may be reactivated by Management through the authorized workflow.
 
 Retirement/reactivation and structural moves are audited.
 
@@ -434,7 +455,7 @@ Priority #5 design is satisfied when the implementation can prove all of the fol
 7. A Client explicitly assigned to a deep node appears under its ancestor hierarchy without duplicate Client assignment rows.
 8. Client permanent transfer timing follows the no-collection-today / already-collected-today rule.
 9. Structural changes do not rewrite historical collection/remittance/custody/accounting evidence.
-10. Used Areas retire rather than hard-delete.
+10. Used Areas retire rather than hard-delete, and retirement/reactivation is Management-only.
 11. Collector mobile main route shows hierarchy + compact Client collection information only.
 12. Hidden Client Tools can show the approved location/photo and schedule views without cluttering the normal route.
 13. Collector schedule rows are view-only and use the existing authoritative schedule engine.
@@ -446,7 +467,7 @@ For Priority #5, this approved design supersedes the earlier proposal that requi
 
 The current operational rule is intentionally simpler:
 
-- Staff/Employee and Management manage the Area hierarchy through authorized Area Management controls;
-- Staff/Employee and Management may assign/reassign Areas to Collectors;
+- Staff/Employee and Management may perform normal Area organization and assign/reassign Areas to Collectors through authorized Area Management controls;
+- Management alone retains retirement/reactivation authority;
 - Collector permanent ownership is determined by the Area tree, inheritance, and most-specific override;
 - separate managerial geography roles are deferred unless Management later creates a concrete need for them.
