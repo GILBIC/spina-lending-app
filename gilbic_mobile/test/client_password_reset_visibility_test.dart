@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/account/client_password_reset_page.dart';
 
 final _now = DateTime.utc(2026, 9, 6, 1);
 
@@ -95,6 +96,25 @@ void main() {
       expect(find.text('Search Client accounts by name, username, or email.'), findsOneWidget);
     });
   }
+
+  testWidgets('Client password reset starts with one simple search control', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClientPasswordResetPage(
+          session: _session(
+            AppRole.employee,
+            permissions: const <String>['client.credential.manage'],
+          ),
+          deviceIdentityProvider: _identity(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('client-password-search')), findsOneWidget);
+    expect(find.byKey(const Key('client-password-search-submit')), findsOneWidget);
+    expect(find.text('Search'), findsOneWidget);
+  });
 
   for (final role in <AppRole>[AppRole.client, AppRole.collector]) {
     testWidgets('${role.name} cannot see Client password reset', (tester) async {
