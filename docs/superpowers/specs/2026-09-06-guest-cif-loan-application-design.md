@@ -1,6 +1,6 @@
 # Pre-CIF Requirements Verification + CIF + Loan Application Design
 
-**Status:** Approved product direction for GitHub #419; written spec updated with Management bypass and official Client-creation rules, awaiting final Management review before implementation resumes.
+**Status:** Final Management-approved product direction for GitHub #419. Implementation is decomposed into focused plans, beginning with pre-CIF eligibility and stable Client identity.
 
 ## Goal
 
@@ -241,6 +241,6 @@ Required proof before merge will include:
 - disposable PostgreSQL validation; and
 - full SPINA CI on the exact PR head.
 
-The previously written implementation plan is superseded by this architecture and must not be executed further. After Management reviews this written spec, create a fresh implementation plan from this design before changing production code/tests.
+Implementation is now decomposed into focused plans. Plan 1 is `docs/superpowers/plans/2026-09-06-pre-cif-eligibility-client-identity.md`; later plans will cover UI/status, CIF lifecycle, and loan application/review separately.
 
 This branch does not authorize production deployment, live applicant data, real eGov/ID/bill/face evidence upload, live residence evidence capture, live biometric/liveness/face-match provider calls, live OTP/email/SMS delivery, production database/Auth mutation, loan creation, contract execution, renewal execution, or release.
