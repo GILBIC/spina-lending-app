@@ -22,6 +22,8 @@ class ClientPasswordResetPage extends StatefulWidget {
 class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
   final TextEditingController _searchController = TextEditingController();
   List<_ClientCredentialAccount> _accounts = const <_ClientCredentialAccount>[];
+  _ClientResetResult? _resetResult;
+  String? _resettingAccountId;
   String? _error;
   bool _searching = false;
   bool _searched = false;
@@ -37,6 +39,7 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
     if (query.isEmpty) {
       setState(() {
         _accounts = const <_ClientCredentialAccount>[];
+        _resetResult = null;
         _searched = false;
         _error = 'Enter a Client name, username, or email.';
       });
@@ -47,6 +50,7 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
       _searching = true;
       _searched = false;
       _accounts = const <_ClientCredentialAccount>[];
+      _resetResult = null;
       _error = null;
     });
 
@@ -111,7 +115,7 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
   }
 
   Future<void> _confirmReset(_ClientCredentialAccount account) async {
-    await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Reset Client password?'),
@@ -131,6 +135,83 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
         ],
       ),
     );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _resettingAccountId = account.id;
+      _resetResult = null;
+      _error = null;
+    });
+
+    try {
+      final identity = await widget.deviceIdentityProvider.load();
+      final response = await http.post(
+        ApiConfig.endpoint(
+          '/api/v1/management/accounts/${account.id}/password/reset',
+        ),
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${widget.session.accessToken}',
+          'X-Device-Id': identity.installationId,
+        },
+      );
+      final payload = decodeJsonObject(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw SpinaApiException(
+          apiErrorMessage(payload, statusCode: response.statusCode),
+          statusCode: response.statusCode,
+        );
+      }
+      final data = stringMap(
+        unwrapSpinaData(payload, statusCode: response.statusCode),
+      );
+      final credentials = stringMap(data['credentials']);
+      final delivery = stringMap(data['delivery']);
+      final username = firstNonEmptyString(<Object?>[credentials['username']]);
+      final password = firstNonEmptyString(<Object?>[credentials['password']]);
+      final deliveryDetail = firstNonEmptyString(<Object?>[delivery['detail']]);
+      final deliverySent = delivery['sent'];
+      if (username == null ||
+          username != account.username ||
+          password == null ||
+          deliveryDetail == null ||
+          deliverySent is! bool) {
+        throw const SpinaApiException(
+          'The SPINA server returned incomplete Client reset data.',
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _resetResult = _ClientResetResult(
+          username: username,
+          password: password,
+          deliverySent: deliverySent,
+          deliveryDetail: deliveryDetail,
+        );
+        _resettingAccountId = null;
+      });
+    } on SpinaApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = error.message;
+        _resettingAccountId = null;
+      });
+    } on Exception {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = 'SPINA could not confirm the password reset result. Do not retry automatically.';
+        _resettingAccountId = null;
+      });
+    }
   }
 
   @override
@@ -152,7 +233,7 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
             TextField(
               key: const Key('client-password-search'),
               controller: _searchController,
-              enabled: !_searching,
+              enabled: !_searching && _resettingAccountId == null,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _search(),
               decoration: const InputDecoration(
@@ -165,7 +246,7 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
                 key: const Key('client-password-search-submit'),
-                onPressed: _searching ? null : _search,
+                onPressed: _searching || _resettingAccountId != null ? null : _search,
                 icon: _searching
                     ? const SizedBox.square(
                         dimension: 16,
@@ -180,6 +261,41 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
               Text(
                 _error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            if (_resetResult != null) ...[
+              const SizedBox(height: 16),
+              Card(
+                key: const Key('client-password-reset-result'),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'New Client credentials',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 10),
+                      const Text('Username'),
+                      Text(_resetResult!.username),
+                      const SizedBox(height: 8),
+                      const Text('New password'),
+                      Text(_resetResult!.password),
+                      const SizedBox(height: 8),
+                      Text(
+                        _resetResult!.deliverySent
+                            ? 'Credential email sent'
+                            : 'Credential email not sent',
+                      ),
+                      Text(_resetResult!.deliveryDetail),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Copy/share this password now. SPINA does not store or retrieve the old password.',
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
             if (_searched && _accounts.isEmpty) ...[
@@ -202,8 +318,15 @@ class _ClientPasswordResetPageState extends State<ClientPasswordResetPage> {
                     ),
                     trailing: TextButton(
                       key: Key('client-password-reset-${account.id}'),
-                      onPressed: () => _confirmReset(account),
-                      child: const Text('Reset password'),
+                      onPressed: _resettingAccountId == null
+                          ? () => _confirmReset(account)
+                          : null,
+                      child: _resettingAccountId == account.id
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Reset password'),
                     ),
                   ),
                 ),
@@ -254,4 +377,18 @@ class _ClientCredentialAccount {
   final String fullName;
   final String status;
   final String? email;
+}
+
+class _ClientResetResult {
+  const _ClientResetResult({
+    required this.username,
+    required this.password,
+    required this.deliverySent,
+    required this.deliveryDetail,
+  });
+
+  final String username;
+  final String password;
+  final bool deliverySent;
+  final String deliveryDetail;
 }
