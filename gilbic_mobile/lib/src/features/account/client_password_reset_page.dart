@@ -17,10 +17,10 @@ class ClientPasswordResetPage extends StatelessWidget {
     return Scaffold(
       key: const Key('client-password-reset-page'),
       appBar: AppBar(title: const Text('Client password reset')),
-      body: const SafeArea(
+      body: SafeArea(
         child: ListView(
-          padding: EdgeInsets.all(16),
-          children: [
+          padding: const EdgeInsets.all(16),
+          children: const [
             Text(
               'Client password reset',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
