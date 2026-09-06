@@ -212,4 +212,49 @@ def create_client_onboarding_router() -> APIRouter:
         )
         return {"status": record.status}
 
+    @router.post(
+        "/api/v1/management/onboarding/applicants/{applicant_id}/eligibility"
+    )
+    def approve_normal_eligibility(
+        applicant_id: UUID,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        onboarding: PostgresClientOnboardingRepository = Depends(
+            client_onboarding_repository_dependency
+        ),
+    ) -> dict[str, str]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="client_onboarding.requirement.review",
+            permission_error="Onboarding requirement review permission is required.",
+        )
+        if not any(role in actor.roles for role in ("employee", "management")):
+            raise HTTPException(
+                status_code=403,
+                detail="Employee or Management role is required to approve eligibility.",
+            )
+
+        record = onboarding.approve_normal_eligibility(
+            actor_user_id=actor.user_id,
+            applicant_id=applicant_id,
+        )
+        if record.status != "eligible_for_cif" or record.promoted_client_id is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "All four pre-CIF requirements must be passed "
+                    "before normal eligibility."
+                ),
+            )
+
+        return {
+            "status": record.status,
+            "client_id": str(record.promoted_client_id),
+        }
+
     return router

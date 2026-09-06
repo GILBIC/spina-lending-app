@@ -20,6 +20,7 @@ ClientOnboardingStatus = Literal[
 class ClientOnboardingRecord:
     application_reference: str
     status: ClientOnboardingStatus
+    promoted_client_id: UUID | None = None
 
 
 class PostgresClientOnboardingRepository:
@@ -228,4 +229,131 @@ class PostgresClientOnboardingRepository:
         return ClientOnboardingRecord(
             application_reference=str(row[0]),
             status=cast(ClientOnboardingStatus, str(row[1])),
+        )
+
+    def approve_normal_eligibility(
+        self,
+        *,
+        actor_user_id: UUID,
+        applicant_id: UUID,
+    ) -> ClientOnboardingRecord:
+        with open_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    select
+                        application_reference,
+                        status,
+                        full_name,
+                        phone_number,
+                        national_id_status,
+                        tin_id_status,
+                        meralco_bill_status,
+                        collector_visit_status,
+                        promoted_client_id
+                    from lending.client_onboarding_applicants
+                    where id = %s
+                    for update
+                    """,
+                    (applicant_id,),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError("Onboarding applicant was not found.")
+
+                application_reference = str(row[0])
+                current_status = cast(ClientOnboardingStatus, str(row[1]))
+                promoted_client_id = row[8]
+                if current_status == "eligible_for_cif" and promoted_client_id is not None:
+                    return ClientOnboardingRecord(
+                        application_reference=application_reference,
+                        status=current_status,
+                        promoted_client_id=promoted_client_id,
+                    )
+
+                requirements = (row[4], row[5], row[6], row[7])
+                if any(str(requirement) != "passed" for requirement in requirements):
+                    return ClientOnboardingRecord(
+                        application_reference=application_reference,
+                        status=current_status,
+                    )
+
+                client_code = application_reference.replace("APP-", "CLIENT-", 1)
+                cursor.execute(
+                    """
+                    insert into lending.clients (
+                        client_code,
+                        full_name,
+                        phone_number,
+                        area,
+                        status,
+                        user_id
+                    )
+                    values (%s, %s, %s, null, 'inactive', null)
+                    returning id
+                    """,
+                    (client_code, str(row[2]), str(row[3])),
+                )
+                client_row = cursor.fetchone()
+                if client_row is None:
+                    raise RuntimeError("Unable to create Client identity.")
+                client_id = client_row[0]
+
+                cursor.execute(
+                    """
+                    update lending.client_onboarding_applicants
+                    set
+                        status = 'eligible_for_cif',
+                        promoted_client_id = %s,
+                        eligibility_reviewed_by_user_id = %s,
+                        eligibility_reviewed_at = now(),
+                        updated_at = now()
+                    where id = %s
+                    """,
+                    (client_id, actor_user_id, applicant_id),
+                )
+
+                cursor.execute(
+                    """
+                    insert into core.audit_logs (
+                        actor_user_id,
+                        action,
+                        target_type,
+                        target_id,
+                        details
+                    )
+                    values (
+                        %s,
+                        'client_onboarding.eligibility_approved',
+                        'client_onboarding_applicant',
+                        %s,
+                        jsonb_build_object('client_id', %s::text)
+                    )
+                    """,
+                    (actor_user_id, applicant_id, client_id),
+                )
+                cursor.execute(
+                    """
+                    insert into core.audit_logs (
+                        actor_user_id,
+                        action,
+                        target_type,
+                        target_id,
+                        details
+                    )
+                    values (
+                        %s,
+                        'client_onboarding.client_created',
+                        'client',
+                        %s,
+                        jsonb_build_object('application_reference', %s::text)
+                    )
+                    """,
+                    (actor_user_id, client_id, application_reference),
+                )
+
+        return ClientOnboardingRecord(
+            application_reference=application_reference,
+            status="eligible_for_cif",
+            promoted_client_id=client_id,
         )
