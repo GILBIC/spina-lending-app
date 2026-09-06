@@ -96,6 +96,32 @@ Map<String, Object?> _clientSearchResponse() => <String, Object?>{
       },
     };
 
+Map<String, Object?> _clientResetResponse() => <String, Object?>{
+      'success': true,
+      'data': <String, Object?>{
+        'account': <String, Object?>{
+          'id': '33333333-3333-4333-8333-333333333333',
+          'username': 'spina.c.001',
+          'email': 'client@example.com',
+          'full_name': 'Maria Santos',
+          'status': 'active',
+          'roles': <String>['client'],
+          'device_count': 0,
+          'created_at': '2026-09-05T13:00:00Z',
+          'updated_at': '2026-09-05T13:00:00Z',
+        },
+        'credentials': <String, Object?>{
+          'username': 'spina.c.001',
+          'password': 'test-generated-value-1',
+        },
+        'delivery': <String, Object?>{
+          'sent': true,
+          'detail': 'SPINA account credentials were sent by email.',
+        },
+        'audit_recorded': true,
+      },
+    };
+
 void main() {
   for (final role in <AppRole>[AppRole.employee, AppRole.management]) {
     testWidgets('${role.name} with client.credential.manage can open Client password reset',
@@ -236,6 +262,73 @@ void main() {
         expect(request.method, 'GET');
         return http.Response(
           jsonEncode(_clientSearchResponse()),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+  });
+
+  testWidgets('Confirmed Client reset returns the new one-time credentials', (tester) async {
+    var resetRequests = 0;
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ClientPasswordResetPage(
+              session: _session(
+                AppRole.employee,
+                permissions: const <String>['client.credential.manage'],
+              ),
+              deviceIdentityProvider: _identity(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('client-password-search')),
+          'Maria Santos',
+        );
+        await tester.tap(find.byKey(const Key('client-password-search-submit')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(
+            const Key('client-password-reset-33333333-3333-4333-8333-333333333333'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Reset password'));
+        await tester.pumpAndSettle();
+
+        expect(resetRequests, 1);
+        expect(find.byKey(const Key('client-password-reset-result')), findsOneWidget);
+        expect(find.text('spina.c.001'), findsOneWidget);
+        expect(find.text('test-generated-value-1'), findsOneWidget);
+        expect(
+          find.text('SPINA account credentials were sent by email.'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Copy/share this password now'), findsOneWidget);
+      },
+      () => MockClient((request) async {
+        if (request.method == 'GET') {
+          return http.Response(
+            jsonEncode(_clientSearchResponse()),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        }
+        resetRequests += 1;
+        expect(request.method, 'POST');
+        expect(
+          request.url.path,
+          '/api/v1/management/accounts/33333333-3333-4333-8333-333333333333/password/reset',
+        );
+        expect(request.headers['Authorization'], 'Bearer employee-token');
+        expect(request.headers['X-Device-Id'], startsWith('gilbic-'));
+        return http.Response(
+          jsonEncode(_clientResetResponse()),
           200,
           headers: const <String, String>{'content-type': 'application/json'},
         );
