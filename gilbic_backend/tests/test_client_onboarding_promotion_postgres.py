@@ -112,6 +112,24 @@ def _seed_case(*, non_passed_requirement: str | None = None) -> OnboardingPromot
     )
 
 
+def _set_all_requirements_pending(case: OnboardingPromotionCase) -> None:
+    assert DATABASE_URL is not None
+    with psycopg.connect(DATABASE_URL) as connection:
+        connection.execute(
+            """
+            update lending.client_onboarding_applicants
+            set
+                national_id_status = 'pending',
+                tin_id_status = 'pending',
+                meralco_bill_status = 'pending',
+                collector_visit_status = 'pending',
+                updated_at = now()
+            where id = %s
+            """,
+            (case.applicant_id,),
+        )
+
+
 def _delete_case(case: OnboardingPromotionCase) -> None:
     assert DATABASE_URL is not None
     with psycopg.connect(DATABASE_URL) as connection:
@@ -293,6 +311,236 @@ def test_normal_eligibility_does_not_promote_when_any_requirement_is_not_passed(
 
         assert onboarding_row["status"] == "under_verification"
         assert onboarding_row["promoted_client_id"] is None
+        assert matching_client_count == 0
+    finally:
+        _delete_case(case)
+
+
+def test_management_bypass_promotes_all_pending_without_faking_requirement_passes() -> None:
+    case = _seed_case()
+    _set_all_requirements_pending(case)
+    all_requirements = (
+        "collector_visit",
+        "meralco_bill",
+        "national_id",
+        "tin_id",
+    )
+    try:
+        repository = PostgresClientOnboardingRepository()
+        assert DATABASE_URL is not None
+
+        with psycopg.connect(DATABASE_URL) as connection:
+            user_count_before = connection.execute(
+                "select count(*) from core.users"
+            ).fetchone()[0]
+            loan_count_before = connection.execute(
+                "select count(*) from lending.loans"
+            ).fetchone()[0]
+
+        first = repository.bypass_and_approve_eligibility(
+            actor_user_id=case.actor_user_id,
+            applicant_id=case.applicant_id,
+            bypassed_requirements=all_requirements,
+            reason="  Approved   Management exception  ",
+        )
+        second = repository.bypass_and_approve_eligibility(
+            actor_user_id=case.actor_user_id,
+            applicant_id=case.applicant_id,
+            bypassed_requirements=all_requirements,
+            reason="Approved Management exception",
+        )
+
+        assert first.status == "eligible_for_cif"
+        assert first.promoted_client_id is not None
+        assert first.promoted_client_id == second.promoted_client_id
+
+        with psycopg.connect(DATABASE_URL, row_factory=dict_row) as connection:
+            client_row = connection.execute(
+                """
+                select client_code, area, status, user_id
+                from lending.clients
+                where id = %s
+                """,
+                (first.promoted_client_id,),
+            ).fetchone()
+            onboarding_row = connection.execute(
+                """
+                select
+                    status,
+                    promoted_client_id,
+                    national_id_status,
+                    tin_id_status,
+                    meralco_bill_status,
+                    collector_visit_status,
+                    bypassed_requirements,
+                    bypass_reason,
+                    bypassed_by_user_id,
+                    bypassed_at
+                from lending.client_onboarding_applicants
+                where id = %s
+                """,
+                (case.applicant_id,),
+            ).fetchone()
+            audit_rows = connection.execute(
+                """
+                select action, target_type, target_id, details
+                from core.audit_logs
+                where actor_user_id = %s
+                  and target_id = any(%s)
+                order by action
+                """,
+                (
+                    case.actor_user_id,
+                    [case.applicant_id, first.promoted_client_id],
+                ),
+            ).fetchall()
+            user_count_after = connection.execute(
+                "select count(*) as count from core.users"
+            ).fetchone()["count"]
+            loan_count_after = connection.execute(
+                "select count(*) as count from lending.loans"
+            ).fetchone()["count"]
+            matching_client_count = connection.execute(
+                """
+                select count(*) as count
+                from lending.clients
+                where client_code = %s
+                """,
+                (case.expected_client_code,),
+            ).fetchone()["count"]
+
+        assert client_row is not None
+        assert client_row["client_code"] == case.expected_client_code
+        assert client_row["area"] is None
+        assert client_row["status"] == "inactive"
+        assert client_row["user_id"] is None
+        assert onboarding_row["status"] == "eligible_for_cif"
+        assert onboarding_row["promoted_client_id"] == first.promoted_client_id
+        assert onboarding_row["national_id_status"] == "pending"
+        assert onboarding_row["tin_id_status"] == "pending"
+        assert onboarding_row["meralco_bill_status"] == "pending"
+        assert onboarding_row["collector_visit_status"] == "pending"
+        assert onboarding_row["bypassed_requirements"] == list(all_requirements)
+        assert onboarding_row["bypass_reason"] == "Approved Management exception"
+        assert onboarding_row["bypassed_by_user_id"] == case.actor_user_id
+        assert onboarding_row["bypassed_at"] is not None
+        assert user_count_after == user_count_before
+        assert loan_count_after == loan_count_before
+        assert matching_client_count == 1
+
+        actions = [row["action"] for row in audit_rows]
+        assert actions.count("client_onboarding.requirements_bypassed") == 1
+        assert actions.count("client_onboarding.client_created") == 1
+        assert actions.count("client_onboarding.eligibility_approved") == 1
+        bypass_audit = next(
+            row
+            for row in audit_rows
+            if row["action"] == "client_onboarding.requirements_bypassed"
+        )
+        assert bypass_audit["target_type"] == "client_onboarding_applicant"
+        assert bypass_audit["target_id"] == case.applicant_id
+        assert bypass_audit["details"] == {
+            "bypassed_requirements": list(all_requirements),
+            "reason": "Approved Management exception",
+        }
+        assert "evidence" not in str(bypass_audit["details"]).lower()
+    finally:
+        _delete_case(case)
+
+
+def test_management_bypass_set_must_match_all_current_non_passed_requirements() -> None:
+    case = _seed_case()
+    _set_all_requirements_pending(case)
+    try:
+        repository = PostgresClientOnboardingRepository()
+        record = repository.bypass_and_approve_eligibility(
+            actor_user_id=case.actor_user_id,
+            applicant_id=case.applicant_id,
+            bypassed_requirements=("national_id", "tin_id", "meralco_bill"),
+            reason="Approved exception",
+        )
+
+        assert record.status == "under_verification"
+        assert record.promoted_client_id is None
+
+        assert DATABASE_URL is not None
+        with psycopg.connect(DATABASE_URL, row_factory=dict_row) as connection:
+            onboarding_row = connection.execute(
+                """
+                select status, promoted_client_id, bypassed_requirements,
+                       bypass_reason, bypassed_by_user_id, bypassed_at
+                from lending.client_onboarding_applicants
+                where id = %s
+                """,
+                (case.applicant_id,),
+            ).fetchone()
+            matching_client_count = connection.execute(
+                """
+                select count(*) as count
+                from lending.clients
+                where client_code = %s
+                """,
+                (case.expected_client_code,),
+            ).fetchone()["count"]
+            bypass_audit_count = connection.execute(
+                """
+                select count(*) as count
+                from core.audit_logs
+                where actor_user_id = %s
+                  and target_id = %s
+                  and action = 'client_onboarding.requirements_bypassed'
+                """,
+                (case.actor_user_id, case.applicant_id),
+            ).fetchone()["count"]
+
+        assert onboarding_row["status"] == "under_verification"
+        assert onboarding_row["promoted_client_id"] is None
+        assert onboarding_row["bypassed_requirements"] == []
+        assert onboarding_row["bypass_reason"] is None
+        assert onboarding_row["bypassed_by_user_id"] is None
+        assert onboarding_row["bypassed_at"] is None
+        assert matching_client_count == 0
+        assert bypass_audit_count == 0
+    finally:
+        _delete_case(case)
+
+
+def test_management_bypass_is_not_used_when_all_four_requirements_already_passed() -> None:
+    case = _seed_case()
+    try:
+        repository = PostgresClientOnboardingRepository()
+        record = repository.bypass_and_approve_eligibility(
+            actor_user_id=case.actor_user_id,
+            applicant_id=case.applicant_id,
+            bypassed_requirements=("national_id",),
+            reason="Approved exception",
+        )
+
+        assert record.status == "under_verification"
+        assert record.promoted_client_id is None
+
+        assert DATABASE_URL is not None
+        with psycopg.connect(DATABASE_URL, row_factory=dict_row) as connection:
+            onboarding_row = connection.execute(
+                """
+                select status, promoted_client_id, bypassed_requirements
+                from lending.client_onboarding_applicants
+                where id = %s
+                """,
+                (case.applicant_id,),
+            ).fetchone()
+            matching_client_count = connection.execute(
+                """
+                select count(*) as count
+                from lending.clients
+                where client_code = %s
+                """,
+                (case.expected_client_code,),
+            ).fetchone()["count"]
+
+        assert onboarding_row["status"] == "under_verification"
+        assert onboarding_row["promoted_client_id"] is None
+        assert onboarding_row["bypassed_requirements"] == []
         assert matching_client_count == 0
     finally:
         _delete_case(case)
