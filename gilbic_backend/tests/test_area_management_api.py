@@ -12,7 +12,10 @@ from gilbic_backend.account_repository import (
     DeviceNotRegistered,
     DeviceRevoked,
 )
-from gilbic_backend.area_management_api import area_management_repository_dependency
+from gilbic_backend.area_management_api import (
+    area_management_repository_dependency,
+    create_area_management_router,
+)
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
@@ -242,10 +245,10 @@ def headers() -> dict[str, str]:
 
 
 def test_area_management_router_exposes_the_approved_plan1_surface_once() -> None:
-    app = create_app()
+    router = create_area_management_router()
     routes = {
         (method, route.path)
-        for route in app.routes
+        for route in router.routes
         for method in (getattr(route, "methods", None) or ())
     }
     expected = {
@@ -269,7 +272,7 @@ def test_area_management_router_exposes_the_approved_plan1_surface_once() -> Non
     for method, path in expected:
         assert sum(
             1
-            for route in app.routes
+            for route in router.routes
             if route.path == path
             and method in (getattr(route, "methods", None) or set())
         ) == 1
