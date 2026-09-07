@@ -127,9 +127,9 @@ function selectedAreaDetails(tree, selected) {
       ${inheritedFrom ? `<p><strong>Inherited from:</strong> ${escapeHtml(inheritedFrom)}</p>` : ''}
     </div>
     <div class="detail-grid area-counts">
-      ${detailItem('Direct Clients', escapeHtml(selected.direct_client_count ?? 0))}
-      ${detailItem('Subtree Clients', escapeHtml(selected.subtree_client_count ?? 0))}
-      ${detailItem('Child Areas', escapeHtml(selected.child_count ?? 0))}
+      ${detailItem('Direct Clients:', escapeHtml(selected.direct_client_count ?? 0))}
+      ${detailItem('Subtree Clients:', escapeHtml(selected.subtree_client_count ?? 0))}
+      ${detailItem('Child Areas:', escapeHtml(selected.child_count ?? 0))}
     </div>`;
 }
 
