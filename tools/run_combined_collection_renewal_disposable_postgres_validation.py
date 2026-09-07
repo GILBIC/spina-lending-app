@@ -17,19 +17,7 @@ MIGRATION_RUNNER = ROOT / "tools" / "apply_0100_0101_collection_renewal_migratio
 AREA_MANAGEMENT_MIGRATION = (
     ROOT / "gilbic_backend" / "sql" / "0113_add_authoritative_area_management.sql"
 )
-TARGET_TESTS = (
-    ROOT
-    / "gilbic_backend"
-    / "tests"
-    / "test_combined_collection_renewal_workflow_postgres.py",
-    ROOT
-    / "gilbic_backend"
-    / "tests"
-    / "test_seven_by_seven_verified_advance_postgres.py",
-    ROOT
-    / "gilbic_backend"
-    / "tests"
-    / "test_seven_by_seven_no_collection_voluntary_postgres.py",
+AREA_ACCEPTANCE_TESTS = (
     ROOT
     / "gilbic_backend"
     / "tests"
@@ -46,6 +34,20 @@ TARGET_TESTS = (
     / "gilbic_backend"
     / "tests"
     / "test_delegated_area_access_postgres.py",
+)
+TARGET_TESTS = (
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_combined_collection_renewal_workflow_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_seven_by_seven_verified_advance_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_seven_by_seven_no_collection_voluntary_postgres.py",
 )
 # The shared branch schema is contiguous through 0111. Migration 0112 belongs to
 # the separately isolated onboarding work and is intentionally absent from this
@@ -157,7 +159,12 @@ def _assert_current_7x7_reader_schema(test_url: str) -> None:
 
 
 def main() -> int:
-    for required in (AREA_MANAGEMENT_MIGRATION, MIGRATION_RUNNER, *TARGET_TESTS):
+    for required in (
+        AREA_MANAGEMENT_MIGRATION,
+        MIGRATION_RUNNER,
+        *AREA_ACCEPTANCE_TESTS,
+        *TARGET_TESTS,
+    ):
         if not required.is_file():
             raise SystemExit(f"Required validation file is missing: {required}")
 
@@ -186,9 +193,26 @@ def main() -> int:
         print("Re-running guarded migrations once more to prove idempotency...")
         _run([sys.executable, str(MIGRATION_RUNNER)], env=migration_env, timeout=300)
 
+        # Run the Area acceptance suite first while the disposable database is
+        # still clean. Existing 7x7 tests intentionally commit legacy Cardona
+        # fixtures, which would otherwise create unrelated equal-specificity
+        # owners and contaminate the delegated-ownership assertions.
+        print("Running Area Management PostgreSQL acceptance tests on clean 0113 state...")
+        _run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                *(str(path) for path in AREA_ACCEPTANCE_TESTS),
+            ],
+            env=migration_env,
+            timeout=600,
+        )
+
         print(
-            "Running atomic combined Pay/renewal, verified 7x7 Advance, NC voluntary, "
-            "and Area Management PostgreSQL acceptance tests..."
+            "Running atomic combined Pay/renewal, verified 7x7 Advance, and NC voluntary "
+            "PostgreSQL tests..."
         )
         _run(
             [
