@@ -973,3 +973,189 @@ class PostgresAreaManagementRepository:
                     },
                 )
                 return ordered_area_uids
+
+    def assign_collector(
+        self,
+        *,
+        actor_user_id: UUID,
+        area_uid: UUID,
+        collector_user_id: UUID,
+    ) -> UUID:
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                node = _node_by_uid(cursor, area_uid, for_update=True)
+                if not node["is_active"]:
+                    raise ValueError("A Collector cannot be assigned to a retired Area.")
+
+                cursor.execute(
+                    """
+                    select exists (
+                        select 1
+                        from core.users account
+                        join core.user_roles user_role
+                          on user_role.user_id = account.id
+                        join core.roles role
+                          on role.id = user_role.role_id
+                        where account.id = %s
+                          and account.status = 'active'
+                          and role.code = 'collector'
+                    ) as is_active_collector
+                    """,
+                    (collector_user_id,),
+                )
+                if not cursor.fetchone()["is_active_collector"]:
+                    raise ValueError("Only an active Collector account may own an Area.")
+
+                cursor.execute(
+                    """
+                    select
+                        id,
+                        collector_user_id,
+                        area,
+                        sort_order,
+                        is_active
+                    from lending.collector_area_assignments
+                    where area_uid = %s
+                    order by created_at, id
+                    for update
+                    """,
+                    (area_uid,),
+                )
+                assignments = cursor.fetchall()
+                active_assignment = next(
+                    (row for row in assignments if row["is_active"]),
+                    None,
+                )
+                if (
+                    active_assignment is not None
+                    and active_assignment["collector_user_id"] == collector_user_id
+                ):
+                    return active_assignment["id"]
+
+                previous_collector_user_id = (
+                    active_assignment["collector_user_id"]
+                    if active_assignment is not None
+                    else None
+                )
+                if active_assignment is not None:
+                    cursor.execute(
+                        """
+                        update lending.collector_area_assignments
+                        set is_active = false, updated_at = now()
+                        where id = %s
+                        """,
+                        (active_assignment["id"],),
+                    )
+
+                reusable_assignment = next(
+                    (
+                        row
+                        for row in assignments
+                        if row["collector_user_id"] == collector_user_id
+                    ),
+                    None,
+                )
+                if reusable_assignment is None:
+                    cursor.execute(
+                        """
+                        insert into lending.collector_area_assignments (
+                            collector_user_id,
+                            area,
+                            area_uid,
+                            sort_order,
+                            is_active
+                        ) values (%s, %s, %s, %s, true)
+                        returning id
+                        """,
+                        (
+                            collector_user_id,
+                            node["full_path"],
+                            area_uid,
+                            node["sort_order"],
+                        ),
+                    )
+                    assignment_id = cursor.fetchone()["id"]
+                else:
+                    cursor.execute(
+                        """
+                        update lending.collector_area_assignments
+                        set
+                            area = %s,
+                            area_uid = %s,
+                            sort_order = %s,
+                            is_active = true,
+                            updated_at = now()
+                        where id = %s
+                        returning id
+                        """,
+                        (
+                            node["full_path"],
+                            area_uid,
+                            node["sort_order"],
+                            reusable_assignment["id"],
+                        ),
+                    )
+                    assignment_id = cursor.fetchone()["id"]
+
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.collector.assign",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={
+                        "area_path": node["full_path"],
+                        "previous_collector_user_id": str(previous_collector_user_id)
+                        if previous_collector_user_id is not None
+                        else None,
+                        "collector_user_id": str(collector_user_id),
+                    },
+                )
+                return assignment_id
+
+    def remove_collector_assignment(
+        self,
+        *,
+        actor_user_id: UUID,
+        area_uid: UUID,
+    ) -> UUID:
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                node = _node_by_uid(cursor, area_uid, for_update=True)
+                if not node["is_active"]:
+                    raise ValueError("A retired Area cannot change its Collector assignment.")
+
+                cursor.execute(
+                    """
+                    select id, collector_user_id
+                    from lending.collector_area_assignments
+                    where area_uid = %s
+                      and is_active = true
+                    for update
+                    """,
+                    (area_uid,),
+                )
+                assignment = cursor.fetchone()
+                if assignment is None:
+                    raise ValueError("This Area does not have a direct Collector assignment to remove.")
+
+                cursor.execute(
+                    """
+                    update lending.collector_area_assignments
+                    set is_active = false, updated_at = now()
+                    where id = %s
+                    """,
+                    (assignment["id"],),
+                )
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.collector.remove",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={
+                        "area_path": node["full_path"],
+                        "collector_user_id": str(assignment["collector_user_id"]),
+                    },
+                )
+                return assignment["collector_user_id"]
