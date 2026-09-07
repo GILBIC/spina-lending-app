@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
 MOBILE_SRC = ROOT / "spina_backend_mobile" / "src"
 MIGRATION_RUNNER = ROOT / "tools" / "apply_0100_0101_collection_renewal_migrations.py"
+AREA_MANAGEMENT_MIGRATION = (
+    ROOT / "gilbic_backend" / "sql" / "0113_add_authoritative_area_management.sql"
+)
 TARGET_TESTS = (
     ROOT
     / "gilbic_backend"
@@ -28,12 +31,12 @@ TARGET_TESTS = (
     / "tests"
     / "test_seven_by_seven_no_collection_voluntary_postgres.py",
 )
-# The current combined collection/renewal code now depends on borrower schedule
-# adjustment migration 0110 as well as the 7x7 operational reader work through
-# 0108. Migration 0110 preserves the existing No Collection semantics while
-# adding generic event_date evidence and borrower extension state, so this
-# production-code validation must exercise the current schema contract.
-BOOTSTRAP_THROUGH = 110
+# The shared branch schema is contiguous through 0111. Migration 0112 belongs to
+# the separately isolated onboarding work and is intentionally absent from this
+# Area Management branch, while current collection posting now depends on the
+# Area transfer table introduced by 0113. Replay the shared baseline through
+# 0111, then apply this branch's 0113 feature migration directly.
+BOOTSTRAP_THROUGH = 111
 REQUIRED_7X7_READER_RELATIONS = (
     "lending.seven_by_seven_extra_principal_adjustments",
     "lending.loan_contract_installments_operational",
@@ -97,6 +100,8 @@ def _bootstrap_database(test_url: str) -> None:
         disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
+        with psycopg.connect(test_url, autocommit=True) as connection:
+            connection.execute(AREA_MANAGEMENT_MIGRATION.read_text(encoding="utf-8"))
     finally:
         disposable.BOOTSTRAP_THROUGH = previous_bootstrap_through
 
@@ -136,7 +141,7 @@ def _assert_current_7x7_reader_schema(test_url: str) -> None:
 
 
 def main() -> int:
-    for required in (MIGRATION_RUNNER, *TARGET_TESTS):
+    for required in (AREA_MANAGEMENT_MIGRATION, MIGRATION_RUNNER, *TARGET_TESTS):
         if not required.is_file():
             raise SystemExit(f"Required validation file is missing: {required}")
 
@@ -153,7 +158,8 @@ def main() -> int:
         created = True
 
         print(
-            f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d}..."
+            f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d} "
+            "plus Area Management migration 0113..."
         )
         _bootstrap_database(test_url)
         _assert_current_7x7_reader_schema(test_url)
