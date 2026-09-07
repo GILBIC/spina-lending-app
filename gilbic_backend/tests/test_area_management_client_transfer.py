@@ -199,6 +199,7 @@ def _insert_official_collection(
     client_id: UUID,
     collector_user_id: UUID,
     device_id: UUID,
+    device_sequence: int,
     collection_date: date,
 ) -> UUID:
     return connection.execute(
@@ -224,7 +225,7 @@ def _insert_official_collection(
             details
         ) values (
             %s, %s, %s, %s, %s, %s, %s,
-            'payment', 100.00, now(), 1, '',
+            'payment', 100.00, now(), %s, '',
             300.00, 200.00, 0, null, %s, '{}'::jsonb
         )
         returning id
@@ -237,6 +238,7 @@ def _insert_official_collection(
             device_id,
             loan_id,
             collection_date,
+            device_sequence,
             f"AX-R-{suffix}-{uuid4().hex[:8]}",
         ),
     ).fetchone()[0]
@@ -460,6 +462,7 @@ def test_client_transfer_is_immediate_before_collection_and_deferred_to_next_rea
             client_id=deferred_client,
             collector_user_id=old_collector,
             device_id=device_id,
+            device_sequence=1,
             collection_date=business_date,
         )
         historical_before = connection.execute(
@@ -614,6 +617,7 @@ def test_client_transfer_is_immediate_before_collection_and_deferred_to_next_rea
             client_id=no_future_client,
             collector_user_id=old_collector,
             device_id=device_id,
+            device_sequence=2,
             collection_date=business_date,
         )
         with pytest.raises(ValueError, match="client_transfer_next_collection_day_unavailable"):
