@@ -5,8 +5,12 @@ from typing import Any, Mapping
 from uuid import UUID
 
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from .database import open_connection
+
+
+_AREA_SEPARATOR = " › "
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +48,16 @@ class AreaClientSearchResult:
     effective_collector: AreaCollector | None
 
 
+@dataclass(frozen=True, slots=True)
+class AreaMovePreview:
+    area_uid: UUID
+    old_parent_area_uid: UUID | None
+    new_parent_area_uid: UUID | None
+    old_path: str
+    new_path: str
+    affected_node_count: int
+
+
 def _collector_from_row(
     row: Mapping[str, Any],
     *,
@@ -59,6 +73,190 @@ def _collector_from_row(
         username=row[username_key],
         full_name=row[full_name_key],
     )
+
+
+def _normalize_area_name(name: str) -> str:
+    normalized = " ".join(name.strip().split())
+    if not normalized or "›" in normalized:
+        raise ValueError("Area name must be nonblank and cannot contain the hierarchy separator.")
+    return normalized
+
+
+def _node_by_uid(cursor, area_uid: UUID, *, for_update: bool = False):
+    lock_clause = " for update" if for_update else ""
+    cursor.execute(
+        f"""
+        select
+            area_uid,
+            parent_area_uid,
+            name,
+            full_path,
+            depth,
+            sort_order,
+            is_active,
+            is_legacy_unmapped
+        from lending.area_nodes
+        where area_uid = %s{lock_clause}
+        """,
+        (area_uid,),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        raise ValueError("The selected Area does not exist.")
+    return row
+
+
+def _subtree_rows(cursor, area_uid: UUID, *, for_update: bool = False):
+    lock_clause = "for update of node" if for_update else ""
+    cursor.execute(
+        f"""
+        with recursive subtree as (
+            select root.area_uid
+            from lending.area_nodes root
+            where root.area_uid = %s
+
+            union all
+
+            select child.area_uid
+            from lending.area_nodes child
+            join subtree parent
+              on child.parent_area_uid = parent.area_uid
+        )
+        select
+            node.area_uid,
+            node.parent_area_uid,
+            node.name,
+            node.full_path,
+            node.depth,
+            node.sort_order,
+            node.is_active,
+            node.is_legacy_unmapped
+        from lending.area_nodes node
+        join subtree on subtree.area_uid = node.area_uid
+        order by node.depth, node.area_uid
+        {lock_clause}
+        """,
+        (area_uid,),
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        raise ValueError("The selected Area does not exist.")
+    return rows
+
+
+def _assert_path_available(
+    cursor,
+    full_path: str,
+    *,
+    excluded_area_uids: tuple[UUID, ...] = (),
+) -> None:
+    if excluded_area_uids:
+        cursor.execute(
+            """
+            select 1
+            from lending.area_nodes
+            where lower(lending.normalize_area_path(full_path)) =
+                  lower(lending.normalize_area_path(%s))
+              and not (area_uid = any(%s::uuid[]))
+            limit 1
+            """,
+            (full_path, list(excluded_area_uids)),
+        )
+    else:
+        cursor.execute(
+            """
+            select 1
+            from lending.area_nodes
+            where lower(lending.normalize_area_path(full_path)) =
+                  lower(lending.normalize_area_path(%s))
+            limit 1
+            """,
+            (full_path,),
+        )
+    if cursor.fetchone() is not None:
+        raise ValueError("An Area with that path already exists.")
+
+
+def _sync_current_area_paths(cursor, path_by_uid: Mapping[UUID, str]) -> None:
+    for area_uid, full_path in path_by_uid.items():
+        cursor.execute(
+            """
+            update lending.clients
+            set area = %s, updated_at = now()
+            where area_uid = %s
+            """,
+            (full_path, area_uid),
+        )
+        cursor.execute(
+            """
+            update lending.collector_area_assignments
+            set area = %s, updated_at = now()
+            where area_uid = %s
+            """,
+            (full_path, area_uid),
+        )
+        cursor.execute(
+            """
+            update lending.client_area_pending_transfers
+            set current_area_path_snapshot = %s
+            where current_area_uid = %s
+              and applied_at is null
+              and cancelled_at is null
+            """,
+            (full_path, area_uid),
+        )
+        cursor.execute(
+            """
+            update lending.client_area_pending_transfers
+            set target_area_path_snapshot = %s
+            where target_area_uid = %s
+              and applied_at is null
+              and cancelled_at is null
+            """,
+            (full_path, area_uid),
+        )
+
+
+def _write_area_audit(
+    cursor,
+    *,
+    actor_user_id: UUID,
+    action: str,
+    target_type: str,
+    target_id: UUID | None,
+    details: Mapping[str, Any],
+) -> None:
+    cursor.execute(
+        """
+        insert into core.audit_logs (
+            actor_user_id,
+            action,
+            target_type,
+            target_id,
+            details
+        ) values (%s, %s, %s, %s, %s)
+        """,
+        (actor_user_id, action, target_type, target_id, Jsonb(dict(details))),
+    )
+
+
+def _planned_subtree_paths(
+    rows,
+    *,
+    old_prefix: str,
+    new_prefix: str,
+) -> dict[UUID, str]:
+    planned: dict[UUID, str] = {}
+    for row in rows:
+        old_path = row["full_path"]
+        if old_path == old_prefix:
+            suffix = ""
+        elif old_path.startswith(old_prefix + _AREA_SEPARATOR):
+            suffix = old_path[len(old_prefix) :]
+        else:
+            raise ValueError("The Area subtree contains an inconsistent path.")
+        planned[row["area_uid"]] = new_prefix + suffix
+    return planned
 
 
 class PostgresAreaManagementRepository:
@@ -368,3 +566,410 @@ class PostgresAreaManagementRepository:
         if row is None:
             return None
         return row["collector_user_id"]
+
+    def create_area(
+        self,
+        *,
+        actor_user_id: UUID,
+        parent_area_uid: UUID | None,
+        name: str,
+    ) -> UUID:
+        normalized_name = _normalize_area_name(name)
+
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                if parent_area_uid is None:
+                    full_path = normalized_name
+                    depth = 0
+                else:
+                    parent = _node_by_uid(cursor, parent_area_uid, for_update=True)
+                    if not parent["is_active"]:
+                        raise ValueError("A new Area cannot be added under a retired Area.")
+                    full_path = f'{parent["full_path"]}{_AREA_SEPARATOR}{normalized_name}'
+                    depth = parent["depth"] + 1
+
+                _assert_path_available(cursor, full_path)
+                cursor.execute(
+                    """
+                    select coalesce(max(sort_order) + 1, 0)::integer as next_sort_order
+                    from lending.area_nodes
+                    where parent_area_uid is not distinct from %s
+                    """,
+                    (parent_area_uid,),
+                )
+                next_sort_order = cursor.fetchone()["next_sort_order"]
+                cursor.execute(
+                    """
+                    insert into lending.area_nodes (
+                        parent_area_uid,
+                        name,
+                        full_path,
+                        depth,
+                        sort_order,
+                        is_active,
+                        is_legacy_unmapped
+                    ) values (%s, %s, %s, %s, %s, true, false)
+                    returning area_uid
+                    """,
+                    (
+                        parent_area_uid,
+                        normalized_name,
+                        full_path,
+                        depth,
+                        next_sort_order,
+                    ),
+                )
+                area_uid = cursor.fetchone()["area_uid"]
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.create",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={
+                        "path": full_path,
+                        "parent_area_uid": str(parent_area_uid)
+                        if parent_area_uid is not None
+                        else None,
+                    },
+                )
+                return area_uid
+
+    def rename_area(
+        self,
+        *,
+        actor_user_id: UUID,
+        area_uid: UUID,
+        name: str,
+    ) -> UUID:
+        normalized_name = _normalize_area_name(name)
+
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                rows = _subtree_rows(cursor, area_uid, for_update=True)
+                target = next(row for row in rows if row["area_uid"] == area_uid)
+                if not target["is_active"]:
+                    raise ValueError("A retired Area cannot be renamed.")
+
+                old_prefix = target["full_path"]
+                if target["parent_area_uid"] is None:
+                    new_prefix = normalized_name
+                else:
+                    parent = _node_by_uid(
+                        cursor,
+                        target["parent_area_uid"],
+                        for_update=True,
+                    )
+                    new_prefix = (
+                        f'{parent["full_path"]}{_AREA_SEPARATOR}{normalized_name}'
+                    )
+
+                subtree_uids = tuple(row["area_uid"] for row in rows)
+                planned_paths = _planned_subtree_paths(
+                    rows,
+                    old_prefix=old_prefix,
+                    new_prefix=new_prefix,
+                )
+                for planned_path in planned_paths.values():
+                    _assert_path_available(
+                        cursor,
+                        planned_path,
+                        excluded_area_uids=subtree_uids,
+                    )
+
+                for row in rows:
+                    current_uid = row["area_uid"]
+                    if current_uid == area_uid:
+                        cursor.execute(
+                            """
+                            update lending.area_nodes
+                            set name = %s, full_path = %s, updated_at = now()
+                            where area_uid = %s
+                            """,
+                            (normalized_name, planned_paths[current_uid], current_uid),
+                        )
+                    else:
+                        cursor.execute(
+                            """
+                            update lending.area_nodes
+                            set full_path = %s, updated_at = now()
+                            where area_uid = %s
+                            """,
+                            (planned_paths[current_uid], current_uid),
+                        )
+
+                _sync_current_area_paths(cursor, planned_paths)
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.rename",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={"old_path": old_prefix, "new_path": new_prefix},
+                )
+                return area_uid
+
+    def preview_move(
+        self,
+        *,
+        area_uid: UUID,
+        new_parent_area_uid: UUID | None,
+    ) -> AreaMovePreview:
+        if new_parent_area_uid == area_uid:
+            raise ValueError("An Area cannot be moved under itself.")
+
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                rows = _subtree_rows(cursor, area_uid, for_update=False)
+                target = next(row for row in rows if row["area_uid"] == area_uid)
+                if not target["is_active"]:
+                    raise ValueError("A retired Area cannot be moved.")
+                subtree_uids = tuple(row["area_uid"] for row in rows)
+                if new_parent_area_uid in subtree_uids:
+                    raise ValueError("An Area cannot be moved under one of its descendants.")
+                if target["parent_area_uid"] == new_parent_area_uid:
+                    raise ValueError("The Area is already under that parent.")
+
+                if new_parent_area_uid is None:
+                    new_prefix = target["name"]
+                else:
+                    parent = _node_by_uid(cursor, new_parent_area_uid)
+                    if not parent["is_active"]:
+                        raise ValueError("An Area cannot be moved under a retired Area.")
+                    new_prefix = (
+                        f'{parent["full_path"]}{_AREA_SEPARATOR}{target["name"]}'
+                    )
+
+                planned_paths = _planned_subtree_paths(
+                    rows,
+                    old_prefix=target["full_path"],
+                    new_prefix=new_prefix,
+                )
+                for planned_path in planned_paths.values():
+                    _assert_path_available(
+                        cursor,
+                        planned_path,
+                        excluded_area_uids=subtree_uids,
+                    )
+
+                return AreaMovePreview(
+                    area_uid=area_uid,
+                    old_parent_area_uid=target["parent_area_uid"],
+                    new_parent_area_uid=new_parent_area_uid,
+                    old_path=target["full_path"],
+                    new_path=new_prefix,
+                    affected_node_count=len(rows),
+                )
+
+    def move_area(
+        self,
+        *,
+        actor_user_id: UUID,
+        area_uid: UUID,
+        new_parent_area_uid: UUID | None,
+    ) -> AreaMovePreview:
+        if new_parent_area_uid == area_uid:
+            raise ValueError("An Area cannot be moved under itself.")
+
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                rows = _subtree_rows(cursor, area_uid, for_update=True)
+                target = next(row for row in rows if row["area_uid"] == area_uid)
+                if not target["is_active"]:
+                    raise ValueError("A retired Area cannot be moved.")
+                subtree_uids = tuple(row["area_uid"] for row in rows)
+                if new_parent_area_uid in subtree_uids:
+                    raise ValueError("An Area cannot be moved under one of its descendants.")
+                old_parent_area_uid = target["parent_area_uid"]
+                if old_parent_area_uid == new_parent_area_uid:
+                    raise ValueError("The Area is already under that parent.")
+
+                if new_parent_area_uid is None:
+                    new_prefix = target["name"]
+                    new_depth = 0
+                else:
+                    parent = _node_by_uid(cursor, new_parent_area_uid, for_update=True)
+                    if not parent["is_active"]:
+                        raise ValueError("An Area cannot be moved under a retired Area.")
+                    new_prefix = (
+                        f'{parent["full_path"]}{_AREA_SEPARATOR}{target["name"]}'
+                    )
+                    new_depth = parent["depth"] + 1
+
+                planned_paths = _planned_subtree_paths(
+                    rows,
+                    old_prefix=target["full_path"],
+                    new_prefix=new_prefix,
+                )
+                for planned_path in planned_paths.values():
+                    _assert_path_available(
+                        cursor,
+                        planned_path,
+                        excluded_area_uids=subtree_uids,
+                    )
+
+                cursor.execute(
+                    """
+                    select coalesce(max(sort_order) + 1, 0)::integer as next_sort_order
+                    from lending.area_nodes
+                    where parent_area_uid is not distinct from %s
+                      and area_uid <> %s
+                    """,
+                    (new_parent_area_uid, area_uid),
+                )
+                next_sort_order = cursor.fetchone()["next_sort_order"]
+                depth_delta = new_depth - target["depth"]
+
+                for row in rows:
+                    current_uid = row["area_uid"]
+                    if current_uid == area_uid:
+                        cursor.execute(
+                            """
+                            update lending.area_nodes
+                            set
+                                parent_area_uid = %s,
+                                full_path = %s,
+                                depth = %s,
+                                sort_order = %s,
+                                is_legacy_unmapped = case
+                                    when %s::uuid is not null then false
+                                    else is_legacy_unmapped
+                                end,
+                                updated_at = now()
+                            where area_uid = %s
+                            """,
+                            (
+                                new_parent_area_uid,
+                                planned_paths[current_uid],
+                                new_depth,
+                                next_sort_order,
+                                new_parent_area_uid,
+                                current_uid,
+                            ),
+                        )
+                    else:
+                        cursor.execute(
+                            """
+                            update lending.area_nodes
+                            set
+                                full_path = %s,
+                                depth = %s,
+                                updated_at = now()
+                            where area_uid = %s
+                            """,
+                            (
+                                planned_paths[current_uid],
+                                row["depth"] + depth_delta,
+                                current_uid,
+                            ),
+                        )
+
+                if old_parent_area_uid != new_parent_area_uid:
+                    cursor.execute(
+                        """
+                        select area_uid
+                        from lending.area_nodes
+                        where parent_area_uid is not distinct from %s
+                          and area_uid <> %s
+                        order by sort_order, area_uid
+                        for update
+                        """,
+                        (old_parent_area_uid, area_uid),
+                    )
+                    for sort_order, sibling in enumerate(cursor.fetchall()):
+                        cursor.execute(
+                            """
+                            update lending.area_nodes
+                            set sort_order = %s, updated_at = now()
+                            where area_uid = %s
+                            """,
+                            (sort_order, sibling["area_uid"]),
+                        )
+
+                _sync_current_area_paths(cursor, planned_paths)
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.move",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={
+                        "old_path": target["full_path"],
+                        "new_path": new_prefix,
+                        "old_parent_area_uid": str(old_parent_area_uid)
+                        if old_parent_area_uid is not None
+                        else None,
+                        "new_parent_area_uid": str(new_parent_area_uid)
+                        if new_parent_area_uid is not None
+                        else None,
+                        "affected_node_count": len(rows),
+                    },
+                )
+                return AreaMovePreview(
+                    area_uid=area_uid,
+                    old_parent_area_uid=old_parent_area_uid,
+                    new_parent_area_uid=new_parent_area_uid,
+                    old_path=target["full_path"],
+                    new_path=new_prefix,
+                    affected_node_count=len(rows),
+                )
+
+    def reorder_siblings(
+        self,
+        *,
+        actor_user_id: UUID,
+        parent_area_uid: UUID | None,
+        ordered_area_uids: tuple[UUID, ...],
+    ) -> tuple[UUID, ...]:
+        if not ordered_area_uids:
+            raise ValueError("At least one Area is required for reordering.")
+        if len(set(ordered_area_uids)) != len(ordered_area_uids):
+            raise ValueError("Each Area may appear only once in the new order.")
+
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                if parent_area_uid is not None:
+                    parent = _node_by_uid(cursor, parent_area_uid, for_update=True)
+                    if not parent["is_active"]:
+                        raise ValueError("Areas under a retired parent cannot be reordered.")
+                cursor.execute(
+                    """
+                    select area_uid, sort_order
+                    from lending.area_nodes
+                    where parent_area_uid is not distinct from %s
+                    order by sort_order, area_uid
+                    for update
+                    """,
+                    (parent_area_uid,),
+                )
+                siblings = cursor.fetchall()
+                sibling_uids = tuple(row["area_uid"] for row in siblings)
+                if len(sibling_uids) != len(ordered_area_uids) or set(
+                    sibling_uids
+                ) != set(ordered_area_uids):
+                    raise ValueError("The reorder must include the complete sibling set exactly once.")
+
+                for sort_order, sibling_uid in enumerate(ordered_area_uids):
+                    cursor.execute(
+                        """
+                        update lending.area_nodes
+                        set sort_order = %s, updated_at = now()
+                        where area_uid = %s
+                        """,
+                        (sort_order, sibling_uid),
+                    )
+
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.reorder",
+                    target_type="area_siblings",
+                    target_id=parent_area_uid,
+                    details={
+                        "parent_area_uid": str(parent_area_uid)
+                        if parent_area_uid is not None
+                        else None,
+                        "ordered_area_uids": [str(value) for value in ordered_area_uids],
+                    },
+                )
+                return ordered_area_uids
