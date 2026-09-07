@@ -72,6 +72,19 @@ class ClientAreaTransferPreview:
     timing: str
 
 
+@dataclass(frozen=True, slots=True)
+class AreaRetirementPreview:
+    area_uid: UUID
+    full_path: str
+    is_active: bool
+    active_direct_client_count: int
+    active_subtree_client_count: int
+    active_collector_assignment_count: int
+    pending_transfer_target_count: int
+    descendant_count: int
+    active_descendant_count: int
+
+
 def _collector_from_row(
     row: Mapping[str, Any],
     *,
@@ -271,6 +284,74 @@ def _planned_subtree_paths(
             raise ValueError("The Area subtree contains an inconsistent path.")
         planned[row["area_uid"]] = new_prefix + suffix
     return planned
+
+
+def _retirement_preview(
+    cursor,
+    area_uid: UUID,
+    *,
+    for_update: bool,
+) -> AreaRetirementPreview:
+    rows = _subtree_rows(cursor, area_uid, for_update=for_update)
+    target = next(row for row in rows if row["area_uid"] == area_uid)
+    subtree_uids = [row["area_uid"] for row in rows]
+
+    cursor.execute(
+        """
+        select
+            count(*) filter (
+                where client.area_uid = %s and client.status = 'active'
+            )::integer as active_direct_client_count,
+            count(*) filter (
+                where client.status = 'active'
+            )::integer as active_subtree_client_count
+        from lending.clients client
+        where client.area_uid = any(%s::uuid[])
+        """,
+        (area_uid, subtree_uids),
+    )
+    client_counts = cursor.fetchone()
+
+    cursor.execute(
+        """
+        select count(*)::integer as active_collector_assignment_count
+        from lending.collector_area_assignments assignment
+        where assignment.area_uid = any(%s::uuid[])
+          and assignment.is_active = true
+        """,
+        (subtree_uids,),
+    )
+    assignment_counts = cursor.fetchone()
+
+    cursor.execute(
+        """
+        select count(*)::integer as pending_transfer_target_count
+        from lending.client_area_pending_transfers pending
+        where pending.target_area_uid = any(%s::uuid[])
+          and pending.applied_at is null
+          and pending.cancelled_at is null
+        """,
+        (subtree_uids,),
+    )
+    pending_counts = cursor.fetchone()
+
+    return AreaRetirementPreview(
+        area_uid=area_uid,
+        full_path=target["full_path"],
+        is_active=bool(target["is_active"]),
+        active_direct_client_count=client_counts["active_direct_client_count"],
+        active_subtree_client_count=client_counts["active_subtree_client_count"],
+        active_collector_assignment_count=assignment_counts[
+            "active_collector_assignment_count"
+        ],
+        pending_transfer_target_count=pending_counts["pending_transfer_target_count"],
+        descendant_count=max(len(rows) - 1, 0),
+        active_descendant_count=sum(
+            1
+            for row in rows
+            if row["area_uid"] != area_uid and bool(row["is_active"])
+        ),
+    )
 
 
 def _client_transfer_decision(
@@ -1594,3 +1675,85 @@ class PostgresAreaManagementRepository:
                     },
                 )
                 return preview
+
+    def preview_retirement(self, *, area_uid: UUID) -> AreaRetirementPreview:
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                return _retirement_preview(cursor, area_uid, for_update=False)
+
+    def retire_area(self, *, actor_user_id: UUID, area_uid: UUID) -> UUID:
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                preview = _retirement_preview(cursor, area_uid, for_update=True)
+                if not preview.is_active:
+                    raise ValueError("The Area is already retired.")
+                if preview.active_subtree_client_count:
+                    raise ValueError("The Area still has active Clients in its subtree.")
+                if preview.active_collector_assignment_count:
+                    raise ValueError(
+                        "The Area subtree still has an active Collector assignment."
+                    )
+                if preview.pending_transfer_target_count:
+                    raise ValueError(
+                        "The Area subtree is still targeted by a pending Client transfer."
+                    )
+                if preview.active_descendant_count:
+                    raise ValueError(
+                        "Retire active descendant Areas before retiring this Area."
+                    )
+
+                cursor.execute(
+                    """
+                    update lending.area_nodes
+                    set is_active = false, updated_at = now()
+                    where area_uid = %s
+                    """,
+                    (area_uid,),
+                )
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.retired",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={
+                        "area_path": preview.full_path,
+                        "descendant_count": preview.descendant_count,
+                    },
+                )
+                return area_uid
+
+    def reactivate_area(self, *, actor_user_id: UUID, area_uid: UUID) -> UUID:
+        with open_connection() as connection:  # noqa: SIM117
+            with connection.cursor(row_factory=dict_row) as cursor:
+                node = _node_by_uid(cursor, area_uid, for_update=True)
+                if node["is_active"]:
+                    raise ValueError("The Area is already active.")
+                if node["parent_area_uid"] is not None:
+                    parent = _node_by_uid(
+                        cursor,
+                        node["parent_area_uid"],
+                        for_update=True,
+                    )
+                    if not parent["is_active"]:
+                        raise ValueError(
+                            "The parent Area must be active before this Area can be reactivated."
+                        )
+
+                cursor.execute(
+                    """
+                    update lending.area_nodes
+                    set is_active = true, updated_at = now()
+                    where area_uid = %s
+                    """,
+                    (area_uid,),
+                )
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=actor_user_id,
+                    action="area.reactivated",
+                    target_type="area",
+                    target_id=area_uid,
+                    details={"area_path": node["full_path"]},
+                )
+                return area_uid
