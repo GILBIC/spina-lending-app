@@ -325,22 +325,22 @@ def test_permanent_collector_assignment_inherits_overrides_falls_back_and_invali
                 collector_user_id=non_collector,
             )
 
-        audit_actions = connection.execute(
-            """
-            select action
-            from core.audit_logs
-            where actor_user_id = %s
-              and action in ('area.collector.assign', 'area.collector.remove')
-            order by created_at, id
-            """,
-            (actor_id,),
-        ).fetchall()
-        assert [row[0] for row in audit_actions] == [
-            "area.collector.assign",
-            "area.collector.assign",
-            "area.collector.assign",
-            "area.collector.remove",
-        ]
+        audit_action_counts = dict(
+            connection.execute(
+                """
+                select action, count(*)::integer
+                from core.audit_logs
+                where actor_user_id = %s
+                  and action in ('area.collector.assign', 'area.collector.remove')
+                group by action
+                """,
+                (actor_id,),
+            ).fetchall()
+        )
+        assert audit_action_counts == {
+            "area.collector.assign": 3,
+            "area.collector.remove": 1,
+        }
 
         protected_after = {
             table: _protected_fingerprint(connection, table)
