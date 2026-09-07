@@ -395,8 +395,8 @@ def apply_due_client_area_transfers(
     """Apply due deferred transfers inside the caller's existing transaction."""
 
     applied_count = 0
-    with connection.cursor(row_factory=dict_row) as cursor:
-        cursor.execute(
+    with connection.cursor(row_factory=dict_row) as pending_cursor:
+        pending_cursor.execute(
             """
             select
                 pending.id,
@@ -418,115 +418,117 @@ def apply_due_client_area_transfers(
             """,
             (as_of_date, client_id, client_id),
         )
-        pending = cursor.fetchone()
+        pending = pending_cursor.fetchone()
         while pending is not None:
-            cursor.execute(
-                """
-                select
-                    client.id,
-                    client.area_uid,
-                    coalesce(
-                        node.full_path,
-                        nullif(lending.normalize_area_path(client.area), ''),
-                        ''
-                    ) as area_path,
-                    client.status
-                from lending.clients client
-                left join lending.area_nodes node
-                  on node.area_uid = client.area_uid
-                where client.id = %s
-                for update of client
-                """,
-                (pending["client_id"],),
-            )
-            current = cursor.fetchone()
-            if current is None or current["status"] != "active":
-                raise ValueError("client_transfer_client_unavailable")
-            if current["area_uid"] != pending["current_area_uid"]:
-                raise ValueError("client_transfer_current_area_changed")
-
-            target = _node_by_uid(cursor, pending["target_area_uid"], for_update=True)
-            if not target["is_active"]:
-                raise ValueError("client_transfer_target_area_inactive")
-            cursor.execute(
-                "select lending.collector_area_owner(%s) as collector_user_id",
-                (target["full_path"],),
-            )
-            if cursor.fetchone()["collector_user_id"] is None:
-                raise ValueError("client_transfer_target_collector_unavailable")
-
-            cursor.execute(
-                """
-                update lending.clients
-                set area_uid = %s, area = %s, updated_at = now()
-                where id = %s
-                """,
-                (
-                    pending["target_area_uid"],
-                    target["full_path"],
-                    pending["client_id"],
-                ),
-            )
-            cursor.execute(
-                """
-                update lending.client_area_pending_transfers
-                set applied_at = now()
-                where id = %s
-                  and applied_at is null
-                  and cancelled_at is null
-                """,
-                (pending["id"],),
-            )
-            cursor.execute(
-                """
-                insert into lending.client_area_transfer_history (
-                    pending_transfer_id,
-                    client_id,
-                    old_area_uid,
-                    old_area_path_snapshot,
-                    new_area_uid,
-                    new_area_path_snapshot,
-                    effective_date,
-                    timing,
-                    scheduled_by_user_id,
-                    scheduled_at,
-                    applied_at
-                ) values (
-                    %s, %s, %s, %s, %s, %s, %s,
-                    'next_collection_day', %s, %s, now()
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    """
+                    select
+                        client.id,
+                        client.area_uid,
+                        coalesce(
+                            node.full_path,
+                            nullif(lending.normalize_area_path(client.area), ''),
+                            ''
+                        ) as area_path,
+                        client.status
+                    from lending.clients client
+                    left join lending.area_nodes node
+                      on node.area_uid = client.area_uid
+                    where client.id = %s
+                    for update of client
+                    """,
+                    (pending["client_id"],),
                 )
-                """,
-                (
-                    pending["id"],
-                    pending["client_id"],
-                    pending["current_area_uid"],
-                    pending["current_area_path_snapshot"],
-                    pending["target_area_uid"],
-                    target["full_path"],
-                    pending["effective_date"],
-                    pending["scheduled_by_user_id"],
-                    pending["scheduled_at"],
-                ),
-            )
-            _write_area_audit(
-                cursor,
-                actor_user_id=pending["scheduled_by_user_id"],
-                action="area.client.transfer.applied",
-                target_type="client",
-                target_id=pending["client_id"],
-                details={
-                    "old_area_uid": str(pending["current_area_uid"])
-                    if pending["current_area_uid"] is not None
-                    else None,
-                    "old_area_path": pending["current_area_path_snapshot"],
-                    "new_area_uid": str(pending["target_area_uid"]),
-                    "new_area_path": target["full_path"],
-                    "effective_date": pending["effective_date"].isoformat(),
-                    "timing": "next_collection_day",
-                },
-            )
-            applied_count += 1
-            pending = cursor.fetchone()
+                current = cursor.fetchone()
+                if current is None or current["status"] != "active":
+                    raise ValueError("client_transfer_client_unavailable")
+                if current["area_uid"] != pending["current_area_uid"]:
+                    raise ValueError("client_transfer_current_area_changed")
+
+                target = _node_by_uid(cursor, pending["target_area_uid"], for_update=True)
+                if not target["is_active"]:
+                    raise ValueError("client_transfer_target_area_inactive")
+                cursor.execute(
+                    "select lending.collector_area_owner(%s) as collector_user_id",
+                    (target["full_path"],),
+                )
+                if cursor.fetchone()["collector_user_id"] is None:
+                    raise ValueError("client_transfer_target_collector_unavailable")
+
+                cursor.execute(
+                    """
+                    update lending.clients
+                    set area_uid = %s, area = %s, updated_at = now()
+                    where id = %s
+                    """,
+                    (
+                        pending["target_area_uid"],
+                        target["full_path"],
+                        pending["client_id"],
+                    ),
+                )
+                cursor.execute(
+                    """
+                    update lending.client_area_pending_transfers
+                    set applied_at = now()
+                    where id = %s
+                      and applied_at is null
+                      and cancelled_at is null
+                    """,
+                    (pending["id"],),
+                )
+                cursor.execute(
+                    """
+                    insert into lending.client_area_transfer_history (
+                        pending_transfer_id,
+                        client_id,
+                        old_area_uid,
+                        old_area_path_snapshot,
+                        new_area_uid,
+                        new_area_path_snapshot,
+                        effective_date,
+                        timing,
+                        scheduled_by_user_id,
+                        scheduled_at,
+                        applied_at
+                    ) values (
+                        %s, %s, %s, %s, %s, %s, %s,
+                        'next_collection_day', %s, %s, now()
+                    )
+                    """,
+                    (
+                        pending["id"],
+                        pending["client_id"],
+                        pending["current_area_uid"],
+                        pending["current_area_path_snapshot"],
+                        pending["target_area_uid"],
+                        target["full_path"],
+                        pending["effective_date"],
+                        pending["scheduled_by_user_id"],
+                        pending["scheduled_at"],
+                    ),
+                )
+                _write_area_audit(
+                    cursor,
+                    actor_user_id=pending["scheduled_by_user_id"],
+                    action="area.client.transfer.applied",
+                    target_type="client",
+                    target_id=pending["client_id"],
+                    details={
+                        "old_area_uid": str(pending["current_area_uid"])
+                        if pending["current_area_uid"] is not None
+                        else None,
+                        "old_area_path": pending["current_area_path_snapshot"],
+                        "new_area_uid": str(pending["target_area_uid"]),
+                        "new_area_path": target["full_path"],
+                        "effective_date": pending["effective_date"].isoformat(),
+                        "timing": "next_collection_day",
+                    },
+                )
+                applied_count += 1
+
+            pending = pending_cursor.fetchone()
 
     return applied_count
 
