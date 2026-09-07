@@ -30,6 +30,22 @@ TARGET_TESTS = (
     / "gilbic_backend"
     / "tests"
     / "test_seven_by_seven_no_collection_voluntary_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_area_management_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_area_management_collector_assignment.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_area_management_client_transfer.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_delegated_area_access_postgres.py",
 )
 # The shared branch schema is contiguous through 0111. Migration 0112 belongs to
 # the separately isolated onboarding work and is intentionally absent from this
@@ -171,8 +187,8 @@ def main() -> int:
         _run([sys.executable, str(MIGRATION_RUNNER)], env=migration_env, timeout=300)
 
         print(
-            "Running atomic combined Pay/renewal, verified 7x7 Advance, and NC voluntary "
-            "PostgreSQL tests..."
+            "Running atomic combined Pay/renewal, verified 7x7 Advance, NC voluntary, "
+            "and Area Management PostgreSQL acceptance tests..."
         )
         _run(
             [
@@ -183,7 +199,7 @@ def main() -> int:
                 *(str(path) for path in TARGET_TESTS),
             ],
             env=migration_env,
-            timeout=600,
+            timeout=900,
         )
     finally:
         if created:
@@ -198,7 +214,7 @@ def main() -> int:
             except Exception as error:  # noqa: BLE001 - cleanup is best effort
                 print(f"Warning: failed to drop disposable database: {error}")
 
-    print("Disposable combined Pay + renewal workflow validation passed.")
+    print("Disposable combined Pay + renewal + Area Management validation passed.")
     return 0
 
 
