@@ -18,6 +18,7 @@ from spina_mobile_collections.contracts import (
 )
 from spina_mobile_collections.service import CollectionConflict, CollectionRejected
 
+from .area_management_repository import apply_due_client_area_transfers
 from .receipt_application import (
     ReceiptApplicationError,
     ReceiptApplicationPlan,
@@ -72,6 +73,12 @@ class PostgresCollectionPostingBridge:
                 "Refresh the route before saving this entry.",
                 code="route_revision_required",
             )
+
+        apply_due_client_area_transfers(
+            connection,
+            as_of_date=command.collection_date,
+            client_id=client_id,
+        )
 
         with connection.cursor(row_factory=dict_row) as cursor:
             self._lock_device_sequence(

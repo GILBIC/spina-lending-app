@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
+from .area_management_api import create_area_management_router
 from .auth_api import create_auth_router
 from .client_account_api import create_client_account_router
 from .client_gcash_api import create_client_gcash_router
@@ -163,6 +164,7 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_area_management_router())
     app.include_router(create_client_account_router())
     app.include_router(create_management_alerts_audit_router())
     app.include_router(create_management_dashboard_overview_router())

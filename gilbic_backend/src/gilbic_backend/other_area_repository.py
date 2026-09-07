@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from psycopg.rows import dict_row
 
+from .area_management_repository import apply_due_client_area_transfers
 from .database import open_connection
+
+
+_MANILA_TZ = ZoneInfo("Asia/Manila")
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,8 +104,11 @@ class PostgresOtherAreaRepository:
         if exclude_actor_owned:
             params.append(actor_user_id)
         params.extend((pattern, pattern, pattern, pattern, safe_limit))
+        business_date = datetime.now(_MANILA_TZ).date()
 
         with open_connection() as connection:
+            apply_due_client_area_transfers(connection, as_of_date=business_date)
+
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     f"""
@@ -222,6 +230,8 @@ class PostgresOtherAreaRepository:
 
         safe_limit = max(1, min(limit, 1000))
         with open_connection() as connection:
+            apply_due_client_area_transfers(connection, as_of_date=collection_date)
+
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     """

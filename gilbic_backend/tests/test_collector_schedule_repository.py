@@ -111,6 +111,11 @@ def test_persisted_borrower_shift_is_authoritative_without_reader_reprojection(
 ) -> None:
     connection = FakeConnection()
     monkeypatch.setattr(schedule_repository, "open_connection", lambda: connection)
+    monkeypatch.setattr(
+        schedule_repository,
+        "apply_due_client_area_transfers",
+        lambda *args, **kwargs: 0,
+    )
 
     schedule = PostgresCollectorScheduleRepository().get_schedule(
         collector_user_id=COLLECTOR_ID,

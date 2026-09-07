@@ -7,6 +7,7 @@ from uuid import UUID
 
 from psycopg.rows import dict_row
 
+from .area_management_repository import apply_due_client_area_transfers
 from .database import open_connection
 
 
@@ -203,6 +204,8 @@ class PostgresCollectorScheduleRepository:
         as_of_date: date,
     ) -> CollectorScheduleRecord:
         with open_connection() as connection:
+            apply_due_client_area_transfers(connection, as_of_date=as_of_date)
+
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     """
