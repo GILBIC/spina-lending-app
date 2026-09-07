@@ -243,7 +243,11 @@ def headers() -> dict[str, str]:
 
 def test_area_management_router_exposes_the_approved_plan1_surface_once() -> None:
     app = create_app()
-    routes = {(method, route.path) for route in app.routes for method in route.methods or ()}
+    routes = {
+        (method, route.path)
+        for route in app.routes
+        for method in (getattr(route, "methods", None) or ())
+    }
     expected = {
         ("GET", "/api/v1/areas"),
         ("GET", "/api/v1/areas/collectors"),
@@ -266,7 +270,8 @@ def test_area_management_router_exposes_the_approved_plan1_surface_once() -> Non
         assert sum(
             1
             for route in app.routes
-            if route.path == path and method in (route.methods or set())
+            if route.path == path
+            and method in (getattr(route, "methods", None) or set())
         ) == 1
 
 
@@ -319,12 +324,15 @@ def test_employee_area_manage_can_mutate_structure_but_cannot_retire() -> None:
     move = client.post(
         f"/api/v1/areas/{AREA_ID}/move",
         headers=headers(),
-        json={"new_parent_area_id": OTHER_AREA_ID},
+        json={"new_parent_area_id": str(OTHER_AREA_ID)},
     )
     reorder = client.post(
         "/api/v1/areas/reorder",
         headers=headers(),
-        json={"parent_area_id": None, "ordered_area_ids": [AREA_ID, OTHER_AREA_ID]},
+        json={
+            "parent_area_id": None,
+            "ordered_area_ids": [str(AREA_ID), str(OTHER_AREA_ID)],
+        },
     )
     retire = client.post(f"/api/v1/areas/{AREA_ID}/retire", headers=headers())
 
@@ -347,7 +355,7 @@ def test_employee_collector_assignment_requires_exact_permission() -> None:
     response = client.put(
         f"/api/v1/areas/{AREA_ID}/collector",
         headers=headers(),
-        json={"collector_user_id": COLLECTOR_ID},
+        json={"collector_user_id": str(COLLECTOR_ID)},
     )
 
     assert response.status_code == 200
