@@ -30,6 +30,17 @@ class CollectorRouteReceiptRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class CollectorRouteAreaNode:
+    area_uid: UUID
+    parent_area_uid: UUID | None
+    name: str
+    full_path: str
+    depth: int
+    sort_order: int
+    is_legacy_unmapped: bool
+
+
+@dataclass(frozen=True, slots=True)
 class CollectorRouteEntryRecord:
     route_entry_id: UUID
     client_id: UUID
@@ -44,6 +55,7 @@ class CollectorRouteEntryRecord:
     advance_until: date | None
     status: str
     note: str
+    area_uid: UUID | None = None
     state_version: int = 0
     is_reconciled: bool = False
     mobile_collections_enabled: bool = False
@@ -197,6 +209,7 @@ class CollectorRouteRecord:
     collector_name: str
     areas: tuple[str, ...]
     entries: tuple[CollectorRouteEntryRecord, ...]
+    area_nodes: tuple[CollectorRouteAreaNode, ...] = ()
 
     @property
     def expected_total(self) -> Decimal:
@@ -297,6 +310,104 @@ class PostgresCollectorRouteRepository:
             for row in rows
         }
 
+    @staticmethod
+    def _route_area_nodes(
+        connection,
+        *,
+        collector_user_id: UUID,
+    ) -> tuple[CollectorRouteAreaNode, ...]:
+        with connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                with recursive ordered_tree as (
+                    select
+                        node.area_uid,
+                        node.parent_area_uid,
+                        node.name,
+                        node.full_path,
+                        node.depth,
+                        node.sort_order,
+                        node.is_active,
+                        node.is_legacy_unmapped,
+                        array[node.sort_order]::integer[] as route_order
+                    from lending.area_nodes node
+                    where node.parent_area_uid is null
+
+                    union all
+
+                    select
+                        child.area_uid,
+                        child.parent_area_uid,
+                        child.name,
+                        child.full_path,
+                        child.depth,
+                        child.sort_order,
+                        child.is_active,
+                        child.is_legacy_unmapped,
+                        parent.route_order || child.sort_order
+                    from lending.area_nodes child
+                    join ordered_tree parent
+                      on child.parent_area_uid = parent.area_uid
+                ),
+                route_nodes as (
+                    select node.*
+                    from ordered_tree node
+                    where node.is_active = true
+                      and (
+                          lending.collector_area_owner(node.full_path) = %s
+                          or exists (
+                              select 1
+                              from lending.area_nodes descendant
+                              where descendant.is_active = true
+                                and lending.collector_area_owner(descendant.full_path) = %s
+                                and lending.area_path_contains(
+                                    node.full_path,
+                                    descendant.full_path,
+                                    true
+                                )
+                          )
+                      )
+                )
+                select
+                    area_uid,
+                    parent_area_uid,
+                    name,
+                    full_path,
+                    depth,
+                    sort_order,
+                    is_legacy_unmapped
+                from route_nodes
+                order by route_order, area_uid
+                """,
+                (collector_user_id, collector_user_id),
+            )
+            rows = cursor.fetchall()
+
+        required = {
+            "area_uid",
+            "parent_area_uid",
+            "name",
+            "full_path",
+            "depth",
+            "sort_order",
+            "is_legacy_unmapped",
+        }
+        return tuple(
+            CollectorRouteAreaNode(
+                area_uid=row["area_uid"],
+                parent_area_uid=row["parent_area_uid"],
+                name=str(row["name"]),
+                full_path=str(row["full_path"]),
+                depth=int(row["depth"]),
+                sort_order=int(row["sort_order"]),
+                is_legacy_unmapped=bool(row["is_legacy_unmapped"]),
+            )
+            for row in rows
+            if isinstance(row, dict)
+            and row.get("area_uid") is not None
+            and required.issubset(row)
+        )
+
     def get_today_route(
         self,
         *,
@@ -329,6 +440,7 @@ class PostgresCollectorRouteRepository:
                         l.id as loan_id,
                         c.full_name as client_name,
                         c.area,
+                        c.area_uid,
                         lt.name as loan_type,
                         l.daily_amount,
                         coalesce(s.remaining_balance, l.principal) as remaining_balance,
@@ -586,6 +698,10 @@ class PostgresCollectorRouteRepository:
                 )
                 rows = cursor.fetchall()
 
+            area_nodes = self._route_area_nodes(
+                connection,
+                collector_user_id=collector_user_id,
+            )
             active_promises = self._active_promise_summaries(
                 connection,
                 client_ids=tuple({row["client_id"] for row in rows}),
@@ -637,6 +753,7 @@ class PostgresCollectorRouteRepository:
                     loan_id=row["loan_id"],
                     client_name=row["client_name"],
                     area=row["area"] or "",
+                    area_uid=row.get("area_uid"),
                     loan_type=row["loan_type"],
                     daily_amount=row["daily_amount"],
                     remaining_balance=remaining_balance,
@@ -718,4 +835,5 @@ class PostgresCollectorRouteRepository:
             collector_name=collector_name,
             areas=areas,
             entries=tuple(entries),
+            area_nodes=area_nodes,
         )
