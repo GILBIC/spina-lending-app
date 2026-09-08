@@ -229,7 +229,11 @@ function actionControls(selected, session) {
     actions.push('<button class="button button-outline button-small" type="button" data-area-action="client-transfer">Move Client</button>');
   }
   if (hasPermission(session, 'area.retire')) {
-    actions.push(`<button class="button button-outline button-small" type="button" data-area-action="${selected.is_active ? 'retire' : 'reactivate'}">${selected.is_active ? 'Retire' : 'Reactivate'}</button>`);
+    actions.push(
+      selected.is_active
+        ? '<button class="button button-danger button-small" type="button" data-area-action="retire">Retire Area</button>'
+        : '<button class="button button-outline button-small" type="button" data-area-action="reactivate">Reactivate Area</button>',
+    );
   }
   if (!actions.length) return '';
   return `<div class="action-row area-actions">${actions.join('')}</div>`;
@@ -427,6 +431,53 @@ function moveEditorMarkup(moveEditor, selected, tree) {
   </form>`;
 }
 
+function retirementBlockers(preview) {
+  if (!preview) return [];
+  const blockers = [];
+  const clientCount = Number(preview.active_subtree_client_count || 0);
+  const collectorCount = Number(preview.active_collector_assignment_count || 0);
+  const transferCount = Number(preview.pending_transfer_target_count || 0);
+  const descendantCount = Number(preview.active_descendant_count || 0);
+  if (clientCount > 0) {
+    blockers.push(`${clientCount} active Client${clientCount === 1 ? '' : 's'}`);
+  }
+  if (collectorCount > 0) {
+    blockers.push(`${collectorCount} active Collector assignment${collectorCount === 1 ? '' : 's'}`);
+  }
+  if (transferCount > 0) {
+    blockers.push(`${transferCount} pending transfer${transferCount === 1 ? '' : 's'}`);
+  }
+  if (descendantCount > 0) {
+    blockers.push(`${descendantCount} active descendant Area${descendantCount === 1 ? '' : 's'}`);
+  }
+  return blockers;
+}
+
+function retirementEditorMarkup(retirementEditor, selected) {
+  if (!retirementEditor || !selected?.is_active) return '';
+  const preview = retirementEditor.preview || null;
+  if (!preview || preview.area_id !== selected.area_id) return '';
+  const blockers = retirementBlockers(preview);
+  const dependencyMarkup = blockers.length
+    ? `<div class="area-retirement-blockers">
+        <p><strong>Retirement blocked</strong></p>
+        <ul>${blockers.map((value) => `<li>${escapeHtml(value)}</li>`).join('')}</ul>
+        <p class="meta">Resolve these authoritative dependencies before retiring this Area.</p>
+      </div>`
+    : `<div class="area-retirement-ready">
+        <p>No active operational dependencies were reported by SPINA.</p>
+        <div class="action-row">
+          <button class="button button-danger button-small" type="button" data-area-retirement-confirm>Confirm Retire Area</button>
+        </div>
+      </div>`;
+
+  return `<section class="area-retirement-editor">
+    <div class="section-heading"><div><h3>Retire Area</h3><p>Retirement keeps historical Area references intact and removes the Area from active operations.</p></div></div>
+    <p><strong>Area:</strong> ${escapeHtml(preview.full_path || selected.full_path || selected.name)}</p>
+    ${dependencyMarkup}
+  </section>`;
+}
+
 function safeMutationError(error) {
   if (Number(error?.status) === 409) {
     return new Error('Area name already exists under this parent or conflicts with the current Area structure.');
@@ -467,6 +518,13 @@ function safeClientTransferError(error) {
   return new Error('Client Area transfer could not be completed. Refresh and try again.');
 }
 
+function safeAreaLifecycleError(error) {
+  if (Number(error?.status) === 409) {
+    return new Error('Area lifecycle conflicts with the current authoritative state. Refresh and review the Area dependencies.');
+  }
+  return new Error('Area lifecycle change could not be completed. Refresh and try again.');
+}
+
 export function renderAreaManagementShell({
   tree = [],
   selectedAreaId = null,
@@ -479,6 +537,7 @@ export function renderAreaManagementShell({
   collectorEditor = null,
   moveEditor = null,
   clientTransferEditor = null,
+  retirementEditor = null,
   mutationError = null,
 } = {}) {
   const expanded = expandedAreaIds instanceof Set ? expandedAreaIds : new Set(expandedAreaIds || []);
@@ -501,6 +560,7 @@ export function renderAreaManagementShell({
         ${collectorEditorMarkup(collectorEditor, selected, collectors)}
         ${moveEditorMarkup(moveEditor, selected, tree)}
         ${clientTransferEditorMarkup(clientTransferEditor, tree)}
+        ${retirementEditorMarkup(retirementEditor, selected)}
         ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
         ${collectorLoadError ? errorCard(collectorLoadError, 'Collector choices are temporarily unavailable.') : ''}
       </section>
@@ -515,7 +575,11 @@ export async function mountAreaManagement(context) {
   const canManageAreas = hasPermission(session, 'area.manage');
   const canAssignCollector = hasPermission(session, 'area.collector.assign');
   const canAssignClient = hasPermission(session, 'area.client.assign');
-  const areasRequest = settledRequest(api, '/api/v1/areas', {}, { areas: [] });
+  const canRetireAreas = hasPermission(session, 'area.retire');
+  const areasPath = canRetireAreas
+    ? '/api/v1/areas?include_inactive=true'
+    : '/api/v1/areas';
+  const areasRequest = settledRequest(api, areasPath, {}, { areas: [] });
   const collectorsRequest = canAssignCollector
     ? settledRequest(api, '/api/v1/areas/collectors', {}, { collectors: [] })
     : Promise.resolve({ data: { collectors: [] }, error: null });
@@ -537,6 +601,7 @@ export async function mountAreaManagement(context) {
     collectorEditor: null,
     moveEditor: null,
     clientTransferEditor: null,
+    retirementEditor: null,
     mutationError: null,
     draggingAreaId: null,
   };
@@ -554,18 +619,27 @@ export async function mountAreaManagement(context) {
       collectorEditor: state.collectorEditor,
       moveEditor: state.moveEditor,
       clientTransferEditor: state.clientTransferEditor,
+      retirementEditor: state.retirementEditor,
       mutationError: state.mutationError,
     });
   };
 
   const reloadAreas = async () => {
     const previousSelectedAreaId = state.selectedAreaId;
-    const data = await api.request('/api/v1/areas');
+    const data = await api.request(areasPath);
     const refreshedNodes = Array.isArray(data?.areas) ? data.areas : [];
     state.tree = buildAreaTree(refreshedNodes);
     state.selectedAreaId = findArea(state.tree, previousSelectedAreaId)
       ? previousSelectedAreaId
       : refreshedNodes[0]?.area_id || null;
+  };
+
+  const clearEditors = () => {
+    state.editor = null;
+    state.collectorEditor = null;
+    state.moveEditor = null;
+    state.clientTransferEditor = null;
+    state.retirementEditor = null;
   };
 
   const submitSiblingOrder = async (parentAreaId, orderedAreaIds) => {
@@ -605,6 +679,40 @@ export async function mountAreaManagement(context) {
         orderedAreaIds[index],
       ];
       await submitSiblingOrder(area.parent_area_id || null, orderedAreaIds);
+      return;
+    }
+
+    const retirementConfirm = event.target?.closest?.('[data-area-retirement-confirm]');
+    if (retirementConfirm) {
+      if (!canRetireAreas) return;
+      const selected = findArea(state.tree, state.selectedAreaId);
+      const editor = state.retirementEditor;
+      const preview = editor?.preview || null;
+      if (
+        !selected?.is_active
+        || !preview
+        || editor.areaId !== selected.area_id
+        || preview.area_id !== selected.area_id
+        || retirementBlockers(preview).length > 0
+      ) {
+        state.retirementEditor = null;
+        state.mutationError = new Error('Retirement preview is stale or blocked. Preview the Area again before confirming.');
+        render();
+        return;
+      }
+      try {
+        await api.request(`/api/v1/areas/${encodeURIComponent(selected.area_id)}/retire`, {
+          method: 'POST',
+        });
+        await reloadAreas();
+        clearEditors();
+        state.mutationError = null;
+        render();
+      } catch (error) {
+        state.retirementEditor = null;
+        state.mutationError = safeAreaLifecycleError(error);
+        render();
+      }
       return;
     }
 
@@ -691,10 +799,7 @@ export async function mountAreaManagement(context) {
           body: { new_parent_area_id: targetAreaId },
         });
         await reloadAreas();
-        state.editor = null;
-        state.collectorEditor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
+        clearEditors();
         state.mutationError = null;
         render();
       } catch (error) {
@@ -717,9 +822,7 @@ export async function mountAreaManagement(context) {
           method: 'DELETE',
         });
         await reloadAreas();
-        state.collectorEditor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
+        clearEditors();
         state.mutationError = null;
         render();
       } catch (error) {
@@ -734,17 +837,56 @@ export async function mountAreaManagement(context) {
       const selected = findArea(state.tree, state.selectedAreaId);
       const actionName = action.dataset.areaAction;
 
+      if (actionName === 'retire') {
+        if (!canRetireAreas || !selected?.is_active) return;
+        try {
+          const preview = await api.request(
+            `/api/v1/areas/${encodeURIComponent(selected.area_id)}/retirement-preview`,
+          );
+          if (!preview || preview.area_id !== selected.area_id || preview.is_active !== true) {
+            throw new Error('Retirement preview identity did not match the selected Area.');
+          }
+          clearEditors();
+          state.retirementEditor = {
+            areaId: selected.area_id,
+            preview,
+          };
+          state.mutationError = null;
+          render();
+        } catch (error) {
+          state.retirementEditor = null;
+          state.mutationError = safeAreaLifecycleError(error);
+          render();
+        }
+        return;
+      }
+
+      if (actionName === 'reactivate') {
+        if (!canRetireAreas || !selected || selected.is_active) return;
+        try {
+          await api.request(`/api/v1/areas/${encodeURIComponent(selected.area_id)}/reactivate`, {
+            method: 'POST',
+          });
+          await reloadAreas();
+          clearEditors();
+          state.mutationError = null;
+          render();
+        } catch (error) {
+          state.mutationError = safeAreaLifecycleError(error);
+          render();
+        }
+        return;
+      }
+
       if (actionName === 'collector') {
         if (!canAssignCollector || !selected) return;
+        clearEditors();
         state.collectorEditor = {
           selectedCollectorUserId: selected.explicit_collector?.user_id
             || selected.effective_collector?.user_id
             || state.collectors[0]?.user_id
             || '',
         };
-        state.editor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -752,6 +894,7 @@ export async function mountAreaManagement(context) {
 
       if (actionName === 'client-transfer') {
         if (!canAssignClient) return;
+        clearEditors();
         state.clientTransferEditor = {
           query: '',
           results: [],
@@ -761,9 +904,6 @@ export async function mountAreaManagement(context) {
           result: null,
           error: null,
         };
-        state.editor = null;
-        state.collectorEditor = null;
-        state.moveEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -773,27 +913,23 @@ export async function mountAreaManagement(context) {
 
       if (actionName === 'move') {
         if (!selected?.is_active) return;
+        clearEditors();
         state.moveEditor = {
           selectedParentAreaId: '',
           preview: null,
         };
-        state.editor = null;
-        state.collectorEditor = null;
-        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
       }
 
       if (actionName === 'add-root') {
+        clearEditors();
         state.editor = {
           kind: 'create',
           parentAreaId: null,
           label: '+ Add City/Municipality',
         };
-        state.collectorEditor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -802,14 +938,12 @@ export async function mountAreaManagement(context) {
       if (actionName === 'add-child') {
         const label = childCreateLabel(selected);
         if (!selected || !label) return;
+        clearEditors();
         state.editor = {
           kind: 'create',
           parentAreaId: selected.area_id,
           label,
         };
-        state.collectorEditor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -817,14 +951,12 @@ export async function mountAreaManagement(context) {
 
       if (actionName === 'rename') {
         if (!selected) return;
+        clearEditors();
         state.editor = {
           kind: 'rename',
           areaId: selected.area_id,
           label: 'Rename Area',
         };
-        state.collectorEditor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -837,10 +969,7 @@ export async function mountAreaManagement(context) {
     const area = findArea(state.tree, areaId);
     if (!area) return;
     state.selectedAreaId = areaId;
-    state.editor = null;
-    state.collectorEditor = null;
-    state.moveEditor = null;
-    state.clientTransferEditor = null;
+    clearEditors();
     state.mutationError = null;
     if ((area.children || []).length) {
       if (state.expandedAreaIds.has(areaId)) state.expandedAreaIds.delete(areaId);
@@ -1011,9 +1140,7 @@ export async function mountAreaManagement(context) {
           body: { collector_user_id: collectorUserId },
         });
         await reloadAreas();
-        state.collectorEditor = null;
-        state.moveEditor = null;
-        state.clientTransferEditor = null;
+        clearEditors();
         state.mutationError = null;
         render();
       } catch (error) {
@@ -1055,9 +1182,7 @@ export async function mountAreaManagement(context) {
       }
 
       await reloadAreas();
-      state.editor = null;
-      state.moveEditor = null;
-      state.clientTransferEditor = null;
+      clearEditors();
       state.mutationError = null;
       render();
     } catch (error) {
