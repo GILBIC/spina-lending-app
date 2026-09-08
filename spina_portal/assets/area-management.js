@@ -133,11 +133,24 @@ function selectedAreaDetails(tree, selected) {
     </div>`;
 }
 
+function childCreateLabel(selected) {
+  if (!selected || selected.is_legacy_unmapped) return null;
+  return Number(selected.depth ?? 0) === 0 ? '+ Add Barangay' : '+ Add Subarea';
+}
+
+function rootCreateControl(session) {
+  if (!hasPermission(session, 'area.manage')) return '';
+  return '<button class="button button-outline button-small" type="button" data-area-action="add-root">+ Add City/Municipality</button>';
+}
+
 function actionControls(selected, session) {
   if (!selected) return '';
   const actions = [];
   if (hasPermission(session, 'area.manage')) {
-    actions.push('<button class="button button-outline button-small" type="button" data-area-action="add-child">Add child</button>');
+    const createLabel = childCreateLabel(selected);
+    if (createLabel) {
+      actions.push(`<button class="button button-outline button-small" type="button" data-area-action="add-child">${escapeHtml(createLabel)}</button>`);
+    }
     actions.push('<button class="button button-outline button-small" type="button" data-area-action="rename">Rename</button>');
   }
   if (hasPermission(session, 'area.collector.assign')) {
@@ -153,6 +166,27 @@ function actionControls(selected, session) {
   return `<div class="action-row area-actions">${actions.join('')}</div>`;
 }
 
+function editorMarkup(editor, selected) {
+  if (!editor) return '';
+  const isRename = editor.kind === 'rename';
+  const heading = isRename ? 'Rename Area' : editor.label || 'Add Area';
+  const initialName = isRename ? selected?.name || '' : '';
+  return `<form class="entry-form area-editor" data-area-editor="${escapeHtml(editor.kind)}">
+    <div class="section-heading"><div><h3>${escapeHtml(heading)}</h3><p>SPINA recalculates the authoritative path on the server.</p></div></div>
+    <label>Area name<input name="name" value="${escapeHtml(initialName)}" maxlength="160" autocomplete="off"></label>
+    <div class="action-row">
+      <button class="button button-primary button-small" type="submit">${isRename ? 'Save name' : 'Create Area'}</button>
+    </div>
+  </form>`;
+}
+
+function safeMutationError(error) {
+  if (Number(error?.status) === 409) {
+    return new Error('Area name already exists under this parent or conflicts with the current Area structure.');
+  }
+  return new Error('Area change could not be saved. Refresh and try again.');
+}
+
 export function renderAreaManagementShell({
   tree = [],
   selectedAreaId = null,
@@ -160,6 +194,8 @@ export function renderAreaManagementShell({
   query = '',
   session = {},
   collectorLoadError = null,
+  editor = null,
+  mutationError = null,
 } = {}) {
   const expanded = expandedAreaIds instanceof Set ? expandedAreaIds : new Set(expandedAreaIds || []);
   const selected = findArea(tree, selectedAreaId) || tree[0] || null;
@@ -171,11 +207,13 @@ export function renderAreaManagementShell({
       <section class="area-tree-panel">
         <label>Search area / Collector<input type="search" value="${escapeHtml(query)}" data-area-search></label>
         <div class="area-tree">${renderTreeRows(filteredTree, expanded, selected?.area_id || null)}</div>
-        ${hasPermission(session, 'area.manage') ? '<div class="area-route-order-controls"><span class="meta">Route order follows the authoritative server order.</span></div>' : ''}
+        ${hasPermission(session, 'area.manage') ? `<div class="area-route-order-controls">${rootCreateControl(session)}<span class="meta">Route order follows the authoritative server order.</span></div>` : ''}
       </section>
       <section class="area-details-panel">
         ${selectedAreaDetails(tree, selected)}
         ${actionControls(selected, session)}
+        ${editorMarkup(editor, selected)}
+        ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
         ${collectorLoadError ? errorCard(collectorLoadError, 'Collector choices are temporarily unavailable.') : ''}
       </section>
     </div>
@@ -205,6 +243,8 @@ export async function mountAreaManagement(context) {
     expandedAreaIds: new Set(nodes.filter((node) => !node.parent_area_id).map((node) => node.area_id)),
     query: '',
     collectors: Array.isArray(collectorsResult.data?.collectors) ? collectorsResult.data.collectors : [],
+    editor: null,
+    mutationError: null,
   };
 
   const render = () => {
@@ -215,23 +255,121 @@ export async function mountAreaManagement(context) {
       query: state.query,
       session,
       collectorLoadError: collectorsResult.error,
+      editor: state.editor,
+      mutationError: state.mutationError,
     });
+  };
+
+  const reloadAreas = async () => {
+    const previousSelectedAreaId = state.selectedAreaId;
+    const data = await api.request('/api/v1/areas');
+    const refreshedNodes = Array.isArray(data?.areas) ? data.areas : [];
+    state.tree = buildAreaTree(refreshedNodes);
+    state.selectedAreaId = findArea(state.tree, previousSelectedAreaId)
+      ? previousSelectedAreaId
+      : refreshedNodes[0]?.area_id || null;
   };
 
   render();
 
-  root.addEventListener('click', (event) => {
+  root.addEventListener('click', async (event) => {
+    const action = event.target?.closest?.('[data-area-action]');
+    if (action) {
+      if (!hasPermission(session, 'area.manage')) return;
+      const selected = findArea(state.tree, state.selectedAreaId);
+
+      if (action.dataset.areaAction === 'add-root') {
+        state.editor = {
+          kind: 'create',
+          parentAreaId: null,
+          label: '+ Add City/Municipality',
+        };
+        state.mutationError = null;
+        render();
+        return;
+      }
+
+      if (action.dataset.areaAction === 'add-child') {
+        const label = childCreateLabel(selected);
+        if (!selected || !label) return;
+        state.editor = {
+          kind: 'create',
+          parentAreaId: selected.area_id,
+          label,
+        };
+        state.mutationError = null;
+        render();
+        return;
+      }
+
+      if (action.dataset.areaAction === 'rename') {
+        if (!selected) return;
+        state.editor = {
+          kind: 'rename',
+          areaId: selected.area_id,
+          label: 'Rename Area',
+        };
+        state.mutationError = null;
+        render();
+        return;
+      }
+    }
+
     const row = event.target?.closest?.('[data-area-id]');
     if (!row) return;
     const areaId = row.dataset.areaId;
     const area = findArea(state.tree, areaId);
     if (!area) return;
     state.selectedAreaId = areaId;
+    state.editor = null;
+    state.mutationError = null;
     if ((area.children || []).length) {
       if (state.expandedAreaIds.has(areaId)) state.expandedAreaIds.delete(areaId);
       else state.expandedAreaIds.add(areaId);
     }
     render();
+  });
+
+  root.addEventListener('submit', async (event) => {
+    if (!event.target?.matches?.('[data-area-editor]')) return;
+    event.preventDefault();
+
+    const kind = event.target.dataset.areaEditor;
+    const name = String(event.target.elements?.name?.value || '').trim();
+    if (!name) {
+      state.mutationError = new Error('Enter an Area name before saving.');
+      render();
+      return;
+    }
+
+    try {
+      if (kind === 'create') {
+        await api.request('/api/v1/areas', {
+          method: 'POST',
+          body: {
+            parent_area_id: state.editor?.parentAreaId ?? null,
+            name,
+          },
+        });
+      } else if (kind === 'rename') {
+        const areaId = state.editor?.areaId || state.selectedAreaId;
+        if (!areaId) return;
+        await api.request(`/api/v1/areas/${encodeURIComponent(areaId)}`, {
+          method: 'PATCH',
+          body: { name },
+        });
+      } else {
+        return;
+      }
+
+      await reloadAreas();
+      state.editor = null;
+      state.mutationError = null;
+      render();
+    } catch (error) {
+      state.mutationError = safeMutationError(error);
+      render();
+    }
   });
 
   root.addEventListener('input', (event) => {
