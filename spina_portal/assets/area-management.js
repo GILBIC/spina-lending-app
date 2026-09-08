@@ -89,6 +89,37 @@ function siblingAreas(tree, area) {
   return findArea(tree, area.parent_area_id)?.children || [];
 }
 
+function flattenAreaTree(tree = []) {
+  const flattened = [];
+  for (const node of tree) {
+    flattened.push(node);
+    flattened.push(...flattenAreaTree(node.children || []));
+  }
+  return flattened;
+}
+
+function descendantAreaIds(area) {
+  const ids = new Set();
+  const visit = (node) => {
+    for (const child of node?.children || []) {
+      ids.add(child.area_id);
+      visit(child);
+    }
+  };
+  visit(area);
+  return ids;
+}
+
+function validMoveParents(tree, selected) {
+  if (!selected) return [];
+  const blocked = descendantAreaIds(selected);
+  blocked.add(selected.area_id);
+  if (selected.parent_area_id) blocked.add(selected.parent_area_id);
+  return flattenAreaTree(tree).filter(
+    (area) => area.is_active && !blocked.has(area.area_id),
+  );
+}
+
 function renderOrderControls(node, siblings, index, canManageOrder) {
   if (!canManageOrder || siblings.length < 2) return '';
   const areaId = escapeHtml(node.area_id);
@@ -187,6 +218,9 @@ function actionControls(selected, session) {
       actions.push(`<button class="button button-outline button-small" type="button" data-area-action="add-child">${escapeHtml(createLabel)}</button>`);
     }
     actions.push('<button class="button button-outline button-small" type="button" data-area-action="rename">Rename</button>');
+    if (selected.is_active) {
+      actions.push('<button class="button button-outline button-small" type="button" data-area-action="move">Move</button>');
+    }
   }
   if (hasPermission(session, 'area.collector.assign')) {
     actions.push('<button class="button button-outline button-small" type="button" data-area-action="collector">Collector</button>');
@@ -247,6 +281,47 @@ function collectorEditorMarkup(collectorEditor, selected, collectors = []) {
   </form>`;
 }
 
+function collectorDisplayName(collector) {
+  if (!collector) return 'Unassigned';
+  if (typeof collector === 'string') return collector;
+  return collector.full_name || collector.username || collector.user_id || 'Unassigned';
+}
+
+function moveEditorMarkup(moveEditor, selected, tree) {
+  if (!moveEditor || !selected) return '';
+  const selectedParentAreaId = moveEditor.selectedParentAreaId || '';
+  const options = validMoveParents(tree, selected).map((area) => {
+    const selectedAttribute = area.area_id === selectedParentAreaId ? ' selected' : '';
+    return `<option value="${escapeHtml(area.area_id)}"${selectedAttribute}>${escapeHtml(area.full_path || area.name)}</option>`;
+  }).join('');
+  const preview = moveEditor.preview || null;
+  const staleCount = Number(preview?.stale_delegated_access_count || 0);
+  const previewMarkup = preview
+    ? `<div class="area-move-preview" data-area-move-preview>
+        <p><strong>Clients affected:</strong> ${escapeHtml(preview.clients_affected ?? 0)}</p>
+        <p><strong>Descendant Areas affected:</strong> ${escapeHtml(preview.descendant_areas_affected ?? 0)}</p>
+        <p><strong>Collector before:</strong> ${escapeHtml(collectorDisplayName(preview.effective_collector_before))}</p>
+        <p><strong>Collector after:</strong> ${escapeHtml(collectorDisplayName(preview.effective_collector_after))}</p>
+        ${staleCount > 0 ? `<p class="meta">${escapeHtml(staleCount)} stale delegated access ${staleCount === 1 ? 'scope' : 'scopes'} may require Staff review.</p>` : ''}
+        <div class="action-row">
+          <button class="button button-primary button-small" type="button" data-area-move-confirm>Confirm move</button>
+        </div>
+      </div>`
+    : '';
+
+  return `<form class="entry-form area-move-editor" data-area-move-preview-form>
+    <div class="section-heading"><div><h3>Move Area branch</h3><p>Preview the authoritative operational impact before confirming.</p></div></div>
+    <label>New parent<select name="new_parent_area_id" data-area-move-parent-select>
+      <option value="">Select new parent</option>
+      ${options}
+    </select></label>
+    <div class="action-row">
+      <button class="button button-outline button-small" type="submit">Preview move</button>
+    </div>
+    ${previewMarkup}
+  </form>`;
+}
+
 function safeMutationError(error) {
   if (Number(error?.status) === 409) {
     return new Error('Area name already exists under this parent or conflicts with the current Area structure.');
@@ -261,6 +336,20 @@ function safeCollectorMutationError(error) {
   return new Error('Collector assignment could not be saved. Refresh and try again.');
 }
 
+function safeMovePreviewError(error) {
+  if (Number(error?.status) === 409) {
+    return new Error('Move preview conflict — refresh Area Management and try again.');
+  }
+  return new Error('Move preview could not be loaded. Refresh and try again.');
+}
+
+function safeMoveMutationError(error) {
+  if (Number(error?.status) === 409) {
+    return new Error('Move conflict — refresh Area Management and preview the branch again.');
+  }
+  return new Error('Area move could not be saved. Refresh and preview again.');
+}
+
 export function renderAreaManagementShell({
   tree = [],
   selectedAreaId = null,
@@ -271,6 +360,7 @@ export function renderAreaManagementShell({
   collectorLoadError = null,
   editor = null,
   collectorEditor = null,
+  moveEditor = null,
   mutationError = null,
 } = {}) {
   const expanded = expandedAreaIds instanceof Set ? expandedAreaIds : new Set(expandedAreaIds || []);
@@ -291,6 +381,7 @@ export function renderAreaManagementShell({
         ${actionControls(selected, session)}
         ${editorMarkup(editor, selected)}
         ${collectorEditorMarkup(collectorEditor, selected, collectors)}
+        ${moveEditorMarkup(moveEditor, selected, tree)}
         ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
         ${collectorLoadError ? errorCard(collectorLoadError, 'Collector choices are temporarily unavailable.') : ''}
       </section>
@@ -324,6 +415,7 @@ export async function mountAreaManagement(context) {
     collectors: Array.isArray(collectorsResult.data?.collectors) ? collectorsResult.data.collectors : [],
     editor: null,
     collectorEditor: null,
+    moveEditor: null,
     mutationError: null,
     draggingAreaId: null,
   };
@@ -339,6 +431,7 @@ export async function mountAreaManagement(context) {
       collectorLoadError: collectorsResult.error,
       editor: state.editor,
       collectorEditor: state.collectorEditor,
+      moveEditor: state.moveEditor,
       mutationError: state.mutationError,
     });
   };
@@ -393,6 +486,47 @@ export async function mountAreaManagement(context) {
       return;
     }
 
+    const moveConfirm = event.target?.closest?.('[data-area-move-confirm]');
+    if (moveConfirm) {
+      if (!canManageAreas) return;
+      const selected = findArea(state.tree, state.selectedAreaId);
+      const targetAreaId = state.moveEditor?.selectedParentAreaId || '';
+      const preview = state.moveEditor?.preview || null;
+      if (
+        !selected
+        || !targetAreaId
+        || !preview
+        || preview.area_id !== selected.area_id
+        || preview.new_parent_area_id !== targetAreaId
+      ) {
+        state.moveEditor = state.moveEditor
+          ? { ...state.moveEditor, preview: null }
+          : null;
+        state.mutationError = new Error('Move preview is stale. Preview the branch again before confirming.');
+        render();
+        return;
+      }
+      try {
+        await api.request(`/api/v1/areas/${encodeURIComponent(selected.area_id)}/move`, {
+          method: 'POST',
+          body: { new_parent_area_id: targetAreaId },
+        });
+        await reloadAreas();
+        state.editor = null;
+        state.collectorEditor = null;
+        state.moveEditor = null;
+        state.mutationError = null;
+        render();
+      } catch (error) {
+        state.moveEditor = state.moveEditor
+          ? { ...state.moveEditor, preview: null }
+          : null;
+        state.mutationError = safeMoveMutationError(error);
+        render();
+      }
+      return;
+    }
+
     const collectorRemove = event.target?.closest?.('[data-area-collector-remove]');
     if (collectorRemove) {
       if (!canAssignCollector) return;
@@ -404,6 +538,7 @@ export async function mountAreaManagement(context) {
         });
         await reloadAreas();
         state.collectorEditor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
       } catch (error) {
@@ -427,12 +562,26 @@ export async function mountAreaManagement(context) {
             || '',
         };
         state.editor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
         return;
       }
 
       if (!canManageAreas) return;
+
+      if (actionName === 'move') {
+        if (!selected?.is_active) return;
+        state.moveEditor = {
+          selectedParentAreaId: '',
+          preview: null,
+        };
+        state.editor = null;
+        state.collectorEditor = null;
+        state.mutationError = null;
+        render();
+        return;
+      }
 
       if (actionName === 'add-root') {
         state.editor = {
@@ -441,6 +590,7 @@ export async function mountAreaManagement(context) {
           label: '+ Add City/Municipality',
         };
         state.collectorEditor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -455,6 +605,7 @@ export async function mountAreaManagement(context) {
           label,
         };
         state.collectorEditor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -468,6 +619,7 @@ export async function mountAreaManagement(context) {
           label: 'Rename Area',
         };
         state.collectorEditor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -482,6 +634,7 @@ export async function mountAreaManagement(context) {
     state.selectedAreaId = areaId;
     state.editor = null;
     state.collectorEditor = null;
+    state.moveEditor = null;
     state.mutationError = null;
     if ((area.children || []).length) {
       if (state.expandedAreaIds.has(areaId)) state.expandedAreaIds.delete(areaId);
@@ -532,6 +685,46 @@ export async function mountAreaManagement(context) {
   });
 
   root.addEventListener('submit', async (event) => {
+    if (event.target?.matches?.('[data-area-move-preview-form]')) {
+      event.preventDefault();
+      if (!canManageAreas) return;
+      const selected = findArea(state.tree, state.selectedAreaId);
+      const targetAreaId = String(event.target.elements?.new_parent_area_id?.value || '').trim();
+      const validParentIds = new Set(validMoveParents(state.tree, selected).map((area) => area.area_id));
+      if (!selected || !targetAreaId || !validParentIds.has(targetAreaId)) {
+        if (state.moveEditor) state.moveEditor.preview = null;
+        state.mutationError = new Error('Select an active valid parent before previewing the move.');
+        render();
+        return;
+      }
+      if (!state.moveEditor) {
+        state.moveEditor = { selectedParentAreaId: targetAreaId, preview: null };
+      } else {
+        state.moveEditor.selectedParentAreaId = targetAreaId;
+        state.moveEditor.preview = null;
+      }
+      try {
+        const preview = await api.request(
+          `/api/v1/areas/${encodeURIComponent(selected.area_id)}/move-preview?new_parent_area_id=${encodeURIComponent(targetAreaId)}`,
+        );
+        if (
+          !preview
+          || preview.area_id !== selected.area_id
+          || preview.new_parent_area_id !== targetAreaId
+        ) {
+          throw new Error('Move preview identity did not match the selected branch.');
+        }
+        state.moveEditor.preview = preview;
+        state.mutationError = null;
+        render();
+      } catch (error) {
+        state.moveEditor.preview = null;
+        state.mutationError = safeMovePreviewError(error);
+        render();
+      }
+      return;
+    }
+
     if (event.target?.matches?.('[data-area-collector-editor]')) {
       event.preventDefault();
       if (!canAssignCollector) return;
@@ -549,6 +742,7 @@ export async function mountAreaManagement(context) {
         });
         await reloadAreas();
         state.collectorEditor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
       } catch (error) {
@@ -591,6 +785,7 @@ export async function mountAreaManagement(context) {
 
       await reloadAreas();
       state.editor = null;
+      state.moveEditor = null;
       state.mutationError = null;
       render();
     } catch (error) {
@@ -600,6 +795,15 @@ export async function mountAreaManagement(context) {
   });
 
   root.addEventListener('change', (event) => {
+    if (event.target?.matches?.('[data-area-move-parent-select]')) {
+      if (!state.moveEditor) return;
+      state.moveEditor.selectedParentAreaId = event.target.value || '';
+      state.moveEditor.preview = null;
+      state.mutationError = null;
+      render();
+      return;
+    }
+
     if (!event.target?.matches?.('[data-area-collector-select]')) return;
     if (!state.collectorEditor) return;
     state.collectorEditor.selectedCollectorUserId = event.target.value || '';
