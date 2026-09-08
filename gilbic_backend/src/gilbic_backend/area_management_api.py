@@ -95,6 +95,20 @@ def _require_permission(
         )
 
 
+def _require_any_permission(
+    actor: AccountContext,
+    permissions: tuple[str, ...],
+) -> None:
+    if not set(actor.permissions).intersection(permissions):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "area_permission_required",
+                "message": "Your account does not have permission for this Area action.",
+            },
+        )
+
+
 def _raise_area_conflict(error: ValueError) -> NoReturn:
     raise HTTPException(
         status_code=409,
@@ -215,7 +229,15 @@ def create_area_management_router() -> APIRouter:
             area_management_repository_dependency
         ),
     ) -> dict[str, object]:
-        _require_permission(actor, "area.manage")
+        _require_any_permission(
+            actor,
+            (
+                "area.manage",
+                "area.collector.assign",
+                "area.client.assign",
+                "area.retire",
+            ),
+        )
         records = repository.list_tree(include_inactive=include_inactive)
         return {
             "success": True,
@@ -229,7 +251,7 @@ def create_area_management_router() -> APIRouter:
             area_management_repository_dependency
         ),
     ) -> dict[str, object]:
-        _require_permission(actor, "area.manage")
+        _require_permission(actor, "area.collector.assign")
         return {
             "success": True,
             "data": {
@@ -248,7 +270,7 @@ def create_area_management_router() -> APIRouter:
             area_management_repository_dependency
         ),
     ) -> dict[str, object]:
-        _require_permission(actor, "area.manage")
+        _require_permission(actor, "area.client.assign")
         records = repository.search_clients(q, limit=limit)
         return {
             "success": True,
