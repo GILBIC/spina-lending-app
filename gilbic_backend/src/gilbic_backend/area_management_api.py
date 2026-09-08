@@ -120,6 +120,22 @@ def _raise_area_conflict(error: ValueError) -> NoReturn:
     ) from error
 
 
+def _raise_client_transfer_conflict(error: ValueError) -> NoReturn:
+    code = str(error)
+    if code == "client_transfer_next_collection_day_unavailable":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": code,
+                "message": (
+                    "SPINA could not find an authoritative next scheduled collection day "
+                    "for this Client. Refresh the schedule before retrying the Area transfer."
+                ),
+            },
+        ) from error
+    _raise_area_conflict(error)
+
+
 def _uuid(value: UUID | None) -> str | None:
     return str(value) if value is not None else None
 
@@ -353,7 +369,7 @@ def create_area_management_router() -> APIRouter:
                 as_of_date=date.today(),
             )
         except ValueError as error:
-            _raise_area_conflict(error)
+            _raise_client_transfer_conflict(error)
         return {"success": True, "data": _transfer_payload(preview)}
 
     @router.post("/api/v1/areas", status_code=status.HTTP_201_CREATED)
@@ -499,7 +515,7 @@ def create_area_management_router() -> APIRouter:
                 as_of_date=date.today(),
             )
         except ValueError as error:
-            _raise_area_conflict(error)
+            _raise_client_transfer_conflict(error)
         return {"success": True, "data": _transfer_payload(transfer)}
 
     @router.post("/api/v1/areas/{area_id}/retire")
