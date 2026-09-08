@@ -33,6 +33,10 @@ AREA_ACCEPTANCE_TESTS = (
     ROOT
     / "gilbic_backend"
     / "tests"
+    / "test_area_management_move_preview_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
     / "test_delegated_area_access_postgres.py",
 )
 TARGET_TESTS = (

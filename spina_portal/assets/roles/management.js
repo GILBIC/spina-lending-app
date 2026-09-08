@@ -1,3 +1,4 @@
+import { mountAreaManagement } from '../area-management.js';
 import { buildManagementViewModel } from '../presenters.js';
 import {
   bindClientAccountAdmin,
@@ -274,9 +275,16 @@ export async function mountManagementWorkspace(context) {
   const canManageAccounts = hasPermission(session, 'account.manage');
   const canManageDevices = hasPermission(session, 'device.manage');
   const canViewStaff = canManageAccounts || canManageDevices;
+  const canUseAreaManagement = [
+    'area.manage',
+    'area.collector.assign',
+    'area.client.assign',
+    'area.retire',
+  ].some((permission) => hasPermission(session, permission));
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
     { id: 'management-loans', label: 'Clients & loans' },
+    ...(canUseAreaManagement ? [{ id: 'management-area-management', label: 'Area Management' }] : []),
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
     ...(canSupport ? [{ id: 'management-support', label: 'Support' }] : []),
@@ -301,6 +309,7 @@ export async function mountManagementWorkspace(context) {
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
@@ -314,4 +323,8 @@ export async function mountManagementWorkspace(context) {
   bindClientAccountAdmin(context);
   bindStaffInvite(context);
   bindStaffDevices(context, staffAccounts);
+  if (canUseAreaManagement) {
+    const areaRoot = root.querySelector('#management-area-management');
+    if (areaRoot) await mountAreaManagement({ ...context, root: areaRoot });
+  }
 }

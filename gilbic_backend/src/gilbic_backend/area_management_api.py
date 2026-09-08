@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from .account_repository import AccountContext, PostgresAccountRepository
+from .area_management_move_preview import preview_move_with_operational_impact
 from .area_management_repository import PostgresAreaManagementRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
@@ -95,6 +96,20 @@ def _require_permission(
         )
 
 
+def _require_any_permission(
+    actor: AccountContext,
+    permissions: tuple[str, ...],
+) -> None:
+    if not set(actor.permissions).intersection(permissions):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "area_permission_required",
+                "message": "Your account does not have permission for this Area action.",
+            },
+        )
+
+
 def _raise_area_conflict(error: ValueError) -> NoReturn:
     raise HTTPException(
         status_code=409,
@@ -103,6 +118,22 @@ def _raise_area_conflict(error: ValueError) -> NoReturn:
             "message": "The Area action conflicts with the current authoritative state.",
         },
     ) from error
+
+
+def _raise_client_transfer_conflict(error: ValueError) -> NoReturn:
+    code = str(error)
+    if code == "client_transfer_next_collection_day_unavailable":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": code,
+                "message": (
+                    "SPINA could not find an authoritative next scheduled collection day "
+                    "for this Client. Refresh the schedule before retrying the Area transfer."
+                ),
+            },
+        ) from error
+    _raise_area_conflict(error)
 
 
 def _uuid(value: UUID | None) -> str | None:
@@ -162,6 +193,8 @@ def _client_payload(record) -> dict[str, object]:
 
 
 def _move_payload(record) -> dict[str, object]:
+    effective_collector_before = getattr(record, "effective_collector_before", None)
+    effective_collector_after = getattr(record, "effective_collector_after", None)
     return {
         "area_id": str(record.area_uid),
         "old_parent_area_id": _uuid(record.old_parent_area_uid),
@@ -169,6 +202,27 @@ def _move_payload(record) -> dict[str, object]:
         "old_path": record.old_path,
         "new_path": record.new_path,
         "affected_node_count": record.affected_node_count,
+        "clients_affected": getattr(record, "clients_affected", 0),
+        "descendant_areas_affected": getattr(
+            record,
+            "descendant_areas_affected",
+            max(record.affected_node_count - 1, 0),
+        ),
+        "effective_collector_before": (
+            _collector_payload(effective_collector_before)
+            if effective_collector_before is not None
+            else None
+        ),
+        "effective_collector_after": (
+            _collector_payload(effective_collector_after)
+            if effective_collector_after is not None
+            else None
+        ),
+        "stale_delegated_access_count": getattr(
+            record,
+            "stale_delegated_access_count",
+            0,
+        ),
     }
 
 
@@ -215,7 +269,15 @@ def create_area_management_router() -> APIRouter:
             area_management_repository_dependency
         ),
     ) -> dict[str, object]:
-        _require_permission(actor, "area.manage")
+        _require_any_permission(
+            actor,
+            (
+                "area.manage",
+                "area.collector.assign",
+                "area.client.assign",
+                "area.retire",
+            ),
+        )
         records = repository.list_tree(include_inactive=include_inactive)
         return {
             "success": True,
@@ -229,7 +291,7 @@ def create_area_management_router() -> APIRouter:
             area_management_repository_dependency
         ),
     ) -> dict[str, object]:
-        _require_permission(actor, "area.manage")
+        _require_permission(actor, "area.collector.assign")
         return {
             "success": True,
             "data": {
@@ -248,7 +310,7 @@ def create_area_management_router() -> APIRouter:
             area_management_repository_dependency
         ),
     ) -> dict[str, object]:
-        _require_permission(actor, "area.manage")
+        _require_permission(actor, "area.client.assign")
         records = repository.search_clients(q, limit=limit)
         return {
             "success": True,
@@ -266,7 +328,8 @@ def create_area_management_router() -> APIRouter:
     ) -> dict[str, object]:
         _require_permission(actor, "area.manage")
         try:
-            preview = repository.preview_move(
+            preview = preview_move_with_operational_impact(
+                repository,
                 area_uid=area_id,
                 new_parent_area_uid=new_parent_area_id,
             )
@@ -306,7 +369,7 @@ def create_area_management_router() -> APIRouter:
                 as_of_date=date.today(),
             )
         except ValueError as error:
-            _raise_area_conflict(error)
+            _raise_client_transfer_conflict(error)
         return {"success": True, "data": _transfer_payload(preview)}
 
     @router.post("/api/v1/areas", status_code=status.HTTP_201_CREATED)
@@ -452,7 +515,7 @@ def create_area_management_router() -> APIRouter:
                 as_of_date=date.today(),
             )
         except ValueError as error:
-            _raise_area_conflict(error)
+            _raise_client_transfer_conflict(error)
         return {"success": True, "data": _transfer_payload(transfer)}
 
     @router.post("/api/v1/areas/{area_id}/retire")
