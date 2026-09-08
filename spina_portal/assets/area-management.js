@@ -287,6 +287,107 @@ function collectorDisplayName(collector) {
   return collector.full_name || collector.username || collector.user_id || 'Unassigned';
 }
 
+function formatAreaDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+  if (!match) return String(value || '');
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  const month = months[Number(match[2]) - 1] || match[2];
+  return `${month} ${Number(match[3])}, ${match[1]}`;
+}
+
+function clientTransferTimingMarkup(preview) {
+  if (!preview) return '';
+  if (preview.timing === 'immediate') {
+    return '<p>Effective: Immediately — no official collection has been recorded today.</p>';
+  }
+  if (preview.timing === 'next_collection_day') {
+    return `<p>Effective: ${escapeHtml(formatAreaDate(preview.effective_date))} — next scheduled collection day because today already has an official collection.</p>`;
+  }
+  return `<p>Effective: ${escapeHtml(formatAreaDate(preview.effective_date))}</p>`;
+}
+
+function clientTransferEditorMarkup(clientTransferEditor, tree = []) {
+  if (!clientTransferEditor) return '';
+  const results = Array.isArray(clientTransferEditor.results) ? clientTransferEditor.results : [];
+  const selectedClient = clientTransferEditor.selectedClient || null;
+  const preview = clientTransferEditor.preview || null;
+  const result = clientTransferEditor.result || null;
+  const targetAreaId = clientTransferEditor.targetAreaId || '';
+  const targetAreas = flattenAreaTree(tree).filter(
+    (area) => area.is_active && area.area_id !== selectedClient?.area_id,
+  );
+  const targetOptions = targetAreas.map((area) => {
+    const selectedAttribute = area.area_id === targetAreaId ? ' selected' : '';
+    return `<option value="${escapeHtml(area.area_id)}"${selectedAttribute}>${escapeHtml(area.full_path || area.name)}</option>`;
+  }).join('');
+  const resultRows = results.map((client) => {
+    const collector = collectorDisplayName(client.effective_collector);
+    return `<button class="button button-outline area-client-result" type="button" data-area-client-id="${escapeHtml(client.client_id)}">
+      <strong>${escapeHtml(client.full_name || client.client_code || client.client_id)}</strong>
+      <span>${escapeHtml(client.client_code || '')}</span>
+      <span>Current Area: ${escapeHtml(client.area_path || 'Unassigned')}</span>
+      <span>Effective Collector: ${escapeHtml(collector)}</span>
+    </button>`;
+  }).join('');
+  const selectedMarkup = selectedClient
+    ? `<div class="area-client-transfer-selection">
+        <p><strong>${escapeHtml(selectedClient.full_name || selectedClient.client_code || selectedClient.client_id)}</strong></p>
+        <p>Current Area: ${escapeHtml(selectedClient.area_path || 'Unassigned')}</p>
+        <p>Effective Collector: ${escapeHtml(collectorDisplayName(selectedClient.effective_collector))}</p>
+        <form class="entry-form" data-area-client-transfer-preview-form>
+          <label>Target Area<select name="target_area_id">
+            <option value="">Select target Area</option>
+            ${targetOptions}
+          </select></label>
+          <div class="action-row">
+            <button class="button button-outline button-small" type="submit">Preview transfer</button>
+          </div>
+        </form>
+      </div>`
+    : '';
+  const previewMarkup = preview
+    ? `<div class="area-client-transfer-preview">
+        ${clientTransferTimingMarkup(preview)}
+        <p>Current Area: ${escapeHtml(preview.old_area_path || selectedClient?.area_path || 'Unassigned')}</p>
+        <p>Target Area: ${escapeHtml(preview.new_area_path || findArea(tree, preview.new_area_id)?.full_path || 'Unassigned')}</p>
+        <div class="action-row">
+          <button class="button button-primary button-small" type="button" data-area-client-transfer-confirm>Confirm Client transfer</button>
+        </div>
+      </div>`
+    : '';
+  const resultMarkup = result
+    ? `<div class="area-client-transfer-result">
+        <p><strong>${result.timing === 'next_collection_day' ? 'Scheduled' : 'Transferred'}</strong></p>
+        ${result.timing === 'next_collection_day'
+          ? `<p>Effective: ${escapeHtml(formatAreaDate(result.effective_date))}</p>`
+          : '<p>Effective: Immediately</p>'}
+        <p>Current Area: ${escapeHtml(selectedClient?.area_path || result.old_area_path || 'Unassigned')}</p>
+        <p>Target Area: ${escapeHtml(result.new_area_path || findArea(tree, result.new_area_id)?.full_path || 'Unassigned')}</p>
+      </div>`
+    : '';
+  const errorMarkup = clientTransferEditor.error
+    ? `<p class="error-text">${escapeHtml(clientTransferEditor.error.message || clientTransferEditor.error)}</p>`
+    : '';
+
+  return `<section class="area-client-transfer-editor">
+    <div class="section-heading"><div><h3>Move Client</h3><p>SPINA decides the safe effective timing from authoritative collection and schedule data.</p></div></div>
+    <form class="entry-form" data-area-client-search-form>
+      <label>Find Client<input name="q" type="search" value="${escapeHtml(clientTransferEditor.query || '')}" autocomplete="off"></label>
+      <div class="action-row">
+        <button class="button button-outline button-small" type="submit">Search Clients</button>
+      </div>
+    </form>
+    ${resultRows ? `<div class="area-client-results">${resultRows}</div>` : ''}
+    ${selectedMarkup}
+    ${previewMarkup}
+    ${resultMarkup}
+    ${errorMarkup}
+  </section>`;
+}
+
 function moveEditorMarkup(moveEditor, selected, tree) {
   if (!moveEditor || !selected) return '';
   const selectedParentAreaId = moveEditor.selectedParentAreaId || '';
@@ -350,6 +451,18 @@ function safeMoveMutationError(error) {
   return new Error('Area move could not be saved. Refresh and preview again.');
 }
 
+function safeClientTransferError(error) {
+  if (error?.code === 'client_transfer_next_collection_day_unavailable') {
+    return new Error(
+      'SPINA could not find an authoritative next scheduled collection day for this Client. Refresh the schedule before retrying the Area transfer.',
+    );
+  }
+  if (Number(error?.status) === 409) {
+    return new Error('Client Area transfer conflicts with the current authoritative state. Refresh and try again.');
+  }
+  return new Error('Client Area transfer could not be completed. Refresh and try again.');
+}
+
 export function renderAreaManagementShell({
   tree = [],
   selectedAreaId = null,
@@ -361,6 +474,7 @@ export function renderAreaManagementShell({
   editor = null,
   collectorEditor = null,
   moveEditor = null,
+  clientTransferEditor = null,
   mutationError = null,
 } = {}) {
   const expanded = expandedAreaIds instanceof Set ? expandedAreaIds : new Set(expandedAreaIds || []);
@@ -382,6 +496,7 @@ export function renderAreaManagementShell({
         ${editorMarkup(editor, selected)}
         ${collectorEditorMarkup(collectorEditor, selected, collectors)}
         ${moveEditorMarkup(moveEditor, selected, tree)}
+        ${clientTransferEditorMarkup(clientTransferEditor, tree)}
         ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
         ${collectorLoadError ? errorCard(collectorLoadError, 'Collector choices are temporarily unavailable.') : ''}
       </section>
@@ -395,6 +510,7 @@ export async function mountAreaManagement(context) {
 
   const canManageAreas = hasPermission(session, 'area.manage');
   const canAssignCollector = hasPermission(session, 'area.collector.assign');
+  const canAssignClient = hasPermission(session, 'area.client.assign');
   const areasRequest = settledRequest(api, '/api/v1/areas', {}, { areas: [] });
   const collectorsRequest = canAssignCollector
     ? settledRequest(api, '/api/v1/areas/collectors', {}, { collectors: [] })
@@ -416,6 +532,7 @@ export async function mountAreaManagement(context) {
     editor: null,
     collectorEditor: null,
     moveEditor: null,
+    clientTransferEditor: null,
     mutationError: null,
     draggingAreaId: null,
   };
@@ -432,6 +549,7 @@ export async function mountAreaManagement(context) {
       editor: state.editor,
       collectorEditor: state.collectorEditor,
       moveEditor: state.moveEditor,
+      clientTransferEditor: state.clientTransferEditor,
       mutationError: state.mutationError,
     });
   };
@@ -486,6 +604,63 @@ export async function mountAreaManagement(context) {
       return;
     }
 
+    const clientTransferConfirm = event.target?.closest?.('[data-area-client-transfer-confirm]');
+    if (clientTransferConfirm) {
+      if (!canAssignClient) return;
+      const editor = state.clientTransferEditor;
+      const client = editor?.selectedClient || null;
+      const targetAreaId = editor?.targetAreaId || '';
+      const preview = editor?.preview || null;
+      if (
+        !client
+        || !targetAreaId
+        || !preview
+        || preview.client_id !== client.client_id
+        || preview.old_area_id !== client.area_id
+        || preview.new_area_id !== targetAreaId
+      ) {
+        if (editor) editor.preview = null;
+        if (editor) editor.error = new Error('Client transfer preview is stale. Preview again before confirming.');
+        render();
+        return;
+      }
+      try {
+        const transfer = await api.request(
+          `/api/v1/clients/${encodeURIComponent(client.client_id)}/area-transfer`,
+          {
+            method: 'POST',
+            body: { target_area_id: targetAreaId },
+          },
+        );
+        editor.result = transfer;
+        editor.preview = null;
+        editor.error = null;
+        state.mutationError = null;
+        render();
+      } catch (error) {
+        editor.preview = null;
+        editor.error = safeClientTransferError(error);
+        render();
+      }
+      return;
+    }
+
+    const clientResult = event.target?.closest?.('[data-area-client-id]');
+    if (clientResult) {
+      if (!canAssignClient || !state.clientTransferEditor) return;
+      const client = state.clientTransferEditor.results.find(
+        (candidate) => candidate.client_id === clientResult.dataset.areaClientId,
+      );
+      if (!client) return;
+      state.clientTransferEditor.selectedClient = client;
+      state.clientTransferEditor.targetAreaId = '';
+      state.clientTransferEditor.preview = null;
+      state.clientTransferEditor.result = null;
+      state.clientTransferEditor.error = null;
+      render();
+      return;
+    }
+
     const moveConfirm = event.target?.closest?.('[data-area-move-confirm]');
     if (moveConfirm) {
       if (!canManageAreas) return;
@@ -515,6 +690,7 @@ export async function mountAreaManagement(context) {
         state.editor = null;
         state.collectorEditor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
       } catch (error) {
@@ -539,6 +715,7 @@ export async function mountAreaManagement(context) {
         await reloadAreas();
         state.collectorEditor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
       } catch (error) {
@@ -563,6 +740,26 @@ export async function mountAreaManagement(context) {
         };
         state.editor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
+        state.mutationError = null;
+        render();
+        return;
+      }
+
+      if (actionName === 'client-transfer') {
+        if (!canAssignClient) return;
+        state.clientTransferEditor = {
+          query: '',
+          results: [],
+          selectedClient: null,
+          targetAreaId: '',
+          preview: null,
+          result: null,
+          error: null,
+        };
+        state.editor = null;
+        state.collectorEditor = null;
+        state.moveEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -578,6 +775,7 @@ export async function mountAreaManagement(context) {
         };
         state.editor = null;
         state.collectorEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -591,6 +789,7 @@ export async function mountAreaManagement(context) {
         };
         state.collectorEditor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -606,6 +805,7 @@ export async function mountAreaManagement(context) {
         };
         state.collectorEditor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -620,6 +820,7 @@ export async function mountAreaManagement(context) {
         };
         state.collectorEditor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -635,6 +836,7 @@ export async function mountAreaManagement(context) {
     state.editor = null;
     state.collectorEditor = null;
     state.moveEditor = null;
+    state.clientTransferEditor = null;
     state.mutationError = null;
     if ((area.children || []).length) {
       if (state.expandedAreaIds.has(areaId)) state.expandedAreaIds.delete(areaId);
@@ -685,6 +887,70 @@ export async function mountAreaManagement(context) {
   });
 
   root.addEventListener('submit', async (event) => {
+    if (event.target?.matches?.('[data-area-client-search-form]')) {
+      event.preventDefault();
+      if (!canAssignClient || !state.clientTransferEditor) return;
+      const query = String(event.target.elements?.q?.value || '').trim();
+      if (!query) {
+        state.clientTransferEditor.error = new Error('Enter a Client name or code before searching.');
+        render();
+        return;
+      }
+      try {
+        const data = await api.request(`/api/v1/areas/clients?q=${encodeURIComponent(query)}`);
+        state.clientTransferEditor.query = query;
+        state.clientTransferEditor.results = Array.isArray(data?.clients) ? data.clients : [];
+        state.clientTransferEditor.selectedClient = null;
+        state.clientTransferEditor.targetAreaId = '';
+        state.clientTransferEditor.preview = null;
+        state.clientTransferEditor.result = null;
+        state.clientTransferEditor.error = null;
+        render();
+      } catch {
+        state.clientTransferEditor.error = new Error('Client search could not be loaded. Refresh and try again.');
+        render();
+      }
+      return;
+    }
+
+    if (event.target?.matches?.('[data-area-client-transfer-preview-form]')) {
+      event.preventDefault();
+      if (!canAssignClient || !state.clientTransferEditor) return;
+      const client = state.clientTransferEditor.selectedClient;
+      const targetAreaId = String(event.target.elements?.target_area_id?.value || '').trim();
+      const targetArea = findArea(state.tree, targetAreaId);
+      if (!client || !targetAreaId || !targetArea?.is_active || targetAreaId === client.area_id) {
+        state.clientTransferEditor.preview = null;
+        state.clientTransferEditor.error = new Error('Select a different active target Area before previewing the Client transfer.');
+        render();
+        return;
+      }
+      state.clientTransferEditor.targetAreaId = targetAreaId;
+      state.clientTransferEditor.preview = null;
+      state.clientTransferEditor.result = null;
+      try {
+        const preview = await api.request(
+          `/api/v1/clients/${encodeURIComponent(client.client_id)}/area-transfer-preview?target_area_id=${encodeURIComponent(targetAreaId)}`,
+        );
+        if (
+          !preview
+          || preview.client_id !== client.client_id
+          || preview.old_area_id !== client.area_id
+          || preview.new_area_id !== targetAreaId
+        ) {
+          throw new Error('Client Area transfer preview identity did not match the selected Client and Area.');
+        }
+        state.clientTransferEditor.preview = preview;
+        state.clientTransferEditor.error = null;
+        render();
+      } catch (error) {
+        state.clientTransferEditor.preview = null;
+        state.clientTransferEditor.error = safeClientTransferError(error);
+        render();
+      }
+      return;
+    }
+
     if (event.target?.matches?.('[data-area-move-preview-form]')) {
       event.preventDefault();
       if (!canManageAreas) return;
@@ -743,6 +1009,7 @@ export async function mountAreaManagement(context) {
         await reloadAreas();
         state.collectorEditor = null;
         state.moveEditor = null;
+        state.clientTransferEditor = null;
         state.mutationError = null;
         render();
       } catch (error) {
@@ -786,6 +1053,7 @@ export async function mountAreaManagement(context) {
       await reloadAreas();
       state.editor = null;
       state.moveEditor = null;
+      state.clientTransferEditor = null;
       state.mutationError = null;
       render();
     } catch (error) {
