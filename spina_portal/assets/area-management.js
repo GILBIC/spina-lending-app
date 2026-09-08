@@ -364,7 +364,11 @@ function clientTransferEditorMarkup(clientTransferEditor, tree = []) {
         ${result.timing === 'next_collection_day'
           ? `<p>Effective: ${escapeHtml(formatAreaDate(result.effective_date))}</p>`
           : '<p>Effective: Immediately</p>'}
-        <p>Current Area: ${escapeHtml(selectedClient?.area_path || result.old_area_path || 'Unassigned')}</p>
+        <p>Current Area: ${escapeHtml(
+          result.timing === 'next_collection_day'
+            ? (selectedClient?.area_path || result.old_area_path || 'Unassigned')
+            : (result.new_area_path || findArea(tree, result.new_area_id)?.full_path || 'Unassigned'),
+        )}</p>
         <p>Target Area: ${escapeHtml(result.new_area_path || findArea(tree, result.new_area_id)?.full_path || 'Unassigned')}</p>
       </div>`
     : '';
