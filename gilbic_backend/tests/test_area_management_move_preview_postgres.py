@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 import psycopg
 import pytest
 
+import gilbic_backend.area_management_move_preview as move_preview_module
 import gilbic_backend.area_management_repository as repository_module
 from gilbic_backend.area_management_repository import PostgresAreaManagementRepository
 
@@ -75,11 +76,9 @@ def test_move_preview_reports_clients_descendants_owner_change_and_stale_delegat
         ).fetchone()[0] is None:
             pytest.skip("Area Management migration 0113 is not installed")
 
-        monkeypatch.setattr(
-            repository_module,
-            "open_connection",
-            lambda: _same_connection(connection),
-        )
+        same_connection = lambda: _same_connection(connection)  # noqa: E731
+        monkeypatch.setattr(repository_module, "open_connection", same_connection)
+        monkeypatch.setattr(move_preview_module, "open_connection", same_connection)
         repository = PostgresAreaManagementRepository()
         suffix = uuid4().hex[:8]
         actor_id = _insert_user(connection, suffix=suffix, label="actor")
@@ -164,10 +163,15 @@ def test_move_preview_reports_clients_descendants_owner_change_and_stale_delegat
                 include_descendants
             ) values (%s, %s, %s, true)
             """,
-            (grant_id, cardona_assignment, calahan_path),
+            (grant_id, cardona_assignment, cardona_name),
         )
+        assert connection.execute(
+            "select lending.collector_has_active_delegated_area_access(%s, %s, now())",
+            (visitor, calahan_path),
+        ).fetchone()[0] is True
 
-        preview = repository.preview_move(
+        preview = move_preview_module.preview_move_with_operational_impact(
+            repository,
             area_uid=calahan_uid,
             new_parent_area_uid=destination_uid,
         )

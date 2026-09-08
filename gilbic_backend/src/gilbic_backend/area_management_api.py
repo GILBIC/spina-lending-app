@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from .account_repository import AccountContext, PostgresAccountRepository
+from .area_management_move_preview import preview_move_with_operational_impact
 from .area_management_repository import PostgresAreaManagementRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
@@ -176,6 +177,8 @@ def _client_payload(record) -> dict[str, object]:
 
 
 def _move_payload(record) -> dict[str, object]:
+    effective_collector_before = getattr(record, "effective_collector_before", None)
+    effective_collector_after = getattr(record, "effective_collector_after", None)
     return {
         "area_id": str(record.area_uid),
         "old_parent_area_id": _uuid(record.old_parent_area_uid),
@@ -183,6 +186,27 @@ def _move_payload(record) -> dict[str, object]:
         "old_path": record.old_path,
         "new_path": record.new_path,
         "affected_node_count": record.affected_node_count,
+        "clients_affected": getattr(record, "clients_affected", 0),
+        "descendant_areas_affected": getattr(
+            record,
+            "descendant_areas_affected",
+            max(record.affected_node_count - 1, 0),
+        ),
+        "effective_collector_before": (
+            _collector_payload(effective_collector_before)
+            if effective_collector_before is not None
+            else None
+        ),
+        "effective_collector_after": (
+            _collector_payload(effective_collector_after)
+            if effective_collector_after is not None
+            else None
+        ),
+        "stale_delegated_access_count": getattr(
+            record,
+            "stale_delegated_access_count",
+            0,
+        ),
     }
 
 
@@ -288,7 +312,8 @@ def create_area_management_router() -> APIRouter:
     ) -> dict[str, object]:
         _require_permission(actor, "area.manage")
         try:
-            preview = repository.preview_move(
+            preview = preview_move_with_operational_impact(
+                repository,
                 area_uid=area_id,
                 new_parent_area_uid=new_parent_area_id,
             )
