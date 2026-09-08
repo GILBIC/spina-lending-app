@@ -83,19 +83,45 @@ function findArea(tree, areaId) {
   return null;
 }
 
-function renderTreeRows(nodes, expandedAreaIds, selectedAreaId, parent = null) {
-  return (nodes || []).map((node) => {
+function siblingAreas(tree, area) {
+  if (!area) return [];
+  if (!area.parent_area_id) return tree;
+  return findArea(tree, area.parent_area_id)?.children || [];
+}
+
+function renderOrderControls(node, siblings, index, canManageOrder) {
+  if (!canManageOrder || siblings.length < 2) return '';
+  const areaId = escapeHtml(node.area_id);
+  const parentAreaId = escapeHtml(node.parent_area_id || '');
+  const name = escapeHtml(node.name);
+  return `<div class="area-tree-order-actions" data-area-parent-id="${parentAreaId}">
+    <button class="button button-outline button-small" type="button" aria-label="Move ${name} up" data-area-order="up" data-area-id="${areaId}"${index === 0 ? ' disabled' : ''}>↑</button>
+    <button class="button button-outline button-small" type="button" aria-label="Move ${name} down" data-area-order="down" data-area-id="${areaId}"${index === siblings.length - 1 ? ' disabled' : ''}>↓</button>
+  </div>`;
+}
+
+function renderTreeRows(
+  nodes,
+  expandedAreaIds,
+  selectedAreaId,
+  parent = null,
+  canManageOrder = false,
+) {
+  const siblings = nodes || [];
+  return siblings.map((node, index) => {
     const hasChildren = (node.children || []).length > 0;
     const expanded = hasChildren && expandedAreaIds.has(node.area_id);
     const selected = node.area_id === selectedAreaId;
     const collector = node.effective_collector?.full_name || node.effective_collector?.username || '';
+    const draggable = canManageOrder && siblings.length > 1;
     return `<div class="area-tree-branch">
-      <button class="area-tree-row${selected ? ' selected' : ''}" type="button" data-area-id="${escapeHtml(node.area_id)}">
+      <button class="area-tree-row${selected ? ' selected' : ''}" type="button" data-area-id="${escapeHtml(node.area_id)}" data-area-parent-id="${escapeHtml(node.parent_area_id || '')}"${draggable ? ' draggable="true"' : ''}>
         <span class="area-tree-toggle" aria-hidden="true">${hasChildren ? (expanded ? '▾' : '▸') : '•'}</span>
         <span><strong>${escapeHtml(node.name)}</strong><small>${escapeHtml(areaKindLabel(node, parent))}</small></span>
         ${collector ? `<span class="meta">${escapeHtml(collector)}</span>` : ''}
       </button>
-      ${expanded ? `<div class="area-tree-children">${renderTreeRows(node.children, expandedAreaIds, selectedAreaId, node)}</div>` : ''}
+      ${renderOrderControls(node, siblings, index, canManageOrder)}
+      ${expanded ? `<div class="area-tree-children">${renderTreeRows(node.children, expandedAreaIds, selectedAreaId, node, canManageOrder)}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -200,14 +226,15 @@ export function renderAreaManagementShell({
   const expanded = expandedAreaIds instanceof Set ? expandedAreaIds : new Set(expandedAreaIds || []);
   const selected = findArea(tree, selectedAreaId) || tree[0] || null;
   const filteredTree = filterAreaTree(tree, query);
+  const canManageOrder = hasPermission(session, 'area.manage');
 
   return `<section class="area-management">
     <header><p class="eyebrow">AREA MANAGEMENT</p><h2>Area Management</h2></header>
     <div class="area-management-grid">
       <section class="area-tree-panel">
         <label>Search area / Collector<input type="search" value="${escapeHtml(query)}" data-area-search></label>
-        <div class="area-tree">${renderTreeRows(filteredTree, expanded, selected?.area_id || null)}</div>
-        ${hasPermission(session, 'area.manage') ? `<div class="area-route-order-controls">${rootCreateControl(session)}<span class="meta">Route order follows the authoritative server order.</span></div>` : ''}
+        <div class="area-tree">${renderTreeRows(filteredTree, expanded, selected?.area_id || null, null, canManageOrder)}</div>
+        ${canManageOrder ? `<div class="area-route-order-controls">${rootCreateControl(session)}<span class="meta">Route order follows the authoritative server order.</span></div>` : ''}
       </section>
       <section class="area-details-panel">
         ${selectedAreaDetails(tree, selected)}
@@ -224,6 +251,7 @@ export async function mountAreaManagement(context) {
   const { root, api, session = {} } = context;
   root.innerHTML = loadingPanel('Loading authoritative Area structure…');
 
+  const canManageAreas = hasPermission(session, 'area.manage');
   const canAssignCollector = hasPermission(session, 'area.collector.assign');
   const areasRequest = settledRequest(api, '/api/v1/areas', {}, { areas: [] });
   const collectorsRequest = canAssignCollector
@@ -245,6 +273,7 @@ export async function mountAreaManagement(context) {
     collectors: Array.isArray(collectorsResult.data?.collectors) ? collectorsResult.data.collectors : [],
     editor: null,
     mutationError: null,
+    draggingAreaId: null,
   };
 
   const render = () => {
@@ -270,12 +299,49 @@ export async function mountAreaManagement(context) {
       : refreshedNodes[0]?.area_id || null;
   };
 
+  const submitSiblingOrder = async (parentAreaId, orderedAreaIds) => {
+    try {
+      await api.request('/api/v1/areas/reorder', {
+        method: 'POST',
+        body: {
+          parent_area_id: parentAreaId || null,
+          ordered_area_ids: orderedAreaIds,
+        },
+      });
+      await reloadAreas();
+      state.mutationError = null;
+      render();
+    } catch (error) {
+      state.mutationError = safeMutationError(error);
+      render();
+    }
+  };
+
   render();
 
   root.addEventListener('click', async (event) => {
+    const orderControl = event.target?.closest?.('[data-area-order]');
+    if (orderControl) {
+      if (!canManageAreas) return;
+      const area = findArea(state.tree, orderControl.dataset.areaId);
+      if (!area) return;
+      const siblings = siblingAreas(state.tree, area);
+      const index = siblings.findIndex((sibling) => sibling.area_id === area.area_id);
+      const delta = orderControl.dataset.areaOrder === 'up' ? -1 : 1;
+      const targetIndex = index + delta;
+      if (index < 0 || targetIndex < 0 || targetIndex >= siblings.length) return;
+      const orderedAreaIds = siblings.map((sibling) => sibling.area_id);
+      [orderedAreaIds[index], orderedAreaIds[targetIndex]] = [
+        orderedAreaIds[targetIndex],
+        orderedAreaIds[index],
+      ];
+      await submitSiblingOrder(area.parent_area_id || null, orderedAreaIds);
+      return;
+    }
+
     const action = event.target?.closest?.('[data-area-action]');
     if (action) {
-      if (!hasPermission(session, 'area.manage')) return;
+      if (!canManageAreas) return;
       const selected = findArea(state.tree, state.selectedAreaId);
 
       if (action.dataset.areaAction === 'add-root') {
@@ -328,6 +394,47 @@ export async function mountAreaManagement(context) {
       else state.expandedAreaIds.add(areaId);
     }
     render();
+  });
+
+  root.addEventListener('dragstart', (event) => {
+    if (!canManageAreas) return;
+    const row = event.target?.closest?.('[data-area-id]');
+    if (!row) return;
+    const area = findArea(state.tree, row.dataset.areaId);
+    if (!area || siblingAreas(state.tree, area).length < 2) return;
+    state.draggingAreaId = area.area_id;
+    event.dataTransfer?.setData?.('text/plain', area.area_id);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  });
+
+  root.addEventListener('dragover', (event) => {
+    if (!canManageAreas || !state.draggingAreaId) return;
+    const targetRow = event.target?.closest?.('[data-area-id]');
+    if (!targetRow) return;
+    const source = findArea(state.tree, state.draggingAreaId);
+    const target = findArea(state.tree, targetRow.dataset.areaId);
+    if (!source || !target || source.parent_area_id !== target.parent_area_id) return;
+    event.preventDefault();
+  });
+
+  root.addEventListener('drop', async (event) => {
+    if (!canManageAreas || !state.draggingAreaId) return;
+    const targetRow = event.target?.closest?.('[data-area-id]');
+    const source = findArea(state.tree, state.draggingAreaId);
+    const target = targetRow ? findArea(state.tree, targetRow.dataset.areaId) : null;
+    state.draggingAreaId = null;
+    if (!source || !target || source.area_id === target.area_id) return;
+    if (source.parent_area_id !== target.parent_area_id) return;
+
+    event.preventDefault();
+    const siblings = siblingAreas(state.tree, source);
+    const orderedAreaIds = siblings.map((sibling) => sibling.area_id);
+    const sourceIndex = orderedAreaIds.indexOf(source.area_id);
+    const targetIndex = orderedAreaIds.indexOf(target.area_id);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    orderedAreaIds.splice(sourceIndex, 1);
+    orderedAreaIds.splice(targetIndex, 0, source.area_id);
+    await submitSiblingOrder(source.parent_area_id || null, orderedAreaIds);
   });
 
   root.addEventListener('submit', async (event) => {
