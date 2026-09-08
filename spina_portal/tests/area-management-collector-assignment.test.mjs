@@ -203,7 +203,7 @@ test('Collector ownership details distinguish explicit, inherited, and unassigne
     expandedAreaIds: new Set(['cardona', 'calahan']),
     session: { permissions: ['area.collector.assign'] },
   });
-  assert.match(inheritedHtml, /Inherited:\s*Collector A from Calahan/i);
+  assert.match(inheritedHtml, /Inherited:<\/strong>\s*Collector A from Calahan/i);
 
   const explicitHtml = renderAreaManagementShell({
     tree: buildAreaTree(explicitNiaNodes),
@@ -211,7 +211,7 @@ test('Collector ownership details distinguish explicit, inherited, and unassigne
     expandedAreaIds: new Set(['cardona', 'calahan']),
     session: { permissions: ['area.collector.assign'] },
   });
-  assert.match(explicitHtml, /Explicit:\s*Collector B/i);
+  assert.match(explicitHtml, /Explicit:<\/strong>\s*Collector B/i);
 
   const unassignedHtml = renderAreaManagementShell({
     tree: buildAreaTree(inheritedNiaNodes),
@@ -282,10 +282,10 @@ test('assigning NIA to Collector B PUTs only the exact override and reloads auth
   assert.equal(collectorWrites[0].path, '/api/v1/areas/nia/collector');
   assert.deepEqual(collectorWrites[0].options.body, { collector_user_id: 'collector-b' });
   assert.equal(getAreaReadCount(), 2, 'successful assignment must reload the authoritative Area tree');
-  assert.match(root.innerHTML, /Explicit:\s*Collector B/i);
+  assert.match(root.innerHTML, /Explicit:<\/strong>\s*Collector B/i);
 
   await root.dispatch('click', areaRowTarget('calahan'));
-  assert.match(root.innerHTML, /Explicit:\s*Collector A/i);
+  assert.match(root.innerHTML, /Explicit:<\/strong>\s*Collector A/i);
 });
 
 test('removing the NIA exact override DELETEs only NIA and reloads inherited Collector A', async () => {
@@ -308,10 +308,10 @@ test('removing the NIA exact override DELETEs only NIA and reloads inherited Col
   assert.equal(collectorDeletes.length, 1, 'removal must touch only the exact NIA override');
   assert.equal(collectorDeletes[0].path, '/api/v1/areas/nia/collector');
   assert.equal(getAreaReadCount(), 2, 'successful removal must reload the authoritative Area tree');
-  assert.match(root.innerHTML, /Inherited:\s*Collector A from Calahan/i);
+  assert.match(root.innerHTML, /Inherited:<\/strong>\s*Collector A from Calahan/i);
 
   await root.dispatch('click', areaRowTarget('calahan'));
-  assert.match(root.innerHTML, /Explicit:\s*Collector A/i);
+  assert.match(root.innerHTML, /Explicit:<\/strong>\s*Collector A/i);
 });
 
 test('Collector assignment 409 fails closed, preserves prior ownership, and asks for Staff review', async () => {
@@ -332,7 +332,7 @@ test('Collector assignment 409 fails closed, preserves prior ownership, and asks
   await root.dispatch('submit', collectorEditorTarget('collector-b'));
 
   assert.match(root.innerHTML, /Conflict — SPINA requires Staff review/i);
-  assert.match(root.innerHTML, /Inherited:\s*Collector A from Calahan/i);
+  assert.match(root.innerHTML, /Inherited:<\/strong>\s*Collector A from Calahan/i);
 });
 
 test('Collector assignment controls remain absent without area.collector.assign', async () => {
