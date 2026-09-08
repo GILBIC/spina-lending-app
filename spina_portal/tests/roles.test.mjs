@@ -211,7 +211,7 @@ test('Management mounts the same shared Area component and receives retirement c
       calls.push(path);
       if (path === '/api/v1/account') return { profile: { full_name: 'Management' } };
       if (path === '/api/v1/management/loans?status=active') return { summary: {}, loans: [] };
-      if (path === '/api/v1/areas') return { areas: [areaNode] };
+      if (path === '/api/v1/areas?include_inactive=true') return { areas: [areaNode] };
       throw new Error(`Unexpected Management request: ${path}`);
     },
   };
@@ -226,9 +226,9 @@ test('Management mounts the same shared Area component and receives retirement c
   });
 
   assert.ok(navigation.some((item) => item.label === 'Area Management'));
-  assert.ok(calls.includes('/api/v1/areas'));
+  assert.ok(calls.includes('/api/v1/areas?include_inactive=true'));
   assert.match(mountedAreaRoot.innerHTML, /AREA MANAGEMENT/i);
-  assert.match(mountedAreaRoot.innerHTML, />Retire<\/button>/);
+  assert.match(mountedAreaRoot.innerHTML, />Retire Area<\/button>/);
 });
 
 test('role workspaces never duplicate Area API implementation outside the shared module', () => {
