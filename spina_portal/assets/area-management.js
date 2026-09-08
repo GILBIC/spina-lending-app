@@ -141,6 +141,14 @@ function selectedAreaDetails(tree, selected) {
   const inheritedFrom = sourceArea && sourceArea.area_id !== selected.area_id
     ? sourceArea.name
     : null;
+  let ownershipSummary = '<p><strong>Unassigned</strong></p>';
+  if (selected.explicit_collector) {
+    ownershipSummary = `<p><strong>Explicit:</strong> ${escapeHtml(explicitCollector)}</p>`;
+  } else if (selected.effective_collector && inheritedFrom) {
+    ownershipSummary = `<p><strong>Inherited:</strong> ${escapeHtml(selectedCollector)} from ${escapeHtml(inheritedFrom)}</p>`;
+  } else if (selected.effective_collector) {
+    ownershipSummary = `<p><strong>Inherited:</strong> ${escapeHtml(selectedCollector)}</p>`;
+  }
 
   return `<div class="section-heading area-details-heading">
       <div><p class="eyebrow">${escapeHtml(areaKindLabel(selected))}</p><h3>${escapeHtml(selected.name)}</h3></div>
@@ -148,6 +156,7 @@ function selectedAreaDetails(tree, selected) {
     </div>
     <p class="area-path">${escapeHtml(selected.full_path)}</p>
     <div class="area-collector-summary">
+      ${ownershipSummary}
       <p><strong>Effective Collector:</strong> ${escapeHtml(selectedCollector)}</p>
       <p><strong>Explicit Collector:</strong> ${escapeHtml(explicitCollector)}</p>
       ${inheritedFrom ? `<p><strong>Inherited from:</strong> ${escapeHtml(inheritedFrom)}</p>` : ''}
@@ -206,11 +215,50 @@ function editorMarkup(editor, selected) {
   </form>`;
 }
 
+function collectorEditorMarkup(collectorEditor, selected, collectors = []) {
+  if (!collectorEditor || !selected) return '';
+  const selectedCollectorId = collectorEditor.selectedCollectorUserId || '';
+  const selectedCollector = collectors.find((collector) => collector.user_id === selectedCollectorId) || null;
+  const selectedCollectorName = selectedCollector?.full_name || selectedCollector?.username || '';
+  const options = collectors.map((collector) => {
+    const collectorId = String(collector.user_id || '');
+    const collectorName = collector.full_name || collector.username || collectorId;
+    const selectedAttribute = collectorId === selectedCollectorId ? ' selected' : '';
+    return `<option value="${escapeHtml(collectorId)}"${selectedAttribute}>${escapeHtml(collectorName)}</option>`;
+  }).join('');
+  const explanation = selectedCollectorName
+    ? `<p class="meta">${escapeHtml(selectedCollectorName)} will handle ${escapeHtml(selected.name)} and its descendants unless a deeper Subarea has its own Collector override.</p>`
+    : '';
+  const removeControl = selected.explicit_collector
+    ? '<button class="button button-outline button-small" type="button" data-area-collector-remove>Remove exact override</button>'
+    : '';
+
+  return `<form class="entry-form area-collector-editor" data-area-collector-editor>
+    <div class="section-heading"><div><h3>Collector assignment</h3><p>SPINA keeps parent inheritance and deeper overrides authoritative on the server.</p></div></div>
+    <label>Collector<select name="collector_user_id" data-area-collector-select>
+      <option value="">Select Collector</option>
+      ${options}
+    </select></label>
+    ${explanation}
+    <div class="action-row">
+      <button class="button button-primary button-small" type="submit">Save Collector</button>
+      ${removeControl}
+    </div>
+  </form>`;
+}
+
 function safeMutationError(error) {
   if (Number(error?.status) === 409) {
     return new Error('Area name already exists under this parent or conflicts with the current Area structure.');
   }
   return new Error('Area change could not be saved. Refresh and try again.');
+}
+
+function safeCollectorMutationError(error) {
+  if (Number(error?.status) === 409) {
+    return new Error('Conflict — SPINA requires Staff review. Prior Collector ownership was kept unchanged.');
+  }
+  return new Error('Collector assignment could not be saved. Refresh and try again.');
 }
 
 export function renderAreaManagementShell({
@@ -219,8 +267,10 @@ export function renderAreaManagementShell({
   expandedAreaIds = new Set(),
   query = '',
   session = {},
+  collectors = [],
   collectorLoadError = null,
   editor = null,
+  collectorEditor = null,
   mutationError = null,
 } = {}) {
   const expanded = expandedAreaIds instanceof Set ? expandedAreaIds : new Set(expandedAreaIds || []);
@@ -240,6 +290,7 @@ export function renderAreaManagementShell({
         ${selectedAreaDetails(tree, selected)}
         ${actionControls(selected, session)}
         ${editorMarkup(editor, selected)}
+        ${collectorEditorMarkup(collectorEditor, selected, collectors)}
         ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
         ${collectorLoadError ? errorCard(collectorLoadError, 'Collector choices are temporarily unavailable.') : ''}
       </section>
@@ -272,6 +323,7 @@ export async function mountAreaManagement(context) {
     query: '',
     collectors: Array.isArray(collectorsResult.data?.collectors) ? collectorsResult.data.collectors : [],
     editor: null,
+    collectorEditor: null,
     mutationError: null,
     draggingAreaId: null,
   };
@@ -283,8 +335,10 @@ export async function mountAreaManagement(context) {
       expandedAreaIds: state.expandedAreaIds,
       query: state.query,
       session,
+      collectors: state.collectors,
       collectorLoadError: collectorsResult.error,
       editor: state.editor,
+      collectorEditor: state.collectorEditor,
       mutationError: state.mutationError,
     });
   };
@@ -339,23 +393,60 @@ export async function mountAreaManagement(context) {
       return;
     }
 
+    const collectorRemove = event.target?.closest?.('[data-area-collector-remove]');
+    if (collectorRemove) {
+      if (!canAssignCollector) return;
+      const selected = findArea(state.tree, state.selectedAreaId);
+      if (!selected?.explicit_collector) return;
+      try {
+        await api.request(`/api/v1/areas/${encodeURIComponent(selected.area_id)}/collector`, {
+          method: 'DELETE',
+        });
+        await reloadAreas();
+        state.collectorEditor = null;
+        state.mutationError = null;
+        render();
+      } catch (error) {
+        state.mutationError = safeCollectorMutationError(error);
+        render();
+      }
+      return;
+    }
+
     const action = event.target?.closest?.('[data-area-action]');
     if (action) {
-      if (!canManageAreas) return;
       const selected = findArea(state.tree, state.selectedAreaId);
+      const actionName = action.dataset.areaAction;
 
-      if (action.dataset.areaAction === 'add-root') {
-        state.editor = {
-          kind: 'create',
-          parentAreaId: null,
-          label: '+ Add City/Municipality',
+      if (actionName === 'collector') {
+        if (!canAssignCollector || !selected) return;
+        state.collectorEditor = {
+          selectedCollectorUserId: selected.explicit_collector?.user_id
+            || selected.effective_collector?.user_id
+            || state.collectors[0]?.user_id
+            || '',
         };
+        state.editor = null;
         state.mutationError = null;
         render();
         return;
       }
 
-      if (action.dataset.areaAction === 'add-child') {
+      if (!canManageAreas) return;
+
+      if (actionName === 'add-root') {
+        state.editor = {
+          kind: 'create',
+          parentAreaId: null,
+          label: '+ Add City/Municipality',
+        };
+        state.collectorEditor = null;
+        state.mutationError = null;
+        render();
+        return;
+      }
+
+      if (actionName === 'add-child') {
         const label = childCreateLabel(selected);
         if (!selected || !label) return;
         state.editor = {
@@ -363,18 +454,20 @@ export async function mountAreaManagement(context) {
           parentAreaId: selected.area_id,
           label,
         };
+        state.collectorEditor = null;
         state.mutationError = null;
         render();
         return;
       }
 
-      if (action.dataset.areaAction === 'rename') {
+      if (actionName === 'rename') {
         if (!selected) return;
         state.editor = {
           kind: 'rename',
           areaId: selected.area_id,
           label: 'Rename Area',
         };
+        state.collectorEditor = null;
         state.mutationError = null;
         render();
         return;
@@ -388,6 +481,7 @@ export async function mountAreaManagement(context) {
     if (!area) return;
     state.selectedAreaId = areaId;
     state.editor = null;
+    state.collectorEditor = null;
     state.mutationError = null;
     if ((area.children || []).length) {
       if (state.expandedAreaIds.has(areaId)) state.expandedAreaIds.delete(areaId);
@@ -438,6 +532,32 @@ export async function mountAreaManagement(context) {
   });
 
   root.addEventListener('submit', async (event) => {
+    if (event.target?.matches?.('[data-area-collector-editor]')) {
+      event.preventDefault();
+      if (!canAssignCollector) return;
+      const selected = findArea(state.tree, state.selectedAreaId);
+      const collectorUserId = String(event.target.elements?.collector_user_id?.value || '').trim();
+      if (!selected || !collectorUserId) {
+        state.mutationError = new Error('Select a Collector before saving.');
+        render();
+        return;
+      }
+      try {
+        await api.request(`/api/v1/areas/${encodeURIComponent(selected.area_id)}/collector`, {
+          method: 'PUT',
+          body: { collector_user_id: collectorUserId },
+        });
+        await reloadAreas();
+        state.collectorEditor = null;
+        state.mutationError = null;
+        render();
+      } catch (error) {
+        state.mutationError = safeCollectorMutationError(error);
+        render();
+      }
+      return;
+    }
+
     if (!event.target?.matches?.('[data-area-editor]')) return;
     event.preventDefault();
 
@@ -477,6 +597,14 @@ export async function mountAreaManagement(context) {
       state.mutationError = safeMutationError(error);
       render();
     }
+  });
+
+  root.addEventListener('change', (event) => {
+    if (!event.target?.matches?.('[data-area-collector-select]')) return;
+    if (!state.collectorEditor) return;
+    state.collectorEditor.selectedCollectorUserId = event.target.value || '';
+    state.mutationError = null;
+    render();
   });
 
   root.addEventListener('input', (event) => {
