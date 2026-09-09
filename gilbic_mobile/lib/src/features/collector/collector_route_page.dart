@@ -14,6 +14,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_schedule_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_tools_sheet.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
@@ -608,10 +609,11 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       case CollectorClientToolKind.correction:
         if (entry != null) await _openCorrection(loaded, entry);
       case CollectorClientToolKind.schedule:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Schedule is read-only. The authoritative schedule view is connected in the next Area Management step.',
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => CollectorClientSchedulePage(
+              session: widget.session,
+              client: selectedClient,
             ),
           ),
         );
