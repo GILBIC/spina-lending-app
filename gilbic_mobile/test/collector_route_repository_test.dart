@@ -95,61 +95,66 @@ void main() {
         appVersionResolver: () async => '0.4.0+4',
       ),
       client: MockClient((request) async {
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'success': true,
-            'data': <String, Object?>{
-              'route_date': '2026-09-09',
-              'collector_name': 'Collector One',
-              'areas': <String>['Cardona › Calahan'],
-              'expected_total': 200,
-              'area_nodes': <Object?>[
-                <String, Object?>{
-                  'area_uid': 'cardona',
-                  'parent_area_uid': null,
-                  'name': 'Cardona',
-                  'full_path': 'Cardona',
-                  'depth': 0,
-                  'sort_order': 0,
-                  'is_legacy_unmapped': false,
-                },
-                <String, Object?>{
-                  'area_uid': 'calahan',
-                  'parent_area_uid': 'cardona',
-                  'name': 'Calahan',
-                  'full_path': 'Cardona › Calahan',
-                  'depth': 1,
-                  'sort_order': 0,
-                  'is_legacy_unmapped': false,
-                },
-                <String, Object?>{
-                  'area_uid': 'balayong',
-                  'parent_area_uid': 'calahan',
-                  'name': 'Balayong',
-                  'full_path': 'Cardona › Calahan › Balayong',
-                  'depth': 2,
-                  'sort_order': 0,
-                  'is_legacy_unmapped': false,
-                },
-              ],
-              'entries': <Object?>[
-                <String, Object?>{
-                  'route_entry_id': 'entry-hierarchy',
-                  'client_id': 'client-hierarchy',
-                  'loan_id': 'loan-hierarchy',
-                  'client_name': 'Ana Client',
-                  'area': 'Cardona › Calahan › Balayong',
-                  'area_uid': 'balayong',
-                  'loan_type': 'Regular',
-                  'daily_amount': 200,
-                  'remaining_balance': 4800,
-                  'pass_count': 0,
-                  'status': 'Pending',
-                },
-              ],
-            },
-          }),
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'route_date': '2026-09-09',
+                'collector_name': 'Collector One',
+                'areas': <String>['Cardona › Calahan'],
+                'expected_total': 200,
+                'area_nodes': <Object?>[
+                  <String, Object?>{
+                    'area_uid': 'cardona',
+                    'parent_area_uid': null,
+                    'name': 'Cardona',
+                    'full_path': 'Cardona',
+                    'depth': 0,
+                    'sort_order': 0,
+                    'is_legacy_unmapped': false,
+                  },
+                  <String, Object?>{
+                    'area_uid': 'calahan',
+                    'parent_area_uid': 'cardona',
+                    'name': 'Calahan',
+                    'full_path': 'Cardona › Calahan',
+                    'depth': 1,
+                    'sort_order': 0,
+                    'is_legacy_unmapped': false,
+                  },
+                  <String, Object?>{
+                    'area_uid': 'balayong',
+                    'parent_area_uid': 'calahan',
+                    'name': 'Balayong',
+                    'full_path': 'Cardona › Calahan › Balayong',
+                    'depth': 2,
+                    'sort_order': 0,
+                    'is_legacy_unmapped': false,
+                  },
+                ],
+                'entries': <Object?>[
+                  <String, Object?>{
+                    'route_entry_id': 'entry-hierarchy',
+                    'client_id': 'client-hierarchy',
+                    'loan_id': 'loan-hierarchy',
+                    'client_name': 'Ana Client',
+                    'area': 'Cardona › Calahan › Balayong',
+                    'area_uid': 'balayong',
+                    'loan_type': 'Regular',
+                    'daily_amount': 200,
+                    'remaining_balance': 4800,
+                    'pass_count': 0,
+                    'status': 'Pending',
+                  },
+                ],
+              },
+            }),
+          ),
           200,
+          headers: const <String, String>{
+            'content-type': 'application/json; charset=utf-8',
+          },
         );
       }),
     );
