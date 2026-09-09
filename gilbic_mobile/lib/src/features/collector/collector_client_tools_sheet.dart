@@ -259,9 +259,7 @@ class _LoanToolsCard extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
-                  builder: (context) => CollectorClientSchedulePage(
-                    entry: entry,
-                  ),
+                  builder: (context) => CollectorClientSchedulePage(entry: entry),
                 ),
               ),
             ),
