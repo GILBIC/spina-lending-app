@@ -16,6 +16,7 @@ import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart'
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_route_tree.dart';
 
 class CollectorRoutePage extends StatefulWidget {
   const CollectorRoutePage({
@@ -49,6 +50,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   late final CollectionDeviceSequence _deviceSequence;
 
   final Set<String> _expandedClients = <String>{};
+  final Set<String> _expandedAreaUids = <String>{};
   final Set<String> _payingLoanIds = <String>{};
   final Map<String, PaymentSubmissionDraft> _pendingDirectDrafts =
       <String, PaymentSubmissionDraft>{};
@@ -557,6 +559,14 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     return null;
   }
 
+  void _toggleArea(String areaUid) {
+    setState(() {
+      if (!_expandedAreaUids.add(areaUid)) {
+        _expandedAreaUids.remove(areaUid);
+      }
+    });
+  }
+
   void _toggleClient(String clientId) {
     setState(() {
       if (!_expandedClients.add(clientId)) {
@@ -621,6 +631,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     final loaded = result!;
     final route = loaded.route;
     final areaGroups = groupCollectorRoute(route);
+    final areaTree = route.areaNodes.isEmpty
+        ? const <CollectorRouteTreeNode>[]
+        : buildCollectorRouteTree(route);
     final clientCount = areaGroups.fold<int>(
       0,
       (total, group) => total + group.clientCount,
@@ -680,6 +693,31 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               child: Text(
                 'No clients are assigned to this route.',
                 textAlign: TextAlign.center,
+              ),
+            )
+          else if (areaTree.isNotEmpty)
+            CollectorRouteTree(
+              roots: areaTree,
+              expandedAreaUids: _expandedAreaUids,
+              expandedClients: _expandedClients,
+              directPayBlockedReasonFor: (entry) =>
+                  _directPayBlockedReason(loaded, entry),
+              payingLoanIds: _payingLoanIds,
+              pendingDirectLoanIds: _pendingPaymentLoanIds(),
+              onToggleArea: _toggleArea,
+              onToggleClient: _toggleClient,
+              onRecord: (entry) => _payNow(loaded, entry),
+              onRecordCombined: (client) => _payCombined(loaded, client),
+              detailsBuilder: (entry) => _LoanDetails(
+                entry: entry,
+                blockedReason: _directPayBlockedReason(loaded, entry),
+                detailsBlockedReason: _detailsBlockedReason(loaded, entry),
+                correctionBlockedReason: _correctionBlockedReason(
+                  loaded,
+                  entry,
+                ),
+                onDetails: () => _openCollectionDetails(loaded, entry),
+                onEdit: () => _openCorrection(loaded, entry),
               ),
             )
           else
