@@ -17,6 +17,7 @@ from .collection_void_api import create_collection_void_router
 from .collector_cash_accountability_api import (
     create_collector_cash_accountability_router,
 )
+from .collector_client_detail_api import create_collector_client_detail_router
 from .collector_route_api import create_collector_route_router
 from .collector_schedule_api import create_collector_schedule_router
 from .combined_collection_api import create_combined_collection_router
@@ -227,6 +228,7 @@ def create_app() -> FastAPI:
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_collector_schedule_router())
+    app.include_router(create_collector_client_detail_router())
     app.include_router(create_collector_cash_accountability_router())
     app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())
