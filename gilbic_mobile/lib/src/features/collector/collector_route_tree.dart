@@ -103,7 +103,7 @@ class _CollectorAreaBranch extends StatelessWidget {
               key: areaUid == null ? null : Key('route-area-$areaUid'),
               borderRadius: BorderRadius.circular(10),
               onTap: isExpandable && node.depth > 0
-                  ? () => onToggleArea(areaUid!)
+                  ? () => onToggleArea(areaUid)
                   : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
