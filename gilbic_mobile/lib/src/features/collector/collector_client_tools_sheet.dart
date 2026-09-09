@@ -115,14 +115,22 @@ class _LoanToolsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final messages = <String>{
-      if (entry.contractReadinessMessage.trim().isNotEmpty)
-        entry.contractReadinessMessage.trim(),
-      if (entry.collectionMessage.trim().isNotEmpty)
-        entry.collectionMessage.trim(),
-      if (directPayBlockedReason?.trim().isNotEmpty == true)
-        directPayBlockedReason!.trim(),
-    };
+    final directReason = directPayBlockedReason?.trim();
+    final collectionMessage = entry.collectionMessage.trim();
+    final readinessMessage = entry.contractReadinessMessage.trim();
+    final operationalMessage = directReason?.isNotEmpty == true
+        ? directReason
+        : collectionMessage.isNotEmpty
+            ? collectionMessage
+            : readinessMessage.isNotEmpty
+                ? readinessMessage
+                : null;
+    final detailsReason = detailsBlockedReason?.trim();
+    final detailsSubtitle = detailsReason == null || detailsReason.isEmpty
+        ? '${_loanLabel(entry.loanType)} payment flow'
+        : detailsReason == operationalMessage
+            ? 'Payment details unavailable until this route is eligible.'
+            : detailsReason;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -150,7 +158,10 @@ class _LoanToolsCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 5),
-            Text('Status: ${entry.status}', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Status: ${entry.status}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             if (entry.contractCollectionReady &&
                 entry.contractTodayScheduledAmount > 0) ...[
               const SizedBox(height: 3),
@@ -192,9 +203,12 @@ class _LoanToolsCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-            for (final message in messages) ...[
+            if (operationalMessage != null) ...[
               const SizedBox(height: 3),
-              Text(message, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                operationalMessage,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
             if (entry.todayReceipts.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -206,9 +220,7 @@ class _LoanToolsCard extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.tune),
               title: const Text('Payment details / other amount'),
-              subtitle: detailsBlockedReason == null
-                  ? Text('${_loanLabel(entry.loanType)} payment flow')
-                  : Text(detailsBlockedReason!),
+              subtitle: Text(detailsSubtitle),
               trailing: detailsBlockedReason == null
                   ? const Icon(Icons.chevron_right)
                   : const Icon(Icons.lock_outline),
@@ -240,7 +252,9 @@ class _LoanToolsCard extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_month_outlined),
               title: const Text('Schedule'),
-              subtitle: Text('Read-only ${_loanLabel(entry.loanType)} schedule'),
+              subtitle: Text(
+                'Read-only ${_loanLabel(entry.loanType)} schedule',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).pop(
                 CollectorClientToolSelection(
