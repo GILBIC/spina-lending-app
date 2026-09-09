@@ -17,8 +17,11 @@ ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_borrower_schedule_"
 BOOTSTRAP_THROUGH = 109
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
-INTEGRATION_TESTS = (
+SQL_ROOT = ROOT / "gilbic_backend" / "sql"
+UPGRADE_TESTS = (
     TEST_ROOT / "test_borrower_schedule_adjustment_upgrade_postgres.py",
+)
+CURRENT_INTEGRATION_TESTS = (
     TEST_ROOT / "test_borrower_schedule_adjustment_repository_postgres.py",
     TEST_ROOT / "test_borrower_schedule_finalization_postgres.py",
     TEST_ROOT / "test_collector_route_api.py",
@@ -30,6 +33,10 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_schedule_allocation.py",
     TEST_ROOT / "test_seven_by_seven_borrower_catchup_postgres.py",
 )
+CURRENT_SCHEMA_MIGRATIONS = (
+    SQL_ROOT / "0111_add_client_credential_management.sql",
+    SQL_ROOT / "0113_add_authoritative_area_management.sql",
+)
 
 
 def _configure_shared_safety_helpers() -> None:
@@ -37,13 +44,7 @@ def _configure_shared_safety_helpers() -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
 
 
-def _run_tests(test_database_url: str) -> int:
-    missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
-    if missing:
-        raise SystemExit(
-            "Borrower-schedule validation refused: required integration test file is missing: "
-            + ", ".join(missing)
-        )
+def _test_env(test_database_url: str) -> dict[str, str]:
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
@@ -58,18 +59,64 @@ def _run_tests(test_database_url: str) -> int:
     if existing_python_path:
         python_paths.append(existing_python_path)
     env["PYTHONPATH"] = os.pathsep.join(python_paths)
+    return env
+
+
+def _run_tests(test_database_url: str, tests: tuple[Path, ...]) -> int:
+    missing = [str(path) for path in tests if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "Borrower-schedule validation refused: required integration test file is missing: "
+            + ", ".join(missing)
+        )
     completed = subprocess.run(
         [
             sys.executable,
             "-m",
             "pytest",
             "-q",
-            *(str(path) for path in INTEGRATION_TESTS),
+            *(str(path) for path in tests),
         ],
-        env=env,
+        env=_test_env(test_database_url),
         check=False,
     )
     return int(completed.returncode)
+
+
+def _advance_to_current_schema(test_database_url: str) -> None:
+    missing = [str(path) for path in CURRENT_SCHEMA_MIGRATIONS if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "Borrower-schedule validation refused: required current-schema migration is missing: "
+            + ", ".join(missing)
+        )
+
+    with psycopg.connect(test_database_url, autocommit=True) as connection:
+        event_date_installed = connection.execute(
+            """
+            select count(*)
+            from information_schema.columns
+            where table_schema = 'lending'
+              and table_name = 'loan_schedule_adjustments'
+              and column_name = 'event_date'
+            """
+        ).fetchone()[0]
+        if event_date_installed == 0:
+            raise RuntimeError(
+                "Borrower-schedule validator cannot advance to current schema before the "
+                "0109-to-0110 upgrade proof installs event_date."
+            )
+
+        for path in CURRENT_SCHEMA_MIGRATIONS:
+            connection.execute(path.read_text(encoding="utf-8"))
+
+        area_transfer_table = connection.execute(
+            "select to_regclass('lending.client_area_pending_transfers')"
+        ).fetchone()[0]
+        if area_transfer_table is None:
+            raise RuntimeError(
+                "Borrower-schedule current-schema advance did not install Area transfer authority."
+            )
 
 
 def main() -> int:
@@ -77,8 +124,12 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through both 0109 migrations, seed existing audited No Collection history, "
-            "apply 0110 only inside the disposable test, and prove the upgrade preserves "
-            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence, elapsed-date finalization, Collector route refresh behavior, authoritative Collector and Client schedule reads, Regular protected/transactional catch-up allocation, and 7x7 catch-up planning/posting."
+            "prove the 0109-to-0110 upgrade in isolation, then advance the same disposable "
+            "database through the current shared Plan 1 schema before exercising current "
+            "borrower shortfall/catch-up persistence, elapsed-date finalization, Collector "
+            "route refresh behavior, authoritative Collector and Client schedule reads, "
+            "Regular protected/transactional catch-up allocation, and 7x7 catch-up "
+            "planning/posting."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -128,19 +179,30 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        result = _run_tests(test_url)
-        if result != 0:
+
+        upgrade_result = _run_tests(test_url, UPGRADE_TESTS)
+        if upgrade_result != 0:
             raise SystemExit(
                 "Borrower-schedule disposable PostgreSQL validation failed: "
-                f"tests exited with code {result}."
+                f"0109-to-0110 upgrade tests exited with code {upgrade_result}."
+            )
+
+        _advance_to_current_schema(test_url)
+
+        integration_result = _run_tests(test_url, CURRENT_INTEGRATION_TESTS)
+        if integration_result != 0:
+            raise SystemExit(
+                "Borrower-schedule disposable PostgreSQL validation failed: "
+                f"current-schema integration tests exited with code {integration_result}."
             )
         print(
             "Borrower-schedule disposable PostgreSQL validation passed: schema through 0109 "
-            "upgraded with 0110 after existing audited No Collection history was created; "
-            "event_date backfill, immutable evidence preservation, borrower schedule "
-            "repository integration, elapsed-date finalization, Collector route refresh, "
-            "authoritative Collector/Client schedule reads, Regular protected/transactional "
-            "catch-up allocation, and 7x7 catch-up planning/posting were proven."
+            "was upgraded with 0110 after existing audited No Collection history was created; "
+            "the same disposable database was then advanced through current Plan 1 Area "
+            "authority before event_date backfill, immutable evidence preservation, borrower "
+            "schedule repository integration, elapsed-date finalization, Collector route "
+            "refresh, authoritative Collector/Client schedule reads, Regular protected/"
+            "transactional catch-up allocation, and 7x7 catch-up planning/posting were proven."
         )
         return 0
     except psycopg.Error as error:
