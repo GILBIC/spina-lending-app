@@ -89,6 +89,11 @@ void main() {
       Navigator.of(tester.element(find.text('Client Tools'))).pop();
       await tester.pumpAndSettle();
 
+      // Fully unmount the first route so its already-loaded correctionAllowed
+      // state cannot be reused by Flutter when the second scenario is pumped.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
       await tester.pumpWidget(
         MaterialApp(
           home: CollectorRoutePage(
