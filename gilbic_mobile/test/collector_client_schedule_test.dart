@@ -31,7 +31,7 @@ void main() {
       expect(find.text('Client Tools'), findsOneWidget);
 
       await tester.tap(find.text('Schedule').first);
-      await tester.pumpAndSettle();
+      await _pumpUntilFound(tester, find.text('Client Schedule'));
 
       expect(find.text('Client Schedule'), findsOneWidget);
       expect(
@@ -123,6 +123,12 @@ Future<void> _usePhoneSurface(WidgetTester tester) async {
   addTearDown(() async {
     await tester.binding.setSurfaceSize(null);
   });
+}
+
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var attempt = 0; attempt < 20 && finder.evaluate().isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 const UserSession _session = UserSession(
