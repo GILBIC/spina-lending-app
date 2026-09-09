@@ -86,6 +86,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Correction'), findsOneWidget);
 
+      Navigator.of(tester.element(find.text('Client Tools'))).pop();
+      await tester.pumpAndSettle();
+
       await tester.pumpWidget(
         MaterialApp(
           home: CollectorRoutePage(
