@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
-import 'package:gilbic_mobile/src/features/collector/collector_client_schedule_page.dart';
 
 typedef CollectorClientToolReason = String? Function(CollectorRouteEntry entry);
 
@@ -257,9 +256,10 @@ class _LoanToolsCard extends StatelessWidget {
                 'Read-only ${_loanLabel(entry.loanType)} schedule',
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (context) => CollectorClientSchedulePage(entry: entry),
+              onTap: () => Navigator.of(context).pop(
+                CollectorClientToolSelection(
+                  CollectorClientToolKind.schedule,
+                  entry: entry,
                 ),
               ),
             ),
