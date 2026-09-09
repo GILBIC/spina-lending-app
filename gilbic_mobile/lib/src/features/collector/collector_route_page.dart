@@ -14,6 +14,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_tools_sheet.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_tree.dart';
@@ -567,12 +568,62 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     });
   }
 
-  void _toggleClient(String clientId) {
-    setState(() {
-      if (!_expandedClients.add(clientId)) {
-        _expandedClients.remove(clientId);
+  Future<void> _toggleClient(String clientId) async {
+    final loaded = _result;
+    if (loaded == null || !mounted) return;
+
+    CollectorRouteClientGroup? client;
+    for (final areaGroup in groupCollectorRoute(loaded.route)) {
+      for (final candidate in areaGroup.clients) {
+        if (candidate.clientId == clientId) {
+          client = candidate;
+          break;
+        }
       }
-    });
+      if (client != null) break;
+    }
+    final selectedClient = client;
+    if (selectedClient == null) return;
+
+    final selection = await showModalBottomSheet<CollectorClientToolSelection>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => CollectorClientToolsSheet(
+        client: selectedClient,
+        directPayBlockedReasonFor: (entry) =>
+            _directPayBlockedReason(loaded, entry),
+        detailsBlockedReasonFor: (entry) =>
+            _detailsBlockedReason(loaded, entry),
+        correctionBlockedReasonFor: (entry) =>
+            _correctionBlockedReason(loaded, entry),
+      ),
+    );
+    if (!mounted || selection == null) return;
+
+    final entry = selection.entry;
+    switch (selection.kind) {
+      case CollectorClientToolKind.paymentDetails:
+        if (entry != null) await _openCollectionDetails(loaded, entry);
+      case CollectorClientToolKind.correction:
+        if (entry != null) await _openCorrection(loaded, entry);
+      case CollectorClientToolKind.schedule:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Schedule is read-only. The authoritative schedule view is connected in the next Area Management step.',
+            ),
+          ),
+        );
+      case CollectorClientToolKind.collectionLocation:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Collection location is read-only. Verified route details are connected in the next Area Management step.',
+            ),
+          ),
+        );
+    }
   }
 
   @override
