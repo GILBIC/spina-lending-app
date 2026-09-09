@@ -1,5 +1,54 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+class CollectorRouteAreaNode {
+  const CollectorRouteAreaNode({
+    required this.areaUid,
+    required this.parentAreaUid,
+    required this.name,
+    required this.fullPath,
+    required this.depth,
+    required this.sortOrder,
+    required this.isLegacyUnmapped,
+  });
+
+  final String areaUid;
+  final String? parentAreaUid;
+  final String name;
+  final String fullPath;
+  final int depth;
+  final int sortOrder;
+  final bool isLegacyUnmapped;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'area_uid': areaUid,
+        'parent_area_uid': parentAreaUid,
+        'name': name,
+        'full_path': fullPath,
+        'depth': depth,
+        'sort_order': sortOrder,
+        'is_legacy_unmapped': isLegacyUnmapped,
+      };
+
+  static CollectorRouteAreaNode? fromPayload(Object? value) {
+    final data = stringMap(value);
+    if (data.isEmpty) return null;
+    final areaUid = firstNonEmptyString(<Object?>[data['area_uid']]);
+    if (areaUid == null) return null;
+    final name = firstNonEmptyString(<Object?>[data['name']]) ?? '';
+    return CollectorRouteAreaNode(
+      areaUid: areaUid,
+      parentAreaUid:
+          firstNonEmptyString(<Object?>[data['parent_area_uid']]),
+      name: name,
+      fullPath: firstNonEmptyString(<Object?>[data['full_path']]) ?? name,
+      depth: firstNumber(<Object?>[data['depth']])?.toInt() ?? 0,
+      sortOrder: firstNumber(<Object?>[data['sort_order']])?.toInt() ?? 0,
+      isLegacyUnmapped:
+          _boolValue(data['is_legacy_unmapped'], fallback: false),
+    );
+  }
+}
+
 class CollectorRoute {
   const CollectorRoute({
     required this.routeDate,
@@ -7,11 +56,13 @@ class CollectorRoute {
     required this.areas,
     required this.entries,
     required this.expectedTotal,
+    this.areaNodes = const <CollectorRouteAreaNode>[],
   });
 
   final DateTime? routeDate;
   final String collectorName;
   final List<String> areas;
+  final List<CollectorRouteAreaNode> areaNodes;
   final List<CollectorRouteEntry> entries;
   final double expectedTotal;
 
@@ -20,6 +71,8 @@ class CollectorRoute {
       'route_date': routeDate?.toIso8601String(),
       'collector_name': collectorName,
       'areas': areas,
+      'area_nodes':
+          areaNodes.map((node) => node.toJson()).toList(growable: false),
       'expected_total': expectedTotal,
       'entries': entries.map((entry) => entry.toJson()).toList(growable: false),
     };
@@ -40,6 +93,13 @@ class CollectorRoute {
             .whereType<CollectorRouteEntry>()
             .toList(growable: false)
         : const <CollectorRouteEntry>[];
+    final rawAreaNodes = source['area_nodes'] ?? outer['area_nodes'];
+    final areaNodes = rawAreaNodes is Iterable
+        ? rawAreaNodes
+            .map(CollectorRouteAreaNode.fromPayload)
+            .whereType<CollectorRouteAreaNode>()
+            .toList(growable: false)
+        : const <CollectorRouteAreaNode>[];
 
     final rawAreas = stringList(source['areas'] ?? outer['areas']);
     final derivedAreas = entries
@@ -72,6 +132,7 @@ class CollectorRoute {
           ]) ??
           'Collector',
       areas: rawAreas.isEmpty ? derivedAreas : rawAreas,
+      areaNodes: areaNodes,
       entries: entries,
       expectedTotal: expected?.toDouble() ??
           entries.fold<double>(0, (total, entry) => total + entry.dailyAmount),
@@ -208,6 +269,7 @@ class CollectorRouteEntry {
     required this.balance,
     required this.status,
     required this.passCount,
+    this.areaUid,
     this.lastPaymentDate,
     this.advanceUntil,
     this.coveredDates = const <DateTime>[],
@@ -253,6 +315,7 @@ class CollectorRouteEntry {
   final String loanId;
   final String clientName;
   final String area;
+  final String? areaUid;
   final String loanType;
   final double dailyAmount;
   final double balance;
@@ -303,6 +366,7 @@ class CollectorRouteEntry {
         'loan_id': loanId,
         'client_name': clientName,
         'area': area,
+        'area_uid': areaUid,
         'loan_type': loanType,
         'daily_amount': dailyAmount,
         'balance': balance,
@@ -399,6 +463,10 @@ class CollectorRouteEntry {
             client['area'],
           ]) ??
           '',
+      areaUid: firstNonEmptyString(<Object?>[
+        data['area_uid'],
+        client['area_uid'],
+      ]),
       loanType: firstNonEmptyString(<Object?>[
             data['loan_type'],
             loan['loan_type'],
