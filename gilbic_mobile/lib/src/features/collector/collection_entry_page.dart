@@ -430,6 +430,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                           DropdownButtonFormField<PaymentAllocationIntent>(
                             key: const Key('regular-extra-allocation-choice'),
                             initialValue: _paymentAllocationIntent,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'If there is extra cash',
                               helperText:

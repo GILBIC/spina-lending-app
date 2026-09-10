@@ -15,10 +15,15 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_borrower_schedule_"
-BOOTSTRAP_THROUGH = 109
+UPGRADE_BOOTSTRAP_THROUGH = 109
+CURRENT_BOOTSTRAP_THROUGH = 111
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
-INTEGRATION_TESTS = (
+SQL_ROOT = ROOT / "gilbic_backend" / "sql"
+AREA_MANAGEMENT_MIGRATION = SQL_ROOT / "0113_add_authoritative_area_management.sql"
+UPGRADE_TESTS = (
     TEST_ROOT / "test_borrower_schedule_adjustment_upgrade_postgres.py",
+)
+CURRENT_INTEGRATION_TESTS = (
     TEST_ROOT / "test_borrower_schedule_adjustment_repository_postgres.py",
     TEST_ROOT / "test_borrower_schedule_finalization_postgres.py",
     TEST_ROOT / "test_collector_route_api.py",
@@ -34,16 +39,10 @@ INTEGRATION_TESTS = (
 
 def _configure_shared_safety_helpers() -> None:
     disposable.TEST_DATABASE_PREFIX = TEST_DATABASE_PREFIX
-    disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
+    disposable.BOOTSTRAP_THROUGH = UPGRADE_BOOTSTRAP_THROUGH
 
 
-def _run_tests(test_database_url: str) -> int:
-    missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
-    if missing:
-        raise SystemExit(
-            "Borrower-schedule validation refused: required integration test file is missing: "
-            + ", ".join(missing)
-        )
+def _test_env(test_database_url: str) -> dict[str, str]:
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
@@ -58,27 +57,116 @@ def _run_tests(test_database_url: str) -> int:
     if existing_python_path:
         python_paths.append(existing_python_path)
     env["PYTHONPATH"] = os.pathsep.join(python_paths)
+    return env
+
+
+def _run_tests(test_database_url: str, tests: tuple[Path, ...]) -> int:
+    missing = [str(path) for path in tests if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "Borrower-schedule validation refused: required integration test file is missing: "
+            + ", ".join(missing)
+        )
     completed = subprocess.run(
         [
             sys.executable,
             "-m",
             "pytest",
             "-q",
-            *(str(path) for path in INTEGRATION_TESTS),
+            *(str(path) for path in tests),
         ],
-        env=env,
+        env=_test_env(test_database_url),
         check=False,
     )
     return int(completed.returncode)
 
 
+def _create_disposable_database(
+    admin_url: str,
+    base_params: dict[str, str],
+    created_databases: list[str],
+) -> tuple[str, str]:
+    database_name = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
+    database_url = disposable._conninfo_for_database(base_params, database_name)
+    with psycopg.connect(admin_url, autocommit=True) as admin:
+        if disposable._database_exists(admin, database_name):
+            raise SystemExit(
+                "Borrower-schedule validation refused: generated database already exists."
+            )
+        # Record cleanup responsibility before CREATE DATABASE. If PostgreSQL creates
+        # the database but the client receives an ambiguous result, finally still
+        # performs the idempotent drop.
+        created_databases.append(database_name)
+        admin.execute(
+            sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(
+                sql.Identifier(database_name)
+            )
+        )
+    return database_name, database_url
+
+
+def _bootstrap_upgrade_schema(test_database_url: str) -> None:
+    previous_bootstrap_through = disposable.BOOTSTRAP_THROUGH
+    try:
+        disposable.BOOTSTRAP_THROUGH = UPGRADE_BOOTSTRAP_THROUGH
+        disposable._install_supabase_auth_prerequisite(test_database_url)
+        disposable._bootstrap_database(test_database_url)
+    finally:
+        disposable.BOOTSTRAP_THROUGH = previous_bootstrap_through
+
+
+def _bootstrap_current_schema(test_database_url: str) -> None:
+    if not AREA_MANAGEMENT_MIGRATION.is_file():
+        raise SystemExit(
+            "Borrower-schedule validation refused: Area Management migration is missing: "
+            + str(AREA_MANAGEMENT_MIGRATION)
+        )
+
+    previous_bootstrap_through = disposable.BOOTSTRAP_THROUGH
+    try:
+        disposable.BOOTSTRAP_THROUGH = CURRENT_BOOTSTRAP_THROUGH
+        disposable._install_supabase_auth_prerequisite(test_database_url)
+        disposable._bootstrap_database(test_database_url)
+    finally:
+        disposable.BOOTSTRAP_THROUGH = previous_bootstrap_through
+
+    with psycopg.connect(test_database_url, autocommit=True) as connection:
+        connection.execute(AREA_MANAGEMENT_MIGRATION.read_text(encoding="utf-8"))
+
+        event_date_installed = connection.execute(
+            """
+            select count(*)
+            from information_schema.columns
+            where table_schema = 'lending'
+              and table_name = 'loan_schedule_adjustments'
+              and column_name = 'event_date'
+            """
+        ).fetchone()[0]
+        if event_date_installed == 0:
+            raise RuntimeError(
+                "Borrower-schedule current-schema database is missing the 0110 event_date column."
+            )
+
+        area_transfer_table = connection.execute(
+            "select to_regclass('lending.client_area_pending_transfers')"
+        ).fetchone()[0]
+        if area_transfer_table is None:
+            raise RuntimeError(
+                "Borrower-schedule current-schema database is missing Area transfer authority."
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through both 0109 migrations, seed existing audited No Collection history, "
-            "apply 0110 only inside the disposable test, and prove the upgrade preserves "
-            "immutable schedule-adjustment evidence while exercising borrower shortfall/catch-up persistence, elapsed-date finalization, Collector route refresh behavior, authoritative Collector and Client schedule reads, Regular protected/transactional catch-up allocation, and 7x7 catch-up planning/posting."
+            "Use two isolated loopback-only disposable PostgreSQL databases: one to replay "
+            "SPINA through both 0109 migrations and prove the historical 0109-to-0110 "
+            "upgrade, and a second clean database bootstrapped through the current shared "
+            "Plan 1 schema plus Area Management migration 0113 before exercising current "
+            "borrower shortfall/catch-up persistence, elapsed-date finalization, Collector "
+            "route refresh behavior, authoritative Collector and Client schedule reads, "
+            "Regular protected/transactional catch-up allocation, and 7x7 catch-up "
+            "planning/posting."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -109,38 +197,45 @@ def main() -> int:
         print(f"Borrower-schedule disposable PostgreSQL janitor passed: dropped={dropped}.")
         return 0
 
-    test_database = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
-    test_url = disposable._conninfo_for_database(base_params, test_database)
-    cleanup_required = False
+    created_databases: list[str] = []
     primary_error: BaseException | None = None
     try:
-        with psycopg.connect(admin_url, autocommit=True) as admin:
-            if disposable._database_exists(admin, test_database):
-                raise SystemExit(
-                    "Borrower-schedule validation refused: generated database already exists."
-                )
-            cleanup_required = True
-            admin.execute(
-                sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(
-                    sql.Identifier(test_database)
-                )
-            )
+        upgrade_database, upgrade_url = _create_disposable_database(
+            admin_url,
+            base_params,
+            created_databases,
+        )
+        print(f"Borrower-schedule upgrade proof database: {upgrade_database}")
+        _bootstrap_upgrade_schema(upgrade_url)
 
-        disposable._install_supabase_auth_prerequisite(test_url)
-        disposable._bootstrap_database(test_url)
-        result = _run_tests(test_url)
-        if result != 0:
+        upgrade_result = _run_tests(upgrade_url, UPGRADE_TESTS)
+        if upgrade_result != 0:
             raise SystemExit(
                 "Borrower-schedule disposable PostgreSQL validation failed: "
-                f"tests exited with code {result}."
+                f"0109-to-0110 upgrade tests exited with code {upgrade_result}."
+            )
+
+        current_database, current_url = _create_disposable_database(
+            admin_url,
+            base_params,
+            created_databases,
+        )
+        print(f"Borrower-schedule current-schema database: {current_database}")
+        _bootstrap_current_schema(current_url)
+
+        integration_result = _run_tests(current_url, CURRENT_INTEGRATION_TESTS)
+        if integration_result != 0:
+            raise SystemExit(
+                "Borrower-schedule disposable PostgreSQL validation failed: "
+                f"current-schema integration tests exited with code {integration_result}."
             )
         print(
-            "Borrower-schedule disposable PostgreSQL validation passed: schema through 0109 "
-            "upgraded with 0110 after existing audited No Collection history was created; "
-            "event_date backfill, immutable evidence preservation, borrower schedule "
-            "repository integration, elapsed-date finalization, Collector route refresh, "
-            "authoritative Collector/Client schedule reads, Regular protected/transactional "
-            "catch-up allocation, and 7x7 catch-up planning/posting were proven."
+            "Borrower-schedule disposable PostgreSQL validation passed: an isolated 0109 "
+            "database proved the 0110 upgrade and immutable evidence preservation, while a "
+            "separate clean current-schema database proved borrower schedule repository "
+            "integration, elapsed-date finalization, Collector route refresh, authoritative "
+            "Collector/Client schedule reads, Regular protected/transactional catch-up "
+            "allocation, and 7x7 catch-up planning/posting under Plan 1 Area authority."
         )
         return 0
     except psycopg.Error as error:
@@ -153,18 +248,21 @@ def main() -> int:
         primary_error = error
         raise
     finally:
-        if cleanup_required:
+        cleanup_failures: list[str] = []
+        for database_name in reversed(created_databases):
             try:
                 with psycopg.connect(admin_url, autocommit=True) as admin:
-                    disposable._drop_database(admin, test_database)
+                    disposable._drop_database(admin, database_name)
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
-                    "Borrower-schedule disposable PostgreSQL cleanup failed: "
+                    "Borrower-schedule disposable PostgreSQL cleanup failed for "
+                    f"{database_name}: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
-                if primary_error is None:
-                    raise SystemExit(message) from cleanup_error
+                cleanup_failures.append(message)
+        if cleanup_failures and primary_error is None:
+            raise SystemExit(cleanup_failures[0])
 
 
 if __name__ == "__main__":
