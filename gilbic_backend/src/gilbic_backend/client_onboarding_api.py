@@ -143,15 +143,33 @@ def create_client_onboarding_router() -> APIRouter:
     router = APIRouter(tags=["client-onboarding"])
 
     @router.post(
-        "/api/v1/public/onboarding/applicants",
+        "/api/v1/management/onboarding/applicants",
         status_code=status.HTTP_201_CREATED,
     )
-    def submit_public_applicant(
+    def submit_office_applicant(
         body: SubmitClientOnboardingRequest,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
         onboarding: PostgresClientOnboardingRepository = Depends(
             client_onboarding_repository_dependency
         ),
     ) -> dict[str, str]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="client_onboarding.requirement.review",
+            permission_error="Onboarding requirement review permission is required.",
+        )
+        if not any(role in actor.roles for role in ("employee", "management")):
+            raise HTTPException(
+                status_code=403,
+                detail="Employee or Management role is required to encode office intake.",
+            )
+
         record = onboarding.submit_applicant(
             full_name=body.full_name,
             phone_number=body.phone_number,
@@ -168,7 +186,7 @@ def create_client_onboarding_router() -> APIRouter:
         return {
             "application_reference": record.application_reference,
             "status": record.status,
-            "detail": "Keep this application reference to check your onboarding status.",
+            "detail": "Office applicant intake recorded.",
         }
 
     @router.patch(
