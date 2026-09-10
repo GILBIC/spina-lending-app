@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_collection_location_repository.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
@@ -13,6 +14,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_collection_location_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_schedule_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_tools_sheet.dart';
@@ -27,6 +29,7 @@ class CollectorRoutePage extends StatefulWidget {
     this.paymentRepository,
     this.combinedPaymentRepository,
     this.correctionRepository,
+    this.collectionLocationRepository,
     this.deviceIdentityProvider,
     this.deviceSequence,
     super.key,
@@ -37,6 +40,7 @@ class CollectorRoutePage extends StatefulWidget {
   final PaymentSubmissionRepository? paymentRepository;
   final CombinedPaymentSubmissionRepository? combinedPaymentRepository;
   final CollectionCorrectionRepository? correctionRepository;
+  final CollectorCollectionLocationRepository? collectionLocationRepository;
   final DeviceIdentityProvider? deviceIdentityProvider;
   final CollectionDeviceSequence? deviceSequence;
 
@@ -48,6 +52,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   late final PaymentSubmissionRepository _paymentRepository;
   late final CombinedPaymentSubmissionRepository _combinedPaymentRepository;
   late final CollectionCorrectionRepository _correctionRepository;
+  late final CollectorCollectionLocationRepository _collectionLocationRepository;
   late final DeviceIdentityProvider _deviceIdentityProvider;
   late final CollectionDeviceSequence _deviceSequence;
 
@@ -72,6 +77,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         SpinaCombinedPaymentSubmissionRepository();
     _correctionRepository =
         widget.correctionRepository ?? SpinaCollectionCorrectionRepository();
+    _collectionLocationRepository =
+        widget.collectionLocationRepository ??
+        SpinaCollectorCollectionLocationRepository();
     _deviceIdentityProvider =
         widget.deviceIdentityProvider ?? DeviceIdentityProvider();
     _deviceSequence = widget.deviceSequence ?? SecureCollectionDeviceSequence();
@@ -618,10 +626,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           ),
         );
       case CollectorClientToolKind.collectionLocation:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Collection location is read-only. Verified route details are connected in the next Area Management step.',
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => CollectorClientCollectionLocationPage(
+              session: widget.session,
+              client: selectedClient,
+              repository: _collectionLocationRepository,
             ),
           ),
         );
