@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from types import ModuleType
 from uuid import UUID
 
@@ -47,6 +48,26 @@ DRAFT_ROW = {
     "review_due_at": None,
     "reverification_required_at": None,
     "reverification_reason": None,
+}
+
+READY_DRAFT_ROW = {
+    **DRAFT_ROW,
+    "baseline_face_scan_evidence_reference": "FAKE-FACE",
+    "baseline_liveness_status": "passed",
+}
+
+FAILED_LIVENESS_ROW = {
+    **DRAFT_ROW,
+    "baseline_face_scan_evidence_reference": "FAKE-FACE-FAILED",
+    "baseline_liveness_status": "failed",
+}
+
+ACTIVE_ROW = {
+    **READY_DRAFT_ROW,
+    "status": "active",
+    "activated_at": datetime(2026, 9, 11, 0, 0, tzinfo=timezone.utc),
+    "expires_at": datetime(2031, 9, 11, 0, 0, tzinfo=timezone.utc),
+    "review_due_at": datetime(2031, 6, 13, 0, 0, tzinfo=timezone.utc),
 }
 
 
@@ -194,3 +215,137 @@ def test_begin_draft_is_idempotent_when_current_draft_already_exists(
 
     queries = _sql(connection)
     assert sum("insert into lending.client_cif_versions" in query for query in queries) == 0
+
+
+def test_record_baseline_live_face_updates_only_the_current_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection([READY_DRAFT_ROW])
+    module, repository = _wire_repository(monkeypatch, connection)
+
+    record = repository.record_baseline_live_face(
+        client_id=CLIENT_ID,
+        evidence_reference="  FAKE-FACE  ",
+        liveness_status="passed",
+    )
+
+    assert isinstance(record, module.ClientCifVersion)
+    assert record.status == "draft"
+    assert record.baseline_face_scan_evidence_reference == "FAKE-FACE"
+    assert record.baseline_liveness_status == "passed"
+
+    queries = _sql(connection)
+    assert len(queries) == 1
+    assert "update lending.client_cif_versions" in queries[0]
+    assert "baseline_face_scan_evidence_reference = %s" in queries[0]
+    assert "baseline_liveness_status = %s" in queries[0]
+    assert "where client_id = %s" in queries[0]
+    assert "is_current = true" in queries[0]
+    assert "status = 'draft'" in queries[0]
+    assert "update lending.clients" not in queries[0]
+    parameters = connection.cursor_instance.executions[0][1]
+    assert parameters[:2] == ("FAKE-FACE", "passed")
+
+
+def test_record_baseline_live_face_rejects_blank_evidence_without_writing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection([])
+    module, repository = _wire_repository(monkeypatch, connection)
+
+    with pytest.raises(ValueError):
+        repository.record_baseline_live_face(
+            client_id=CLIENT_ID,
+            evidence_reference="   ",
+            liveness_status="passed",
+        )
+
+    assert connection.cursor_instance.executions == []
+
+
+@pytest.mark.parametrize("draft_row", [DRAFT_ROW, FAILED_LIVENESS_ROW])
+def test_activate_current_requires_passed_liveness_and_face_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+    draft_row: dict[str, object],
+) -> None:
+    connection = FakeConnection([draft_row])
+    module, repository = _wire_repository(monkeypatch, connection)
+
+    with pytest.raises(module.ClientCifConflict):
+        repository.activate_current(
+            actor_user_id=ACTOR_USER_ID,
+            client_id=CLIENT_ID,
+        )
+
+    queries = _sql(connection)
+    assert len(queries) == 1
+    assert "from lending.client_cif_versions cif" in queries[0]
+    assert "join lending.client_onboarding_applicants applicant" in queries[0]
+    assert "applicant.status = 'eligible_for_cif'" in queries[0]
+    assert "for update" in queries[0]
+    assert "update lending.client_cif_versions" not in queries[0]
+    assert "update lending.clients" not in queries[0]
+
+
+def test_activate_current_marks_cif_and_existing_client_active_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection([READY_DRAFT_ROW, ACTIVE_ROW])
+    module, repository = _wire_repository(monkeypatch, connection)
+
+    record = repository.activate_current(
+        actor_user_id=ACTOR_USER_ID,
+        client_id=CLIENT_ID,
+    )
+
+    assert isinstance(record, module.ClientCifVersion)
+    assert record.status == "active"
+    assert record.activated_at == ACTIVE_ROW["activated_at"]
+    assert record.expires_at == ACTIVE_ROW["expires_at"]
+    assert record.review_due_at == ACTIVE_ROW["review_due_at"]
+
+    queries = _sql(connection)
+    cif_update = next(
+        query for query in queries if "update lending.client_cif_versions" in query
+    )
+    assert "status = 'active'" in cif_update
+    assert "activated_at = now()" in cif_update
+    assert "expires_at = now() + interval '5 years'" in cif_update
+    assert "review_due_at = now() + interval '5 years' - interval '90 days'" in cif_update
+    assert "activated_by_user_id = %s" in cif_update
+
+    client_update = next(query for query in queries if "update lending.clients" in query)
+    assert "status = 'active'" in client_update
+    assert "where id = %s" in client_update
+    assert "status = 'inactive'" in client_update
+
+    combined = "\n".join(queries)
+    for forbidden in (
+        "insert into core.users",
+        "insert into lending.loans",
+        "insert into lending.loan_contract",
+        "insert into lending.loan_disbursement",
+        "insert into accounting.journal",
+        "insert into lending.loan_contract_installments",
+    ):
+        assert forbidden not in combined
+
+
+def test_activate_current_is_idempotent_after_activation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection([ACTIVE_ROW])
+    module, repository = _wire_repository(monkeypatch, connection)
+
+    record = repository.activate_current(
+        actor_user_id=ACTOR_USER_ID,
+        client_id=CLIENT_ID,
+    )
+
+    assert isinstance(record, module.ClientCifVersion)
+    assert record.status == "active"
+
+    queries = _sql(connection)
+    assert len(queries) == 1
+    assert "update lending.client_cif_versions" not in queries[0]
+    assert "update lending.clients" not in queries[0]
