@@ -7,8 +7,10 @@ from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
 from .auth_api import create_auth_router
 from .client_account_api import create_client_account_router
+from .client_cif_api import create_client_cif_router
 from .client_gcash_api import create_client_gcash_router
 from .client_loan_api import create_client_loan_router
+from .client_onboarding_api import create_client_onboarding_router
 from .client_payment_api import create_client_payment_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
@@ -164,6 +166,8 @@ def create_app() -> FastAPI:
     app.include_router(create_account_router())
     app.include_router(create_management_router())
     app.include_router(create_client_account_router())
+    app.include_router(create_client_onboarding_router())
+    app.include_router(create_client_cif_router())
     app.include_router(create_management_alerts_audit_router())
     app.include_router(create_management_dashboard_overview_router())
     app.include_router(create_management_employee_activity_router())
