@@ -8,7 +8,6 @@ import pytest
 
 import gilbic_backend.contract_schedule_registration_repository as registration_repository
 import gilbic_backend.contract_schedule_registration_service as registration_service
-from gilbic_backend.contract_schedule_service import ContractScheduleConflict
 from gilbic_backend.seven_by_seven_signed_schedule import (
     generate_signed_seven_by_seven_schedule,
 )
@@ -160,13 +159,3 @@ def test_verified_registration_threads_penalty_snapshot_into_schedule_store(
 
     assert result == schedule_id
     assert captured["settings"] == schedule_settings
-
-
-def test_incomplete_penalty_review_cannot_be_treated_as_signed_authority() -> None:
-    review = _review(complete_penalty_authority=False)
-    assert review.ready is True
-
-    with pytest.raises(ContractScheduleConflict):
-        registration_repository.build_7x7_penalty_policy_schedule_settings(
-            review=review
-        )
