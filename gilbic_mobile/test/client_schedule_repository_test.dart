@@ -40,7 +40,7 @@ void main() {
               'is_7x7': false,
               'payment_frequency': 'daily',
               'read_only': true,
-              'past_due_amount': '200.00',
+              'past_due_amount': '90071992547409.91',
               'past_due_count': 1,
               'schedule_extension_slots': 2,
               'contractual_maturity': '2026-10-10',
@@ -49,10 +49,10 @@ void main() {
               'rows': <Object?>[
                 <String, Object?>{
                   'payment_date': '2026-09-12',
-                  'amount': '200.00',
+                  'amount': '90071992547409.91',
                   'status': 'Due Today',
                   'details': <String, Object?>{
-                    'remaining_amount': '150.00',
+                    'remaining_amount': '90071992547409.90',
                     'note': 'Management-approved extension',
                   },
                 },
@@ -76,8 +76,9 @@ void main() {
     expect(schedule.loanId, 'regular-loan');
     expect(schedule.contractualMaturity, DateTime(2026, 10, 10));
     expect(schedule.operationalMaturity, DateTime(2026, 10, 12));
-    expect(schedule.pastDueAmount, 200);
-    expect(schedule.rows.single.remainingAmount, 150);
+    expect(schedule.pastDueAmount, '90071992547409.91');
+    expect(schedule.rows.single.amount, '90071992547409.91');
+    expect(schedule.rows.single.remainingAmount, '90071992547409.90');
     expect(schedule.rows.single.note, 'Management-approved extension');
   });
 
