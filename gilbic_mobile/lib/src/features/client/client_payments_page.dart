@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_statement_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
@@ -154,6 +155,51 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                       label: 'Voided receipts',
                       value: '$voidedCount',
                     ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.description_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Statement of Account',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'View your read-only loan balances and official payment history from the protected SPINA server.',
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          key: const Key('open-client-statement'),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ClientStatementPage(
+                                  session: widget.session,
+                                  deviceIdentityProvider:
+                                      widget.deviceIdentityProvider,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.description_outlined),
+                          label: const Text('View statement'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
