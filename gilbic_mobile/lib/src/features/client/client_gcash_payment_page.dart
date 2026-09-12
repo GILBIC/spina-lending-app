@@ -112,10 +112,9 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       }
     }
     for (final loan in loans) {
-      final suggested = min(loan.dailyAmount, loan.remainingBalance);
       _amountControllers.putIfAbsent(
         loan.loanId,
-        () => TextEditingController(text: suggested.toStringAsFixed(2)),
+        TextEditingController.new,
       );
       if (loans.length == 1) {
         _selectedLoanIds.add(loan.loanId);
