@@ -6,7 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -25,6 +25,7 @@ from .contract_schedule_registration_repository import (
     PostgresContractScheduleRegistrationRepository,
     SevenBySevenPricingComplianceReview,
     VerifiedContractScheduleRegistration,
+    build_7x7_penalty_policy_schedule_settings,
     build_7x7_pricing_compliance_terms_fingerprint,
 )
 from .contract_schedule_registration_service import VerifiedScheduleInstallment
@@ -112,16 +113,39 @@ class ReviewSevenBySevenPricingComplianceRequest(ContractScheduleTermsRequest):
     pricing_cap_review_ready: bool
     disclosure_ready: bool
     total_cost_cap_review_ready: bool
+    penalty_policy_version: str = Field(min_length=1, max_length=100)
+    penalty_monthly_rate: Decimal = Field(gt=0, max_digits=9, decimal_places=6)
+    penalty_proration_days: Literal[30]
+    penalty_rate_ceiling: Decimal = Field(gt=0, max_digits=9, decimal_places=6)
+    lifetime_nonprincipal_cost_ceiling: Decimal = Field(
+        ge=0, max_digits=18, decimal_places=2
+    )
+    counted_nonprincipal_cost_at_contract_lock: Decimal = Field(
+        ge=0, max_digits=18, decimal_places=2
+    )
     evidence_reference: str = Field(min_length=1, max_length=500)
     review_note: str = Field(min_length=1, max_length=1000)
 
-    @field_validator("evidence_reference", "review_note")
+    @field_validator("penalty_policy_version", "evidence_reference", "review_note")
     @classmethod
     def normalize_review_text(cls, value: str) -> str:
         normalized = " ".join(value.split())
         if not normalized:
             raise ValueError("Pricing/compliance review evidence text cannot be blank.")
         return normalized
+
+    @model_validator(mode="after")
+    def validate_penalty_authority(self) -> ReviewSevenBySevenPricingComplianceRequest:
+        if self.penalty_monthly_rate != Decimal("0.030000"):
+            raise ValueError("The approved 7x7 contractual penalty rate is 3% per month.")
+        if (
+            self.counted_nonprincipal_cost_at_contract_lock
+            > self.lifetime_nonprincipal_cost_ceiling
+        ):
+            raise ValueError(
+                "Counted non-principal cost at contract lock cannot exceed the lifetime ceiling."
+            )
+        return self
 
 
 def contract_schedule_registration_repository_dependency() -> (
@@ -184,11 +208,23 @@ def _pricing_compliance_review_payload(
         "pricing_cap_review_ready": review.pricing_cap_review_ready,
         "disclosure_ready": review.disclosure_ready,
         "total_cost_cap_review_ready": review.total_cost_cap_review_ready,
+        "penalty_policy_version": review.penalty_policy_version,
+        "penalty_monthly_rate": _optional_decimal(review.penalty_monthly_rate),
+        "penalty_proration_days": review.penalty_proration_days,
+        "penalty_rate_ceiling": _optional_decimal(review.penalty_rate_ceiling),
+        "lifetime_nonprincipal_cost_ceiling": _optional_decimal(
+            review.lifetime_nonprincipal_cost_ceiling
+        ),
+        "counted_nonprincipal_cost_at_contract_lock": _optional_decimal(
+            review.counted_nonprincipal_cost_at_contract_lock
+        ),
         "evidence_reference": review.evidence_reference,
         "review_note": review.review_note,
         "reviewed_by_user_id": str(review.reviewed_by_user_id),
         "reviewed_at": review.reviewed_at.isoformat(),
-        "ready_for_contract_lock": review.ready,
+        "pricing_compliance_ready": review.ready,
+        "penalty_authority_ready": review.penalty_authority_ready,
+        "ready_for_contract_lock": review.penalty_authority_ready,
     }
 
 
@@ -484,6 +520,16 @@ def create_contract_schedule_registration_router() -> APIRouter:
                 evidence_reference=body.evidence_reference,
                 review_note=body.review_note,
                 reviewed_by_user_id=actor.user_id,
+                penalty_policy_version=body.penalty_policy_version,
+                penalty_monthly_rate=body.penalty_monthly_rate,
+                penalty_proration_days=body.penalty_proration_days,
+                penalty_rate_ceiling=body.penalty_rate_ceiling,
+                lifetime_nonprincipal_cost_ceiling=(
+                    body.lifetime_nonprincipal_cost_ceiling
+                ),
+                counted_nonprincipal_cost_at_contract_lock=(
+                    body.counted_nonprincipal_cost_at_contract_lock
+                ),
             )
         except ContractScheduleRegistrationError as error:
             raise _registration_exception(error) from error
@@ -492,8 +538,8 @@ def create_contract_schedule_registration_router() -> APIRouter:
             "success": True,
             "data": _pricing_compliance_review_payload(review),
             "notice": (
-                "Exact-term 7x7 pricing/compliance readiness evidence recorded. "
-                "This review does not infer legal applicability, calculate EIR or caps, "
+                "Exact-term 7x7 pricing/compliance and signed penalty-policy authority "
+                "recorded. This review does not infer legal applicability, calculate EIR, "
                 "or register the contract schedule."
             ),
         }
@@ -541,6 +587,7 @@ def create_contract_schedule_registration_router() -> APIRouter:
         except ContractScheduleRegistrationError as error:
             raise _registration_exception(error) from error
         installments = _generate_verified_terms(body, context)
+        schedule_settings: dict[str, object] | None = None
         if context.calculation_mode == "seven_by_seven":
             terms_fingerprint = _seven_by_seven_terms_fingerprint(
                 body=body,
@@ -548,9 +595,16 @@ def create_contract_schedule_registration_router() -> APIRouter:
                 installments=installments,
             )
             try:
-                registrations.require_7x7_pricing_compliance_ready(
+                review = registrations.require_7x7_pricing_compliance_ready(
                     loan_id=body.loan_id,
                     terms_fingerprint=terms_fingerprint,
+                )
+                if not review.penalty_authority_ready:
+                    raise ContractScheduleRegistrationConflict(
+                        "The latest exact-term 7x7 review has no complete signed penalty authority."
+                    )
+                schedule_settings = build_7x7_penalty_policy_schedule_settings(
+                    review=review
                 )
             except ContractScheduleRegistrationError as error:
                 raise _registration_exception(error) from error
@@ -568,6 +622,7 @@ def create_contract_schedule_registration_router() -> APIRouter:
                 verification_note=body.verification_note,
                 verified_by_user_id=actor.user_id,
                 agreed_daily_payment=body.agreed_daily_payment,
+                schedule_settings=schedule_settings,
                 confirmed=body.confirm_registration,
                 supersede_active=body.supersede_active,
             )
