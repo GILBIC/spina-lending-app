@@ -175,7 +175,7 @@ class _FakeClientScheduleRepository implements ClientScheduleRepository {
       isSevenBySeven: false,
       paymentFrequency: 'daily',
       readOnly: true,
-      pastDueAmount: 0,
+      pastDueAmount: '0.00',
       pastDueCount: 0,
       scheduleExtensionSlots: 0,
       contractualMaturity: DateTime(2026, 11, 29),
