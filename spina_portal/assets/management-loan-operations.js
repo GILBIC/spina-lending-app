@@ -2,10 +2,12 @@ import {
   asArray,
   badge,
   emptyState,
+  errorCard,
   escapeHtml,
   formatDate,
   formatDateTime,
   formatMoney,
+  loadingPanel,
   metricCard,
 } from './ui.js';
 
@@ -122,4 +124,32 @@ export function managementLoanOperationsMarkup(payload = {}) {
     <div class="section-heading" style="margin-top:1rem"><div><h3>Corrections & voids</h3><p>Permanent audit history returned by the owning SPINA records.</p></div></div>
     ${auditsMarkup(payload.audits)}
   </div>`;
+}
+
+export function bindManagementLoanOperations(context) {
+  const form = context.root.querySelector('#management-loan-operations-search');
+  const target = context.root.querySelector('#management-loan-operations-results');
+  if (!form || !target) return;
+
+  const queryInput = form.querySelector('[name="q"]');
+  const statusInput = form.querySelector('[name="status"]');
+
+  const reload = async () => {
+    target.innerHTML = loadingPanel('Loading authoritative loan operations…');
+    try {
+      const data = await loadManagementLoanOperations(context.api, {
+        query: queryInput?.value ?? '',
+        status: statusInput?.value ?? 'all',
+      });
+      target.innerHTML = managementLoanOperationsMarkup(data);
+    } catch (error) {
+      target.innerHTML = errorCard(error);
+    }
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await reload();
+  });
+  statusInput?.addEventListener('change', reload);
 }
