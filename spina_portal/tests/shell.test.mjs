@@ -70,6 +70,14 @@ test('service worker refreshes the shell when Management device administration i
   assert.match(serviceWorker, /'\/assets\/roles\/management\.js'/);
 });
 
+test('service worker precaches the Client schedule module imported by Client workspace', async () => {
+  const serviceWorker = await text('../sw.js');
+  const clientWorkspace = await text('../assets/roles/client.js');
+
+  assert.match(clientWorkspace, /from '\.\.\/client-schedule\.js'/);
+  assert.match(serviceWorker, /'\/assets\/client-schedule\.js'/);
+});
+
 test('application bootstrap mounts each canonical role workspace', async () => {
   const source = await text('../assets/app.js');
 
