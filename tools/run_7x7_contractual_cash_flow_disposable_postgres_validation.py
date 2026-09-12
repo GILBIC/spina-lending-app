@@ -15,11 +15,14 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 TEST_DATABASE_PREFIX = "spina_7x7_contract_cf_"
 BOOTSTRAP_THROUGH = 59
-INTEGRATION_TEST = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "tests"
-    / "test_7x7_contractual_cash_flow_readiness_postgres.py"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+BACKEND_SOURCE_ROOT = REPOSITORY_ROOT / "gilbic_backend" / "src"
+TEST_ROOT = REPOSITORY_ROOT / "gilbic_backend" / "tests"
+INTEGRATION_TESTS = (
+    TEST_ROOT / "test_7x7_contractual_cash_flow_readiness_postgres.py",
+    TEST_ROOT / "test_7x7_one_active_loan_postgres.py",
+    TEST_ROOT / "test_7x7_pricing_compliance_readiness_postgres.py",
+    TEST_ROOT / "test_7x7_contractual_interest_maturity.py",
 )
 
 
@@ -29,16 +32,30 @@ def _configure_shared_safety_helpers() -> None:
 
 
 def _run_test(test_database_url: str) -> int:
-    if not INTEGRATION_TEST.is_file():
+    missing = [path for path in INTEGRATION_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "7x7 contractual cash-flow disposable validation refused: integration test file is missing."
+            "7x7 contractual cash-flow disposable validation refused: integration test file is missing: "
+            + ", ".join(str(path) for path in missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
+    existing_pythonpath = env.get("PYTHONPATH", "").strip()
+    env["PYTHONPATH"] = os.pathsep.join(
+        part
+        for part in (str(BACKEND_SOURCE_ROOT), existing_pythonpath)
+        if part
+    )
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            *(str(path) for path in INTEGRATION_TESTS),
+        ],
         env=env,
         check=False,
     )
@@ -49,8 +66,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
-            "migrations through 0059, prove the verified greenfield 7x7 contractual "
-            "daily-interest/principal-at-maturity cash-flow gate, then remove the database."
+            "migrations through 0059, then prove Priority #6 signed-schedule accounting "
+            "authority, one-active-7x7 enforcement, exact-term pricing/compliance "
+            "readiness, and contractual-interest maturity stopping."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -107,15 +125,20 @@ def main() -> int:
         if result != 0:
             raise SystemExit(
                 "7x7 contractual cash-flow disposable PostgreSQL validation failed: "
-                f"integration test exited with code {result}."
+                f"integration tests exited with code {result}."
             )
         print(
             "7x7 contractual cash-flow disposable PostgreSQL validation passed: "
-            "verified signed-contract evidence controlled the schedule, daily contractual "
-            "interest remained based on original principal, the base maturity row included "
-            "full principal, missing/early principal and unsupported evidence failed closed, "
-            "prepayment expectation/EIR/SPPI/carrying decisions stayed separate, journal "
-            "lines stayed disabled, and automatic source posting remained disabled."
+            "the active verified signed schedule controlled contractual duration and "
+            "maturity; fixed daily interest remained based on original principal and "
+            "stopped at signed contractual maturity while earned arrears remained "
+            "collectible; principal amortized inside the signed daily-payment rows; "
+            "stale or corrupt contract evidence failed closed; one active 7x7 per Client "
+            "was enforced without blocking a simultaneous Regular loan, including "
+            "concurrent attempts; exact-term pricing/compliance review evidence was "
+            "append-only and a newer not-ready review remained authoritative for the "
+            "same fingerprint; and post-maturity penalty calculation, accounting "
+            "policy/EIR/carrying conclusions, and automatic posting stayed separate."
         )
         return 0
     except psycopg.Error as error:

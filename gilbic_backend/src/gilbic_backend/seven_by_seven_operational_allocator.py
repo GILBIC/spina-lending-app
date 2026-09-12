@@ -99,6 +99,7 @@ def allocate_seven_by_seven_payments(
     daily_interest_per_1000: Decimal | int | str,
     payment_start: date,
     events: Iterable[SevenBySevenCashEvent],
+    contractual_maturity: date | None = None,
     interest_holiday_dates: Iterable[date] = (),
 ) -> SevenBySevenAllocationResult:
     """Apply the protected Desktop 7x7 operational allocation rule.
@@ -109,11 +110,19 @@ def allocate_seven_by_seven_payments(
     cash may reduce principal. This is an operational contractual allocator, not
     an accounting EIR allocator.
 
+    When ``contractual_maturity`` is supplied from an active verified signed
+    schedule, the maturity date itself may earn contractual interest but later
+    calendar days never create new contractual interest. Interest already earned
+    through maturity remains collectible after maturity. This allocator does not
+    calculate or post a separate post-maturity penalty.
+
     Management-approved 7x7 No Collection dates may be supplied through
     ``interest_holiday_dates``. Those dates remain part of the elapsed calendar
     gap but contribute zero new daily interest. Existing interest arrears remain
     collectible on the holiday. The later full-voluntary-payment exception may
     explicitly remove a date from the holiday set before calling this allocator.
+    Post-maturity days are not counted as No Collection interest holidays merely
+    because contractual interest has stopped.
 
     Multiple distinct receipt events may occur on the same calendar date. The
     first event for that date evaluates the elapsed period; later same-day
@@ -129,6 +138,10 @@ def allocate_seven_by_seven_payments(
         original_principal=principal,
         daily_interest_per_1000=daily_rate,
     )
+    if contractual_maturity is not None and contractual_maturity < payment_start:
+        raise SevenBySevenAllocationError(
+            "7x7 contractual maturity cannot precede the protected payment start date."
+        )
     rows = tuple(events)
     holidays = frozenset(interest_holiday_dates)
     _validate_events(rows, payment_start=payment_start)
@@ -174,9 +187,16 @@ def allocate_seven_by_seven_payments(
             previous_date=previous_date,
             current_date=event.collection_date,
             payment_start=payment_start,
+            contractual_maturity=contractual_maturity,
             holidays=holidays,
         )
-        holiday_days = max(0, elapsed_days - interest_days)
+        holiday_days = _explicit_interest_holiday_days(
+            previous_date=previous_date,
+            current_date=event.collection_date,
+            payment_start=payment_start,
+            contractual_maturity=contractual_maturity,
+            holidays=holidays,
+        )
         interest_due = money(fixed_daily_interest * interest_days + interest_arrears)
         interest_paid = money(min(amount, interest_due))
         principal_paid = money(
@@ -241,19 +261,57 @@ def allocate_seven_by_seven_payments(
     )
 
 
+def _contractual_interest_window_end(
+    *,
+    current_date: date,
+    contractual_maturity: date | None,
+) -> date:
+    if contractual_maturity is None:
+        return current_date
+    return min(current_date, contractual_maturity)
+
+
 def _interest_bearing_days(
     *,
     previous_date: date,
     current_date: date,
     payment_start: date,
+    contractual_maturity: date | None,
     holidays: frozenset[date],
 ) -> int:
     if current_date <= previous_date:
         return 0
     cursor = max(previous_date + timedelta(days=1), payment_start)
+    end = _contractual_interest_window_end(
+        current_date=current_date,
+        contractual_maturity=contractual_maturity,
+    )
     count = 0
-    while cursor <= current_date:
+    while cursor <= end:
         if cursor not in holidays:
+            count += 1
+        cursor += timedelta(days=1)
+    return count
+
+
+def _explicit_interest_holiday_days(
+    *,
+    previous_date: date,
+    current_date: date,
+    payment_start: date,
+    contractual_maturity: date | None,
+    holidays: frozenset[date],
+) -> int:
+    if current_date <= previous_date:
+        return 0
+    cursor = max(previous_date + timedelta(days=1), payment_start)
+    end = _contractual_interest_window_end(
+        current_date=current_date,
+        contractual_maturity=contractual_maturity,
+    )
+    count = 0
+    while cursor <= end:
+        if cursor in holidays:
             count += 1
         cursor += timedelta(days=1)
     return count

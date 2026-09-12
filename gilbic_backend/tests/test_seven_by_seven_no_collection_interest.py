@@ -53,6 +53,7 @@ def test_verified_replay_uses_active_no_collection_as_zero_interest_holiday() ->
         daily_interest_per_1000=Decimal("7.00"),
         payment_start=date(2026, 8, 1),
         through_date=date(2026, 8, 3),
+        contractual_maturity=None,
     )
 
     assert replay.interest_holiday_dates == (date(2026, 8, 2),)

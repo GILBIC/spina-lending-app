@@ -822,6 +822,7 @@ def _project_seven_by_seven_cash(
                 daily_interest_per_1000=_money(loan["daily_interest_per_1000"]),
                 payment_start=payment_start,
                 through_date=collection_date,
+                contractual_maturity=baseline.contractual_maturity,
             )
         except SevenBySevenAdvanceActivationError as error:
             raise CollectionRejected(str(error), code=error.code) from error
@@ -877,6 +878,7 @@ def _project_seven_by_seven_cash(
                     ),
                     payment_start=payment_start,
                     events=tuple(projected_events),
+                    contractual_maturity=historical.contractual_maturity,
                     interest_holiday_dates=historical.interest_holiday_dates,
                 )
             except SevenBySevenAllocationError as error:
