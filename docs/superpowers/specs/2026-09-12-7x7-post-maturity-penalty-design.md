@@ -469,3 +469,7 @@ No Ready-for-review transition, merge, deployment, production DB/Auth/data mutat
 The approved product and implementation direction is:
 
 **Exact signed maturity → contractual interest stops → if an eligible contractual amount remains overdue and the exact signed disclosure plus terms-bound legal rate/cost-cap authority is ready, assess a separate contractual 3%/month simple penalty using 30-day daily proration but reduce it to any lower proven legal rate ceiling → protect Management-approved No Collection amounts/days → clamp by lifetime legal cost headroom → round only at financial boundaries → allocate payment to contractual interest, then principal, then penalty → stop new penalty when contractual base reaches zero → keep any remaining assessed penalty as Penalty Outstanding until settled.**
+
+## 16. Review Gate
+
+This specification has completed the design self-review for placeholders, internal contradictions, scope, and ambiguity. Implementation planning and production code must not start until Management reviews and explicitly approves this written spec.
