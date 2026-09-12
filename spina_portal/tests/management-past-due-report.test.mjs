@@ -8,6 +8,10 @@ const managementSource = await readFile(
   new URL('../assets/roles/management.js', import.meta.url),
   'utf8',
 );
+const serviceWorkerSource = await readFile(
+  new URL('../sw.js', import.meta.url),
+  'utf8',
+);
 
 async function importPastDueModule() {
   try {
@@ -232,4 +236,8 @@ test('Management workspace mounts Past-Due reporting only through the existing d
   assert.match(managementSource, /management-past-due-report-search/);
   assert.match(managementSource, /canDashboard/);
   assert.doesNotMatch(managementSource, /name="client_id"|name="collector_user_id"/);
+});
+
+test('installed Web shell precaches the isolated Management Past-Due report dependency', () => {
+  assert.match(serviceWorkerSource, /'\/assets\/management-past-due-report\.js'/);
 });
