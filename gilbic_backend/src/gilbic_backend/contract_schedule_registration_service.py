@@ -41,6 +41,7 @@ def register_verified_contract_schedule(
     verification_note: str,
     verified_by_user_id: UUID,
     agreed_daily_payment: Decimal | None = None,
+    schedule_settings: dict[str, object] | None = None,
     confirmed: bool,
     supersede_active: bool = False,
 ) -> UUID:
@@ -54,7 +55,9 @@ def register_verified_contract_schedule(
 
     Component-bearing schedule rows (currently the signed 7x7 model) are stored
     with principal/interest components on the initial immutable installment-row
-    insert. They are never initialized by a follow-up UPDATE.
+    insert. They are never initialized by a follow-up UPDATE. Optional schedule
+    settings are written at the same creation boundary so signed policy metadata
+    is protected by the existing immutable schedule-terms guard.
     """
 
     if not confirmed:
@@ -145,6 +148,7 @@ def register_verified_contract_schedule(
         installments=installments,  # type: ignore[arg-type]
         created_by_user_id=verified_by_user_id,
         supersede_active=supersede_active,
+        settings=schedule_settings,
     )
 
     cursor.execute(
