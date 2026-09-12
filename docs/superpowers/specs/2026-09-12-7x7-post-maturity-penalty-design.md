@@ -32,12 +32,18 @@ Signed maturity is inclusive for contractual interest. The first possible penalt
 
 ### 2.2 Rate and proration
 
-Approved product rate:
+Approved contractual product rate:
 
 - **3% per month**;
 - **simple / non-compounding**;
 - **30-day fixed-month daily proration**;
-- therefore the nominal daily factor is **0.1% of the eligible penalty base per eligible overdue day**.
+- therefore the contractual nominal daily factor is **0.1% of the eligible penalty base per eligible overdue day**.
+
+The charge actually assessed must also respect any lower applicable legal penalty-rate ceiling proven for that exact loan. Therefore:
+
+**Effective Monthly Penalty Rate = min(3%, Applicable Legal Penalty-Rate Ceiling)**
+
+If the terms-bound compliance authority does not prove either the applicable numeric penalty-rate ceiling or an explicit evidence-backed determination that no lower ceiling applies, automatic penalty assessment fails closed.
 
 No penalty-on-penalty and no interest-on-penalty is permitted.
 
@@ -78,7 +84,7 @@ SPINA must:
 
 - keep fractional-cent calculations internally;
 - aggregate the exact penalty over the assessment period;
-- apply the applicable legal-cap clamp;
+- apply the applicable legal rate/cost-cap clamps;
 - round only when a real financial boundary requires a centavo amount, using `ROUND_HALF_UP` to PHP 0.01.
 
 Do not round each daily accrual before summing.
@@ -129,28 +135,48 @@ Automatic penalty assessment is allowed only when the exact loan's signed, terms
 
 The signed policy must unambiguously bind at least:
 
-- 3% monthly simple/non-compounding rate;
+- 3% monthly simple/non-compounding contractual rate;
 - 30-day daily proration;
 - start only after exact signed contractual maturity;
 - approved penalty base;
-- applicable legal/total-cost caps;
+- applicable legal rate and total-cost caps;
 - no penalty-on-penalty.
 
 The exact signed schedule/contract settings plus the existing Priority #6 exact-term pricing/compliance fingerprint are the authority. Do not create a separate mutable loan-type penalty authority.
 
-If disclosure, exact-term fingerprint, legal applicability/cap authority, signed maturity, or required schedule evidence is missing or mismatched:
+The current readiness evidence is not enough if it proves only Boolean readiness. Penalty implementation must minimally extend terms-bound compliance evidence, if necessary, so the server can prove the exact immutable values/basis needed for calculation, including:
 
-- **automatic penalty = PHP 0**;
+- applicable penalty-rate ceiling or explicit evidence-backed no-lower-ceiling determination;
+- applicable lifetime non-principal cost ceiling;
+- policy/legal basis or evidence reference used for those values;
+- the exact terms fingerprint they apply to.
+
+The penalty layer must consume that evidence; it must not become a legal-applicability calculator.
+
+If disclosure, exact-term fingerprint, legal applicability/rate/cost-cap authority, signed maturity, or required schedule evidence is missing or mismatched:
+
+- no automatic penalty is posted;
+- the automatic assessable amount is blocked/fail-closed;
 - return **Management review required**;
 - do not estimate or retroactively invent a penalty.
 
 Legacy 7x7 loans that never signed this exact policy are not retroactively penalized by this subsystem.
 
-## 5. Legal Total-Cost Cap
+## 5. Legal Cap Enforcement
 
 The penalty engine must not hard-code a universal numeric legal ceiling.
 
-The exact applicable ceiling/headroom must come from the terms-bound compliance authority for that exact loan.
+The exact applicable rate ceiling and lifetime cost ceiling must come from terms-bound compliance authority for that exact loan.
+
+### 5.1 Penalty-rate ceiling
+
+The contractual product rate remains 3% per month, but the effective rate used for calculation is:
+
+**Effective Monthly Penalty Rate = min(3%, Proven Applicable Legal Penalty-Rate Ceiling)**
+
+If the proven legal ceiling is lower than 3%, SPINA uses the lower rate. If the applicable rate authority is unavailable or ambiguous, automatic penalty assessment fails closed.
+
+### 5.2 Lifetime total-cost ceiling
 
 Approved lifetime-cap model:
 
@@ -160,11 +186,13 @@ Principal repayment itself does not consume the non-principal cost ceiling.
 
 For each new penalty assessment:
 
+**Theoretical Penalty = Eligible Penalty Base × Effective Daily Rate × Eligible Overdue Days**
+
 **Assessable Penalty = min(Theoretical Penalty, Remaining Cost Headroom)**
 
 Once lifetime cost headroom is zero, new penalty accrual stops permanently for that loan. Later payment of already assessed charges does not create new lifetime headroom.
 
-If the applicable legal ceiling/headroom cannot be proven, automatic penalty assessment fails closed.
+If the applicable lifetime ceiling/headroom cannot be proven, automatic penalty assessment fails closed.
 
 ## 6. Architecture
 
@@ -187,7 +215,7 @@ The penalty layer receives server-authoritative data only:
 - earned/unpaid contractual interest through maturity;
 - persisted operational No Collection/effective-date protection;
 - signed policy/disclosure evidence;
-- exact-term compliance/cap authority;
+- exact-term compliance rate/cost-cap authority;
 - cumulative counted lifetime non-principal charges;
 - previously assessed penalty balance and assessed-through boundary;
 - authoritative collection/payment date.
@@ -200,6 +228,7 @@ The shared replay/backend contract should expose authoritative fields sufficient
 - `projected_penalty`;
 - `assessed_penalty_balance`;
 - `penalty_base`;
+- `effective_penalty_rate`;
 - `remaining_cost_headroom`;
 - `exact_payoff_total`;
 - `management_review_required_reason`.
@@ -231,8 +260,9 @@ The assessment evidence must preserve enough data to reproduce why the amount wa
 - opening eligible penalty base;
 - eligible overdue-day count or equivalent auditable period representation;
 - Management No Collection exclusions/protected amounts needed to explain the result;
+- contractual penalty rate and proven applicable legal rate ceiling/effective rate;
 - exact unrounded theoretical calculation;
-- legal-cap/headroom authority and amount used;
+- lifetime cost-cap/headroom authority and amount used;
 - final rounded assessed centavo amount;
 - policy/disclosure/fingerprint identity;
 - actor/transaction context when relevant;
@@ -272,8 +302,9 @@ Read-only schedule, route, payoff, and account previews:
 
 1. run existing authoritative 7x7 contractual replay;
 2. derive signed contractual maturity from the active verified immutable schedule;
-3. run the penalty projection layer only if post-maturity and disclosure/cap authority are ready;
-4. expose server-authoritative penalty/payoff fields.
+3. resolve signed penalty policy plus terms-bound legal rate/cost-cap authority;
+4. run the penalty projection layer only if post-maturity and all authority is ready;
+5. expose server-authoritative penalty/payoff fields.
 
 Desktop, Web, and Android must not calculate penalty independently.
 
@@ -286,13 +317,14 @@ Inside the same existing database transaction used for 7x7 collection/payoff pos
 3. determine the unassessed eligible penalty period through the collection date;
 4. accrue that payment date's penalty from the opening eligible base;
 5. apply Management No Collection exclusions;
-6. apply lifetime legal-cap/headroom clamp;
-7. round the final assessment to PHP 0.01 using `ROUND_HALF_UP`;
-8. persist one immutable penalty assessment when the rounded assessable amount is positive;
-9. apply cash in order: contractual interest → principal → assessed penalty;
-10. persist penalty payment allocation evidence;
-11. enforce existing exact-payoff/unallocated-cash protections;
-12. commit atomically.
+6. resolve the effective rate as the lower of contractual 3% and the proven applicable legal rate ceiling;
+7. apply the lifetime legal cost-cap/headroom clamp;
+8. round the final assessment to PHP 0.01 using `ROUND_HALF_UP`;
+9. persist one immutable penalty assessment when the rounded assessable amount is positive;
+10. apply cash in order: contractual interest → principal → assessed penalty;
+11. persist penalty payment allocation evidence;
+12. enforce existing exact-payoff/unallocated-cash protections;
+13. commit atomically.
 
 ### 8.3 No double accrual
 
@@ -308,8 +340,8 @@ Automatic penalty assessment must stop with a clear Management-review reason whe
 - immutable signed maturity unavailable/corrupt;
 - exact signed penalty disclosure absent/mismatched;
 - exact-term compliance fingerprint mismatch;
-- legal applicability/cap authority unavailable;
-- lifetime cost headroom cannot be determined;
+- legal applicability/rate ceiling unavailable or ambiguous;
+- lifetime cost ceiling/headroom cannot be determined;
 - historical void/correction invalidates already-assessed penalty assumptions;
 - concurrent/stale state prevents a deterministic authoritative result.
 
@@ -324,7 +356,7 @@ A read-only accounting-facing projection may expose:
 - total assessed penalty;
 - total penalty paid;
 - penalty outstanding;
-- policy/cap readiness status.
+- policy/rate/cap readiness status.
 
 This design explicitly does **not**:
 
@@ -362,6 +394,7 @@ Rules:
 - historical migrations remain immutable;
 - no production backfill may create retroactive penalties;
 - existing signed schedules without the exact approved penalty disclosure remain fail-closed;
+- any new legal rate/cost-cap evidence fields must be terms-bound and append-only/version-safe rather than mutable global defaults;
 - no live production DB/Auth/data mutation is part of implementation acceptance;
 - do not copy or merge Priority #4/#5/#7/#8 code into Priority #6 to solve unrelated concerns.
 
@@ -375,20 +408,22 @@ Before production implementation, tests must require at least:
 
 - no penalty on/before signed contractual maturity;
 - first possible penalty day is maturity + 1;
-- 3% monthly / 30-day daily proration;
+- contractual 3% monthly / 30-day daily proration;
+- a proven legal penalty-rate ceiling lower than 3% reduces the effective rate;
+- missing/ambiguous legal rate authority fails closed;
 - opening-base-before-same-day-payment behavior;
 - no daily centavo rounding bias;
 - Management No Collection protection;
 - borrower-caused extension does not itself postpone penalty authority;
 - no penalty-on-penalty;
 - lifetime legal headroom clamps accrual;
-- zero/unknown cap authority fails closed;
+- zero/unknown lifetime cap authority fails closed;
 - missing/mismatched signed disclosure fails closed;
-- legacy/undisclosed schedules receive PHP 0 automatic penalty;
+- legacy/undisclosed schedules receive no automatic penalty;
 - contractual principal+interest at zero stops new penalty accrual;
 - penalty-only state remains collectible and prevents Paid/Closed until settled;
 - allocation order is interest → principal → penalty;
-- exact payoff includes projected capped penalty.
+- exact payoff includes projected rate- and cost-capped penalty.
 
 ### 13.2 Required PostgreSQL/integration proof
 
@@ -399,7 +434,7 @@ Integration tests must prove at least:
 - two same-day payments do not create duplicate daily penalty;
 - concurrent postings serialize deterministically;
 - penalty allocations cannot exceed transaction cash or assessed penalty balance;
-- exact signed schedule/fingerprint identity is enforced;
+- exact signed schedule/fingerprint and legal rate/cost-cap authority are enforced;
 - void/correction affecting prior assumptions moves future automatic assessment to review-required instead of rewriting history;
 - Regular behavior remains unchanged.
 
@@ -433,4 +468,4 @@ No Ready-for-review transition, merge, deployment, production DB/Auth/data mutat
 
 The approved product and implementation direction is:
 
-**Exact signed maturity → contractual interest stops → if an eligible contractual amount remains overdue and the exact signed disclosure/cap authority is ready, assess a separate 3%/month simple penalty using 30-day daily proration → protect Management-approved No Collection amounts/days → use lifetime legal cost headroom → round only at financial boundaries → allocate payment to contractual interest, then principal, then penalty → stop new penalty when contractual base reaches zero → keep any remaining assessed penalty as Penalty Outstanding until settled.**
+**Exact signed maturity → contractual interest stops → if an eligible contractual amount remains overdue and the exact signed disclosure plus terms-bound legal rate/cost-cap authority is ready, assess a separate contractual 3%/month simple penalty using 30-day daily proration but reduce it to any lower proven legal rate ceiling → protect Management-approved No Collection amounts/days → clamp by lifetime legal cost headroom → round only at financial boundaries → allocate payment to contractual interest, then principal, then penalty → stop new penalty when contractual base reaches zero → keep any remaining assessed penalty as Penalty Outstanding until settled.**
