@@ -8,6 +8,10 @@ const managementSource = await readFile(
   new URL('../assets/roles/management.js', import.meta.url),
   'utf8',
 );
+const serviceWorkerSource = await readFile(
+  new URL('../sw.js', import.meta.url),
+  'utf8',
+);
 
 async function importOperationsModule() {
   try {
@@ -211,4 +215,8 @@ test('Management workspace mounts the isolated Loan Operations read-only surface
   assert.match(managementSource, /id="management-loan-operations"/);
   assert.match(managementSource, /management-loan-operations-search/);
   assert.doesNotMatch(managementSource, /hasPermission\(session, ['"]loan-operations/);
+});
+
+test('installed Web shell precaches the isolated Management Loan Operations dependency', () => {
+  assert.match(serviceWorkerSource, /'\/assets\/management-loan-operations\.js'/);
 });
