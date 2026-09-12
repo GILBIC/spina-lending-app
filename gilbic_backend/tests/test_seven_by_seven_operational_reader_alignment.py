@@ -199,6 +199,7 @@ def test_advance_activation_replays_active_advance_not_gross_historical_advance(
         daily_interest_per_1000=Decimal("7.00"),
         payment_start=date(2026, 8, 28),
         through_date=date(2026, 8, 28),
+        contractual_maturity=None,
     )
 
     assert replay.matured_advance_row_count == 1
