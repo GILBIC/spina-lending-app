@@ -78,7 +78,7 @@ class _FakeClientScheduleRepository implements ClientScheduleRepository {
       isSevenBySeven: false,
       paymentFrequency: 'daily',
       readOnly: true,
-      pastDueAmount: 200,
+      pastDueAmount: '200.00',
       pastDueCount: 1,
       scheduleExtensionSlots: 2,
       contractualMaturity: DateTime(2026, 10, 10),
@@ -87,9 +87,9 @@ class _FakeClientScheduleRepository implements ClientScheduleRepository {
       rows: <ClientScheduleRow>[
         ClientScheduleRow(
           paymentDate: DateTime(2026, 9, 12),
-          amount: 200,
+          amount: '200.00',
           status: 'Due Today',
-          remainingAmount: 150,
+          remainingAmount: '150.00',
           note: 'Management-approved extension',
         ),
       ],
