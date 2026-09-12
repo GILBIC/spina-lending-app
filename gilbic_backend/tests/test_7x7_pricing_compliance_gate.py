@@ -9,6 +9,12 @@ API = (
 REPOSITORY = (
     ROOT / "src" / "gilbic_backend" / "contract_schedule_registration_repository.py"
 ).read_text(encoding="utf-8")
+REGISTRATION_SERVICE = (
+    ROOT / "src" / "gilbic_backend" / "contract_schedule_registration_service.py"
+).read_text(encoding="utf-8")
+CONTRACT_SERVICE = (
+    ROOT / "src" / "gilbic_backend" / "contract_schedule_service.py"
+).read_text(encoding="utf-8")
 
 
 def test_priority6_pricing_compliance_readiness_migration_exists() -> None:
@@ -44,3 +50,28 @@ def test_priority6_registration_checks_readiness_before_schedule_lock() -> None:
     readiness_call = API.index("require_7x7_pricing_compliance_ready")
     registration_call = API.index("registrations.register_schedule(")
     assert readiness_call < registration_call
+
+
+def test_priority6_penalty_authority_is_required_and_snapshotted_at_contract_lock() -> None:
+    for field in (
+        "penalty_policy_version",
+        "penalty_monthly_rate",
+        "penalty_proration_days",
+        "penalty_rate_ceiling",
+        "lifetime_nonprincipal_cost_ceiling",
+        "counted_nonprincipal_cost_at_contract_lock",
+    ):
+        assert field in API
+        assert field in REPOSITORY
+
+    assert "penalty_authority_ready" in REPOSITORY
+    assert "build_7x7_penalty_policy_schedule_settings" in REPOSITORY
+    assert "seven_by_seven_penalty_policy" in REPOSITORY
+    assert "schedule_settings" in API
+    assert "schedule_settings" in REPOSITORY
+    assert "schedule_settings" in REGISTRATION_SERVICE
+    assert "settings" in CONTRACT_SERVICE
+
+    penalty_ready = API.index("penalty_authority_ready")
+    registration_call = API.index("registrations.register_schedule(")
+    assert penalty_ready < registration_call
