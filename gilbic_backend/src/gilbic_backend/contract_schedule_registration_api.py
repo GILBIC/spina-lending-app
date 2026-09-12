@@ -422,6 +422,7 @@ def create_contract_schedule_registration_router() -> APIRouter:
                 evidence_reference=body.evidence_reference,
                 verification_note=body.verification_note,
                 verified_by_user_id=actor.user_id,
+                agreed_daily_payment=body.agreed_daily_payment,
                 confirmed=body.confirm_registration,
                 supersede_active=body.supersede_active,
             )
