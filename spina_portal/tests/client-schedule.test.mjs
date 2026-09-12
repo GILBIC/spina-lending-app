@@ -39,6 +39,25 @@ test('Client schedule renderer shows only authoritative server schedule values',
   assert.match(html, /Management-approved extension/);
 });
 
+test('Client schedule renderer preserves exact server money text', () => {
+  const html = renderClientSchedule({
+    loan_type: 'Regular',
+    is_7x7: false,
+    past_due_amount: '90071992547409.91',
+    rows: [
+      {
+        payment_date: '2026-09-12',
+        amount: '90071992547409.91',
+        status: 'Due Today',
+        details: { remaining_amount: '90071992547409.90' },
+      },
+    ],
+  });
+
+  assert.match(html, /₱90,071,992,547,409\.91/);
+  assert.match(html, /₱90,071,992,547,409\.90/);
+});
+
 test('Client schedule renderer escapes server notes before displaying them', () => {
   const html = renderClientSchedule({
     loan_type: '7x7',
