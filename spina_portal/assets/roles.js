@@ -60,6 +60,15 @@ export const ROLE_ENDPOINTS = Object.freeze({
         permission: 'accounting.view',
       },
     ),
+    action(
+      'management-general-journal',
+      'General journal & trial balance',
+      '/api/v1/management/financial-accounting/journals',
+      {
+        section: 'Reports',
+        permission: 'accounting.view',
+      },
+    ),
     action('management-alerts', 'Alerts & audit', '/api/v1/management/alerts-audit', {
       section: 'Overview',
       permission: 'management.dashboard.view',
