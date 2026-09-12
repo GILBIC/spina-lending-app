@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 import psycopg
@@ -18,6 +19,20 @@ pytestmark = pytest.mark.skipif(
     not DATABASE_URL,
     reason="GILBIC_TEST_DATABASE_URL is not configured",
 )
+
+SQL_0115 = (
+    Path(__file__).resolve().parents[1]
+    / "sql"
+    / "0115_align_7x7_signed_schedule_accounting_authority.sql"
+).read_text(encoding="utf-8")
+
+
+def _transaction_body(source: str) -> str:
+    body = source.strip()
+    assert body.startswith("BEGIN;")
+    assert body.endswith("COMMIT;")
+    body = body[len("BEGIN;") :].lstrip()
+    return body[: -len("COMMIT;")].rstrip()
 
 
 def test_accounting_readiness_uses_exact_signed_7x7_schedule_not_default_term() -> None:
@@ -48,6 +63,7 @@ def test_accounting_readiness_uses_exact_signed_7x7_schedule_not_default_term() 
 
     with psycopg.connect(DATABASE_URL) as connection:
         try:
+            connection.execute(_transaction_body(SQL_0115))
             actor_id = connection.execute(
                 """
                 insert into core.users (username, full_name, status)
@@ -73,7 +89,7 @@ def test_accounting_readiness_uses_exact_signed_7x7_schedule_not_default_term() 
                     %s, %s, 60, 'seven_by_seven', 7.00,
                     jsonb_build_object(
                         'contractual_interest_payment_frequency', 'daily',
-                        'contractual_principal_due', 'amortized_in_signed_installments',
+                        'contractual_principal_due', 'on_or_before_maturity',
                         'principal_prepayment_allowed', true,
                         'principal_prepayment_changes_daily_interest', false,
                         'mobile_collections_enabled', false
@@ -165,6 +181,7 @@ def test_accounting_readiness_uses_exact_signed_7x7_schedule_not_default_term() 
                     expected_daily_contractual_interest,
                     expected_contractual_interest_total,
                     expected_contractual_total_no_prepayment,
+                    term_days,
                     installment_count,
                     first_due_date,
                     last_due_date,
@@ -182,6 +199,7 @@ def test_accounting_readiness_uses_exact_signed_7x7_schedule_not_default_term() 
                 Decimal("21.00"),
                 Decimal("2184.00"),
                 Decimal("5184.00"),
+                104,
                 104,
                 first_due_date,
                 signed_rows[-1].due_date,
