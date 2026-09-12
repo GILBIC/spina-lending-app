@@ -15,6 +15,11 @@ import {
   loadManagementFinancialStatements,
 } from '../management-financial-statements.js';
 import {
+  bindManagementLoanOperations,
+  loadManagementLoanOperations,
+  managementLoanOperationsMarkup,
+} from '../management-loan-operations.js';
+import {
   asArray,
   badge,
   emptyState,
@@ -282,6 +287,7 @@ export async function mountManagementWorkspace(context) {
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
     { id: 'management-loans', label: 'Clients & loans' },
+    { id: 'management-loan-operations', label: 'Loan operations' },
     ...(canViewFinancialStatements ? [{ id: 'management-financial-statements', label: 'Financial statements' }] : []),
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
@@ -292,10 +298,13 @@ export async function mountManagementWorkspace(context) {
   ]);
   root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
 
-  const [account, overview, loans, financialStatements, alerts, renewals, support, staff] = await Promise.all([
+  const [account, overview, loans, loanOperations, financialStatements, alerts, renewals, support, staff] = await Promise.all([
     settledRequest(api, '/api/v1/account', {}, {}),
     canDashboard ? settledRequest(api, '/api/v1/management/dashboard-overview', {}, { metrics: [] }) : Promise.resolve({ data: { metrics: [] }, error: null }),
     settledRequest(api, '/api/v1/management/loans?status=active', {}, { summary: {}, loans: [] }),
+    loadManagementLoanOperations(api)
+      .then((data) => ({ data, error: null }))
+      .catch((error) => ({ data: { summary: {}, entries: [], audits: [], notice: '' }, error })),
     canViewFinancialStatements
       ? loadManagementFinancialStatements(api)
           .then((data) => ({ data, error: null }))
@@ -312,6 +321,7 @@ export async function mountManagementWorkspace(context) {
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  <section class="section-card" id="management-loan-operations"><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" placeholder="Client, receipt, loan, or collector" /><select name="status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
@@ -321,6 +331,7 @@ export async function mountManagementWorkspace(context) {
   <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
 
   bindLoanSearch(context);
+  bindManagementLoanOperations(context);
   bindRenewals(context);
   bindSupport(context);
   bindClientAccountAdmin(context);
