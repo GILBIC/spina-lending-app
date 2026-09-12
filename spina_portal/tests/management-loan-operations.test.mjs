@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { availableRoleActions } from '../assets/roles.js';
+
+const managementSource = await readFile(
+  new URL('../assets/roles/management.js', import.meta.url),
+  'utf8',
+);
 
 async function importOperationsModule() {
   try {
@@ -128,4 +134,81 @@ test('Loan Operations markup displays server values without recomputing financia
   assert.match(markup, /Manager &amp; One/);
   assert.match(markup, /Server-controlled read-only monitoring notice\./);
   assert.doesNotMatch(markup, />123\.45<.*>9,999\.00</s);
+});
+
+test('Loan Operations binding reloads only its results with the selected server filters', async () => {
+  const operations = await importOperationsModule();
+  assert.equal(typeof operations.bindManagementLoanOperations, 'function');
+
+  const formListeners = {};
+  const statusListeners = {};
+  const queryInput = { value: ' Ana ' };
+  const statusInput = {
+    value: 'received',
+    addEventListener(type, handler) {
+      statusListeners[type] = handler;
+    },
+  };
+  const form = {
+    addEventListener(type, handler) {
+      formListeners[type] = handler;
+    },
+    querySelector(selector) {
+      if (selector === '[name="q"]') return queryInput;
+      if (selector === '[name="status"]') return statusInput;
+      return null;
+    },
+  };
+  const target = { innerHTML: '' };
+  const root = {
+    querySelector(selector) {
+      if (selector === '#management-loan-operations-search') return form;
+      if (selector === '#management-loan-operations-results') return target;
+      return null;
+    },
+  };
+  const calls = [];
+  const api = {
+    async request(path, options = {}) {
+      calls.push({ path, options });
+      return {
+        summary: {},
+        entries: [],
+        audits: [],
+        notice: 'Filtered operations from server.',
+      };
+    },
+  };
+
+  operations.bindManagementLoanOperations({ root, api });
+
+  assert.equal(typeof formListeners.submit, 'function');
+  assert.equal(typeof statusListeners.change, 'function');
+  await formListeners.submit({ preventDefault() {} });
+
+  assert.deepEqual(calls, [
+    {
+      path: '/api/v1/management/loan-operations?q=Ana&status=received',
+      options: {},
+    },
+  ]);
+  assert.match(target.innerHTML, /Filtered operations from server\./);
+
+  queryInput.value = 'OR-1001';
+  statusInput.value = 'voided';
+  await statusListeners.change();
+  assert.equal(
+    calls[1].path,
+    '/api/v1/management/loan-operations?q=OR-1001&status=voided',
+  );
+});
+
+test('Management workspace mounts the isolated Loan Operations read-only surface', () => {
+  assert.match(managementSource, /management-loan-operations\.js/);
+  assert.match(managementSource, /loadManagementLoanOperations/);
+  assert.match(managementSource, /managementLoanOperationsMarkup/);
+  assert.match(managementSource, /bindManagementLoanOperations/);
+  assert.match(managementSource, /id="management-loan-operations"/);
+  assert.match(managementSource, /management-loan-operations-search/);
+  assert.doesNotMatch(managementSource, /hasPermission\(session, ['"]loan-operations/);
 });
