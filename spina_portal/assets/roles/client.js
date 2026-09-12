@@ -16,8 +16,9 @@ import {
   showToast,
 } from '../ui.js';
 import { classifyLoanType } from '../collector-contract.js';
+import { bindClientScheduleButtons } from '../client-schedule.js';
 
-function loanCard(loan) {
+export function loanCard(loan) {
   const type = classifyLoanType(loan.loan_type_name ?? loan.loan_type_code);
   const typeLabel = type === 'seven-by-seven' ? '7x7' : loan.loan_type_name || 'Regular';
   return `<article class="loan-card ${type}">
@@ -39,7 +40,9 @@ function loanCard(loan) {
     <div class="inline-actions">
       ${loan.pass_count ? `<span class="badge warning">Missed / PASS ${escapeHtml(loan.pass_count)}</span>` : ''}
       ${loan.advance_until ? `<span class="badge success">ADV through ${formatDate(loan.advance_until)}</span>` : ''}
+      ${loan.loan_id ? `<button class="button button-secondary" type="button" data-client-schedule-loan="${escapeHtml(loan.loan_id)}">View schedule</button>` : ''}
     </div>
+    <div data-client-schedule-panel hidden></div>
   </article>`;
 }
 
@@ -289,4 +292,5 @@ export async function mountClientWorkspace(context) {
     notifications: notifications.error,
   });
   bindForms(context, raw);
+  bindClientScheduleButtons(context);
 }
