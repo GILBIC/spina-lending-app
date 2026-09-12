@@ -117,7 +117,7 @@ function notificationRows(items) {
     .join('')}</div>`;
 }
 
-function accountCard(account) {
+export function clientAccountCard(account) {
   const profile = account.profile ?? {};
   const devices = asArray(account.devices);
   return `<div class="card-grid">
@@ -132,9 +132,35 @@ function accountCard(account) {
     </article>
     <article class="data-card">
       <h3>Registered devices</h3>
-      ${devices.length ? `<div class="list-stack">${devices.map((device) => `<div class="list-item"><strong>${escapeHtml(device.platform || 'Device')} ${device.is_current ? '· This device' : ''}</strong><span class="meta">Version ${escapeHtml(device.app_version || '—')} · Last seen ${formatDateTime(device.last_seen_at)}</span>${badge(device.status)}</div>`).join('')}</div>` : emptyState('No registered device record is available.')}
+      ${devices.length ? `<div class="list-stack">${devices.map((device) => {
+        const canRevoke = Boolean(
+          device.id &&
+          device.is_current !== true &&
+          String(device.status || '').trim().toLowerCase() === 'active',
+        );
+        return `<div class="list-item"><strong>${escapeHtml(device.platform || 'Device')} ${device.is_current ? '· This device' : ''}</strong><span class="meta">Version ${escapeHtml(device.app_version || '—')} · Last seen ${formatDateTime(device.last_seen_at)}</span>${badge(device.status)}${device.is_current ? '<span class="meta">Use Sign out to end access on this device.</span>' : ''}${canRevoke ? `<button class="button button-secondary" type="button" data-client-revoke-device="${escapeHtml(device.id)}">Revoke</button>` : ''}</div>`;
+      }).join('')}</div>` : emptyState('No registered device record is available.')}
     </article>
   </div>`;
+}
+
+export async function requestClientDeviceRevocation({
+  api,
+  deviceId,
+  confirmRevoke = globalThis.confirm,
+}) {
+  const normalized = String(deviceId || '').trim();
+  if (!normalized) {
+    throw new Error('A registered device is required.');
+  }
+  if (typeof confirmRevoke !== 'function' || !confirmRevoke('Revoke this device? You will need to sign in again on that device.')) {
+    return false;
+  }
+  await api.request(
+    `/api/v1/account/devices/${encodeURIComponent(normalized)}/revoke`,
+    { method: 'POST' },
+  );
+  return true;
 }
 
 function renderWorkspace(root, model, raw, errors) {
@@ -206,7 +232,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-account">
     <div class="section-heading"><div><h2>Account and devices</h2><p>Review your SPINA profile and registered sessions.</p></div></div>
-    ${errors.account ? errorCard(errors.account) : accountCard(model.account)}
+    ${errors.account ? errorCard(errors.account) : clientAccountCard(model.account)}
   </section>`;
 }
 
@@ -259,6 +285,25 @@ function bindForms(context, raw) {
   });
 }
 
+function bindClientAccountDeviceSecurity(context) {
+  for (const button of context.root.querySelectorAll('[data-client-revoke-device]')) {
+    button.addEventListener('click', async () => {
+      const deviceId = button.dataset.clientRevokeDevice;
+      try {
+        const revoked = await requestClientDeviceRevocation({
+          api: context.api,
+          deviceId,
+        });
+        if (!revoked) return;
+        showToast('Device access revoked.', 'success');
+        await mountClientWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+  }
+}
+
 export async function mountClientWorkspace(context) {
   const { root, api, setNavigation } = context;
   setNavigation([
@@ -308,4 +353,5 @@ export async function mountClientWorkspace(context) {
   bindForms(context, raw);
   bindClientScheduleButtons(context);
   bindClientGcashPanel(context);
+  bindClientAccountDeviceSecurity(context);
 }
