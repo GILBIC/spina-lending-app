@@ -14,6 +14,7 @@ from .client_loan_repository import (
     ClientLoanNotFound,
     ClientLoanPortfolio,
     ClientLoanRecord,
+    ClientLoanScheduleUnavailable,
     PostgresClientLoanRepository,
 )
 from .collector_schedule_repository import (
@@ -207,6 +208,11 @@ def create_client_loan_router() -> APIRouter:
         except (ClientBorrowerNotLinked, ClientLoanNotFound) as error:
             raise HTTPException(
                 status_code=404,
+                detail={"code": error.code, "message": str(error)},
+            ) from error
+        except ClientLoanScheduleUnavailable as error:
+            raise HTTPException(
+                status_code=409,
                 detail={"code": error.code, "message": str(error)},
             ) from error
         return {"success": True, "data": _client_schedule_payload(schedule)}
