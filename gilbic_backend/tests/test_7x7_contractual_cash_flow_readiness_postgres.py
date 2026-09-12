@@ -9,6 +9,10 @@ from uuid import uuid4
 import psycopg
 import pytest
 
+from gilbic_backend.seven_by_seven_signed_schedule import (
+    generate_signed_seven_by_seven_schedule,
+)
+
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -19,6 +23,9 @@ pytestmark = pytest.mark.skipif(
 SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
 SQL_0060 = (
     SQL_ROOT / "0060_add_7x7_contractual_cash_flow_readiness.sql"
+).read_text(encoding="utf-8")
+SQL_0115 = (
+    SQL_ROOT / "0115_align_7x7_signed_schedule_accounting_authority.sql"
 ).read_text(encoding="utf-8")
 
 
@@ -47,7 +54,7 @@ def _loan_type(connection, suffix: str):
             code, name, term_days, calculation_mode,
             daily_interest_per_1000, settings
         ) values (
-            %s, %s, 120, 'seven_by_seven', 7.00,
+            %s, %s, 60, 'seven_by_seven', 7.00,
             jsonb_build_object(
                 'contractual_interest_payment_frequency', 'daily',
                 'contractual_principal_due', 'on_or_before_maturity',
@@ -61,7 +68,15 @@ def _loan_type(connection, suffix: str):
     ).fetchone()[0]
 
 
-def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date):
+def _loan(
+    connection,
+    *,
+    suffix: str,
+    actor_id,
+    loan_type_id,
+    release_date: date,
+    due_date: date,
+):
     client_id = connection.execute(
         """
         insert into lending.clients (client_code, full_name, status)
@@ -75,7 +90,7 @@ def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date
             loan_number, client_id, loan_type_id, principal, daily_amount,
             date_released, due_date, status, created_by_user_id
         ) values (
-            %s, %s, %s, 3000.00, 21.00,
+            %s, %s, %s, 3000.00, 50.00,
             %s, %s, 'active', %s
         ) returning id
         """,
@@ -84,7 +99,7 @@ def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date
             client_id,
             loan_type_id,
             release_date,
-            release_date + timedelta(days=120),
+            due_date,
             actor_id,
         ),
     ).fetchone()[0]
@@ -99,8 +114,7 @@ def _schedule(
     release_date: date,
     suffix: str,
     evidence_basis: str | None = "signed_contract",
-    final_includes_principal: bool = True,
-    first_principal_component: str = "0.00",
+    corrupt_first_principal: bool = False,
 ):
     schedule_id = connection.execute(
         """
@@ -122,35 +136,36 @@ def _schedule(
         ),
     ).fetchone()[0]
 
-    final_amount = Decimal("3021.00") if final_includes_principal else Decimal("21.00")
-    final_principal = Decimal("3000.00") if final_includes_principal else Decimal("0.00")
-    connection.execute(
-        """
-        insert into lending.loan_contract_installments (
-            schedule_id, installment_number, due_date, contractual_amount,
-            principal_component, interest_component
-        )
-        select
-            %s,
-            day_number,
-            %s::date + day_number,
-            case when day_number = 120 then %s::numeric else 21.00::numeric end,
-            case
-                when day_number = 1 then %s::numeric
-                when day_number = 120 then %s::numeric
-                else 0.00::numeric
-            end,
-            21.00::numeric
-        from generate_series(1, 120) day_number
-        """,
-        (
-            schedule_id,
-            release_date,
-            final_amount,
-            Decimal(first_principal_component),
-            final_principal,
-        ),
+    rows = generate_signed_seven_by_seven_schedule(
+        original_principal=Decimal("3000.00"),
+        agreed_daily_payment=Decimal("50.00"),
+        daily_interest_per_1000=Decimal("7.00"),
+        first_due_date=release_date + timedelta(days=1),
     )
+    with connection.cursor() as cursor:
+        cursor.executemany(
+            """
+            insert into lending.loan_contract_installments (
+                schedule_id, installment_number, due_date, contractual_amount,
+                principal_component, interest_component
+            ) values (%s, %s, %s, %s, %s, %s)
+            """,
+            [
+                (
+                    schedule_id,
+                    row.installment_number,
+                    row.due_date,
+                    row.contractual_amount,
+                    (
+                        Decimal("28.00")
+                        if corrupt_first_principal and row.installment_number == 1
+                        else row.principal_component
+                    ),
+                    row.interest_component,
+                )
+                for row in rows
+            ],
+        )
 
     if evidence_basis is not None:
         connection.execute(
@@ -164,11 +179,11 @@ def _schedule(
                 schedule_id,
                 evidence_basis,
                 f"X7CF-EVIDENCE-{suffix}",
-                "Verified exact 7x7 contractual cash-flow schedule",
+                "Verified exact 7x7 borrower/Management-approved daily-payment schedule",
                 actor_id,
             ),
         )
-    return schedule_id
+    return schedule_id, rows
 
 
 def _readiness(connection, loan_id):
@@ -178,6 +193,7 @@ def _readiness(connection, loan_id):
             expected_daily_contractual_interest,
             expected_contractual_interest_total,
             expected_contractual_total_no_prepayment,
+            term_days,
             installment_count,
             first_due_date,
             last_due_date,
@@ -199,14 +215,16 @@ def _readiness(connection, loan_id):
     ).fetchone()
 
 
-def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_stays_off() -> None:
+def test_verified_signed_7x7_schedule_is_the_accounting_cash_flow_authority() -> None:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
     release_date = date(2091, 1, 10)
+    signed_maturity = release_date + timedelta(days=104)
 
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             connection.execute(_transaction_body(SQL_0060))
+            connection.execute(_transaction_body(SQL_0115))
             actor_id = _actor(connection, suffix)
             loan_type_id = _loan_type(connection, suffix)
 
@@ -216,30 +234,33 @@ def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_st
                 actor_id=actor_id,
                 loan_type_id=loan_type_id,
                 release_date=release_date,
+                due_date=signed_maturity,
             )
-            _schedule(
+            _, rows = _schedule(
                 connection,
                 loan_id=valid_loan,
                 actor_id=actor_id,
                 release_date=release_date,
                 suffix=f"{suffix}-valid",
             )
+            assert len(rows) == 104
 
             valid = _readiness(connection, valid_loan)
             assert valid is not None
             assert valid[0] == Decimal("21.00")
-            assert valid[1] == Decimal("2520.00")
-            assert valid[2] == Decimal("5520.00")
-            assert valid[3] == 120
-            assert valid[4] == release_date + timedelta(days=1)
-            assert valid[5] == release_date + timedelta(days=120)
-            assert valid[6] == Decimal("5520.00")
-            assert valid[7] == 0
-            assert valid[8] == "pfrs9_contract_cash_flow_ready"
-            assert valid[9] is True
+            assert valid[1] == Decimal("2184.00")
+            assert valid[2] == Decimal("5184.00")
+            assert valid[3] == 104
+            assert valid[4] == 104
+            assert valid[5] == release_date + timedelta(days=1)
+            assert valid[6] == signed_maturity
+            assert valid[7] == Decimal("5184.00")
+            assert valid[8] == 0
+            assert valid[9] == "pfrs9_contract_cash_flow_ready"
             assert valid[10] is True
-            assert valid[11] == "no_prepayment_through_maturity_base_schedule"
-            assert valid[12:] == (False, False, False, False, False)
+            assert valid[11] is True
+            assert valid[12] == "no_prepayment_through_maturity_base_schedule"
+            assert valid[13:] == (False, False, False, False, False)
 
             final_line = connection.execute(
                 """
@@ -247,59 +268,60 @@ def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_st
                        expected_contractual_amount, expected_principal_component,
                        expected_interest_component, line_status
                 from accounting.seven_by_seven_contractual_cash_flow_lines
-                where loan_id = %s and installment_number = 120
+                where loan_id = %s and installment_number = 104
                 """,
                 (valid_loan,),
             ).fetchone()
             assert final_line == (
-                Decimal("3021.00"),
-                Decimal("3000.00"),
+                Decimal("34.00"),
+                Decimal("13.00"),
                 Decimal("21.00"),
-                Decimal("3021.00"),
-                Decimal("3000.00"),
+                Decimal("34.00"),
+                Decimal("13.00"),
                 Decimal("21.00"),
                 "line_ready",
             )
 
-            no_principal_loan = _loan(
+            stale_due_loan = _loan(
                 connection,
-                suffix=f"{suffix}-noprin",
+                suffix=f"{suffix}-stale-due",
                 actor_id=actor_id,
                 loan_type_id=loan_type_id,
                 release_date=release_date,
+                due_date=release_date + timedelta(days=60),
             )
             _schedule(
                 connection,
-                loan_id=no_principal_loan,
+                loan_id=stale_due_loan,
                 actor_id=actor_id,
                 release_date=release_date,
-                suffix=f"{suffix}-noprin",
-                final_includes_principal=False,
+                suffix=f"{suffix}-stale-due",
             )
-            no_principal = _readiness(connection, no_principal_loan)
-            assert no_principal is not None
-            assert no_principal[8] == "contract_cash_flow_mismatch"
-            assert no_principal[9] is False
+            stale_due = _readiness(connection, stale_due_loan)
+            assert stale_due is not None
+            assert stale_due[9] == "contract_cash_flow_mismatch"
+            assert stale_due[10] is False
 
-            early_principal_loan = _loan(
+            corrupt_component_loan = _loan(
                 connection,
-                suffix=f"{suffix}-early",
+                suffix=f"{suffix}-bad-component",
                 actor_id=actor_id,
                 loan_type_id=loan_type_id,
                 release_date=release_date,
+                due_date=signed_maturity,
             )
             _schedule(
                 connection,
-                loan_id=early_principal_loan,
+                loan_id=corrupt_component_loan,
                 actor_id=actor_id,
                 release_date=release_date,
-                suffix=f"{suffix}-early",
-                first_principal_component="100.00",
+                suffix=f"{suffix}-bad-component",
+                corrupt_first_principal=True,
             )
-            early = _readiness(connection, early_principal_loan)
-            assert early is not None
-            assert early[8] == "contract_cash_flow_mismatch"
-            assert early[9] is False
+            corrupt = _readiness(connection, corrupt_component_loan)
+            assert corrupt is not None
+            assert corrupt[9] == "contract_cash_flow_mismatch"
+            assert corrupt[10] is False
 
             unverified_loan = _loan(
                 connection,
@@ -307,6 +329,7 @@ def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_st
                 actor_id=actor_id,
                 loan_type_id=loan_type_id,
                 release_date=release_date,
+                due_date=signed_maturity,
             )
             _schedule(
                 connection,
@@ -318,8 +341,8 @@ def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_st
             )
             unverified = _readiness(connection, unverified_loan)
             assert unverified is not None
-            assert unverified[8] == "verified_signed_contract_schedule_required"
-            assert unverified[9] is False
+            assert unverified[9] == "verified_signed_contract_schedule_required"
+            assert unverified[10] is False
 
             renewal_loan = _loan(
                 connection,
@@ -327,6 +350,7 @@ def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_st
                 actor_id=actor_id,
                 loan_type_id=loan_type_id,
                 release_date=release_date,
+                due_date=signed_maturity,
             )
             _schedule(
                 connection,
@@ -338,8 +362,8 @@ def test_verified_7x7_base_contract_cash_flows_are_exact_and_follow_on_policy_st
             )
             renewal = _readiness(connection, renewal_loan)
             assert renewal is not None
-            assert renewal[8] == "renewal_or_restructure_policy_required"
-            assert renewal[9] is False
+            assert renewal[9] == "renewal_or_restructure_policy_required"
+            assert renewal[10] is False
 
             summary = connection.execute(
                 """
