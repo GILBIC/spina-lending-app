@@ -15,7 +15,9 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 TEST_DATABASE_PREFIX = "spina_7x7_contract_cf_"
 BOOTSTRAP_THROUGH = 59
-TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+BACKEND_SOURCE_ROOT = REPOSITORY_ROOT / "gilbic_backend" / "src"
+TEST_ROOT = REPOSITORY_ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_contractual_cash_flow_readiness_postgres.py",
     TEST_ROOT / "test_7x7_one_active_loan_postgres.py",
@@ -40,6 +42,12 @@ def _run_test(test_database_url: str) -> int:
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
+    existing_pythonpath = env.get("PYTHONPATH", "").strip()
+    env["PYTHONPATH"] = os.pathsep.join(
+        part
+        for part in (str(BACKEND_SOURCE_ROOT), existing_pythonpath)
+        if part
+    )
     completed = subprocess.run(
         [
             sys.executable,
