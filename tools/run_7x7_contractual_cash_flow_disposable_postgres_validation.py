@@ -15,11 +15,10 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 TEST_DATABASE_PREFIX = "spina_7x7_contract_cf_"
 BOOTSTRAP_THROUGH = 59
-INTEGRATION_TEST = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "tests"
-    / "test_7x7_contractual_cash_flow_readiness_postgres.py"
+TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+INTEGRATION_TESTS = (
+    TEST_ROOT / "test_7x7_contractual_cash_flow_readiness_postgres.py",
+    TEST_ROOT / "test_7x7_one_active_loan_postgres.py",
 )
 
 
@@ -29,16 +28,24 @@ def _configure_shared_safety_helpers() -> None:
 
 
 def _run_test(test_database_url: str) -> int:
-    if not INTEGRATION_TEST.is_file():
+    missing = [path for path in INTEGRATION_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "7x7 contractual cash-flow disposable validation refused: integration test file is missing."
+            "7x7 contractual cash-flow disposable validation refused: integration test file is missing: "
+            + ", ".join(str(path) for path in missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            *(str(path) for path in INTEGRATION_TESTS),
+        ],
         env=env,
         check=False,
     )
@@ -50,8 +57,8 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
             "migrations through 0059, then prove that Priority #6 accounting readiness "
-            "uses the exact verified signed 7x7 daily-payment schedule instead of "
-            "reconstructing a second schedule from the product default term."
+            "uses the exact verified signed 7x7 daily-payment schedule and that one Client "
+            "cannot have two active 7x7 loans."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -108,17 +115,16 @@ def main() -> int:
         if result != 0:
             raise SystemExit(
                 "7x7 contractual cash-flow disposable PostgreSQL validation failed: "
-                f"integration test exited with code {result}."
+                f"integration tests exited with code {result}."
             )
         print(
             "7x7 contractual cash-flow disposable PostgreSQL validation passed: "
             "the active verified signed schedule controlled contractual duration and "
-            "maturity, fixed daily interest remained based on original principal, "
-            "principal amortized inside the signed daily-payment rows, the final row "
-            "reconciled exact remaining principal, stale loan maturity/corrupt components/"
-            "unsupported evidence failed closed, accounting policy/EIR/carrying conclusions "
-            "stayed separate, journal lines stayed disabled, and automatic source posting "
-            "remained disabled."
+            "maturity; fixed daily interest remained based on original principal; "
+            "principal amortized inside the signed daily-payment rows; stale or corrupt "
+            "contract evidence failed closed; one active 7x7 per Client was enforced "
+            "without blocking a simultaneous Regular loan, including concurrent attempts; "
+            "and accounting policy/EIR/carrying conclusions and automatic posting stayed separate."
         )
         return 0
     except psycopg.Error as error:
