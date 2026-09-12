@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
+import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
 
 void main() {
@@ -29,19 +30,19 @@ void main() {
     expect(find.text('Valid payments'), findsOneWidget);
     expect(find.text('₱50.00'), findsWidgets);
     await tester.scrollUntilVisible(
-      find.byKey(const Key('client-gcash-placeholder')),
+      find.byKey(const Key('open-client-gcash-payment')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Direct GCash payment'), findsOneWidget);
-    expect(find.text('Coming soon through Xendit'), findsOneWidget);
+    expect(find.text('Pay with GCash'), findsOneWidget);
+    expect(find.text('Coming soon through Xendit'), findsNothing);
     expect(
       find.text(
         'This is a placeholder only. It cannot accept or post a payment yet.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.byKey(const Key('open-client-gcash-payment')), findsNothing);
     await tester.scrollUntilVisible(
       find.text(
         'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
@@ -57,8 +58,8 @@ void main() {
     );
     expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
 
-    // The direct-GCash placeholder sits above the receipt timeline, so scroll
-    // the first lazy-built receipt into view before asserting timeline details.
+    // The direct-GCash entry sits above the receipt timeline, so scroll the
+    // first lazy-built receipt into view before asserting timeline details.
     await tester.scrollUntilVisible(
       find.text('Payment timeline'),
       250,
@@ -86,6 +87,32 @@ void main() {
     );
     expect(repository.deviceId, 'client-device');
     expect(repository.userId, 'client-1');
+  });
+
+  testWidgets('payments opens the existing protected GCash payment page',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClientPaymentsPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeClientPaymentRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.byKey(const Key('open-client-gcash-payment'));
+    await tester.scrollUntilVisible(
+      button,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(find.byType(ClientGcashPaymentPage), findsOneWidget);
+    expect(find.text('Pay with GCash'), findsOneWidget);
   });
 }
 
