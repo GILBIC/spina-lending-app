@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { availableRoleActions } from '../assets/roles.js';
+
+const managementSource = await readFile(
+  new URL('../assets/roles/management.js', import.meta.url),
+  'utf8',
+);
 
 async function importStatementsModule() {
   try {
@@ -119,4 +125,12 @@ test('Financial Statements markup displays server totals without recomputing acc
   assert.match(markup, /3,210\.00/);
   assert.match(markup, /Server-controlled statement notice\./);
   assert.doesNotMatch(markup, />60\.00</);
+});
+
+test('Management workspace mounts Financial Statements only through the isolated accounting.view integration', () => {
+  assert.match(managementSource, /management-financial-statements\.js/);
+  assert.match(managementSource, /hasPermission\(session, 'accounting\.view'\)/);
+  assert.match(managementSource, /loadManagementFinancialStatements/);
+  assert.match(managementSource, /financialStatementsMarkup/);
+  assert.match(managementSource, /id="management-financial-statements"/);
 });
