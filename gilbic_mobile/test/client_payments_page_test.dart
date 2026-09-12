@@ -58,13 +58,13 @@ void main() {
     );
     expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
 
-    // The direct-GCash entry sits above the receipt timeline, so scroll the
-    // first lazy-built receipt into view before asserting timeline details.
-    await tester.scrollUntilVisible(
-      find.text('Payment timeline'),
-      250,
-      scrollable: find.byType(Scrollable).first,
+    // The taller GCash action card can leave the next lazy ListView child just
+    // outside the built viewport. Advance once before locating the timeline.
+    await tester.drag(
+      find.byType(Scrollable).first,
+      const Offset(0, -250),
     );
+    await tester.pumpAndSettle();
     expect(find.text('Payment timeline'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Receipt: GBC-20260806-00000010'),
@@ -108,8 +108,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.pumpAndSettle();
     await tester.tap(button);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byType(ClientGcashPaymentPage), findsOneWidget);
     expect(find.text('Pay with GCash'), findsOneWidget);
