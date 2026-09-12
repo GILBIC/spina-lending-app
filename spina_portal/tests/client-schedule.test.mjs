@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { renderClientSchedule } from '../assets/client-schedule.js';
+import {
+  bindClientScheduleButtons,
+  renderClientSchedule,
+} from '../assets/client-schedule.js';
 
 test('Client schedule renderer shows only authoritative server schedule values', () => {
   const html = renderClientSchedule({
@@ -55,4 +58,57 @@ test('Client schedule renderer escapes server notes before displaying them', () 
 
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/);
+});
+
+test('Client schedule button loads the protected per-loan schedule on demand', async () => {
+  const panel = { hidden: true, innerHTML: '' };
+  const button = {
+    dataset: { clientScheduleLoan: 'loan/1' },
+    disabled: false,
+    textContent: 'View schedule',
+    handler: null,
+    addEventListener(type, handler) {
+      assert.equal(type, 'click');
+      this.handler = handler;
+    },
+    closest(selector) {
+      assert.equal(selector, '.loan-card');
+      return {
+        querySelector(panelSelector) {
+          assert.equal(panelSelector, '[data-client-schedule-panel]');
+          return panel;
+        },
+      };
+    },
+  };
+  const root = {
+    querySelectorAll(selector) {
+      assert.equal(selector, '[data-client-schedule-loan]');
+      return [button];
+    },
+  };
+  let requestedPath = null;
+  const api = {
+    async request(path) {
+      requestedPath = path;
+      return {
+        loan_type: 'Regular',
+        is_7x7: false,
+        contractual_maturity: '2026-10-10',
+        operational_maturity: '2026-10-12',
+        maturity_status: 'extended',
+        past_due_amount: '0.00',
+        rows: [],
+      };
+    },
+  };
+
+  bindClientScheduleButtons({ root, api });
+  await button.handler();
+
+  assert.equal(requestedPath, '/api/v1/client/loans/loan%2F1/schedule');
+  assert.equal(panel.hidden, false);
+  assert.match(panel.innerHTML, /Authoritative SPINA schedule/);
+  assert.equal(button.disabled, false);
+  assert.equal(button.textContent, 'Refresh schedule');
 });
