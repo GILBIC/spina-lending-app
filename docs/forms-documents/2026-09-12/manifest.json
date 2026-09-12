@@ -1,0 +1,237 @@
+{
+  "package": "SPINA_Current_Working_Templates_2026-09-12",
+  "register_date": "2026-09-12",
+  "scope": "Current ten-template legal working set, not the complete operational document suite",
+  "production_status": "NOT CLEARED / NOT FROZEN",
+  "template_files_unchanged": true,
+  "templates": [
+    {
+      "id": "T01",
+      "document": "Loan Application Form",
+      "working_revision": "R2",
+      "prior_review_page_count": 4,
+      "page_count_note": "Existing working copy.",
+      "stage": "Application / CIF review",
+      "package_path": "Templates/SPINA_Loan_Application_R2_Black_White_Draft.docx",
+      "source_file_id": "file_00000000e4f881fb96e481f83098bc36",
+      "sha256": "728f88a90cf97600b38913a243c9431de8f8e45b4c38bd8edda975771c1202ad",
+      "bytes": 74156,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T02",
+      "document": "Cash Loan Agreement",
+      "working_revision": "R3",
+      "prior_review_page_count": 7,
+      "page_count_note": "Includes optional notarial review component.",
+      "stage": "Contractual packet",
+      "package_path": "Templates/SPINA_Cash_Loan_Agreement_R3_Black_White_Draft.docx",
+      "source_file_id": "file_000000002ec881f78fa8430dc8d2e5e6",
+      "sha256": "e51c95eaeeadf8a35372b121d58745955657321f05ee07a34c7f46ceb65a9407",
+      "bytes": 79304,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T03",
+      "document": "Loan Disclosure Statement",
+      "working_revision": "R2",
+      "prior_review_page_count": 4,
+      "page_count_note": "Existing working copy.",
+      "stage": "Contractual packet",
+      "package_path": "Templates/SPINA_Loan_Disclosure_R2_Black_White_Draft.docx",
+      "source_file_id": "file_0000000073b0820ba41dab39da3ca4e8",
+      "sha256": "6799c8d555ea8a677723144a049c665f14580240bcee8d4917bc93753d6bb585",
+      "bytes": 74709,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T04",
+      "document": "Promissory Note",
+      "working_revision": "Clean draft",
+      "prior_review_page_count": 4,
+      "page_count_note": "Includes optional notarial review component.",
+      "stage": "Contractual packet",
+      "package_path": "Templates/SPINA_Promissory_Note_Black_White_Draft.docx",
+      "source_file_id": "file_00000000bad4820b83b14a70e22337b6",
+      "sha256": "680d94d6c5227f58c373f2aa648984ff7be2fee8f6c95b7d09d16bd1035f273c",
+      "bytes": 74454,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T05",
+      "document": "Schedule of Payments / Annex A",
+      "working_revision": "R2",
+      "prior_review_page_count": 2,
+      "page_count_note": "Layout only; actual schedule may require more pages.",
+      "stage": "Complete schedule layout",
+      "package_path": "Templates/SPINA_Schedule_of_Payments_Annex_A_R2_Black_White_Draft.docx",
+      "source_file_id": "file_000000003100820692f3260333b56756",
+      "sha256": "80ef81aec3141f9c96a5d78f1edd1e7367c8a6be9ab7dca92e81b07756217ddb",
+      "bytes": 73022,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T06",
+      "document": "First-Loan Office Release / Cash Receipt",
+      "working_revision": "Clean draft",
+      "prior_review_page_count": 2,
+      "page_count_note": "Existing working copy.",
+      "stage": "Actual office cash handoff",
+      "package_path": "Templates/SPINA_First_Loan_Office_Release_Cash_Receipt_Black_White_Draft.docx",
+      "source_file_id": "file_0000000003b4820baf73e7ccc528ee9e",
+      "sha256": "8bb0db38d4aa30d05b5dc2c9a0218cb2a9347f3402a20aa4810e538f7b3ba003",
+      "bytes": 72020,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T07",
+      "document": "Notice of Delinquency / Default",
+      "working_revision": "Clean draft",
+      "prior_review_page_count": 2,
+      "page_count_note": "Existing working copy.",
+      "stage": "Account notice",
+      "package_path": "Templates/SPINA_Notice_of_Delinquency_Default_Black_White_Draft.docx",
+      "source_file_id": "file_00000000d87881fa8cc7aacdb8c278ab",
+      "sha256": "545429bbb7db7a4629372c48b48b3f580a7a3ae8128bfbb2e25f0d0a432ca4d1",
+      "bytes": 72654,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T08",
+      "document": "Demand Letter",
+      "working_revision": "Clean draft",
+      "prior_review_page_count": 2,
+      "page_count_note": "Existing working copy.",
+      "stage": "Account demand",
+      "package_path": "Templates/SPINA_Demand_Letter_Black_White_Draft.docx",
+      "source_file_id": "file_00000000c008820bb86adb8f7fd5c83b",
+      "sha256": "d53f035fb8f78fcc71c6a855cf3802bac8d6cd6fb0453f436e17ea68a5be6663",
+      "bytes": 72389,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T09",
+      "document": "Data Privacy Consent and Authorization",
+      "working_revision": "Approved reformatted",
+      "prior_review_page_count": 3,
+      "page_count_note": "Existing working copy.",
+      "stage": "Separate consent evidence",
+      "package_path": "Templates/SPINA_Data_Privacy_Consent_Black_White_Reformatted.docx",
+      "source_file_id": "file_00000000e86c820b96c9ab4bf4618c1c",
+      "sha256": "fac55ddf2e14c514339aca1637c2ae135d16f1b3a75574a51b6b6762b8abe855",
+      "bytes": 67885,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    },
+    {
+      "id": "T10",
+      "document": "Privacy Notice",
+      "working_revision": "R2",
+      "prior_review_page_count": 4,
+      "page_count_note": "Existing working copy.",
+      "stage": "Separate privacy information",
+      "package_path": "Templates/SPINA_Privacy_Notice_R2_Black_White_Draft.docx",
+      "source_file_id": "file_0000000058bc81fda6a9740f179aaf68",
+      "sha256": "6e9493e7c02052b1bd444e75187fec9f88e40f8bd40038b39ebf9f3bd39e639e",
+      "bytes": 73732,
+      "status": "Working draft; professional review and production binding remain open.",
+      "copied_without_modification": true,
+      "embedded_media_sha256": {
+        "word/media/image1.png": "97b8196dd8e7361168c82b26ad42d8b8eb7da742d57c7d3db06361c621556656"
+      }
+    }
+  ],
+  "handoff": {
+    "package_path": "Handoff/SPINA_Template_Register_Field_Mapping_PDF_Checklist_2026-09-12.docx",
+    "revision": "R1",
+    "bytes": 81642,
+    "sha256": "15fe57133008396a4112e085614d16d69cbca3b4089babe0efbb51e58e685d60",
+    "freshly_rendered_page_count": 7,
+    "mapping_level": "23 source-family groups; exact production keys/bindings remain open",
+    "acceptance_cases": 12,
+    "application_acceptance_status": "NOT RUN",
+    "all_rendered_pages_visually_reviewed": true
+  },
+  "readme": {
+    "package_path": "README.txt",
+    "bytes": 8478,
+    "sha256": "5655bba87f7b4212125fd72c756978d0688e1ad09a8551120163998f78ae4e71"
+  },
+  "source_references": [
+    {
+      "id": "G1a",
+      "description": "Approved Scheduled Remaining Principal definition",
+      "url": "https://github.com/GILBIC/spina-lending-app/pull/420#issuecomment-5644866766"
+    },
+    {
+      "id": "G1b",
+      "description": "Definition applied to Agreement R3 and Annex A R2",
+      "url": "https://github.com/GILBIC/spina-lending-app/pull/420#issuecomment-5645020501"
+    },
+    {
+      "id": "G2",
+      "description": "Every contractual installment and continuation page",
+      "url": "https://github.com/GILBIC/spina-lending-app/pull/420#issuecomment-5629879504"
+    },
+    {
+      "id": "G3",
+      "description": "Approved PDF evidence architecture and wet-sign flow",
+      "url": "https://github.com/GILBIC/spina-lending-app/pull/420#issuecomment-5634734850"
+    },
+    {
+      "id": "G4",
+      "description": "Targeted working R2 corrections",
+      "url": "https://github.com/GILBIC/spina-lending-app/pull/420#issuecomment-5644204375"
+    },
+    {
+      "id": "C1",
+      "description": "Canonical 7x7 signed-row schema, read only",
+      "url": "https://github.com/GILBIC/spina-lending-app/blob/8bc4df317966bbc435a0467c6a3050f15743282a/gilbic_backend/src/gilbic_backend/seven_by_seven_signed_schedule.py",
+      "commit": "8bc4df317966bbc435a0467c6a3050f15743282a",
+      "blob": "31a4f4111e06aaea0972681b1adff25eb2d1af3e"
+    },
+    {
+      "id": "N1",
+      "description": "Live continuity checkpoint; may change after this package",
+      "url": "https://app.notion.com/p/3cd5ade7bef48106b2c2ff97182001dd"
+    }
+  ],
+  "changed_application_code": false,
+  "changed_production_data": false,
+  "issued_borrower_document": false
+}
