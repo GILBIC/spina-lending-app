@@ -138,6 +138,7 @@ class PostgresContractScheduleRegistrationRepository:
         verified_by_user_id: UUID,
         confirmed: bool,
         supersede_active: bool,
+        agreed_daily_payment: Decimal | None = None,
     ) -> VerifiedContractScheduleRegistration:
         try:
             with open_connection() as connection:
@@ -155,6 +156,7 @@ class PostgresContractScheduleRegistrationRepository:
                         evidence_reference=evidence_reference,
                         verification_note=verification_note,
                         verified_by_user_id=verified_by_user_id,
+                        agreed_daily_payment=agreed_daily_payment,
                         confirmed=confirmed,
                         supersede_active=supersede_active,
                     )
