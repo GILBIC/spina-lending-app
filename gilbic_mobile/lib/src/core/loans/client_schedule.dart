@@ -26,7 +26,7 @@ class ClientLoanSchedule {
   final bool isSevenBySeven;
   final String paymentFrequency;
   final bool readOnly;
-  final double pastDueAmount;
+  final String pastDueAmount;
   final int pastDueCount;
   final int scheduleExtensionSlots;
   final DateTime? contractualMaturity;
@@ -50,7 +50,7 @@ class ClientLoanSchedule {
       isSevenBySeven: payload['is_7x7'] == true,
       paymentFrequency: requiredString(payload, 'payment_frequency'),
       readOnly: payload['read_only'] == true,
-      pastDueAmount: requiredDouble(payload, 'past_due_amount'),
+      pastDueAmount: _requiredMoneyText(payload, 'past_due_amount'),
       pastDueCount: requiredInt(payload, 'past_due_count'),
       scheduleExtensionSlots: requiredInt(payload, 'schedule_extension_slots'),
       contractualMaturity: optionalDate(payload['contractual_maturity']),
@@ -73,9 +73,9 @@ class ClientScheduleRow {
   });
 
   final DateTime paymentDate;
-  final double amount;
+  final String amount;
   final String status;
-  final double remainingAmount;
+  final String remainingAmount;
   final String? note;
 
   factory ClientScheduleRow.fromPayload(Map<String, dynamic> payload) {
@@ -89,10 +89,28 @@ class ClientScheduleRow {
     }
     return ClientScheduleRow(
       paymentDate: paymentDate,
-      amount: requiredDouble(payload, 'amount'),
+      amount: _requiredMoneyText(payload, 'amount'),
       status: requiredString(payload, 'status'),
-      remainingAmount: requiredDouble(details, 'remaining_amount'),
+      remainingAmount: _requiredMoneyText(details, 'remaining_amount'),
       note: optionalString(details['note']),
     );
   }
+}
+
+String _requiredMoneyText(Map<String, dynamic> payload, String key) {
+  final value = payload[key];
+  if (value is! String) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid schedule money data.',
+      code: 'invalid_client_schedule_payload',
+    );
+  }
+  final text = value.trim();
+  if (!RegExp(r'^[+-]?\d+(?:\.\d+)?$').hasMatch(text)) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid schedule money data.',
+      code: 'invalid_client_schedule_payload',
+    );
+  }
+  return text;
 }
