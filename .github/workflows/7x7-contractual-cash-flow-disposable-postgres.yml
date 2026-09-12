@@ -6,10 +6,18 @@ on:
     paths:
       - 'gilbic_backend/sql/0060_add_7x7_contractual_cash_flow_readiness.sql'
       - 'gilbic_backend/sql/0115_align_7x7_signed_schedule_accounting_authority.sql'
+      - 'gilbic_backend/sql/0116_enforce_one_active_7x7_per_client.sql'
+      - 'gilbic_backend/sql/0117_add_7x7_pricing_compliance_readiness.sql'
+      - 'gilbic_backend/src/gilbic_backend/contract_schedule_registration_api.py'
+      - 'gilbic_backend/src/gilbic_backend/contract_schedule_registration_repository.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_migration.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py'
       - 'gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py'
       - 'gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_postgres.py'
+      - 'gilbic_backend/tests/test_7x7_one_active_loan_migration.py'
+      - 'gilbic_backend/tests/test_7x7_one_active_loan_postgres.py'
+      - 'gilbic_backend/tests/test_7x7_pricing_compliance_gate.py'
+      - 'gilbic_backend/tests/test_7x7_pricing_compliance_readiness_postgres.py'
       - 'tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py'
       - '.github/workflows/7x7-contractual-cash-flow-disposable-postgres.yml'
   push:
@@ -17,11 +25,19 @@ on:
     paths:
       - 'gilbic_backend/sql/0060_add_7x7_contractual_cash_flow_readiness.sql'
       - 'gilbic_backend/sql/0115_align_7x7_signed_schedule_accounting_authority.sql'
+      - 'gilbic_backend/sql/0116_enforce_one_active_7x7_per_client.sql'
+      - 'gilbic_backend/sql/0117_add_7x7_pricing_compliance_readiness.sql'
+      - 'gilbic_backend/src/gilbic_backend/contract_schedule_registration_api.py'
+      - 'gilbic_backend/src/gilbic_backend/contract_schedule_registration_repository.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_migration.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py'
       - 'gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py'
       - 'gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_postgres.py'
-      - 'tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py'
+      - 'gilbic_backend/tests/test_7x7_one_active_loan_migration.py'
+      - 'gilbic_backend/tests/test_7x7_one_active_loan_postgres.py'
+      - 'gilbic_backend/tests/test_7x7_pricing_compliance_gate.py'
+      - 'gilbic_backend/tests/test_7x7_pricing_compliance_readiness_postgres.py'
+      - 'tools/run_7x7_contractual_cash-flow-disposable-postgres-validation.py'
       - '.github/workflows/7x7-contractual-cash-flow-disposable-postgres.yml'
 
 permissions:
@@ -79,13 +95,20 @@ jobs:
           set -euo pipefail
           python -m py_compile tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py
           python -m py_compile gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py
+          python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_postgres.py
+          python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_readiness_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py
+          python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_migration.py
+          python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_gate.py
 
-      - name: Verify Priority 6 migration contract
+      - name: Verify Priority 6 migration contracts
         shell: bash
         run: |
           set -euo pipefail
-          python -m pytest -q gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py
+          python -m pytest -q \
+            gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py \
+            gilbic_backend/tests/test_7x7_one_active_loan_migration.py \
+            gilbic_backend/tests/test_7x7_pricing_compliance_gate.py
 
       - name: Execute protected 7x7 contractual cash-flow proof
         shell: bash
