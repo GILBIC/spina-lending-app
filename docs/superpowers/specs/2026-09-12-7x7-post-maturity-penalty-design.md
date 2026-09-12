@@ -1,7 +1,7 @@
 # Priority #6 — 7x7 Post-Maturity Penalty Authority Design
 
 **Date:** 2026-09-12  
-**Status:** Approved design; implementation not started  
+**Status:** Approved design; spec ready for Management review; implementation not started  
 **Branch:** `priority6/7x7-contract-accounting-alignment`  
 **PR:** #426  
 **Frozen base:** `main` at `fd69d2f01c68c4193dc92aa1e45a7113190054b5`
