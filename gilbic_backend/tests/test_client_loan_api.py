@@ -15,6 +15,7 @@ from gilbic_backend.client_loan_repository import (
     ClientLoanNotFound,
     ClientLoanPortfolio,
     ClientLoanRecord,
+    ClientLoanScheduleUnavailable,
 )
 from gilbic_backend.collector_schedule_repository import (
     CollectorScheduleRecord,
@@ -151,35 +152,59 @@ class FakeLoans:
             as_of_date=as_of_date,
             rows=(
                 CollectorScheduleRowRecord(
-                    kind="installment", schedule_date=date(2026, 8, 6), status="Due Today",
-                    amount=Decimal("200.00"), contractual_amount=Decimal("200.00"),
-                    paid_amount=Decimal("0.00"), prepaid_amount=Decimal("0.00"),
-                    remaining_amount=Decimal("200.00"), installment_id=1,
-                    installment_number=1, contractual_due_date=date(2026, 8, 5),
+                    kind="installment",
+                    schedule_date=date(2026, 8, 6),
+                    status="Due Today",
+                    amount=Decimal("200.00"),
+                    contractual_amount=Decimal("200.00"),
+                    paid_amount=Decimal("0.00"),
+                    prepaid_amount=Decimal("0.00"),
+                    remaining_amount=Decimal("200.00"),
+                    installment_id=1,
+                    installment_number=1,
+                    contractual_due_date=date(2026, 8, 5),
                 ),
                 CollectorScheduleRowRecord(
-                    kind="installment", schedule_date=date(2026, 8, 7), status="Scheduled",
-                    amount=Decimal("200.00"), contractual_amount=Decimal("200.00"),
-                    paid_amount=Decimal("0.00"), prepaid_amount=Decimal("0.00"),
-                    remaining_amount=Decimal("200.00"), installment_id=2,
-                    installment_number=2, contractual_due_date=date(2026, 8, 6),
+                    kind="installment",
+                    schedule_date=date(2026, 8, 7),
+                    status="Scheduled",
+                    amount=Decimal("200.00"),
+                    contractual_amount=Decimal("200.00"),
+                    paid_amount=Decimal("0.00"),
+                    prepaid_amount=Decimal("0.00"),
+                    remaining_amount=Decimal("200.00"),
+                    installment_id=2,
+                    installment_number=2,
+                    contractual_due_date=date(2026, 8, 6),
                 ),
                 CollectorScheduleRowRecord(
-                    kind="installment", schedule_date=date(2026, 8, 8), status="Scheduled",
-                    amount=Decimal("200.00"), contractual_amount=Decimal("200.00"),
-                    paid_amount=Decimal("0.00"), prepaid_amount=Decimal("0.00"),
-                    remaining_amount=Decimal("200.00"), installment_id=3,
-                    installment_number=3, contractual_due_date=date(2026, 8, 7),
+                    kind="installment",
+                    schedule_date=date(2026, 8, 8),
+                    status="Scheduled",
+                    amount=Decimal("200.00"),
+                    contractual_amount=Decimal("200.00"),
+                    paid_amount=Decimal("0.00"),
+                    prepaid_amount=Decimal("0.00"),
+                    remaining_amount=Decimal("200.00"),
+                    installment_id=3,
+                    installment_number=3,
+                    contractual_due_date=date(2026, 8, 7),
                 ),
             ),
-            past_due_amount=Decimal("0.00"), past_due_count=0,
-            schedule_extension_slots=1, base_maturity=date(2026, 8, 7),
-            updated_maturity=date(2026, 8, 8), maturity_projection_status="extended",
+            past_due_amount=Decimal("0.00"),
+            past_due_count=0,
+            schedule_extension_slots=1,
+            base_maturity=date(2026, 8, 7),
+            updated_maturity=date(2026, 8, 8),
+            maturity_projection_status="extended",
         )
 
 
 def headers() -> dict[str, str]:
-    return {"Authorization": "Bearer client-token", "X-Device-Id": "client-device"}
+    return {
+        "Authorization": "Bearer client-token",
+        "X-Device-Id": "client-device",
+    }
 
 
 def client_with_fakes(*, role: str = "client") -> tuple[TestClient, FakeLoans]:
@@ -206,7 +231,10 @@ def test_linked_client_can_view_own_loans() -> None:
 
 def test_linked_client_can_view_own_persisted_operational_schedule() -> None:
     client, loans = client_with_fakes()
-    response = client.get(f"/api/v1/client/loans/{REGULAR_LOAN_ID}/schedule", headers=headers())
+    response = client.get(
+        f"/api/v1/client/loans/{REGULAR_LOAN_ID}/schedule",
+        headers=headers(),
+    )
     assert response.status_code == 200
     data = response.json()["data"]
     assert data["loan_id"] == str(REGULAR_LOAN_ID)
@@ -217,9 +245,24 @@ def test_linked_client_can_view_own_persisted_operational_schedule() -> None:
     assert data["maturity_status"] == "extended"
     assert data["schedule_extension_slots"] == 1
     assert data["rows"] == [
-        {"payment_date": "2026-08-06", "amount": "200.00", "status": "Due Today", "details": {"remaining_amount": "200.00"}},
-        {"payment_date": "2026-08-07", "amount": "200.00", "status": "Scheduled", "details": {"remaining_amount": "200.00"}},
-        {"payment_date": "2026-08-08", "amount": "200.00", "status": "Scheduled", "details": {"remaining_amount": "200.00"}},
+        {
+            "payment_date": "2026-08-06",
+            "amount": "200.00",
+            "status": "Due Today",
+            "details": {"remaining_amount": "200.00"},
+        },
+        {
+            "payment_date": "2026-08-07",
+            "amount": "200.00",
+            "status": "Scheduled",
+            "details": {"remaining_amount": "200.00"},
+        },
+        {
+            "payment_date": "2026-08-08",
+            "amount": "200.00",
+            "status": "Scheduled",
+            "details": {"remaining_amount": "200.00"},
+        },
     ]
     assert loans.schedule_user_id == CLIENT_USER_ID
     assert loans.schedule_loan_id == REGULAR_LOAN_ID
@@ -230,9 +273,28 @@ def test_client_cannot_view_another_borrowers_schedule() -> None:
     loans.schedule_error = ClientLoanNotFound(
         "This loan is not linked to the authenticated client account."
     )
-    response = client.get(f"/api/v1/client/loans/{REGULAR_LOAN_ID}/schedule", headers=headers())
+    response = client.get(
+        f"/api/v1/client/loans/{REGULAR_LOAN_ID}/schedule",
+        headers=headers(),
+    )
     assert response.status_code == 404
     assert response.json()["detail"]["code"] == "client_loan_not_found"
+
+
+def test_client_schedule_unavailable_returns_controlled_conflict() -> None:
+    client, loans = client_with_fakes()
+    loans.schedule_error = ClientLoanScheduleUnavailable(
+        "A verified contractual schedule is not yet available for this loan."
+    )
+    response = client.get(
+        f"/api/v1/client/loans/{REGULAR_LOAN_ID}/schedule",
+        headers=headers(),
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == {
+        "code": "client_loan_schedule_unavailable",
+        "message": "A verified contractual schedule is not yet available for this loan.",
+    }
 
 
 def test_non_client_role_cannot_open_client_loans() -> None:
@@ -244,7 +306,9 @@ def test_non_client_role_cannot_open_client_loans() -> None:
 
 def test_unlinked_client_receives_clear_error() -> None:
     client, loans = client_with_fakes()
-    loans.error = ClientBorrowerNotLinked("This client account is not linked to a borrower record.")
+    loans.error = ClientBorrowerNotLinked(
+        "This client account is not linked to a borrower record."
+    )
     response = client.get("/api/v1/client/loans", headers=headers())
     assert response.status_code == 404
     assert response.json()["detail"]["code"] == "client_borrower_not_linked"

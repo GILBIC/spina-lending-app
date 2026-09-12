@@ -5,6 +5,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
 
 void main() {
@@ -31,6 +33,8 @@ void main() {
     expect(find.textContaining('Remaining: ₱4,950.00'), findsOneWidget);
     expect(find.text('Official remaining balance'), findsWidgets);
     expect(find.text('₱4,950.00'), findsWidgets);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.textContaining('% paid'), findsNothing);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('client-loan-seven-by-seven-loan')),
@@ -46,6 +50,35 @@ void main() {
     );
     expect(repository.deviceId, 'client-device');
     expect(repository.userId, 'client-1');
+  });
+
+  testWidgets('My Loans opens the authoritative server schedule for a loan',
+      (tester) async {
+    final loans = _FakeClientLoanRepository();
+    final schedules = _FakeClientScheduleRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClientLoansPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: loans,
+          scheduleRepository: schedules,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.byKey(const Key('client-loan-schedule-regular-loan'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payment schedule'), findsOneWidget);
+    expect(find.text('Authoritative SPINA schedule'), findsOneWidget);
+    expect(schedules.loanId, 'regular-loan');
+    expect(schedules.deviceId, 'client-device');
   });
 }
 
@@ -120,6 +153,37 @@ class _FakeClientLoanRepository implements ClientLoanRepository {
           paymentCount: 0,
         ),
       ],
+    );
+  }
+}
+
+class _FakeClientScheduleRepository implements ClientScheduleRepository {
+  String? deviceId;
+  String? loanId;
+
+  @override
+  Future<ClientLoanSchedule> loadSchedule(
+    UserSession session, {
+    required String deviceId,
+    required String loanId,
+  }) async {
+    this.deviceId = deviceId;
+    this.loanId = loanId;
+    return ClientLoanSchedule(
+      loanId: loanId,
+      loanNumber: 'TEST-REG-20260802',
+      loanType: 'Regular',
+      calculationMode: 'fixed_total',
+      isSevenBySeven: false,
+      paymentFrequency: 'daily',
+      readOnly: true,
+      pastDueAmount: '0.00',
+      pastDueCount: 0,
+      scheduleExtensionSlots: 0,
+      contractualMaturity: DateTime(2026, 11, 29),
+      operationalMaturity: DateTime(2026, 11, 29),
+      maturityStatus: 'current',
+      rows: const <ClientScheduleRow>[],
     );
   }
 }

@@ -16,8 +16,14 @@ import {
   showToast,
 } from '../ui.js';
 import { classifyLoanType } from '../collector-contract.js';
+import {
+  bindClientGcashPanel,
+  renderClientGcashPanel,
+} from '../client-gcash.js';
+import { bindClientScheduleButtons } from '../client-schedule.js';
+import { renderClientStatement } from '../client-statement.js';
 
-function loanCard(loan) {
+export function loanCard(loan) {
   const type = classifyLoanType(loan.loan_type_name ?? loan.loan_type_code);
   const typeLabel = type === 'seven-by-seven' ? '7x7' : loan.loan_type_name || 'Regular';
   return `<article class="loan-card ${type}">
@@ -39,7 +45,9 @@ function loanCard(loan) {
     <div class="inline-actions">
       ${loan.pass_count ? `<span class="badge warning">Missed / PASS ${escapeHtml(loan.pass_count)}</span>` : ''}
       ${loan.advance_until ? `<span class="badge success">ADV through ${formatDate(loan.advance_until)}</span>` : ''}
+      ${loan.loan_id ? `<button class="button button-secondary" type="button" data-client-schedule-loan="${escapeHtml(loan.loan_id)}">View schedule</button>` : ''}
     </div>
+    <div data-client-schedule-panel hidden></div>
   </article>`;
 }
 
@@ -109,7 +117,7 @@ function notificationRows(items) {
     .join('')}</div>`;
 }
 
-function accountCard(account) {
+export function clientAccountCard(account) {
   const profile = account.profile ?? {};
   const devices = asArray(account.devices);
   return `<div class="card-grid">
@@ -124,9 +132,35 @@ function accountCard(account) {
     </article>
     <article class="data-card">
       <h3>Registered devices</h3>
-      ${devices.length ? `<div class="list-stack">${devices.map((device) => `<div class="list-item"><strong>${escapeHtml(device.platform || 'Device')} ${device.is_current ? '· This device' : ''}</strong><span class="meta">Version ${escapeHtml(device.app_version || '—')} · Last seen ${formatDateTime(device.last_seen_at)}</span>${badge(device.status)}</div>`).join('')}</div>` : emptyState('No registered device record is available.')}
+      ${devices.length ? `<div class="list-stack">${devices.map((device) => {
+        const canRevoke = Boolean(
+          device.id &&
+          device.is_current !== true &&
+          String(device.status || '').trim().toLowerCase() === 'active',
+        );
+        return `<div class="list-item"><strong>${escapeHtml(device.platform || 'Device')} ${device.is_current ? '· This device' : ''}</strong><span class="meta">Version ${escapeHtml(device.app_version || '—')} · Last seen ${formatDateTime(device.last_seen_at)}</span>${badge(device.status)}${device.is_current ? '<span class="meta">Use Sign out to end access on this device.</span>' : ''}${canRevoke ? `<button class="button button-secondary" type="button" data-client-revoke-device="${escapeHtml(device.id)}">Revoke</button>` : ''}</div>`;
+      }).join('')}</div>` : emptyState('No registered device record is available.')}
     </article>
   </div>`;
+}
+
+export async function requestClientDeviceRevocation({
+  api,
+  deviceId,
+  confirmRevoke = globalThis.confirm,
+}) {
+  const normalized = String(deviceId || '').trim();
+  if (!normalized) {
+    throw new Error('A registered device is required.');
+  }
+  if (typeof confirmRevoke !== 'function' || !confirmRevoke('Revoke this device? You will need to sign in again on that device.')) {
+    return false;
+  }
+  await api.request(
+    `/api/v1/account/devices/${encodeURIComponent(normalized)}/revoke`,
+    { method: 'POST' },
+  );
+  return true;
 }
 
 function renderWorkspace(root, model, raw, errors) {
@@ -150,6 +184,11 @@ function renderWorkspace(root, model, raw, errors) {
   <section class="section-card" id="client-payments">
     <div class="section-heading"><div><h2>Payments and official receipts</h2><p>A receipt appears only after SPINA accepts an official collection.</p></div></div>
     ${errors.payments ? errorCard(errors.payments) : paymentRows(model.payments)}
+  </section>
+
+  <section class="section-card" id="client-statement">
+    <div class="section-heading"><div><h2>Statement</h2><p>Read-only loan and official payment records from the protected SPINA server.</p></div></div>
+    ${errors.statement ? errorCard(errors.statement) : renderClientStatement(raw.statement)}
   </section>
 
   <section class="section-card" id="client-renewals">
@@ -183,7 +222,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-payment-instructions">
     <div class="section-heading"><div><h2>Payment instructions</h2><p>Opening a payment provider page does not itself create an official SPINA payment.</p></div></div>
-    ${errors.gcash ? errorCard(errors.gcash) : `<div class="notice-card ${model.paymentInstructions.payment_available ? '' : 'warning'}"><strong>${model.paymentInstructions.payment_available ? 'GCash checkout available' : 'GCash checkout not connected'}</strong><br>${escapeHtml(model.paymentInstructions.message || model.paymentInstructions.official_payment_rule || 'Ask your collector or office for the approved payment instructions.')}</div>`}
+    ${errors.gcash ? errorCard(errors.gcash) : renderClientGcashPanel({ capability: raw.gcash, loans: asArray(raw.loans.loans) })}
   </section>
 
   <section class="section-card" id="client-updates">
@@ -193,7 +232,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-account">
     <div class="section-heading"><div><h2>Account and devices</h2><p>Review your SPINA profile and registered sessions.</p></div></div>
-    ${errors.account ? errorCard(errors.account) : accountCard(model.account)}
+    ${errors.account ? errorCard(errors.account) : clientAccountCard(model.account)}
   </section>`;
 }
 
@@ -246,12 +285,32 @@ function bindForms(context, raw) {
   });
 }
 
+function bindClientAccountDeviceSecurity(context) {
+  for (const button of context.root.querySelectorAll('[data-client-revoke-device]')) {
+    button.addEventListener('click', async () => {
+      const deviceId = button.dataset.clientRevokeDevice;
+      try {
+        const revoked = await requestClientDeviceRevocation({
+          api: context.api,
+          deviceId,
+        });
+        if (!revoked) return;
+        showToast('Device access revoked.', 'success');
+        await mountClientWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+  }
+}
+
 export async function mountClientWorkspace(context) {
   const { root, api, setNavigation } = context;
   setNavigation([
     { id: 'client-overview', label: 'Overview' },
     { id: 'client-loans', label: 'My loans' },
     { id: 'client-payments', label: 'Payments' },
+    { id: 'client-statement', label: 'Statement' },
     { id: 'client-renewals', label: 'Renewals' },
     { id: 'client-support', label: 'Support' },
     { id: 'client-payment-instructions', label: 'Payment instructions' },
@@ -260,10 +319,11 @@ export async function mountClientWorkspace(context) {
   ]);
   root.innerHTML = loadingPanel('Loading your official Client records…');
 
-  const [account, loans, payments, renewals, support, gcash, notifications] = await Promise.all([
+  const [account, loans, payments, statement, renewals, support, gcash, notifications] = await Promise.all([
     settledRequest(api, '/api/v1/account', {}, {}),
     settledRequest(api, '/api/v1/client/loans', {}, { loans: [] }),
     settledRequest(api, '/api/v1/client/payments', {}, { payments: [] }),
+    settledRequest(api, '/api/v1/client/statement', {}, { client: {}, loans: [], payments: [] }),
     settledRequest(api, '/api/v1/client/renewals', {}, { loans: [], requests: [] }),
     settledRequest(api, '/api/v1/client/support', {}, { requests: [] }),
     settledRequest(api, '/api/v1/client/gcash/config', {}, { payment_available: false }),
@@ -273,6 +333,7 @@ export async function mountClientWorkspace(context) {
     account: account.data,
     loans: loans.data,
     payments: payments.data,
+    statement: statement.data,
     renewals: renewals.data,
     support: support.data,
     gcash: gcash.data,
@@ -283,10 +344,14 @@ export async function mountClientWorkspace(context) {
     account: account.error,
     loans: loans.error,
     payments: payments.error,
+    statement: statement.error,
     renewals: renewals.error,
     support: support.error,
     gcash: gcash.error,
     notifications: notifications.error,
   });
   bindForms(context, raw);
+  bindClientScheduleButtons(context);
+  bindClientGcashPanel(context);
+  bindClientAccountDeviceSecurity(context);
 }

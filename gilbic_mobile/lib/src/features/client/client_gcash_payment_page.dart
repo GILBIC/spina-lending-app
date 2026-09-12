@@ -112,10 +112,9 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       }
     }
     for (final loan in loans) {
-      final suggested = min(loan.dailyAmount, loan.remainingBalance);
       _amountControllers.putIfAbsent(
         loan.loanId,
-        () => TextEditingController(text: suggested.toStringAsFixed(2)),
+        TextEditingController.new,
       );
       if (loans.length == 1) {
         _selectedLoanIds.add(loan.loanId);
@@ -133,18 +132,18 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       if (!_selectedLoanIds.contains(loan.loanId)) {
         continue;
       }
-      final raw = _amountControllers[loan.loanId]?.text.replaceAll(',', '').trim();
-      final amount = double.tryParse(raw ?? '') ?? 0;
-      if (amount > 0) {
+      final raw = _amountControllers[loan.loanId]?.text;
+      final amount = _normalizeGcashAmount(raw);
+      if (amount != null) {
         allocations.add(ClientGcashAllocation(loanId: loan.loanId, amount: amount));
       }
     }
     return allocations;
   }
 
-  double get _total => _allocations().fold<double>(
-        0,
-        (total, allocation) => total + allocation.amount,
+  BigInt get _totalCents => _allocations().fold<BigInt>(
+        BigInt.zero,
+        (total, allocation) => total + _gcashCents(allocation.amount),
       );
 
   Future<void> _createPayment() async {
@@ -158,7 +157,7 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       _showMessage(capability.message);
       return;
     }
-    if (allocations.isEmpty || _total <= 0) {
+    if (allocations.isEmpty || _totalCents <= BigInt.zero) {
       _showMessage('Select at least one loan and enter an amount above zero.');
       return;
     }
@@ -354,7 +353,7 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
                 ),
               ),
               Text(
-                _money(_total),
+                _gcashMoneyFromCents(_totalCents),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: SpinaTheme.brandPinkDark,
                       fontWeight: FontWeight.w900,
@@ -622,7 +621,7 @@ class _IntentStatusCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 7),
-            Text('Amount: ${_money(intent.amount)}'),
+            Text('Amount: ${_gcashMoney(intent.amount)}'),
             if (intent.providerReference != null)
               Text('Provider reference: ${intent.providerReference}'),
             if (intent.expiresAt != null)
@@ -693,5 +692,43 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
+
+final RegExp _gcashAmountPattern = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$');
+
+String? _normalizeGcashAmount(String? raw) {
+  final text = (raw ?? '').replaceAll(',', '').trim();
+  final match = _gcashAmountPattern.firstMatch(text);
+  if (match == null) {
+    return null;
+  }
+  final whole = BigInt.parse(match.group(1)!);
+  final fraction = (match.group(2) ?? '').padRight(2, '0');
+  final cents = whole * BigInt.from(100) + BigInt.parse(fraction);
+  if (cents <= BigInt.zero) {
+    return null;
+  }
+  return '${whole.toString()}.$fraction';
+}
+
+BigInt _gcashCents(String amount) {
+  final match = _gcashAmountPattern.firstMatch(amount.trim());
+  if (match == null) {
+    return BigInt.zero;
+  }
+  final whole = BigInt.parse(match.group(1)!);
+  final fraction = (match.group(2) ?? '').padRight(2, '0');
+  return whole * BigInt.from(100) + BigInt.parse(fraction);
+}
+
+String _gcashAmountFromCents(BigInt cents) {
+  final hundred = BigInt.from(100);
+  final whole = cents ~/ hundred;
+  final fraction = (cents % hundred).toString().padLeft(2, '0');
+  return '$whole.$fraction';
+}
+
+String _gcashMoneyFromCents(BigInt cents) => '₱${_gcashAmountFromCents(cents)}';
+
+String _gcashMoney(String amount) => _gcashMoneyFromCents(_gcashCents(amount));
 
 String _money(double value) => '₱${value.toStringAsFixed(2)}';
