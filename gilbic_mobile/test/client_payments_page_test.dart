@@ -11,6 +11,9 @@ import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
 void main() {
   testWidgets('linked client can view valid and voided payment receipts',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 2400));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
     final repository = _FakeClientPaymentRepository();
 
     await tester.pumpWidget(
@@ -29,11 +32,6 @@ void main() {
     expect(find.text('TEST-REG-001'), findsOneWidget);
     expect(find.text('Valid payments'), findsOneWidget);
     expect(find.text('₱50.00'), findsWidgets);
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('open-client-gcash-payment')),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
     expect(find.text('Direct GCash payment'), findsOneWidget);
     expect(find.text('Pay with GCash'), findsOneWidget);
     expect(find.text('Coming soon through Xendit'), findsNothing);
@@ -43,13 +41,6 @@ void main() {
       ),
       findsNothing,
     );
-    await tester.scrollUntilVisible(
-      find.text(
-        'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
-      ),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
     expect(
       find.text(
         'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
@@ -58,33 +49,10 @@ void main() {
     );
     expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
 
-    // Use the repo's established lazy-ListView test pattern so targets may be
-    // created while the list is dragged into view.
-    final paymentList = find.byType(ListView);
-    final timeline = find.text('Payment timeline');
-    await tester.dragUntilVisible(
-      timeline,
-      paymentList,
-      const Offset(0, -160),
-    );
-    expect(timeline, findsOneWidget);
-
-    final firstReceipt = find.text('Receipt: GBC-20260806-00000010');
-    await tester.dragUntilVisible(
-      firstReceipt,
-      paymentList,
-      const Offset(0, -160),
-    );
-    expect(firstReceipt, findsOneWidget);
+    expect(find.text('Payment timeline'), findsOneWidget);
+    expect(find.text('Receipt: GBC-20260806-00000010'), findsOneWidget);
     expect(find.text('Payment posted'), findsOneWidget);
-
-    final voidedReceipt = find.text('Receipt: GBC-20260805-00000008');
-    await tester.dragUntilVisible(
-      voidedReceipt,
-      paymentList,
-      const Offset(0, -160),
-    );
-    expect(voidedReceipt, findsOneWidget);
+    expect(find.text('Receipt: GBC-20260805-00000008'), findsOneWidget);
     expect(find.text('Voided'), findsOneWidget);
     expect(
       find.text('This receipt was voided and does not reduce your balance.'),
