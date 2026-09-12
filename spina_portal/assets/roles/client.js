@@ -16,6 +16,10 @@ import {
   showToast,
 } from '../ui.js';
 import { classifyLoanType } from '../collector-contract.js';
+import {
+  bindClientGcashPanel,
+  renderClientGcashPanel,
+} from '../client-gcash.js';
 import { bindClientScheduleButtons } from '../client-schedule.js';
 
 export function loanCard(loan) {
@@ -186,7 +190,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-payment-instructions">
     <div class="section-heading"><div><h2>Payment instructions</h2><p>Opening a payment provider page does not itself create an official SPINA payment.</p></div></div>
-    ${errors.gcash ? errorCard(errors.gcash) : `<div class="notice-card ${model.paymentInstructions.payment_available ? '' : 'warning'}"><strong>${model.paymentInstructions.payment_available ? 'GCash checkout available' : 'GCash checkout not connected'}</strong><br>${escapeHtml(model.paymentInstructions.message || model.paymentInstructions.official_payment_rule || 'Ask your collector or office for the approved payment instructions.')}</div>`}
+    ${errors.gcash ? errorCard(errors.gcash) : renderClientGcashPanel({ capability: raw.gcash, loans: asArray(raw.loans.loans) })}
   </section>
 
   <section class="section-card" id="client-updates">
@@ -293,4 +297,5 @@ export async function mountClientWorkspace(context) {
   });
   bindForms(context, raw);
   bindClientScheduleButtons(context);
+  bindClientGcashPanel(context);
 }
