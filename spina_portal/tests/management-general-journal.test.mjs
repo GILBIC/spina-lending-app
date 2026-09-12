@@ -8,6 +8,10 @@ const managementSource = await readFile(
   new URL('../assets/roles/management.js', import.meta.url),
   'utf8',
 );
+const serviceWorkerSource = await readFile(
+  new URL('../sw.js', import.meta.url),
+  'utf8',
+);
 
 async function importJournalModule() {
   try {
@@ -196,4 +200,11 @@ test('Management workspace mounts the isolated General Journal and Trial Balance
   assert.match(managementSource, /id="management-general-journal"/);
   assert.match(managementSource, /hasPermission\(session, 'accounting\.view'\)/);
   assert.doesNotMatch(managementSource, /accounting\.journal\.manage/);
+});
+
+test('installed Web shell precaches the isolated Management General Journal dependency', () => {
+  assert.match(
+    serviceWorkerSource,
+    /'\/assets\/management-general-journal\.js'/,
+  );
 });
