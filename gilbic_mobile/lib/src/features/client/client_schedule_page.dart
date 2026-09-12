@@ -170,16 +170,18 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
   }
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  final digits = parts.first;
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
-    buffer.write(digits[index]);
-  }
-  return '₱$buffer.${parts.last}';
+String _money(String value) {
+  final text = value.trim();
+  final match = RegExp(r'^([+-]?)(\d+)(?:\.(\d+))?$').firstMatch(text);
+  if (match == null) return text;
+  final sign = match.group(1) ?? '';
+  final whole = match.group(2) ?? '0';
+  final fraction = match.group(3);
+  final grouped = whole.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  return '${sign == '-' ? '-' : sign == '+' ? '+' : ''}₱$grouped${fraction == null ? '' : '.$fraction'}';
 }
 
 String _date(DateTime? value) {
