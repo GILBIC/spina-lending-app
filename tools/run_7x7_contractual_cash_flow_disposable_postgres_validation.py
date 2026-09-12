@@ -20,6 +20,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_contractual_cash_flow_readiness_postgres.py",
     TEST_ROOT / "test_7x7_one_active_loan_postgres.py",
     TEST_ROOT / "test_7x7_pricing_compliance_readiness_postgres.py",
+    TEST_ROOT / "test_7x7_contractual_interest_maturity.py",
 )
 
 
@@ -58,8 +59,8 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
             "migrations through 0059, then prove Priority #6 signed-schedule accounting "
-            "authority, one-active-7x7 enforcement, and append-only exact-term "
-            "pricing/compliance readiness evidence."
+            "authority, one-active-7x7 enforcement, exact-term pricing/compliance "
+            "readiness, and contractual-interest maturity stopping."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -121,13 +122,15 @@ def main() -> int:
         print(
             "7x7 contractual cash-flow disposable PostgreSQL validation passed: "
             "the active verified signed schedule controlled contractual duration and "
-            "maturity; fixed daily interest remained based on original principal; "
-            "principal amortized inside the signed daily-payment rows; stale or corrupt "
-            "contract evidence failed closed; one active 7x7 per Client was enforced "
-            "without blocking a simultaneous Regular loan, including concurrent attempts; "
-            "exact-term pricing/compliance review evidence was append-only and a newer "
-            "not-ready review remained authoritative for the same fingerprint; and "
-            "accounting policy/EIR/carrying conclusions and automatic posting stayed separate."
+            "maturity; fixed daily interest remained based on original principal and "
+            "stopped at signed contractual maturity while earned arrears remained "
+            "collectible; principal amortized inside the signed daily-payment rows; "
+            "stale or corrupt contract evidence failed closed; one active 7x7 per Client "
+            "was enforced without blocking a simultaneous Regular loan, including "
+            "concurrent attempts; exact-term pricing/compliance review evidence was "
+            "append-only and a newer not-ready review remained authoritative for the "
+            "same fingerprint; and post-maturity penalty calculation, accounting "
+            "policy/EIR/carrying conclusions, and automatic posting stayed separate."
         )
         return 0
     except psycopg.Error as error:
