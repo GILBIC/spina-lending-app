@@ -21,6 +21,7 @@ import {
   renderClientGcashPanel,
 } from '../client-gcash.js';
 import { bindClientScheduleButtons } from '../client-schedule.js';
+import { renderClientStatement } from '../client-statement.js';
 
 export function loanCard(loan) {
   const type = classifyLoanType(loan.loan_type_name ?? loan.loan_type_code);
@@ -159,6 +160,11 @@ function renderWorkspace(root, model, raw, errors) {
     ${errors.payments ? errorCard(errors.payments) : paymentRows(model.payments)}
   </section>
 
+  <section class="section-card" id="client-statement">
+    <div class="section-heading"><div><h2>Statement</h2><p>Read-only loan and official payment records from the protected SPINA server.</p></div></div>
+    ${errors.statement ? errorCard(errors.statement) : renderClientStatement(raw.statement)}
+  </section>
+
   <section class="section-card" id="client-renewals">
     <div class="section-heading"><div><h2>Renewal requests</h2><p>A request never creates or releases a new loan. Management approval and office processing remain required.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : renewalRows(model.renewals)}
@@ -259,6 +265,7 @@ export async function mountClientWorkspace(context) {
     { id: 'client-overview', label: 'Overview' },
     { id: 'client-loans', label: 'My loans' },
     { id: 'client-payments', label: 'Payments' },
+    { id: 'client-statement', label: 'Statement' },
     { id: 'client-renewals', label: 'Renewals' },
     { id: 'client-support', label: 'Support' },
     { id: 'client-payment-instructions', label: 'Payment instructions' },
@@ -267,10 +274,11 @@ export async function mountClientWorkspace(context) {
   ]);
   root.innerHTML = loadingPanel('Loading your official Client records…');
 
-  const [account, loans, payments, renewals, support, gcash, notifications] = await Promise.all([
+  const [account, loans, payments, statement, renewals, support, gcash, notifications] = await Promise.all([
     settledRequest(api, '/api/v1/account', {}, {}),
     settledRequest(api, '/api/v1/client/loans', {}, { loans: [] }),
     settledRequest(api, '/api/v1/client/payments', {}, { payments: [] }),
+    settledRequest(api, '/api/v1/client/statement', {}, { client: {}, loans: [], payments: [] }),
     settledRequest(api, '/api/v1/client/renewals', {}, { loans: [], requests: [] }),
     settledRequest(api, '/api/v1/client/support', {}, { requests: [] }),
     settledRequest(api, '/api/v1/client/gcash/config', {}, { payment_available: false }),
@@ -280,6 +288,7 @@ export async function mountClientWorkspace(context) {
     account: account.data,
     loans: loans.data,
     payments: payments.data,
+    statement: statement.data,
     renewals: renewals.data,
     support: support.data,
     gcash: gcash.data,
@@ -290,6 +299,7 @@ export async function mountClientWorkspace(context) {
     account: account.error,
     loans: loans.error,
     payments: payments.error,
+    statement: statement.error,
     renewals: renewals.error,
     support: support.error,
     gcash: gcash.error,
