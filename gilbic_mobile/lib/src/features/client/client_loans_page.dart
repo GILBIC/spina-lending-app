@@ -292,13 +292,6 @@ class _LoanCard extends StatelessWidget {
               label: 'Interest rate',
               value: '${_trimNumber(loan.interestRate!)}%',
             ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(value: loan.progress),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('${(loan.progress * 100).toStringAsFixed(1)}% paid'),
-          ),
           const Divider(height: 24),
           _DetailRow(label: 'Released', value: _date(loan.dateReleased)),
           _DetailRow(label: 'Due date', value: _date(loan.dueDate)),
