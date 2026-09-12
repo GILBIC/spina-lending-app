@@ -87,6 +87,15 @@ test('service worker precaches the Client GCash module imported by Client worksp
   assert.match(serviceWorker, /'\/assets\/client-gcash\.js'/);
 });
 
+test('service worker precaches the Client statement module imported by Client workspace', async () => {
+  const serviceWorker = await text('../sw.js');
+  const clientWorkspace = await text('../assets/roles/client.js');
+
+  assert.match(clientWorkspace, /from '\.\.\/client-statement\.js'/);
+  assert.match(clientWorkspace, /renderClientStatement/);
+  assert.match(serviceWorker, /'\/assets\/client-statement\.js'/);
+});
+
 test('application bootstrap mounts each canonical role workspace', async () => {
   const source = await text('../assets/app.js');
 
