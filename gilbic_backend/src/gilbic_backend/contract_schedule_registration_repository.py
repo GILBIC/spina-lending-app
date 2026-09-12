@@ -45,7 +45,7 @@ class ContractScheduleLoanContext:
 
 @dataclass(frozen=True, slots=True)
 class SevenBySevenPricingComplianceReview:
-    id: UUID
+    id: int
     loan_id: UUID
     terms_fingerprint: str
     applicability_review_ready: bool
@@ -56,6 +56,12 @@ class SevenBySevenPricingComplianceReview:
     review_note: str
     reviewed_by_user_id: UUID
     reviewed_at: datetime
+    penalty_policy_version: str | None = None
+    penalty_monthly_rate: Decimal | None = None
+    penalty_proration_days: int | None = None
+    penalty_rate_ceiling: Decimal | None = None
+    lifetime_nonprincipal_cost_ceiling: Decimal | None = None
+    counted_nonprincipal_cost_at_contract_lock: Decimal | None = None
 
     @property
     def ready(self) -> bool:
@@ -64,6 +70,23 @@ class SevenBySevenPricingComplianceReview:
             and self.pricing_cap_review_ready
             and self.disclosure_ready
             and self.total_cost_cap_review_ready
+        )
+
+    @property
+    def penalty_authority_ready(self) -> bool:
+        return (
+            self.ready
+            and bool((self.penalty_policy_version or "").strip())
+            and self.penalty_monthly_rate == Decimal("0.030000")
+            and self.penalty_proration_days == 30
+            and self.penalty_rate_ceiling is not None
+            and self.penalty_rate_ceiling > Decimal("0")
+            and self.lifetime_nonprincipal_cost_ceiling is not None
+            and self.lifetime_nonprincipal_cost_ceiling >= Decimal("0")
+            and self.counted_nonprincipal_cost_at_contract_lock is not None
+            and self.counted_nonprincipal_cost_at_contract_lock >= Decimal("0")
+            and self.counted_nonprincipal_cost_at_contract_lock
+            <= self.lifetime_nonprincipal_cost_ceiling
         )
 
 
@@ -109,6 +132,40 @@ class ContractScheduleRegistrationConflict(ContractScheduleRegistrationError):
 
 def _decimal_text(value: Decimal) -> str:
     return format(value, "f")
+
+
+def build_7x7_penalty_policy_schedule_settings(
+    *,
+    review: SevenBySevenPricingComplianceReview,
+) -> dict[str, object]:
+    """Freeze exact reviewed penalty authority into immutable signed schedule settings."""
+
+    if not review.penalty_authority_ready:
+        raise ContractScheduleRegistrationConflict(
+            "The latest exact-term 7x7 review has no complete signed penalty authority."
+        )
+    assert review.penalty_policy_version is not None
+    assert review.penalty_monthly_rate is not None
+    assert review.penalty_proration_days is not None
+    assert review.penalty_rate_ceiling is not None
+    assert review.lifetime_nonprincipal_cost_ceiling is not None
+    assert review.counted_nonprincipal_cost_at_contract_lock is not None
+    return {
+        "seven_by_seven_penalty_policy": {
+            "policy_version": review.penalty_policy_version.strip(),
+            "review_id": review.id,
+            "terms_fingerprint": review.terms_fingerprint,
+            "contractual_monthly_rate": _decimal_text(review.penalty_monthly_rate),
+            "proration_days": review.penalty_proration_days,
+            "legal_rate_ceiling": _decimal_text(review.penalty_rate_ceiling),
+            "lifetime_nonprincipal_cost_ceiling": _decimal_text(
+                review.lifetime_nonprincipal_cost_ceiling
+            ),
+            "counted_nonprincipal_cost_at_contract_lock": _decimal_text(
+                review.counted_nonprincipal_cost_at_contract_lock
+            ),
+        }
+    }
 
 
 def build_7x7_pricing_compliance_terms_fingerprint(
@@ -217,6 +274,12 @@ class PostgresContractScheduleRegistrationRepository:
         evidence_reference: str,
         review_note: str,
         reviewed_by_user_id: UUID,
+        penalty_policy_version: str | None = None,
+        penalty_monthly_rate: Decimal | None = None,
+        penalty_proration_days: int | None = None,
+        penalty_rate_ceiling: Decimal | None = None,
+        lifetime_nonprincipal_cost_ceiling: Decimal | None = None,
+        counted_nonprincipal_cost_at_contract_lock: Decimal | None = None,
     ) -> SevenBySevenPricingComplianceReview:
         normalized_fingerprint = terms_fingerprint.strip().lower()
         normalized_reference = " ".join(evidence_reference.split())
@@ -232,6 +295,64 @@ class PostgresContractScheduleRegistrationRepository:
                 "Pricing/compliance review evidence reference and note are required."
             )
 
+        normalized_policy_version = (
+            " ".join(penalty_policy_version.split())
+            if penalty_policy_version is not None
+            else None
+        )
+        penalty_values = (
+            normalized_policy_version,
+            penalty_monthly_rate,
+            penalty_proration_days,
+            penalty_rate_ceiling,
+            lifetime_nonprincipal_cost_ceiling,
+            counted_nonprincipal_cost_at_contract_lock,
+        )
+        has_any_penalty_authority = any(value is not None for value in penalty_values)
+        has_all_penalty_authority = all(value is not None for value in penalty_values)
+        if has_any_penalty_authority and not has_all_penalty_authority:
+            raise ContractScheduleRegistrationConflict(
+                "The exact 7x7 penalty authority must be supplied as one complete reviewed tuple."
+            )
+        if has_all_penalty_authority:
+            assert normalized_policy_version is not None
+            assert penalty_monthly_rate is not None
+            assert penalty_proration_days is not None
+            assert penalty_rate_ceiling is not None
+            assert lifetime_nonprincipal_cost_ceiling is not None
+            assert counted_nonprincipal_cost_at_contract_lock is not None
+            if not normalized_policy_version:
+                raise ContractScheduleRegistrationConflict(
+                    "The exact 7x7 penalty policy version cannot be blank."
+                )
+            if penalty_monthly_rate != Decimal("0.030000"):
+                raise ContractScheduleRegistrationConflict(
+                    "The approved 7x7 contractual penalty rate is 3% per month."
+                )
+            if penalty_proration_days != 30:
+                raise ContractScheduleRegistrationConflict(
+                    "The approved 7x7 penalty proration basis is a fixed 30-day month."
+                )
+            if penalty_rate_ceiling <= Decimal("0"):
+                raise ContractScheduleRegistrationConflict(
+                    "The exact terms-bound legal penalty-rate ceiling must be greater than zero."
+                )
+            if lifetime_nonprincipal_cost_ceiling < Decimal("0"):
+                raise ContractScheduleRegistrationConflict(
+                    "The lifetime non-principal cost ceiling cannot be negative."
+                )
+            if counted_nonprincipal_cost_at_contract_lock < Decimal("0"):
+                raise ContractScheduleRegistrationConflict(
+                    "Counted non-principal cost at contract lock cannot be negative."
+                )
+            if (
+                counted_nonprincipal_cost_at_contract_lock
+                > lifetime_nonprincipal_cost_ceiling
+            ):
+                raise ContractScheduleRegistrationConflict(
+                    "Counted non-principal cost at contract lock cannot exceed the lifetime ceiling."
+                )
+
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 row = cursor.execute(
@@ -245,9 +366,16 @@ class PostgresContractScheduleRegistrationRepository:
                         total_cost_cap_review_ready,
                         evidence_reference,
                         review_note,
-                        reviewed_by_user_id
+                        reviewed_by_user_id,
+                        penalty_policy_version,
+                        penalty_monthly_rate,
+                        penalty_proration_days,
+                        penalty_rate_ceiling,
+                        lifetime_nonprincipal_cost_ceiling,
+                        counted_nonprincipal_cost_at_contract_lock
                     ) values (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s
                     )
                     returning *
                     """,
@@ -261,6 +389,12 @@ class PostgresContractScheduleRegistrationRepository:
                         normalized_reference,
                         normalized_note,
                         reviewed_by_user_id,
+                        normalized_policy_version,
+                        penalty_monthly_rate,
+                        penalty_proration_days,
+                        penalty_rate_ceiling,
+                        lifetime_nonprincipal_cost_ceiling,
+                        counted_nonprincipal_cost_at_contract_lock,
                     ),
                 ).fetchone()
         if row is None:
@@ -316,6 +450,7 @@ class PostgresContractScheduleRegistrationRepository:
         confirmed: bool,
         supersede_active: bool,
         agreed_daily_payment: Decimal | None = None,
+        schedule_settings: dict[str, object] | None = None,
     ) -> VerifiedContractScheduleRegistration:
         try:
             with open_connection() as connection:
@@ -334,6 +469,7 @@ class PostgresContractScheduleRegistrationRepository:
                         verification_note=verification_note,
                         verified_by_user_id=verified_by_user_id,
                         agreed_daily_payment=agreed_daily_payment,
+                        schedule_settings=schedule_settings,
                         confirmed=confirmed,
                         supersede_active=supersede_active,
                     )
