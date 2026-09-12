@@ -4,6 +4,7 @@ import {
   escapeHtml,
   formatDate,
   formatMoney,
+  setButtonBusy,
 } from './ui.js';
 
 export function renderClientSchedule(schedule = {}) {
@@ -36,4 +37,30 @@ export function renderClientSchedule(schedule = {}) {
       </tr>`).join('')}</tbody>
     </table></div>` : '<div class="empty-state">No schedule rows are available for this loan.</div>'}
   </div>`;
+}
+
+export function bindClientScheduleButtons(context) {
+  const { root, api } = context;
+  for (const button of root.querySelectorAll('[data-client-schedule-loan]')) {
+    button.addEventListener('click', async () => {
+      const loanId = String(button.dataset.clientScheduleLoan || '').trim();
+      const panel = button.closest('.loan-card')?.querySelector('[data-client-schedule-panel]');
+      if (!loanId || !panel) return;
+
+      setButtonBusy(button, true, 'Loading schedule…');
+      panel.hidden = false;
+      panel.innerHTML = '<div class="loading-panel"><strong>Loading authoritative schedule…</strong></div>';
+      try {
+        const schedule = await api.request(
+          `/api/v1/client/loans/${encodeURIComponent(loanId)}/schedule`,
+        );
+        panel.innerHTML = renderClientSchedule(schedule);
+        setButtonBusy(button, false);
+        button.textContent = 'Refresh schedule';
+      } catch (error) {
+        panel.innerHTML = `<div class="error-card"><strong>Schedule unavailable.</strong><br>${escapeHtml(error?.message || 'The authoritative schedule could not be loaded.')}</div>`;
+        setButtonBusy(button, false);
+      }
+    });
+  }
 }
