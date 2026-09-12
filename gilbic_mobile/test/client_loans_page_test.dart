@@ -68,11 +68,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final button = find.byKey(const Key('client-loan-schedule-regular-loan'));
-    await tester.scrollUntilVisible(
-      button,
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
     await tester.tap(button);
     await tester.pumpAndSettle();
 
