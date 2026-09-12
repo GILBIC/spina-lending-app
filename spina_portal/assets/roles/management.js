@@ -15,6 +15,11 @@ import {
   loadManagementFinancialStatements,
 } from '../management-financial-statements.js';
 import {
+  loadManagementGeneralJournal,
+  loadManagementTrialBalance,
+  managementGeneralJournalMarkup,
+} from '../management-general-journal.js';
+import {
   bindManagementLoanOperations,
   loadManagementLoanOperations,
   managementLoanOperationsMarkup,
@@ -279,6 +284,7 @@ export async function mountManagementWorkspace(context) {
   const { root, api, session, setNavigation } = context;
   const canDashboard = hasPermission(session, 'management.dashboard.view');
   const canViewFinancialStatements = hasPermission(session, 'accounting.view');
+  const canViewGeneralJournal = canViewFinancialStatements;
   const canRenewals = hasPermission(session, 'renewal.manage');
   const canSupport = hasPermission(session, 'support.manage');
   const canManageAccounts = hasPermission(session, 'account.manage');
@@ -289,6 +295,7 @@ export async function mountManagementWorkspace(context) {
     { id: 'management-loans', label: 'Clients & loans' },
     { id: 'management-loan-operations', label: 'Loan operations' },
     ...(canViewFinancialStatements ? [{ id: 'management-financial-statements', label: 'Financial statements' }] : []),
+    ...(canViewGeneralJournal ? [{ id: 'management-general-journal', label: 'General journal & trial balance' }] : []),
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
     ...(canSupport ? [{ id: 'management-support', label: 'Support' }] : []),
@@ -298,7 +305,7 @@ export async function mountManagementWorkspace(context) {
   ]);
   root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
 
-  const [account, overview, loans, loanOperations, financialStatements, alerts, renewals, support, staff] = await Promise.all([
+  const [account, overview, loans, loanOperations, financialStatements, generalJournal, trialBalance, alerts, renewals, support, staff] = await Promise.all([
     settledRequest(api, '/api/v1/account', {}, {}),
     canDashboard ? settledRequest(api, '/api/v1/management/dashboard-overview', {}, { metrics: [] }) : Promise.resolve({ data: { metrics: [] }, error: null }),
     settledRequest(api, '/api/v1/management/loans?status=active', {}, { summary: {}, loans: [] }),
@@ -310,6 +317,16 @@ export async function mountManagementWorkspace(context) {
           .then((data) => ({ data, error: null }))
           .catch((error) => ({ data: { statements: null }, error }))
       : Promise.resolve({ data: { statements: null }, error: null }),
+    canViewGeneralJournal
+      ? loadManagementGeneralJournal(api)
+          .then((data) => ({ data, error: null }))
+          .catch((error) => ({ data: { entries: [], can_manage: false, automatic_loan_posting_enabled: false }, error }))
+      : Promise.resolve({ data: { entries: [], can_manage: false, automatic_loan_posting_enabled: false }, error: null }),
+    canViewGeneralJournal
+      ? loadManagementTrialBalance(api)
+          .then((data) => ({ data, error: null }))
+          .catch((error) => ({ data: { trial_balance: null }, error }))
+      : Promise.resolve({ data: { trial_balance: null }, error: null }),
     canDashboard ? settledRequest(api, '/api/v1/management/alerts-audit?window_days=30&limit=100', {}, { alerts: [], events: [] }) : Promise.resolve({ data: { alerts: [], events: [] }, error: null }),
     canRenewals ? settledRequest(api, '/api/v1/management/renewals?status=pending', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
     canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
@@ -323,6 +340,7 @@ export async function mountManagementWorkspace(context) {
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
   <section class="section-card" id="management-loan-operations"><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" placeholder="Client, receipt, loan, or collector" /><select name="status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
+  ${canViewGeneralJournal ? `<section class="section-card" id="management-general-journal"><div class="section-heading"><div><h2>General journal & trial balance</h2><p>Read-only accounting evidence from the protected SPINA accounting service. Journal changes remain in dedicated protected workflows.</p></div></div>${generalJournal.error ? errorCard(generalJournal.error) : ''}${trialBalance.error ? errorCard(trialBalance.error) : ''}${managementGeneralJournalMarkup({ journals: generalJournal.data, trialBalance: trialBalance.data })}</section>` : ''}
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
