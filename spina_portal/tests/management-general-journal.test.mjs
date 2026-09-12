@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { availableRoleActions } from '../assets/roles.js';
+
+const managementSource = await readFile(
+  new URL('../assets/roles/management.js', import.meta.url),
+  'utf8',
+);
 
 async function importJournalModule() {
   try {
@@ -180,4 +186,14 @@ test('General Journal markup renders authoritative server values and no mutation
   assert.doesNotMatch(markup, />33\.00</);
   assert.doesNotMatch(markup, />99\.00</);
   assert.doesNotMatch(markup, /Create journal|Edit journal|Post journal|Reverse journal|Cancel draft/i);
+});
+
+test('Management workspace mounts the isolated General Journal and Trial Balance read-only surface', () => {
+  assert.match(managementSource, /management-general-journal\.js/);
+  assert.match(managementSource, /loadManagementGeneralJournal/);
+  assert.match(managementSource, /loadManagementTrialBalance/);
+  assert.match(managementSource, /managementGeneralJournalMarkup/);
+  assert.match(managementSource, /id="management-general-journal"/);
+  assert.match(managementSource, /hasPermission\(session, 'accounting\.view'\)/);
+  assert.doesNotMatch(managementSource, /accounting\.journal\.manage/);
 });
