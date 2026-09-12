@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -42,6 +44,30 @@ class ContractScheduleLoanContext:
 
 
 @dataclass(frozen=True, slots=True)
+class SevenBySevenPricingComplianceReview:
+    id: UUID
+    loan_id: UUID
+    terms_fingerprint: str
+    applicability_review_ready: bool
+    pricing_cap_review_ready: bool
+    disclosure_ready: bool
+    total_cost_cap_review_ready: bool
+    evidence_reference: str
+    review_note: str
+    reviewed_by_user_id: UUID
+    reviewed_at: datetime
+
+    @property
+    def ready(self) -> bool:
+        return (
+            self.applicability_review_ready
+            and self.pricing_cap_review_ready
+            and self.disclosure_ready
+            and self.total_cost_cap_review_ready
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class VerifiedContractScheduleRegistration:
     schedule_id: UUID
     loan_id: UUID
@@ -79,6 +105,63 @@ class ContractScheduleRegistrationNotFound(ContractScheduleRegistrationError):
 
 class ContractScheduleRegistrationConflict(ContractScheduleRegistrationError):
     code = "contract_schedule_registration_conflict"
+
+
+def _decimal_text(value: Decimal) -> str:
+    return format(value, "f")
+
+
+def build_7x7_pricing_compliance_terms_fingerprint(
+    *,
+    context: ContractScheduleLoanContext,
+    payment_frequency: PaymentFrequency,
+    contract_reference: str,
+    contract_signed_date: date,
+    effective_from: date,
+    grace_days: int,
+    agreed_daily_payment: Decimal,
+    installments: Sequence[VerifiedScheduleInstallment],
+) -> str:
+    rows: list[dict[str, object]] = []
+    for installment in installments:
+        principal_component = getattr(installment, "principal_component", None)
+        interest_component = getattr(installment, "interest_component", None)
+        rows.append(
+            {
+                "installment_number": installment.installment_number,
+                "due_date": installment.due_date.isoformat(),
+                "contractual_amount": _decimal_text(installment.contractual_amount),
+                "principal_component": (
+                    _decimal_text(principal_component)
+                    if principal_component is not None
+                    else None
+                ),
+                "interest_component": (
+                    _decimal_text(interest_component)
+                    if interest_component is not None
+                    else None
+                ),
+            }
+        )
+    payload = {
+        "loan_id": str(context.loan_id),
+        "principal": _decimal_text(context.principal),
+        "daily_interest_per_1000": _decimal_text(context.daily_interest_per_1000),
+        "payment_frequency": payment_frequency,
+        "contract_reference": contract_reference,
+        "contract_signed_date": contract_signed_date.isoformat(),
+        "effective_from": effective_from.isoformat(),
+        "grace_days": grace_days,
+        "agreed_daily_payment": _decimal_text(agreed_daily_payment),
+        "installments": rows,
+    }
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 class PostgresContractScheduleRegistrationRepository:
@@ -121,6 +204,100 @@ class PostgresContractScheduleRegistrationRepository:
         if row is None:
             raise ContractScheduleRegistrationNotFound("The loan does not exist.")
         return ContractScheduleLoanContext(**row)
+
+    def record_7x7_pricing_compliance_review(
+        self,
+        *,
+        loan_id: UUID,
+        terms_fingerprint: str,
+        applicability_review_ready: bool,
+        pricing_cap_review_ready: bool,
+        disclosure_ready: bool,
+        total_cost_cap_review_ready: bool,
+        evidence_reference: str,
+        review_note: str,
+        reviewed_by_user_id: UUID,
+    ) -> SevenBySevenPricingComplianceReview:
+        normalized_fingerprint = terms_fingerprint.strip().lower()
+        normalized_reference = " ".join(evidence_reference.split())
+        normalized_note = " ".join(review_note.split())
+        if len(normalized_fingerprint) != 64 or any(
+            char not in "0123456789abcdef" for char in normalized_fingerprint
+        ):
+            raise ContractScheduleRegistrationConflict(
+                "The exact 7x7 pricing/compliance terms fingerprint is invalid."
+            )
+        if not normalized_reference or not normalized_note:
+            raise ContractScheduleRegistrationConflict(
+                "Pricing/compliance review evidence reference and note are required."
+            )
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                row = cursor.execute(
+                    """
+                    insert into lending.seven_by_seven_pricing_compliance_reviews (
+                        loan_id,
+                        terms_fingerprint,
+                        applicability_review_ready,
+                        pricing_cap_review_ready,
+                        disclosure_ready,
+                        total_cost_cap_review_ready,
+                        evidence_reference,
+                        review_note,
+                        reviewed_by_user_id
+                    ) values (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    )
+                    returning *
+                    """,
+                    (
+                        loan_id,
+                        normalized_fingerprint,
+                        applicability_review_ready,
+                        pricing_cap_review_ready,
+                        disclosure_ready,
+                        total_cost_cap_review_ready,
+                        normalized_reference,
+                        normalized_note,
+                        reviewed_by_user_id,
+                    ),
+                ).fetchone()
+        if row is None:
+            raise ContractScheduleRegistrationConflict(
+                "7x7 pricing/compliance review evidence could not be reloaded."
+            )
+        return SevenBySevenPricingComplianceReview(**row)
+
+    def require_7x7_pricing_compliance_ready(
+        self,
+        *,
+        loan_id: UUID,
+        terms_fingerprint: str,
+    ) -> SevenBySevenPricingComplianceReview:
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                row = cursor.execute(
+                    """
+                    select *
+                    from lending.seven_by_seven_pricing_compliance_reviews
+                    where loan_id = %s
+                      and terms_fingerprint = %s
+                    order by reviewed_at desc, id desc
+                    limit 1
+                    """,
+                    (loan_id, terms_fingerprint.strip().lower()),
+                ).fetchone()
+        if row is None:
+            raise ContractScheduleRegistrationConflict(
+                "The exact proposed 7x7 terms have no pricing/compliance readiness review."
+            )
+        review = SevenBySevenPricingComplianceReview(**row)
+        if not review.ready:
+            raise ContractScheduleRegistrationConflict(
+                "The latest exact-term 7x7 pricing/compliance review is not fully ready for contract lock."
+            )
+        return review
 
     def register_schedule(
         self,
