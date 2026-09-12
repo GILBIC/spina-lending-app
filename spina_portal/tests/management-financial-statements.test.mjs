@@ -8,6 +8,10 @@ const managementSource = await readFile(
   new URL('../assets/roles/management.js', import.meta.url),
   'utf8',
 );
+const serviceWorkerSource = await readFile(
+  new URL('../sw.js', import.meta.url),
+  'utf8',
+);
 
 async function importStatementsModule() {
   try {
@@ -133,4 +137,8 @@ test('Management workspace mounts Financial Statements only through the isolated
   assert.match(managementSource, /loadManagementFinancialStatements/);
   assert.match(managementSource, /financialStatementsMarkup/);
   assert.match(managementSource, /id="management-financial-statements"/);
+});
+
+test('installed Web shell precaches the isolated Management Financial Statements dependency', () => {
+  assert.match(serviceWorkerSource, /'\/assets\/management-financial-statements\.js'/);
 });
