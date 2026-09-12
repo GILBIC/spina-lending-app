@@ -49,8 +49,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
-            "migrations through 0059, prove the verified greenfield 7x7 contractual "
-            "daily-interest/principal-at-maturity cash-flow gate, then remove the database."
+            "migrations through 0059, then prove that Priority #6 accounting readiness "
+            "uses the exact verified signed 7x7 daily-payment schedule instead of "
+            "reconstructing a second schedule from the product default term."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -111,11 +112,13 @@ def main() -> int:
             )
         print(
             "7x7 contractual cash-flow disposable PostgreSQL validation passed: "
-            "verified signed-contract evidence controlled the schedule, daily contractual "
-            "interest remained based on original principal, the base maturity row included "
-            "full principal, missing/early principal and unsupported evidence failed closed, "
-            "prepayment expectation/EIR/SPPI/carrying decisions stayed separate, journal "
-            "lines stayed disabled, and automatic source posting remained disabled."
+            "the active verified signed schedule controlled contractual duration and "
+            "maturity, fixed daily interest remained based on original principal, "
+            "principal amortized inside the signed daily-payment rows, the final row "
+            "reconciled exact remaining principal, stale loan maturity/corrupt components/"
+            "unsupported evidence failed closed, accounting policy/EIR/carrying conclusions "
+            "stayed separate, journal lines stayed disabled, and automatic source posting "
+            "remained disabled."
         )
         return 0
     except psycopg.Error as error:
