@@ -1,8 +1,10 @@
 import {
   asArray,
   emptyState,
+  errorCard,
   escapeHtml,
   formatMoney,
+  loadingPanel,
   metricCard,
 } from './ui.js';
 
@@ -111,4 +113,31 @@ export function managementPastDueReportMarkup(payload = {}) {
     <div class="section-heading"><div><h3>Reason summary</h3><p>Server-returned Client, Collector, Area, reason, and event grouping.</p></div></div>
     ${rowsMarkup(payload.rows)}
   </div>`;
+}
+
+export function bindManagementPastDueReport(context) {
+  const form = context.root.querySelector('#management-past-due-report-search');
+  const target = context.root.querySelector('#management-past-due-report-results');
+  if (!form || !target) return;
+
+  const reload = async () => {
+    target.innerHTML = loadingPanel('Loading authoritative Past-Due reporting…');
+    try {
+      const data = await loadManagementPastDueReport(context.api, {
+        startDate: form.querySelector('[name="start_date"]')?.value ?? '',
+        endDate: form.querySelector('[name="end_date"]')?.value ?? '',
+        area: form.querySelector('[name="area"]')?.value ?? '',
+        reasonCode: form.querySelector('[name="reason_code"]')?.value ?? '',
+        eventKind: form.querySelector('[name="event_kind"]')?.value ?? '',
+      });
+      target.innerHTML = managementPastDueReportMarkup(data);
+    } catch (error) {
+      target.innerHTML = errorCard(error);
+    }
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await reload();
+  });
 }
