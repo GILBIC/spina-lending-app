@@ -58,29 +58,33 @@ void main() {
     );
     expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
 
-    // The taller GCash action card can leave the next lazy ListView child
-    // unbuilt. Advance in bounded steps until the timeline enters the cache.
+    // Use the repo's established lazy-ListView test pattern so targets may be
+    // created while the list is dragged into view.
+    final paymentList = find.byType(ListView);
     final timeline = find.text('Payment timeline');
-    final scrollable = find.byType(Scrollable).first;
-    for (var attempt = 0; attempt < 6 && timeline.evaluate().isEmpty; attempt++) {
-      await tester.drag(scrollable, const Offset(0, -200));
-      await tester.pumpAndSettle();
-    }
-    expect(timeline, findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Receipt: GBC-20260806-00000010'),
-      300,
-      scrollable: scrollable,
+    await tester.dragUntilVisible(
+      timeline,
+      paymentList,
+      const Offset(0, -160),
     );
-    expect(find.text('Receipt: GBC-20260806-00000010'), findsOneWidget);
+    expect(timeline, findsOneWidget);
+
+    final firstReceipt = find.text('Receipt: GBC-20260806-00000010');
+    await tester.dragUntilVisible(
+      firstReceipt,
+      paymentList,
+      const Offset(0, -160),
+    );
+    expect(firstReceipt, findsOneWidget);
     expect(find.text('Payment posted'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Receipt: GBC-20260805-00000008'),
-      300,
-      scrollable: scrollable,
+    final voidedReceipt = find.text('Receipt: GBC-20260805-00000008');
+    await tester.dragUntilVisible(
+      voidedReceipt,
+      paymentList,
+      const Offset(0, -160),
     );
-    expect(find.text('Receipt: GBC-20260805-00000008'), findsOneWidget);
+    expect(voidedReceipt, findsOneWidget);
     expect(find.text('Voided'), findsOneWidget);
     expect(
       find.text('This receipt was voided and does not reduce your balance.'),
