@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { availableRoleActions } from '../assets/roles.js';
+
+const managementSource = await readFile(
+  new URL('../assets/roles/management.js', import.meta.url),
+  'utf8',
+);
 
 async function importPastDueModule() {
   try {
@@ -158,4 +164,72 @@ test('Past-Due report markup fails safe when the authoritative schema is unavail
 
   assert.match(markup, /not available|unavailable/i);
   assert.doesNotMatch(markup, /Unknown client|Unknown collector/);
+});
+
+test('Past-Due report binding reloads only its result panel with approved form filters', async () => {
+  const report = await importPastDueModule();
+  assert.equal(typeof report.bindManagementPastDueReport, 'function');
+
+  const listeners = {};
+  const controls = {
+    '[name="start_date"]': { value: '2026-08-01' },
+    '[name="end_date"]': { value: '2026-08-31' },
+    '[name="area"]': { value: ' Cardona ' },
+    '[name="reason_code"]': { value: 'business_slow' },
+    '[name="event_kind"]': { value: 'partial_payment' },
+  };
+  const form = {
+    addEventListener(type, handler) {
+      listeners[type] = handler;
+    },
+    querySelector(selector) {
+      return controls[selector] ?? null;
+    },
+  };
+  const target = { innerHTML: '' };
+  const root = {
+    querySelector(selector) {
+      if (selector === '#management-past-due-report-search') return form;
+      if (selector === '#management-past-due-report-results') return target;
+      return null;
+    },
+  };
+  const calls = [];
+  const api = {
+    async request(path, options = {}) {
+      calls.push({ path, options });
+      return {
+        schema_available: true,
+        summary: {
+          event_count: 7,
+          total_past_due_amount: '700.00',
+          remaining_past_due_amount: '300.00',
+        },
+        rows: [],
+      };
+    },
+  };
+
+  report.bindManagementPastDueReport({ root, api });
+  assert.equal(typeof listeners.submit, 'function');
+  await listeners.submit({ preventDefault() {} });
+
+  assert.deepEqual(calls, [
+    {
+      path: '/api/v1/management/past-due/reasons?start_date=2026-08-01&end_date=2026-08-31&area=Cardona&reason_code=business_slow&event_kind=partial_payment',
+      options: {},
+    },
+  ]);
+  assert.match(target.innerHTML, /700\.00/);
+});
+
+test('Management workspace mounts Past-Due reporting only through the existing dashboard gate', () => {
+  assert.match(managementSource, /management-past-due-report\.js/);
+  assert.match(managementSource, /loadManagementPastDueReport/);
+  assert.match(managementSource, /managementPastDueReportMarkup/);
+  assert.match(managementSource, /bindManagementPastDueReport/);
+  assert.match(managementSource, /id="management-past-due-report"/);
+  assert.match(managementSource, /management-past-due-report-search/);
+  assert.match(managementSource, /canDashboard/);
+  assert.doesNotMatch(managementSource, /name="client_id"|name="collector_user_id"/);
 });
