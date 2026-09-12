@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from typing import Any, Literal, Sequence
 from uuid import UUID
 
@@ -39,6 +40,7 @@ def register_verified_contract_schedule(
     evidence_reference: str,
     verification_note: str,
     verified_by_user_id: UUID,
+    agreed_daily_payment: Decimal | None = None,
     confirmed: bool,
     supersede_active: bool = False,
 ) -> UUID:
@@ -78,6 +80,28 @@ def register_verified_contract_schedule(
             raise ContractScheduleConflict(
                 "Contractual principal and interest components must be supplied together."
             )
+
+    signed_maturity: date | None = None
+    if agreed_daily_payment is not None:
+        if payment_frequency != "daily" or not installments or not all(
+            isinstance(installment, SevenBySevenSignedInstallment)
+            for installment in installments
+        ):
+            raise ContractScheduleConflict(
+                "Agreed daily payment is only supported for signed 7x7 daily schedules."
+            )
+        if agreed_daily_payment <= Decimal("0.00"):
+            raise ContractScheduleConflict(
+                "The agreed 7x7 daily payment must be greater than zero."
+            )
+        if any(
+            installment.contractual_amount != agreed_daily_payment
+            for installment in installments[:-1]
+        ) or installments[-1].contractual_amount > agreed_daily_payment:
+            raise ContractScheduleConflict(
+                "The signed 7x7 rows do not match the agreed daily payment."
+            )
+        signed_maturity = max(installment.due_date for installment in installments)
 
     if supersede_active:
         cursor.execute(
@@ -142,4 +166,16 @@ def register_verified_contract_schedule(
             verified_by_user_id,
         ),
     )
+
+    if agreed_daily_payment is not None and signed_maturity is not None:
+        cursor.execute(
+            """
+            update lending.loans
+            set daily_amount = %s,
+                due_date = %s
+            where id = %s
+            """,
+            (agreed_daily_payment, signed_maturity, loan_id),
+        )
+
     return schedule_id
