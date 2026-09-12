@@ -6,7 +6,7 @@ BEGIN;
 -- accrue penalties, change loan balances, or post accounting entries.
 
 CREATE TABLE IF NOT EXISTS lending.seven_by_seven_pricing_compliance_reviews (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     loan_id UUID NOT NULL
         REFERENCES lending.loans(id) ON DELETE RESTRICT,
     terms_fingerprint TEXT NOT NULL
