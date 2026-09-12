@@ -19,6 +19,7 @@ TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_contractual_cash_flow_readiness_postgres.py",
     TEST_ROOT / "test_7x7_one_active_loan_postgres.py",
+    TEST_ROOT / "test_7x7_pricing_compliance_readiness_postgres.py",
 )
 
 
@@ -56,9 +57,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
-            "migrations through 0059, then prove that Priority #6 accounting readiness "
-            "uses the exact verified signed 7x7 daily-payment schedule and that one Client "
-            "cannot have two active 7x7 loans."
+            "migrations through 0059, then prove Priority #6 signed-schedule accounting "
+            "authority, one-active-7x7 enforcement, and append-only exact-term "
+            "pricing/compliance readiness evidence."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -124,7 +125,9 @@ def main() -> int:
             "principal amortized inside the signed daily-payment rows; stale or corrupt "
             "contract evidence failed closed; one active 7x7 per Client was enforced "
             "without blocking a simultaneous Regular loan, including concurrent attempts; "
-            "and accounting policy/EIR/carrying conclusions and automatic posting stayed separate."
+            "exact-term pricing/compliance review evidence was append-only and a newer "
+            "not-ready review remained authoritative for the same fingerprint; and "
+            "accounting policy/EIR/carrying conclusions and automatic posting stayed separate."
         )
         return 0
     except psycopg.Error as error:
