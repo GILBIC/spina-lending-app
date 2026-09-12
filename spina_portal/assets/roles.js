@@ -48,6 +48,9 @@ export const ROLE_ENDPOINTS = Object.freeze({
       permission: 'management.dashboard.view',
     }),
     action('management-loans', 'Clients & loans', '/api/v1/management/loans', { section: 'Portfolio' }),
+    action('management-loan-operations', 'Loan operations', '/api/v1/management/loan-operations', {
+      section: 'Operations',
+    }),
     action(
       'management-financial-statements',
       'Financial statements',
