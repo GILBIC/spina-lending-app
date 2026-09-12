@@ -58,18 +58,19 @@ void main() {
     );
     expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
 
-    // The taller GCash action card can leave the next lazy ListView child just
-    // outside the built viewport. Advance once before locating the timeline.
-    await tester.drag(
-      find.byType(Scrollable).first,
-      const Offset(0, -250),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Payment timeline'), findsOneWidget);
+    // The taller GCash action card can leave the next lazy ListView child
+    // unbuilt. Advance in bounded steps until the timeline enters the cache.
+    final timeline = find.text('Payment timeline');
+    final scrollable = find.byType(Scrollable).first;
+    for (var attempt = 0; attempt < 6 && timeline.evaluate().isEmpty; attempt++) {
+      await tester.drag(scrollable, const Offset(0, -200));
+      await tester.pumpAndSettle();
+    }
+    expect(timeline, findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Receipt: GBC-20260806-00000010'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: scrollable,
     );
     expect(find.text('Receipt: GBC-20260806-00000010'), findsOneWidget);
     expect(find.text('Payment posted'), findsOneWidget);
@@ -77,7 +78,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Receipt: GBC-20260805-00000008'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: scrollable,
     );
     expect(find.text('Receipt: GBC-20260805-00000008'), findsOneWidget);
     expect(find.text('Voided'), findsOneWidget);
