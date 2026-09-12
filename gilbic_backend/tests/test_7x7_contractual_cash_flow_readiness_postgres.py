@@ -9,10 +9,6 @@ from uuid import uuid4
 import psycopg
 import pytest
 
-from gilbic_backend.seven_by_seven_signed_schedule import (
-    generate_signed_seven_by_seven_schedule,
-)
-
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -136,12 +132,26 @@ def _schedule(
         ),
     ).fetchone()[0]
 
-    rows = generate_signed_seven_by_seven_schedule(
-        original_principal=Decimal("3000.00"),
-        agreed_daily_payment=Decimal("50.00"),
-        daily_interest_per_1000=Decimal("7.00"),
-        first_due_date=release_date + timedelta(days=1),
+    rows = [
+        (
+            installment_number,
+            release_date + timedelta(days=installment_number),
+            Decimal("50.00"),
+            Decimal("29.00"),
+            Decimal("21.00"),
+        )
+        for installment_number in range(1, 104)
+    ]
+    rows.append(
+        (
+            104,
+            release_date + timedelta(days=104),
+            Decimal("34.00"),
+            Decimal("13.00"),
+            Decimal("21.00"),
+        )
     )
+
     with connection.cursor() as cursor:
         cursor.executemany(
             """
@@ -153,17 +163,23 @@ def _schedule(
             [
                 (
                     schedule_id,
-                    row.installment_number,
-                    row.due_date,
-                    row.contractual_amount,
+                    installment_number,
+                    due_date,
+                    contractual_amount,
                     (
                         Decimal("28.00")
-                        if corrupt_first_principal and row.installment_number == 1
-                        else row.principal_component
+                        if corrupt_first_principal and installment_number == 1
+                        else principal_component
                     ),
-                    row.interest_component,
+                    interest_component,
                 )
-                for row in rows
+                for (
+                    installment_number,
+                    due_date,
+                    contractual_amount,
+                    principal_component,
+                    interest_component,
+                ) in rows
             ],
         )
 
