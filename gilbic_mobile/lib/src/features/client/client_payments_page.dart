@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
+import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
@@ -159,7 +160,6 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
           ),
           const SizedBox(height: 12),
           Container(
-            key: const Key('client-gcash-placeholder'),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -193,10 +193,25 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
-                      const Text('Coming soon through Xendit'),
-                      const SizedBox(height: 5),
                       const Text(
-                        'This is a placeholder only. It cannot accept or post a payment yet.',
+                        'Availability and payment limits are checked by SPINA when you open the payment screen.',
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('open-client-gcash-payment'),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ClientGcashPaymentPage(
+                                session: widget.session,
+                                deviceIdentityProvider:
+                                    widget.deviceIdentityProvider,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.account_balance_wallet_outlined),
+                        label: const Text('Pay with GCash'),
                       ),
                     ],
                   ),
