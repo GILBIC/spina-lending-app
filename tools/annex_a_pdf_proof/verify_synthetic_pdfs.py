@@ -1,8 +1,9 @@
-"""Check the five OFFLINE synthetic Annex A PDFs against existing SPINA rows.
+"""Check six OFFLINE synthetic Annex A PDFs against existing SPINA rows.
 
 Requires PyMuPDF and the companion synthetic_annex_a.py. This verifier does not
 replace visual review, prove legal rates or authorize a real document. Only use
-with the five fixed synthetic fixture PDFs. No PDF bytes are changed here.
+with the five fixed 7x7 fixtures and one fixed Regular fixture. No PDF bytes are
+changed here.
 """
 from __future__ import annotations
 
@@ -14,7 +15,13 @@ import re
 
 import fitz
 
-from synthetic_annex_a import CASES, NOTICE, make_case, row_values
+from synthetic_annex_a import (
+    CASES,
+    NOTICE,
+    make_case,
+    make_regular_case,
+    row_values,
+)
 
 MONEY = r"(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}"
 ROW = re.compile(
@@ -34,9 +41,16 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
-def verify(path: Path, count: int) -> dict:
-    result = make_case(count)['projection']
+def verify(path: Path, count: int, *, regular: bool = False) -> dict:
+    case = make_regular_case() if regular else make_case(count)
+    result = case['projection']
     expected = [row_values(row) for row in result.rows]
+    identity = 'REGULAR-120' if regular else str(count)
+    product_label = (
+        'Regular Cash Loan (synthetic only)'
+        if regular
+        else '7x7 Cash Loan (synthetic only)'
+    )
     with fitz.open(path) as doc:
         actual, per_page, texts, fonts = [], [], [], set()
         for number, page in enumerate(doc, start=1):
@@ -46,7 +60,7 @@ def verify(path: Path, count: int) -> dict:
             texts.append(text)
             require(NOTICE in text, f'{path.name} page {number}: synthetic warning missing')
             require(f'Page {number} of {len(doc)}' in text, 'Incorrect page numbering')
-            require(f'Doc: SYN-ANNEX-{count} |' in text, 'Wrong document identity')
+            require(f'Doc: SYN-ANNEX-{identity} |' in text, 'Wrong document identity')
             require('Packet: SYN-v1' in text and 'Schedule: SYN-v1' in text, 'Missing versions')
             require(not list(page.widgets() or []), 'Fillable PDF widget present')
             require(not any(s in text for s in ('{', '}', '\ufffd', 'Template instruction:', 'Working layout R2')),
@@ -73,6 +87,12 @@ def verify(path: Path, count: int) -> dict:
         require(actual == expected, f'{path.name}: PDF rows do not match authoritative projection')
         require(len(actual) == count and actual[-1][-1] == '0.00', 'Wrong final row/principal')
         complete_text = '\n'.join(texts)
+        require(product_label in complete_text, 'Wrong product label')
+        if regular:
+            require(
+                '20.00% fixed contractual interest (synthetic fixture)' in complete_text,
+                'Wrong Regular synthetic interest disclosure',
+            )
         summaries = [i for i, text in enumerate(texts) if all(label in text for label in TOTAL_LABELS)]
         require(len(summaries) == 1, 'Totals block is missing, duplicated or split')
         amounts = [result.total_principal, result.total_interest, 0, result.total_due, 0]
@@ -88,6 +108,7 @@ def verify(path: Path, count: int) -> dict:
         return {
             'file': path.name, 'bytes': path.stat().st_size,
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'status': 'PASS',
+            'product': 'Regular' if regular else '7x7',
             'installments': count, 'pages': len(doc), 'rows_by_page': per_page,
             'scheduled_principal': str(result.total_principal), 'contractual_interest': str(result.total_interest),
             'other_scheduled_charges': '0.00', 'total_payable': str(result.total_due),
@@ -108,6 +129,10 @@ def main() -> None:
         matches = list(args.pdf_dir.rglob(name))
         require(len(matches) == 1, f'Expected exactly one {name}')
         reports.append(verify(matches[0], count))
+    regular_name = 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.pdf'
+    regular_matches = list(args.pdf_dir.rglob(regular_name))
+    require(len(regular_matches) == 1, f'Expected exactly one {regular_name}')
+    reports.append(verify(regular_matches[0], 120, regular=True))
     output = json.dumps({'scope': 'OFFLINE_SYNTHETIC_PROOF_ONLY', 'results': reports}, indent=2)
     if args.report:
         require(not args.report.exists(), 'Do not overwrite an existing report')

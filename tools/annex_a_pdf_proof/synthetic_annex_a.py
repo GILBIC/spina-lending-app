@@ -1,10 +1,11 @@
 """Offline synthetic Annex A R2 layout proof; NOT a production document API.
 
 Requires python-docx and the separately supplied original hash-locked R2 DOCX.
-Only five fixed synthetic cases are supported. Existing SPINA schedule and
-projection modules are imported, never copied into this tool or reimplemented.
-Run from a checkout with gilbic_backend/src on PYTHONPATH. Conversion/visual QA
-are separate from this DOCX assembly; no approval, signature or DB write occurs.
+Only six fixed synthetic cases are supported: five 7x7 and one Regular.
+Existing SPINA schedule and projection modules are imported, never copied into
+this tool or reimplemented. Run from a checkout with gilbic_backend/src on
+PYTHONPATH. Conversion/visual QA are separate from this DOCX assembly; no
+approval, signature or DB write occurs.
 """
 from __future__ import annotations
 
@@ -21,8 +22,17 @@ from docx.shared import Pt
 from docx.table import _Row
 from docx.text.paragraph import Paragraph
 
-from gilbic_backend.annex_a_schedule_projection import project_seven_by_seven_annex_a
-from gilbic_backend.seven_by_seven_signed_schedule import generate_signed_seven_by_seven_schedule
+from gilbic_backend.annex_a_schedule_projection import (
+    project_regular_annex_a,
+    project_seven_by_seven_annex_a,
+)
+from gilbic_backend.contract_schedule_engine import (
+    generate_contract_installments,
+    prepare_regular_contract_components,
+)
+from gilbic_backend.seven_by_seven_signed_schedule import (
+    generate_signed_seven_by_seven_schedule,
+)
 
 TEMPLATE_SHA256 = '80ef81aec3141f9c96a5d78f1edd1e7367c8a6be9ab7dca92e81b07756217ddb'
 NOTICE = 'SYNTHETIC TEST COPY - NOT FOR SIGNING OR RELEASE'
@@ -39,7 +49,7 @@ class SyntheticProofError(ValueError):
 
 def make_case(count: int) -> dict:
     if type(count) is not int or count not in CASES:
-        raise SyntheticProofError('Only the five fixed synthetic cases are supported.')
+        raise SyntheticProofError('Only the five fixed 7x7 synthetic cases are supported.')
     principal, daily = CASES[count]
     source = generate_signed_seven_by_seven_schedule(
         original_principal=principal, agreed_daily_payment=daily,
@@ -53,7 +63,48 @@ def make_case(count: int) -> dict:
             'source': source, 'projection': projection}
 
 
-def synthetic_context(count: int) -> dict[str, str]:
+def make_regular_case() -> dict:
+    """Build the one fixed Regular proof fixture from existing schedule authority."""
+
+    principal = '5000.00'
+    interest = '1000.00'
+    total = '6000.00'
+    daily = '50.00'
+    count = 120
+    first_due_date = date(2026, 9, 14)
+    generic = generate_contract_installments(
+        payment_frequency='daily',
+        contractual_total=Decimal(total),
+        first_due_date=first_due_date,
+        installment_count=count,
+        regular_installment_amount=Decimal(daily),
+    )
+    source = prepare_regular_contract_components(
+        installments=generic,
+        original_principal=Decimal(principal),
+        contractual_interest=Decimal(interest),
+    )
+    projection = project_regular_annex_a(
+        original_principal=Decimal(principal),
+        installments=source,
+        expected_installment_count=count,
+        expected_first_due_date=first_due_date,
+        expected_maturity_date=source[-1].due_date,
+        expected_total_payable=Decimal(total),
+    )
+    return {
+        'product': 'Regular',
+        'count': count,
+        'principal': principal,
+        'interest': interest,
+        'rate_percent': f'{(Decimal(interest) / Decimal(principal) * Decimal("100")):.2f}',
+        'daily': daily,
+        'source': source,
+        'projection': projection,
+    }
+
+
+def synthetic_context(count: int | str) -> dict[str, str]:
     return {
         'borrower_name': f'SYNTHETIC TEST BORROWER {count}',
         'company_line': 'SYNTHETIC OFFICE - NOT A REGISTERED ADDRESS',
@@ -125,6 +176,42 @@ def fill_table(table, rows):
             set_text(cell.paragraphs[0], value)
 
 
+def _expected_case(case: dict) -> dict:
+    product = case.get('product', '7x7')
+    if product == 'Regular':
+        return make_regular_case()
+    if product == '7x7':
+        return make_case(case['count'])
+    raise SyntheticProofError('Unsupported synthetic product fixture.')
+
+
+def _display_terms(case: dict, result) -> dict[str, str]:
+    if case.get('product') == 'Regular':
+        return {
+            'product': 'Regular Cash Loan (synthetic only)',
+            'rate': f"{case['rate_percent']}% fixed contractual interest (synthetic fixture)",
+            'basis': 'Fixed contractual interest on original principal; synthetic fixture only',
+            'frequency': 'Daily (synthetic)',
+            'term': f"{case['count']} scheduled daily installments (synthetic)",
+            'allocation': (
+                'Synthetic Regular principal/interest schedule rows only; '
+                'no payment-allocation rule represented'
+            ),
+        }
+    count = case['count']
+    return {
+        'product': '7x7 Cash Loan (synthetic only)',
+        'rate': f'PHP {result.rows[0].interest_component:,.2f} per day (synthetic)',
+        'basis': 'Fixed on original principal; synthetic fixture only',
+        'frequency': 'Daily (synthetic)',
+        'term': f"{count} scheduled daily installment{'s' if count != 1 else ''} (synthetic)",
+        'allocation': (
+            "Past Due Interest; Today's Interest; Past Due Principal; "
+            "Today's Principal; Advance (synthetic disclosure)"
+        ),
+    }
+
+
 def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
     template, output = Path(template), Path(output)
     if template.resolve() == output.resolve() or output.exists():
@@ -140,10 +227,11 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         raise SyntheticProofError('This tool accepts synthetic specimens only.')
     count = case['count']
     # Rebuild only a fixed test fixture; never accept a modified case as a loan.
-    expected = make_case(count)
+    expected = _expected_case(case)
     if case != expected:
         raise SyntheticProofError('Modified synthetic fixture is not supported.')
     result = case['projection']
+    terms = _display_terms(case, result)
     doc = Document(template)
     tables = doc.tables
     if len(tables) != 6 or [len(t.columns) for t in tables] != [2, 7, 7, 2, 2, 2]:
@@ -166,12 +254,12 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         '{Packet ID}': context['packet_id'],
         '{Packet ID and Version}': context['packet_id'] + ' / ' + context['packet_version'],
         '{Schedule ID and Version}': context['schedule_id'] + ' / ' + context['schedule_version'],
-        '{Regular Cash Loan or 7x7 Cash Loan}': '7x7 Cash Loan (synthetic only)',
+        '{Regular Cash Loan or 7x7 Cash Loan}': terms['product'],
         '{Approved Gross Principal}': f"{Decimal(case['principal']):,.2f}",
-        '{Exact Approved Rate and Period / Daily Amount}': f'PHP {result.rows[0].interest_component:,.2f} per day (synthetic)',
-        '{Exact Approved Interest Basis and Method}': 'Fixed on original principal; synthetic fixture only',
-        '{Exact Approved Payment Frequency}': 'Daily (synthetic)',
-        '{Exact Approved Contractual Term}': f"{count} scheduled daily installment{'s' if count != 1 else ''} (synthetic)",
+        '{Exact Approved Rate and Period / Daily Amount}': terms['rate'],
+        '{Exact Approved Interest Basis and Method}': terms['basis'],
+        '{Exact Approved Payment Frequency}': terms['frequency'],
+        '{Exact Approved Contractual Term}': terms['term'],
         '{Agreed Installment Amount}': f"{Decimal(case['daily']):,.2f}",
         '{N - Complete Approved Installment Count}': str(count),
         '{First Contractual Due Date}': result.rows[0].due_date.isoformat(),
@@ -182,7 +270,7 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         '{Total Scheduled Charges / 0.00}': '0.00',
         '{Sum of All Contractual Installments}': f'{result.total_due:,.2f}',
         '{Final Scheduled Remaining Principal}': f'{result.rows[-1].scheduled_remaining_principal:,.2f}',
-        '{Exact Product-Specific Allocation from Locked Disclosure}': "Past Due Interest; Today's Interest; Past Due Principal; Today's Principal; Advance (synthetic disclosure)",
+        '{Exact Product-Specific Allocation from Locked Disclosure}': terms['allocation'],
         '{Exact Applicable Locked Disclosure Rule / None}': 'None / PHP 0.00 (synthetic disclosure; no penalty enabled)',
         '{Authenticated Approver / Locked Approval Reference}': context['approval_evidence'],
         '{Document ID}': context['document_id'], '{Template Version}': 'Annex A R2',
@@ -237,6 +325,10 @@ def main():
         path = args.output_dir / f'SPINA_Annex_A_SYNTHETIC_{count:03d}_rows.docx'
         build_docx(args.template, path, make_case(count), synthetic_context(count))
         print(path)
+    regular = make_regular_case()
+    path = args.output_dir / 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.docx'
+    build_docx(args.template, path, regular, synthetic_context('REGULAR-120'))
+    print(path)
 
 
 if __name__ == '__main__':

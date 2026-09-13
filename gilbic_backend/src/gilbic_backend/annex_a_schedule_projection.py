@@ -1,4 +1,4 @@
-"""Read-only Annex A projection of existing signed 7x7 installment rows.
+"""Read-only Annex A projection of existing component-bearing contractual rows.
 
 This module checks supplied rows and terms, not their database provenance,
 borrower ownership, approval, pricing legality or signature. The caller must
@@ -13,11 +13,14 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, DecimalException, Inexact, localcontext
 
+from .contract_schedule_engine import RegularContractInstallment
 from .seven_by_seven_signed_schedule import SevenBySevenSignedInstallment
 
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
+
+ComponentInstallment = SevenBySevenSignedInstallment | RegularContractInstallment
 
 
 class AnnexAProjectionError(ValueError):
@@ -53,23 +56,18 @@ def _require_money(value: Decimal, field: str) -> Decimal:
     return value
 
 
-def project_seven_by_seven_annex_a(
+def _project_component_schedule(
     *,
     original_principal: Decimal,
-    installments: Sequence[SevenBySevenSignedInstallment],
+    installments: Sequence[ComponentInstallment],
     expected_installment_count: int,
     expected_first_due_date: date,
     expected_maturity_date: date,
     expected_total_payable: Decimal,
+    expected_row_type: type[SevenBySevenSignedInstallment] | type[RegularContractInstallment],
+    require_daily_cadence: bool,
+    row_type_error: str,
 ) -> AnnexAScheduleProjection:
-    """Copy a complete daily contractual schedule and add its principal balance.
-
-    Scheduled Remaining Principal assumes every contractual installment is paid
-    fully and on time; it excludes interest, fees and penalties. It is neither a
-    live account balance nor a payoff quote. Invalid inputs are rejected, never
-    sorted, filled, clamped or silently rounded. No contractual rows are changed.
-    """
-
     if type(expected_installment_count) is not int or expected_installment_count <= 0:
         raise AnnexAProjectionError(
             "A positive expected installment count is required."
@@ -110,10 +108,8 @@ def project_seven_by_seven_annex_a(
             projected: list[AnnexAInstallment] = []
 
             for number, source in enumerate(source_rows, start=1):
-                if not isinstance(source, SevenBySevenSignedInstallment):
-                    raise AnnexAProjectionError(
-                        "Every row must be a signed-schedule installment."
-                    )
+                if not isinstance(source, expected_row_type):
+                    raise AnnexAProjectionError(row_type_error)
                 if (
                     type(source.installment_number) is not int
                     or source.installment_number != number
@@ -130,9 +126,14 @@ def project_seven_by_seven_annex_a(
                         raise AnnexAProjectionError(
                             "First due date does not match the approved terms."
                         )
-                elif (source.due_date - previous_date).days != 1:
+                elif require_daily_cadence:
+                    if (source.due_date - previous_date).days != 1:
+                        raise AnnexAProjectionError(
+                            "The daily contractual schedule contains a date gap or reorder."
+                        )
+                elif source.due_date <= previous_date:
                     raise AnnexAProjectionError(
-                        "The daily contractual schedule contains a date gap or reorder."
+                        "Regular contractual due dates must be strictly increasing."
                     )
 
                 row_principal = _require_money(
@@ -141,7 +142,9 @@ def project_seven_by_seven_annex_a(
                 row_interest = _require_money(
                     source.interest_component, "Scheduled interest"
                 )
-                row_total = _require_money(source.contractual_amount, "Contractual amount")
+                row_total = _require_money(
+                    source.contractual_amount, "Contractual amount"
+                )
                 if row_total != row_principal + row_interest:
                     raise AnnexAProjectionError(
                         "The contractual amount does not match its components."
@@ -192,3 +195,57 @@ def project_seven_by_seven_annex_a(
         raise AnnexAProjectionError(
             "Money must be representable exactly in cents without rounding."
         ) from error
+
+
+def project_seven_by_seven_annex_a(
+    *,
+    original_principal: Decimal,
+    installments: Sequence[SevenBySevenSignedInstallment],
+    expected_installment_count: int,
+    expected_first_due_date: date,
+    expected_maturity_date: date,
+    expected_total_payable: Decimal,
+) -> AnnexAScheduleProjection:
+    """Copy a complete daily 7x7 contractual schedule and add principal balance.
+
+    Scheduled Remaining Principal assumes every contractual installment is paid
+    fully and on time; it excludes interest, fees and penalties. It is neither a
+    live account balance nor a payoff quote. Invalid inputs are rejected, never
+    sorted, filled, clamped or silently rounded. No contractual rows are changed.
+    """
+
+    return _project_component_schedule(
+        original_principal=original_principal,
+        installments=installments,
+        expected_installment_count=expected_installment_count,
+        expected_first_due_date=expected_first_due_date,
+        expected_maturity_date=expected_maturity_date,
+        expected_total_payable=expected_total_payable,
+        expected_row_type=SevenBySevenSignedInstallment,
+        require_daily_cadence=True,
+        row_type_error="Every row must be a signed-schedule installment.",
+    )
+
+
+def project_regular_annex_a(
+    *,
+    original_principal: Decimal,
+    installments: Sequence[RegularContractInstallment],
+    expected_installment_count: int,
+    expected_first_due_date: date,
+    expected_maturity_date: date,
+    expected_total_payable: Decimal,
+) -> AnnexAScheduleProjection:
+    """Copy approved Regular component rows without inventing a payment cadence."""
+
+    return _project_component_schedule(
+        original_principal=original_principal,
+        installments=installments,
+        expected_installment_count=expected_installment_count,
+        expected_first_due_date=expected_first_due_date,
+        expected_maturity_date=expected_maturity_date,
+        expected_total_payable=expected_total_payable,
+        expected_row_type=RegularContractInstallment,
+        require_daily_cadence=False,
+        row_type_error="Every row must be an approved Regular component installment.",
+    )

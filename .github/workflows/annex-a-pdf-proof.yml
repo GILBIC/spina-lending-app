@@ -6,6 +6,7 @@ on:
       - '.github/workflows/annex-a-pdf-proof.yml'
       - 'tools/annex_a_pdf_proof/**'
       - 'gilbic_backend/src/gilbic_backend/annex_a_schedule_projection.py'
+      - 'gilbic_backend/src/gilbic_backend/contract_schedule_engine.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_signed_schedule.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
   workflow_dispatch:
@@ -93,12 +94,12 @@ jobs:
           if (-not (Test-Path $soffice)) { throw 'LibreOffice console binary is missing' }
           "SPINA_SOFFICE=$soffice" >> $env:GITHUB_ENV
 
-      - name: Run the 24 template tests explicitly
+      - name: Run the 26 template tests explicitly
         run: |
           python -m pytest -q tools/annex_a_pdf_proof/test_synthetic_annex_a.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Generate and convert all five synthetic fixtures
+      - name: Generate and convert all six synthetic fixtures
         run: |
           $docx = Join-Path $env:RUNNER_TEMP 'spina-annex-docx'
           $raw = Join-Path $env:RUNNER_TEMP 'spina-annex-raw'
@@ -137,15 +138,16 @@ jobs:
                   for number, page in enumerate(doc, 1):
                       page.get_pixmap(dpi=144, alpha=False).save(pages / f'page-{number}.png')
               results.append({'file': path.name, **fonts})
-          if len(results) != 5:
-              raise SystemExit('All five synthetic PDFs are required')
+          if len(results) != 6:
+              raise SystemExit('All six synthetic PDFs are required')
           evidence = {
               'scope': 'SYNTHETIC_REPOSITORY_PDF_PROOF_ONLY',
               'commit': os.environ['PROOF_COMMIT'],
               'python': platform.python_version(), 'pymupdf': fitz.VersionBind,
               'template_sha256': hashlib.sha256(pathlib.Path(os.environ['SPINA_ANNEX_TEMPLATE']).read_bytes()).hexdigest(),
               'fonts': results, 'visual_review': 'PENDING_MANUAL_REVIEW',
-              'production_integration': 'NOT_IMPLEMENTED', 'regular_binding': 'NOT_IMPLEMENTED',
+              'production_integration': 'NOT_IMPLEMENTED',
+              'regular_binding': 'FIXED_SYNTHETIC_REGULAR_CASE_ONLY',
           }
           (root / 'font-and-environment-verification.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
           print(json.dumps(evidence, indent=2))
