@@ -330,6 +330,21 @@ def _assessment_rollup(
     cursor.execute(
         """
         select
+            to_regclass('lending.seven_by_seven_penalty_assessments'),
+            to_regclass('lending.seven_by_seven_penalty_payment_allocations')
+        """
+    )
+    relation_row = cursor.fetchone()
+    if relation_row is None or relation_row[0] is None or relation_row[1] is None:
+        # Historical validators intentionally replay schemas older than migration
+        # 0118. Such schemas cannot contain penalty evidence. Treat their rollup as
+        # empty so pre-maturity behavior remains compatible; post-maturity still
+        # fails closed because no exact signed penalty authority snapshot exists.
+        return ZERO, ZERO, ZERO, None
+
+    cursor.execute(
+        """
+        select
             coalesce((
                 select sum(assessment.assessed_penalty_amount)
                 from lending.seven_by_seven_penalty_assessments assessment
