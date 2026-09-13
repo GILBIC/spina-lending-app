@@ -193,13 +193,13 @@ def replay_verified_seven_by_seven_financial_state(
     through_date: date,
     contractual_maturity: date | None | object = _CONTRACTUAL_MATURITY_UNSET,
 ) -> SevenBySevenAdvanceFinancialReplay:
-    """Replay immediate cash plus matured active prepayment as cash events.
+    """Replay immediate contractual cash plus matured active prepayment events.
 
-    A verified Advance receipt is deliberately excluded on its receipt date.
-    The same deferred basis may also represent the affected portion of a partial
-    voluntary PAYMENT on a Management No Collection day. For PAYMENT, only the
-    receipt amount not attached to deferred future-row evidence is financially
-    active immediately; the deferred portion later activates with its signed row.
+    Receipt custody cash is not itself the contractual financial event. The replay
+    uses the receipt's applied amount net of immutable penalty allocation so a
+    post-maturity penalty payment can never reduce principal or contractual
+    interest. Deferred Advance/No Collection prepayment is then removed until its
+    operational row becomes financially effective.
 
     Gross Advance allocations remain immutable historical evidence. If audited
     Extra Principal shortening later classifies part of that Advance as Refund
@@ -237,7 +237,11 @@ def replay_verified_seven_by_seven_financial_state(
             transaction.id,
             transaction.collection_date,
             transaction.entry_type,
-            transaction.amount as receipt_amount,
+            greatest(
+                transaction.applied_amount
+                - coalesce(penalty_allocation.amount_applied, 0),
+                0
+            )::numeric(18,2) as receipt_amount,
             coalesce(sum(allocation.amount_applied) filter (
                 where allocation.allocation_basis = %s
             ), 0)::numeric(18,2) as deferred_amount,
@@ -245,16 +249,19 @@ def replay_verified_seven_by_seven_financial_state(
         from lending.collection_transactions transaction
         left join lending.loan_installment_payment_allocations allocation
           on allocation.transaction_id = transaction.id
+        left join lending.seven_by_seven_penalty_payment_allocations penalty_allocation
+          on penalty_allocation.transaction_id = transaction.id
         where transaction.loan_id = %s
           and transaction.is_voided = false
-          and transaction.amount > 0
+          and transaction.applied_amount > 0
           and transaction.collection_date <= %s
           and transaction.entry_type in ('payment', 'advance')
         group by
             transaction.id,
             transaction.collection_date,
             transaction.entry_type,
-            transaction.amount,
+            transaction.applied_amount,
+            penalty_allocation.amount_applied,
             transaction.accepted_at
         order by transaction.collection_date, transaction.accepted_at, transaction.id
         """,
