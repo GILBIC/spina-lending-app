@@ -165,3 +165,37 @@ def test_cli_generates_five_7x7_and_one_regular_specimen(tmp_path, monkeypatch):
     outputs = sorted(path.name for path in output_dir.glob('*.docx'))
     assert len(outputs) == 6
     assert 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.docx' in outputs
+
+
+@pytest.mark.parametrize('case_id', [1, 7, 8, 60, 104, 'REGULAR-120'])
+def test_acknowledgment_text_name_and_signature_stay_together(case_id, tmp_path):
+    # CI specimen 8c5a9f4 split Regular printed name (page 5) from signature (6).
+    m = module()
+    case = m.make_regular_case() if case_id == 'REGULAR-120' else m.make_case(case_id)
+    before = template().read_bytes()
+    out = tmp_path / 'acknowledgment-proof.docx'
+    m.build_docx(template(), out, case, m.synthetic_context(case_id))
+    doc = Document(out)
+    heading = next(p for p in doc.paragraphs if p.text == 'IV. BORROWER ACKNOWLEDGMENT')
+    acknowledgment = next(
+        p for p in doc.paragraphs
+        if p.text.startswith('I acknowledge receipt and review of the complete Schedule')
+    )
+    signatures = next(
+        t for t in doc.tables if t.cell(0, 0).text == 'Borrower Printed Name'
+    )
+    assert [row.cells[0].text for row in signatures.rows] == [
+        'Borrower Printed Name', 'Borrower Signature / Date', 'Management Approval / Evidence',
+    ]
+    assert 'UNSIGNED TEST ONLY - DO NOT SIGN' in signatures.cell(1, 1).text
+    for paragraph in (heading, acknowledgment):
+        assert paragraph.paragraph_format.keep_with_next is True, (
+            'Acknowledgment heading/text must stay with the signature table.'
+        )
+        assert paragraph.paragraph_format.keep_together is True
+    for row in signatures.rows[:-1]:
+        assert all(
+            p.paragraph_format.keep_with_next is True
+            for cell in row.cells for p in cell.paragraphs
+        ), 'Borrower printed name, signature and approval must stay on one page.'
+    assert template().read_bytes() == before
