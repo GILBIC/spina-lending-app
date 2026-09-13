@@ -71,19 +71,22 @@ function paymentRows(payments) {
   </table></div>`;
 }
 
-function renewalRows(requests) {
+export function clientRenewalRows(requests) {
   if (!requests.length) return emptyState('No renewal request has been submitted.');
   return `<div class="list-stack">${requests
-    .map(
-      (request) => `<article class="list-item">
+    .map((request) => {
+      const requestId = String(request.request_id || '').trim();
+      const isPending = String(request.status || '').trim().toLowerCase() === 'pending';
+      return `<article class="list-item">
         <div class="section-heading">
           <div><strong>${escapeHtml(request.loan_number || 'Loan renewal')}</strong><div class="meta">Requested ${formatMoney(request.requested_amount)} · ${formatDateTime(request.submitted_at)}</div></div>
           ${badge(request.status)}
         </div>
         ${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}
         ${request.review_note ? `<div class="notice-card"><strong>Management note:</strong> ${escapeHtml(request.review_note)}</div>` : ''}
-      </article>`,
-    )
+        ${isPending && requestId ? `<button class="button button-secondary" type="button" data-client-renewal-cancel="${escapeHtml(requestId)}">Cancel request</button>` : ''}
+      </article>`;
+    })
     .join('')}</div>`;
 }
 
@@ -180,6 +183,28 @@ export async function requestClientNotificationRead({ api, notificationId }) {
   );
 }
 
+export async function requestClientRenewalCancellation({
+  api,
+  requestId,
+  confirmCancel = globalThis.confirm,
+}) {
+  const normalized = String(requestId || '').trim();
+  if (!normalized) {
+    throw new Error('A renewal request is required.');
+  }
+  if (
+    typeof confirmCancel !== 'function' ||
+    !confirmCancel('Cancel this renewal request? Only this pending request will be cancelled.')
+  ) {
+    return false;
+  }
+  await api.request(
+    `/api/v1/client/renewals/${encodeURIComponent(normalized)}/cancel`,
+    { method: 'POST' },
+  );
+  return true;
+}
+
 function renderWorkspace(root, model, raw, errors) {
   const latestPayment = model.payments[0];
   const renewalLoans = asArray(raw.renewals.loans).filter((loan) => loan.eligible === true && !loan.pending_request_id);
@@ -210,7 +235,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-renewals">
     <div class="section-heading"><div><h2>Renewal requests</h2><p>After you submit, your permanently assigned Collector must recommend the request before Management reviews and decides it. A request never creates or releases a new loan. If approved, complete only your own signer step; any other required signer must use their own SPINA account.</p></div></div>
-    ${errors.renewals ? errorCard(errors.renewals) : renewalRows(model.renewals)}
+    ${errors.renewals ? errorCard(errors.renewals) : clientRenewalRows(model.renewals)}
     <details ${renewalLoans.length ? '' : 'hidden'}>
       <summary>Submit a renewal request</summary>
       <form id="client-renewal-form" class="entry-form">
@@ -341,6 +366,25 @@ function bindClientNotificationReadActions(context) {
   }
 }
 
+function bindClientRenewalCancellation(context) {
+  for (const button of context.root.querySelectorAll('[data-client-renewal-cancel]')) {
+    button.addEventListener('click', async () => {
+      const requestId = button.dataset.clientRenewalCancel;
+      try {
+        const cancelled = await requestClientRenewalCancellation({
+          api: context.api,
+          requestId,
+        });
+        if (!cancelled) return;
+        showToast('Renewal request cancelled.', 'success');
+        await mountClientWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+  }
+}
+
 export async function mountClientWorkspace(context) {
   const { root, api, setNavigation } = context;
   setNavigation([
@@ -392,4 +436,5 @@ export async function mountClientWorkspace(context) {
   bindClientGcashPanel(context);
   bindClientAccountDeviceSecurity(context);
   bindClientNotificationReadActions(context);
+  bindClientRenewalCancellation(context);
 }
