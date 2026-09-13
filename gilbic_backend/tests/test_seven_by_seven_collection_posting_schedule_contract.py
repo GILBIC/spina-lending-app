@@ -3,6 +3,9 @@ from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[1] / "src" / "gilbic_backend"
 POSTING = (PACKAGE / "seven_by_seven_collection_posting.py").read_text(encoding="utf-8")
+ADVANCE_ACTIVATION = (PACKAGE / "seven_by_seven_advance_activation.py").read_text(
+    encoding="utf-8"
+)
 SCHEDULE_ALLOCATION = (PACKAGE / "seven_by_seven_schedule_allocation.py").read_text(
     encoding="utf-8"
 )
@@ -24,7 +27,11 @@ def test_normal_7x7_payment_never_auto_advances_true_extra() -> None:
 def test_same_day_7x7_cash_receipts_are_not_rejected_by_date_guard() -> None:
     assert "if entry_type is not CollectionEntryType.PASS:" in POSTING
     assert "on conflict (loan_id, covered_date) do nothing" in POSTING
-    assert "order by collection_date, accepted_at, id" in POSTING
+    assert "replay_verified_seven_by_seven_financial_state" in POSTING
+    assert (
+        "order by transaction.collection_date, transaction.accepted_at, transaction.id"
+        in ADVANCE_ACTIVATION
+    )
 
 
 def test_advance_schedule_allocation_is_not_claimed_complete_yet() -> None:
