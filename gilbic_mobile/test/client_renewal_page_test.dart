@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.submittedLoanId, 'regular-loan');
-    expect(repository.submittedAmount, 6000);
+    expect(repository.submittedAmount, '6000.00');
     expect(
       repository.submittedMessage,
       'Requesting a higher renewal amount',
@@ -132,7 +132,7 @@ class _FakeClientRenewalRepository implements ClientRenewalRepository {
   final String status;
   String? deviceId;
   String? submittedLoanId;
-  double? submittedAmount;
+  String? submittedAmount;
   String? submittedMessage;
 
   @override
@@ -180,7 +180,7 @@ class _FakeClientRenewalRepository implements ClientRenewalRepository {
     UserSession session, {
     required String deviceId,
     required String loanId,
-    required double requestedAmount,
+    required String requestedAmount,
     required String message,
   }) async {
     this.deviceId = deviceId;
