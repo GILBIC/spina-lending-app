@@ -15,10 +15,16 @@ on:
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_multi_receipt_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py'
       - 'gilbic_backend/src/gilbic_backend/combined_collection_api.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_schedule_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_schedule_api.py'
+      - 'gilbic_backend/src/gilbic_backend/client_loan_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/client_loan_api.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_migration.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py'
       - 'gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py'
@@ -33,6 +39,10 @@ on:
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_postgres.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_collection.py'
+      - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_combined_pay.py'
+      - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_no_collection_voluntary.py'
+      - 'gilbic_backend/tests/test_7x7_penalty_read_models.py'
+      - 'gilbic_backend/tests/test_7x7_penalty_accounting_evidence_postgres.py'
       - 'tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py'
       - '.github/workflows/7x7-contractual-cash-flow-disposable-postgres.yml'
   push:
@@ -49,10 +59,16 @@ on:
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_multi_receipt_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py'
       - 'gilbic_backend/src/gilbic_backend/combined_collection_api.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_schedule_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_schedule_api.py'
+      - 'gilbic_backend/src/gilbic_backend/client_loan_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/client_loan_api.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_migration.py'
       - 'gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py'
       - 'gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py'
@@ -67,6 +83,10 @@ on:
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_postgres.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_collection.py'
+      - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_combined_pay.py'
+      - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_no_collection_voluntary.py'
+      - 'gilbic_backend/tests/test_7x7_penalty_read_models.py'
+      - 'gilbic_backend/tests/test_7x7_penalty_accounting_evidence_postgres.py'
       - 'tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py'
       - '.github/workflows/7x7-contractual-cash-flow-disposable-postgres.yml'
 
@@ -130,19 +150,31 @@ jobs:
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_multi_receipt_posting.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_posting.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/combined_collection_api.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/collector_schedule_repository.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/collector_schedule_api.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/client_loan_repository.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/client_loan_api.py
           python -m py_compile gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_readiness_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_contractual_interest_maturity.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_collection.py
+          python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_combined_pay.py
+          python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_no_collection_voluntary.py
+          python -m py_compile gilbic_backend/tests/test_7x7_penalty_read_models.py
+          python -m py_compile gilbic_backend/tests/test_7x7_penalty_accounting_evidence_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py
           python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_migration.py
           python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_gate.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_migration.py
+          python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_contract_binding.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty.py
 
       - name: Verify Priority 6 migration and pure-calculation contracts
