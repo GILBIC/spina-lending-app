@@ -1,0 +1,243 @@
+"""Offline synthetic Annex A R2 layout proof; NOT a production document API.
+
+Requires python-docx and the separately supplied original hash-locked R2 DOCX.
+Only five fixed synthetic cases are supported. Existing SPINA schedule and
+projection modules are imported, never copied into this tool or reimplemented.
+Run from a checkout with gilbic_backend/src on PYTHONPATH. Conversion/visual QA
+are separate from this DOCX assembly; no approval, signature or DB write occurs.
+"""
+from __future__ import annotations
+
+import argparse
+from copy import deepcopy
+from datetime import date
+from decimal import Decimal
+import hashlib
+from pathlib import Path
+
+from docx import Document
+from docx.oxml.ns import qn
+from docx.shared import Pt
+from docx.table import _Row
+from docx.text.paragraph import Paragraph
+
+from gilbic_backend.annex_a_schedule_projection import project_seven_by_seven_annex_a
+from gilbic_backend.seven_by_seven_signed_schedule import generate_signed_seven_by_seven_schedule
+
+TEMPLATE_SHA256 = '80ef81aec3141f9c96a5d78f1edd1e7367c8a6be9ab7dca92e81b07756217ddb'
+NOTICE = 'SYNTHETIC TEST COPY - NOT FOR SIGNING OR RELEASE'
+CASES = {1: ('1000.00', '1007.00'), 7: ('1000.00', '150.00'), 8: ('1000.00', '140.00'),
+         60: ('3000.00', '71.00'), 104: ('3000.00', '50.00')}
+KEYS = ('borrower_name', 'company_line', 'document_id', 'loan_id', 'cif_version',
+        'packet_id', 'packet_version', 'schedule_id', 'schedule_version',
+        'generated_at', 'approval_evidence')
+
+
+class SyntheticProofError(ValueError):
+    """Synthetic proof inputs are incomplete or unsafe to assemble."""
+
+
+def make_case(count: int) -> dict:
+    if type(count) is not int or count not in CASES:
+        raise SyntheticProofError('Only the five fixed synthetic cases are supported.')
+    principal, daily = CASES[count]
+    source = generate_signed_seven_by_seven_schedule(
+        original_principal=principal, agreed_daily_payment=daily,
+        daily_interest_per_1000='7.00', first_due_date=date(2026, 9, 13))
+    projection = project_seven_by_seven_annex_a(
+        original_principal=Decimal(principal), installments=source,
+        expected_installment_count=count, expected_first_due_date=date(2026, 9, 13),
+        expected_maturity_date=source[-1].due_date,
+        expected_total_payable=sum((r.contractual_amount for r in source), Decimal('0.00')))
+    return {'count': count, 'principal': principal, 'daily': daily,
+            'source': source, 'projection': projection}
+
+
+def synthetic_context(count: int) -> dict[str, str]:
+    return {
+        'borrower_name': f'SYNTHETIC TEST BORROWER {count}',
+        'company_line': 'SYNTHETIC OFFICE - NOT A REGISTERED ADDRESS',
+        'document_id': f'SYN-ANNEX-{count}', 'loan_id': f'SYN-LOAN-{count}',
+        'cif_version': 'SYN-CIF-v1', 'packet_id': f'SYN-PACKET-{count}',
+        'packet_version': 'SYN-v1', 'schedule_id': f'SYN-SCHEDULE-{count}',
+        'schedule_version': 'SYN-v1',
+        'generated_at': '2026-09-12 21:35 +08:00 (synthetic)',
+        'approval_evidence': f'SYN-APPROVAL-{count} / NOT APPROVED OR SIGNED',
+    }
+
+
+def all_paragraphs(doc):
+    roots = [doc.element]
+    for section in doc.sections:
+        roots.extend([section.header._element, section.footer._element])
+    seen = set()
+    for root in roots:
+        if id(root) in seen:
+            continue
+        seen.add(id(root))
+        for el in root.iter(qn('w:p')):
+            yield Paragraph(el, doc)
+
+
+def replace_tokens(paragraph, mapping):
+    # Replace across runs without erasing unaffected Word fields or pictures.
+    for token, value in mapping.items():
+        while token in paragraph.text:
+            start = paragraph.text.index(token)
+            end = start + len(token)
+            offset = 0
+            for run in paragraph.runs:
+                text = run.text
+                run_end = offset + len(text)
+                if offset < end and run_end > start:
+                    left = max(0, start - offset)
+                    right = min(len(text), end - offset)
+                    insert = value if offset <= start < run_end else ''
+                    run.text = text[:left] + insert + text[right:]
+                offset = run_end
+
+
+def set_text(paragraph, text):
+    if paragraph.runs:
+        paragraph.runs[0].text = text
+        for run in paragraph.runs[1:]:
+            run.text = ''
+    else:
+        paragraph.add_run(text)
+
+
+def row_values(row):
+    return [str(row.installment_number), row.due_date.isoformat(),
+            f'{row.principal_component:,.2f}', f'{row.interest_component:,.2f}',
+            '0.00', f'{row.contractual_amount:,.2f}',
+            f'{row.scheduled_remaining_principal:,.2f}']
+
+
+def fill_table(table, rows):
+    model = deepcopy(table.rows[1]._tr)
+    for row in list(table.rows)[1:]:
+        table._tbl.remove(row._tr)
+    for source in rows:
+        element = deepcopy(model)
+        table._tbl.append(element)
+        row = _Row(element, table)
+        for cell, value in zip(row.cells, row_values(source), strict=True):
+            set_text(cell.paragraphs[0], value)
+
+
+def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
+    template, output = Path(template), Path(output)
+    if template.resolve() == output.resolve() or output.exists():
+        raise SyntheticProofError('Never overwrite the source template or an existing output.')
+    data = template.read_bytes()
+    if hashlib.sha256(data).hexdigest() != TEMPLATE_SHA256:
+        raise SyntheticProofError('The exact approved Annex A R2 template is required.')
+    for key in KEYS:
+        value = context.get(key)
+        if not isinstance(value, str) or not value.strip() or '{' in value or '}' in value:
+            raise SyntheticProofError(f'Missing or unresolved synthetic context: {key}')
+    if not context['borrower_name'].startswith('SYNTHETIC '):
+        raise SyntheticProofError('This tool accepts synthetic specimens only.')
+    count = case['count']
+    # Rebuild only a fixed test fixture; never accept a modified case as a loan.
+    expected = make_case(count)
+    if case != expected:
+        raise SyntheticProofError('Modified synthetic fixture is not supported.')
+    result = case['projection']
+    doc = Document(template)
+    tables = doc.tables
+    if len(tables) != 6 or [len(t.columns) for t in tables] != [2, 7, 7, 2, 2, 2]:
+        raise SyntheticProofError('Unexpected approved-template structure.')
+    fill_table(tables[1], result.rows[:7])
+    if count > 7:
+        fill_table(tables[2], result.rows[7:])
+    else:
+        tables[2]._element.getparent().remove(tables[2]._element)
+    # Keep the five-row totals block together when it reaches a page boundary.
+    for row in tables[3].rows[:-1]:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.keep_with_next = True
+    mapping = {
+        '{Controlled SEC company identity and registered office address}': context['company_line'],
+        '{Borrower Full Name from Locked Loan}': context['borrower_name'],
+        '{Borrower Full Name}': context['borrower_name'],
+        '{Loan Account No.}': context['loan_id'], '{Locked CIF Version}': context['cif_version'],
+        '{Packet ID}': context['packet_id'],
+        '{Packet ID and Version}': context['packet_id'] + ' / ' + context['packet_version'],
+        '{Schedule ID and Version}': context['schedule_id'] + ' / ' + context['schedule_version'],
+        '{Regular Cash Loan or 7x7 Cash Loan}': '7x7 Cash Loan (synthetic only)',
+        '{Approved Gross Principal}': f"{Decimal(case['principal']):,.2f}",
+        '{Exact Approved Rate and Period / Daily Amount}': f'PHP {result.rows[0].interest_component:,.2f} per day (synthetic)',
+        '{Exact Approved Interest Basis and Method}': 'Fixed on original principal; synthetic fixture only',
+        '{Exact Approved Payment Frequency}': 'Daily (synthetic)',
+        '{Exact Approved Contractual Term}': f"{count} scheduled daily installment{'s' if count != 1 else ''} (synthetic)",
+        '{Agreed Installment Amount}': f"{Decimal(case['daily']):,.2f}",
+        '{N - Complete Approved Installment Count}': str(count),
+        '{First Contractual Due Date}': result.rows[0].due_date.isoformat(),
+        '{Last Contractual Installment Date}': result.maturity_date.isoformat(),
+        '{Total under Complete Contractual Schedule}': f'{result.total_due:,.2f}',
+        '{Total Principal Components}': f'{result.total_principal:,.2f}',
+        '{Total Interest Components}': f'{result.total_interest:,.2f}',
+        '{Total Scheduled Charges / 0.00}': '0.00',
+        '{Sum of All Contractual Installments}': f'{result.total_due:,.2f}',
+        '{Final Scheduled Remaining Principal}': f'{result.rows[-1].scheduled_remaining_principal:,.2f}',
+        '{Exact Product-Specific Allocation from Locked Disclosure}': "Past Due Interest; Today's Interest; Past Due Principal; Today's Principal; Advance (synthetic disclosure)",
+        '{Exact Applicable Locked Disclosure Rule / None}': 'None / PHP 0.00 (synthetic disclosure; no penalty enabled)',
+        '{Authenticated Approver / Locked Approval Reference}': context['approval_evidence'],
+        '{Document ID}': context['document_id'], '{Template Version}': 'Annex A R2',
+        '{Packet Version}': context['packet_version'], '{Schedule Version}': context['schedule_version'],
+        '{Server Date/Time and Zone}': context['generated_at'],
+    }
+    for p in list(doc.paragraphs):
+        text = p.text
+        if text.startswith('Working layout R2'):
+            set_text(p, NOTICE + '. Test data only; no real loan, approval, signature or cash receipt is represented.')
+        elif text.startswith('Template instruction:'):
+            p._element.getparent().remove(p._element)
+        elif text == 'II. CONTRACTUAL INSTALLMENTS - FIRST-PAGE LAYOUT':
+            set_text(p, 'II. CONTRACTUAL INSTALLMENTS')
+        elif text.startswith('All monetary values are in Philippine pesos'):
+            set_text(p, 'All monetary values are in Philippine pesos (PHP). Every installment is included, with continuation rows where needed.')
+        elif text.startswith('II. CONTRACTUAL INSTALLMENTS - CONTINUATION'):
+            if count <= 7:
+                p._element.getparent().remove(p._element)
+            else:
+                set_text(p, 'II. CONTRACTUAL INSTALLMENTS - CONTINUATION')
+        elif text.startswith('Loan: {Loan Account No.}') and count <= 7:
+            p._element.getparent().remove(p._element)
+        elif text.startswith('Row N is the actual'):
+            set_text(p, text.replace('Row N', f'Row {count}'))
+        elif count <= 7 and p._p.xpath('.//w:br[@w:type="page"]'):
+            p._element.getparent().remove(p._element)
+    for p in all_paragraphs(doc):
+        replace_tokens(p, mapping)
+        if p.text == '____________________________ / ______________':
+            set_text(p, 'UNSIGNED TEST ONLY - DO NOT SIGN')
+    # Use the existing last blank header paragraph, leaving logo bytes untouched.
+    p = doc.sections[0].header.paragraphs[-1]
+    set_text(p, NOTICE)
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(0)
+    for run in p.runs:
+        run.font.size = Pt(7)
+        run.bold = True
+    if any('{' in p.text or '}' in p.text for p in all_paragraphs(doc)):
+        raise SyntheticProofError('Unresolved template fields remain; no output written.')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(output)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--template', type=Path, required=True)
+    parser.add_argument('--output-dir', type=Path, required=True)
+    args = parser.parse_args()
+    for count in CASES:
+        path = args.output_dir / f'SPINA_Annex_A_SYNTHETIC_{count:03d}_rows.docx'
+        build_docx(args.template, path, make_case(count), synthetic_context(count))
+        print(path)
+
+
+if __name__ == '__main__':
+    main()
