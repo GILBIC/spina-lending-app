@@ -443,7 +443,7 @@ def test_management_no_collection_protects_only_deferred_amount_until_effective_
         _declare_management_no_collection(
             connection,
             case=case,
-            no_collection_date=MATURITY,
+            no_collection_date=FIRST_PENALTY_DAY,
             new_effective_due_date=protected_through,
         )
 
