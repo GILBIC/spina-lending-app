@@ -41,6 +41,9 @@ from .seven_by_seven_operational_allocator import (
     SevenBySevenCashEvent,
     allocate_seven_by_seven_payments,
 )
+from .seven_by_seven_penalty_coordinator import (
+    project_verified_seven_by_seven_penalty_state,
+)
 
 MONEY = Decimal("0.01")
 ZERO = Decimal("0.00")
@@ -774,6 +777,69 @@ def _authoritative_allocation_evidence(
     }
 
 
+def _authoritative_seven_by_seven_penalty_obligation(
+    connection,
+    *,
+    loan: dict[str, Any],
+    collection_date: date,
+    collectible_basis: str,
+) -> tuple[Decimal, dict[str, Any]]:
+    """Read post-maturity penalty only from the shared protected coordinator."""
+
+    if collectible_basis != "verified_schedule":
+        return ZERO, {
+            "status": "not_applicable",
+            "authority": "legacy_without_verified_schedule",
+            "projected_penalty": "0.00",
+            "assessed_penalty_balance": "0.00",
+        }
+
+    with connection.cursor() as cursor:
+        state = project_verified_seven_by_seven_penalty_state(
+            cursor,
+            loan_id=loan["id"],
+            as_of_date=collection_date,
+        )
+    if state.status == "management_review_required":
+        raise CollectionRejected(
+            state.management_review_required_reason
+            or "Management review is required before collecting this post-maturity 7x7 obligation.",
+            code="seven_by_seven_penalty_management_review_required",
+        )
+
+    penalty_due = _money(
+        state.assessed_penalty_balance + state.projected_penalty
+    )
+    evidence = {
+        "status": state.status,
+        "schedule_id": str(state.schedule_id) if state.schedule_id is not None else None,
+        "pricing_compliance_review_id": state.pricing_compliance_review_id,
+        "terms_fingerprint": state.terms_fingerprint,
+        "contractual_maturity": (
+            state.contractual_maturity.isoformat()
+            if state.contractual_maturity is not None
+            else None
+        ),
+        "as_of_date": state.as_of_date.isoformat(),
+        "projected_penalty": format(_money(state.projected_penalty), "f"),
+        "assessed_penalty_balance": format(
+            _money(state.assessed_penalty_balance), "f"
+        ),
+        "penalty_collectible": format(penalty_due, "f"),
+        "penalty_base": format(_money(state.penalty_base), "f"),
+        "remaining_cost_headroom": format(
+            _money(state.remaining_cost_headroom), "f"
+        ),
+        "effective_monthly_rate": format(state.effective_monthly_rate, "f"),
+        "projection_start_date": (
+            state.projection_start_date.isoformat()
+            if state.projection_start_date is not None
+            else None
+        ),
+    }
+    return penalty_due, evidence
+
+
 def _project_seven_by_seven_cash(
     connection,
     *,
@@ -782,9 +848,11 @@ def _project_seven_by_seven_cash(
     scheduled_amount: Decimal,
     extra_amount: Decimal,
     extra_choice: CombinedExtraAllocationChoice | None,
+    penalty_collectible: Decimal = ZERO,
 ) -> dict[str, Any]:
     """Run the protected interest-first allocator without writing a receipt."""
 
+    penalty_capacity = _money(penalty_collectible)
     with connection.cursor(row_factory=dict_row) as cursor:
         payment_start = loan["date_released"] + timedelta(days=1)
         cursor.execute(
@@ -887,11 +955,18 @@ def _project_seven_by_seven_cash(
                     code="seven_by_seven_allocation_conflict",
                 ) from error
             line = result.allocations[-1]
+            penalty_cash = ZERO
             if line.unallocated_cash > ZERO:
-                raise CollectionRejected(
-                    "The 7x7 amount is above the exact protected payoff for this date.",
-                    code="combined_amount_exceeds_payoff",
-                )
+                if (
+                    component == "scheduled"
+                    and _money(line.unallocated_cash) <= penalty_capacity
+                ):
+                    penalty_cash = _money(line.unallocated_cash)
+                else:
+                    raise CollectionRejected(
+                        "The 7x7 amount is above the exact protected payoff for this date.",
+                        code="combined_amount_exceeds_payoff",
+                    )
             if (
                 component == "extra"
                 and extra_choice
@@ -910,6 +985,7 @@ def _project_seven_by_seven_cash(
                 "cash_amount": format(_money(amount), "f"),
                 "interest_paid": format(_money(line.interest_paid), "f"),
                 "principal_paid": format(_money(line.principal_paid), "f"),
+                "penalty_paid": format(penalty_cash, "f"),
                 "closing_principal": format(
                     _money(line.closing_remaining_principal), "f"
                 ),
@@ -935,11 +1011,20 @@ def _allocation_preview(
         loan=regular,
         collection_date=body.collection_date,
     )
-    seven_due, seven_basis = _collectible_obligation(
+    seven_contractual_due, seven_basis = _collectible_obligation(
         connection,
         loan=seven,
         collection_date=body.collection_date,
     )
+    seven_penalty_due, seven_penalty_evidence = (
+        _authoritative_seven_by_seven_penalty_obligation(
+            connection,
+            loan=seven,
+            collection_date=body.collection_date,
+            collectible_basis=seven_basis,
+        )
+    )
+    seven_due = _money(seven_contractual_due + seven_penalty_due)
     if regular_due <= ZERO or seven_due <= ZERO:
         raise CollectionRejected(
             "Combined Pay requires collectible obligations on both the Regular and 7x7 loans. Refresh the route and review this client.",
@@ -1022,9 +1107,13 @@ def _allocation_preview(
         scheduled_amount=plan.seven_by_seven_scheduled,
         extra_amount=seven_extra,
         extra_choice=plan.extra_choice,
+        penalty_collectible=seven_penalty_due,
     )
     regular_evidence = _authoritative_allocation_evidence(connection, loan=regular)
-    seven_evidence = _authoritative_allocation_evidence(connection, loan=seven)
+    seven_evidence = {
+        **_authoritative_allocation_evidence(connection, loan=seven),
+        "penalty": seven_penalty_evidence,
+    }
     review_evidence = {
         "client_transaction_id": str(body.client_transaction_id),
         "client_id": str(body.client_id),
