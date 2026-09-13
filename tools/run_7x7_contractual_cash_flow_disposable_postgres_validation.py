@@ -25,6 +25,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_contractual_interest_maturity.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_postgres.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_collection.py",
+    TEST_ROOT / "test_7x7_post_maturity_penalty_combined_pay.py",
 )
 
 
@@ -43,6 +44,7 @@ def _run_test(test_database_url: str) -> int:
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
+    env["GILBIC_DATABASE_URL"] = test_database_url
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     existing_pythonpath = env.get("PYTHONPATH", "").strip()
     env["PYTHONPATH"] = os.pathsep.join(
@@ -71,7 +73,8 @@ def main() -> int:
             "migrations through 0059, then prove Priority #6 signed-schedule accounting "
             "authority, one-active-7x7 enforcement, exact-term pricing/compliance "
             "readiness, contractual-interest maturity stopping, protected post-maturity "
-            "penalty coordination, and protected single-loan penalty collection/payoff."
+            "penalty coordination, protected single-loan penalty collection/payoff, and "
+            "Combined Pay allocation of authoritative 7x7 penalty before Regular."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -141,10 +144,11 @@ def main() -> int:
             "concurrent attempts; exact-term pricing/compliance review evidence was "
             "append-only and a newer not-ready review remained authoritative for the "
             "same fingerprint; the post-maturity penalty coordinator was verified "
-            "against the same protected replay and immutable evidence boundary; and "
-            "protected single-loan collection/payoff used contractual cash before penalty "
-            "without creating a second collection engine while accounting policy/EIR/"
-            "carrying conclusions and automatic posting stayed separate."
+            "against the same protected replay and immutable evidence boundary; "
+            "protected single-loan collection/payoff used contractual cash before penalty; "
+            "and Combined Pay included authoritative 7x7 penalty before Regular without "
+            "creating a second collection engine while accounting policy/EIR/carrying "
+            "conclusions and automatic posting stayed separate."
         )
         return 0
     except psycopg.Error as error:
