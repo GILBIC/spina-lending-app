@@ -436,19 +436,9 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
-  final whole = parts.first.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  return '₱$whole.${parts.last}';
-}
+String _money(String value) => formatClientLoanMoney(value);
 
-String _trimNumber(double value) {
-  final text = value.toStringAsFixed(4);
-  return text.replaceFirst(RegExp(r'\.?0+$'), '');
-}
+String _trimNumber(String value) => formatClientLoanRate(value);
 
 String _date(DateTime? value, {String empty = 'Not available'}) {
   if (value == null) {
