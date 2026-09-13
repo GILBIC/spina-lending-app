@@ -209,7 +209,7 @@ function renderWorkspace(root, model, raw, errors) {
   </section>
 
   <section class="section-card" id="client-renewals">
-    <div class="section-heading"><div><h2>Renewal requests</h2><p>A request never creates or releases a new loan. Management approval and office processing remain required.</p></div></div>
+    <div class="section-heading"><div><h2>Renewal requests</h2><p>After you submit, your permanently assigned Collector must recommend the request before Management reviews and decides it. A request never creates or releases a new loan. If approved, complete only your own signer step; any other required signer must use their own SPINA account.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : renewalRows(model.renewals)}
     <details ${renewalLoans.length ? '' : 'hidden'}>
       <summary>Submit a renewal request</summary>
@@ -269,7 +269,7 @@ function bindForms(context, raw) {
           message: String(data.get('message') || '').trim(),
         },
       });
-      showToast('Renewal request sent for Management review.', 'success');
+      showToast('Renewal request sent. Your assigned Collector must recommend it before Management review.', 'success');
       await mountClientWorkspace(context);
     } catch (error) {
       showToast(error.message, 'error');
