@@ -575,14 +575,7 @@ String _clientHomeFailureMessage(SpinaApiException error) {
   return 'Your latest loan information could not be loaded. Try again in a moment.';
 }
 
-String _money(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
-  final whole = parts.first.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  return '₱$whole.${parts.last}';
-}
+String _money(String value) => formatClientLoanMoney(value);
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
