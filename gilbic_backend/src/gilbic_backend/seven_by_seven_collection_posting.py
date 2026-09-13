@@ -340,11 +340,12 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     command.entry_type is CollectionEntryType.PAYMENT
                     and not is_extra_principal
                 ):
-                    penalty_state = project_verified_seven_by_seven_penalty_state(
-                        cursor,
-                        loan_id=loan_id,
-                        as_of_date=command.collection_date,
-                    )
+                    with connection.cursor() as penalty_cursor:
+                        penalty_state = project_verified_seven_by_seven_penalty_state(
+                            penalty_cursor,
+                            loan_id=loan_id,
+                            as_of_date=command.collection_date,
+                        )
                     penalty_post_maturity = (
                         penalty_state.contractual_maturity is not None
                         and command.collection_date > penalty_state.contractual_maturity
@@ -670,30 +671,31 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
 
             if penalty_post_maturity:
                 try:
-                    frozen_penalty = freeze_verified_seven_by_seven_penalty_assessment(
-                        cursor,
-                        loan_id=loan_id,
-                        through_date=command.collection_date,
-                        source_transaction_id=transaction_id,
-                    )
-                    if frozen_penalty.status == "management_review_required":
-                        raise CollectionRejected(
-                            frozen_penalty.management_review_required_reason
-                            or "Management review is required before assessing this 7x7 penalty.",
-                            code="seven_by_seven_penalty_management_review_required",
-                        )
-                    if penalty_cash > ZERO:
-                        allocate_verified_seven_by_seven_penalty_cash(
-                            cursor,
+                    with connection.cursor() as penalty_cursor:
+                        frozen_penalty = freeze_verified_seven_by_seven_penalty_assessment(
+                            penalty_cursor,
                             loan_id=loan_id,
-                            transaction_id=transaction_id,
-                            amount_applied=penalty_cash,
+                            through_date=command.collection_date,
+                            source_transaction_id=transaction_id,
                         )
-                    final_penalty = project_verified_seven_by_seven_penalty_state(
-                        cursor,
-                        loan_id=loan_id,
-                        as_of_date=command.collection_date,
-                    )
+                        if frozen_penalty.status == "management_review_required":
+                            raise CollectionRejected(
+                                frozen_penalty.management_review_required_reason
+                                or "Management review is required before assessing this 7x7 penalty.",
+                                code="seven_by_seven_penalty_management_review_required",
+                            )
+                        if penalty_cash > ZERO:
+                            allocate_verified_seven_by_seven_penalty_cash(
+                                penalty_cursor,
+                                loan_id=loan_id,
+                                transaction_id=transaction_id,
+                                amount_applied=penalty_cash,
+                            )
+                        final_penalty = project_verified_seven_by_seven_penalty_state(
+                            penalty_cursor,
+                            loan_id=loan_id,
+                            as_of_date=command.collection_date,
+                        )
                 except SevenBySevenPenaltyCoordinatorError as error:
                     raise CollectionRejected(
                         str(error),
