@@ -17,6 +17,7 @@ from .seven_by_seven_operational_allocator import (
 
 
 FUTURE_ADVANCE_BASIS = "future_advance_oldest_first"
+_CONTRACTUAL_MATURITY_UNSET = object()
 
 
 class SevenBySevenAdvanceActivationError(RuntimeError):
@@ -29,6 +30,7 @@ class SevenBySevenAdvanceFinancialReplay:
     result: SevenBySevenAllocationResult
     matured_advance_row_count: int
     interest_holiday_dates: tuple[date, ...]
+    contractual_maturity: date | None = None
 
 
 def _financial_transaction_watermark(cursor: Any, *, loan_id: UUID) -> date | None:
@@ -49,6 +51,65 @@ def _financial_transaction_watermark(cursor: Any, *, loan_id: UUID) -> date | No
     if isinstance(row, dict):
         return next(iter(row.values()))
     return row[0]
+
+
+def _active_verified_contractual_maturity(
+    cursor: Any,
+    *,
+    loan_id: UUID,
+) -> date | None:
+    """Return the immutable maturity of the active verified signed 7x7 schedule.
+
+    Transitional 7x7 loans with no registered signed schedule return ``None``;
+    callers must not invent a contractual maturity from a product target or an
+    operationally shifted date. Once an active verified schedule exists, missing
+    immutable installments or a non-daily schedule fails closed.
+    """
+
+    cursor.execute(
+        """
+        select
+            schedule.id as schedule_id,
+            schedule.payment_frequency,
+            max(installment.due_date) as contractual_maturity,
+            count(installment.id)::integer as installment_count
+        from lending.loan_contract_schedules schedule
+        join lending.loan_contract_schedule_registrations registration
+          on registration.schedule_id = schedule.id
+        left join lending.loan_contract_installments installment
+          on installment.schedule_id = schedule.id
+        where schedule.loan_id = %s
+          and schedule.status = 'active'
+        group by
+            schedule.id,
+            schedule.payment_frequency,
+            schedule.schedule_version,
+            registration.verified_at
+        order by registration.verified_at desc, schedule.schedule_version desc
+        limit 1
+        """,
+        (loan_id,),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        payment_frequency = str(row["payment_frequency"])
+        contractual_maturity = row["contractual_maturity"]
+        installment_count = int(row["installment_count"] or 0)
+    else:
+        payment_frequency = str(row[1])
+        contractual_maturity = row[2]
+        installment_count = int(row[3] or 0)
+    if payment_frequency != "daily":
+        raise SevenBySevenAdvanceActivationError(
+            "The active verified 7x7 schedule is not daily. Management review is required."
+        )
+    if installment_count <= 0 or contractual_maturity is None:
+        raise SevenBySevenAdvanceActivationError(
+            "The active verified 7x7 schedule has no immutable contractual maturity. Management review is required."
+        )
+    return contractual_maturity
 
 
 def _active_no_collection_interest_holidays(
@@ -100,6 +161,27 @@ def _active_no_collection_interest_holidays(
     return tuple(holidays)
 
 
+def _penalty_payment_allocation_table_available(cursor: Any) -> bool:
+    """Return whether the 0118 penalty-allocation evidence table exists.
+
+    Historical disposable validators intentionally stop before migration 0118.
+    Their replay must remain valid and, by definition, cannot contain penalty
+    allocations. Current 0118+ schemas always use the immutable penalty evidence.
+    """
+
+    cursor.execute(
+        "select to_regclass('lending.seven_by_seven_penalty_payment_allocations')"
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return False
+    if isinstance(row, dict):
+        value = next(iter(row.values()))
+    else:
+        value = row[0]
+    return value is not None
+
+
 def _immediate_financial_receipt_amount(
     *,
     receipt_amount: Decimal | int | str,
@@ -130,14 +212,15 @@ def replay_verified_seven_by_seven_financial_state(
     daily_interest_per_1000: Decimal | int | str,
     payment_start: date,
     through_date: date,
+    contractual_maturity: date | None | object = _CONTRACTUAL_MATURITY_UNSET,
 ) -> SevenBySevenAdvanceFinancialReplay:
-    """Replay immediate cash plus matured active prepayment as cash events.
+    """Replay immediate contractual cash plus matured active prepayment events.
 
-    A verified Advance receipt is deliberately excluded on its receipt date.
-    The same deferred basis may also represent the affected portion of a partial
-    voluntary PAYMENT on a Management No Collection day. For PAYMENT, only the
-    receipt amount not attached to deferred future-row evidence is financially
-    active immediately; the deferred portion later activates with its signed row.
+    Receipt custody cash is not itself the contractual financial event. On 0118+
+    schemas the replay uses the receipt's applied amount net of immutable penalty
+    allocation so post-maturity penalty cash can never reduce principal or
+    contractual interest. Historical pre-0118 schemas have no penalty evidence by
+    definition and retain the prior applied-receipt replay unchanged.
 
     Gross Advance allocations remain immutable historical evidence. If audited
     Extra Principal shortening later classifies part of that Advance as Refund
@@ -150,37 +233,92 @@ def replay_verified_seven_by_seven_financial_state(
     receipt is still non-voided. Because prepayment stays attached to installment
     id while operational dates move, financial activation follows the authoritative
     effective date automatically.
+
+    When callers omit ``contractual_maturity``, replay resolves it only from the
+    active verified signed schedule's immutable installment due dates. Tests or
+    transitional compatibility callers may pass ``None`` explicitly to represent
+    a loan that genuinely has no verified contractual maturity yet.
     """
 
-    cursor.execute(
-        """
-        select
-            transaction.id,
-            transaction.collection_date,
-            transaction.entry_type,
-            transaction.amount as receipt_amount,
-            coalesce(sum(allocation.amount_applied) filter (
-                where allocation.allocation_basis = %s
-            ), 0)::numeric(18,2) as deferred_amount,
-            transaction.accepted_at
-        from lending.collection_transactions transaction
-        left join lending.loan_installment_payment_allocations allocation
-          on allocation.transaction_id = transaction.id
-        where transaction.loan_id = %s
-          and transaction.is_voided = false
-          and transaction.amount > 0
-          and transaction.collection_date <= %s
-          and transaction.entry_type in ('payment', 'advance')
-        group by
-            transaction.id,
-            transaction.collection_date,
-            transaction.entry_type,
-            transaction.amount,
-            transaction.accepted_at
-        order by transaction.collection_date, transaction.accepted_at, transaction.id
-        """,
-        (FUTURE_ADVANCE_BASIS, loan_id, through_date),
-    )
+    if contractual_maturity is _CONTRACTUAL_MATURITY_UNSET:
+        resolved_contractual_maturity = _active_verified_contractual_maturity(
+            cursor,
+            loan_id=loan_id,
+        )
+    elif contractual_maturity is None or isinstance(contractual_maturity, date):
+        resolved_contractual_maturity = contractual_maturity
+    else:
+        raise SevenBySevenAdvanceActivationError(
+            "7x7 contractual maturity evidence is invalid. Management review is required."
+        )
+
+    if _penalty_payment_allocation_table_available(cursor):
+        cursor.execute(
+            """
+            select
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                greatest(
+                    transaction.applied_amount
+                    - coalesce(penalty_allocation.amount_applied, 0),
+                    0
+                )::numeric(18,2) as receipt_amount,
+                coalesce(sum(allocation.amount_applied) filter (
+                    where allocation.allocation_basis = %s
+                ), 0)::numeric(18,2) as deferred_amount,
+                transaction.accepted_at
+            from lending.collection_transactions transaction
+            left join lending.loan_installment_payment_allocations allocation
+              on allocation.transaction_id = transaction.id
+            left join lending.seven_by_seven_penalty_payment_allocations penalty_allocation
+              on penalty_allocation.transaction_id = transaction.id
+            where transaction.loan_id = %s
+              and transaction.is_voided = false
+              and transaction.applied_amount > 0
+              and transaction.collection_date <= %s
+              and transaction.entry_type in ('payment', 'advance')
+            group by
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                transaction.applied_amount,
+                penalty_allocation.amount_applied,
+                transaction.accepted_at
+            order by transaction.collection_date, transaction.accepted_at, transaction.id
+            """,
+            (FUTURE_ADVANCE_BASIS, loan_id, through_date),
+        )
+    else:
+        cursor.execute(
+            """
+            select
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                transaction.applied_amount::numeric(18,2) as receipt_amount,
+                coalesce(sum(allocation.amount_applied) filter (
+                    where allocation.allocation_basis = %s
+                ), 0)::numeric(18,2) as deferred_amount,
+                transaction.accepted_at
+            from lending.collection_transactions transaction
+            left join lending.loan_installment_payment_allocations allocation
+              on allocation.transaction_id = transaction.id
+            where transaction.loan_id = %s
+              and transaction.is_voided = false
+              and transaction.applied_amount > 0
+              and transaction.collection_date <= %s
+              and transaction.entry_type in ('payment', 'advance')
+            group by
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                transaction.applied_amount,
+                transaction.accepted_at
+            order by transaction.collection_date, transaction.accepted_at, transaction.id
+            """,
+            (FUTURE_ADVANCE_BASIS, loan_id, through_date),
+        )
     actual_rows = cursor.fetchall()
 
     cursor.execute(
@@ -307,6 +445,7 @@ def replay_verified_seven_by_seven_financial_state(
             daily_interest_per_1000=daily_interest_per_1000,
             payment_start=payment_start,
             events=events,
+            contractual_maturity=resolved_contractual_maturity,
             interest_holiday_dates=holidays,
         )
     except SevenBySevenAllocationError as error:
@@ -325,6 +464,7 @@ def replay_verified_seven_by_seven_financial_state(
         result=result,
         matured_advance_row_count=len(matured_rows),
         interest_holiday_dates=holidays,
+        contractual_maturity=resolved_contractual_maturity,
     )
 
 
@@ -346,6 +486,10 @@ def reconcile_verified_seven_by_seven_advance_before_collection(
 
     loan_id = loan["loan_id"]
     payment_start = loan["date_released"] + timedelta(days=1)
+    contractual_maturity = _active_verified_contractual_maturity(
+        cursor,
+        loan_id=loan_id,
+    )
     watermark = _financial_transaction_watermark(cursor, loan_id=loan_id)
     if watermark is not None and through_date < watermark:
         raise SevenBySevenAdvanceActivationError(
@@ -360,6 +504,7 @@ def reconcile_verified_seven_by_seven_advance_before_collection(
         daily_interest_per_1000=money(loan["daily_interest_per_1000"]),
         payment_start=payment_start,
         through_date=baseline_date,
+        contractual_maturity=contractual_maturity,
     )
     stored_balance = money(loan["remaining_balance"])
     if baseline.result.closing_remaining_principal != stored_balance:
@@ -375,6 +520,7 @@ def reconcile_verified_seven_by_seven_advance_before_collection(
         daily_interest_per_1000=money(loan["daily_interest_per_1000"]),
         payment_start=payment_start,
         through_date=through_date,
+        contractual_maturity=contractual_maturity,
     )
     activated_balance = current.result.closing_remaining_principal
     if activated_balance > stored_balance:
