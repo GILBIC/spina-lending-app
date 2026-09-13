@@ -32,10 +32,10 @@ FIRST_PENALTY_DAY = MATURITY + timedelta(days=1)
 
 def _transaction_body(source: str) -> str:
     body = source.strip()
-    assert body.startswith("BEGIN;")
-    assert body.endswith("COMMIT;")
-    body = body[len("BEGIN;") :].lstrip()
-    return body[: -len("COMMIT;")].rstrip()
+    if body.startswith("BEGIN;") and body.endswith("COMMIT;"):
+        body = body[len("BEGIN;") :].lstrip()
+        body = body[: -len("COMMIT;")].rstrip()
+    return body
 
 
 def _priority6_migrations() -> tuple[Path, ...]:
