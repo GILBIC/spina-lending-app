@@ -124,6 +124,9 @@ def test_regular_fixture_uses_same_template_and_authoritative_component_rows(tmp
         'Regular synthetic Annex A fixture is intentionally missing at this TDD RED step.'
     )
     case = m.make_regular_case()
+    source_before = tuple(case['source'])
+    projection_before = case['projection']
+    template_before = template().read_bytes()
 
     assert case['product'] == 'Regular'
     assert case['count'] == 120
@@ -137,12 +140,52 @@ def test_regular_fixture_uses_same_template_and_authoritative_component_rows(tmp
     tables = [t for t in doc.tables if len(t.columns) == 7]
     actual = [[c.text for c in r.cells] for t in tables for r in t.rows[1:]]
 
-    assert actual == [m.row_values(row) for row in case['projection'].rows]
+    # Presentation feedback must not turn the approved components principal-first.
+    assert case['source'] == source_before
+    assert case['projection'] == projection_before
+    assert template().read_bytes() == template_before
+    assert source_before[0].principal_component == Decimal('41.67')
+    assert source_before[0].interest_component == Decimal('8.33')
+    assert projection_before.rows[0].scheduled_remaining_principal == Decimal('4958.33')
+    assert projection_before.rows[1].scheduled_remaining_principal == Decimal('4916.67')
+    assert projection_before.rows[99].scheduled_remaining_principal == Decimal('833.33')
+    assert [values[:6] for values in actual] == [
+        [str(row.installment_number), row.due_date.isoformat(),
+         f'{row.principal_component:,.2f}', f'{row.interest_component:,.2f}',
+         '0.00', f'{row.contractual_amount:,.2f}']
+        for row in source_before
+    ]
     assert len(actual) == 120
-    assert actual[-1][-1] == '0.00'
+    # Independent expected values for this fixed 120 x PHP50 specimen only.
+    expected_display = [
+        f'{max(Decimal("5000.00") - Decimal("50.00") * number, Decimal("0.00")):,.2f}'
+        for number in range(1, 121)
+    ]
+    assert [values[-1] for values in actual] == expected_display
+    assert [values[-1] for values in actual[:3]] == ['4,950.00', '4,900.00', '4,850.00']
+    assert actual[98][-1] == '50.00'
+    assert all(values[-1] == '0.00' for values in actual[99:])
     all_text = '\n'.join(p.text for p in m.all_paragraphs(doc))
     assert 'Regular Cash Loan (synthetic only)' in all_text
     assert '7x7 Cash Loan (synthetic only)' not in all_text
+
+
+def test_regular_capital_recovery_balance_is_labelled_presentation_only(tmp_path):
+    m = module()
+    out = tmp_path / 'regular-presentation-label.docx'
+    m.build_docx(template(), out, m.make_regular_case(), m.synthetic_context('REGULAR-120'))
+    doc = Document(out)
+    tables = [t for t in doc.tables if len(t.columns) == 7]
+
+    assert len(tables) == 2
+    for table in tables:
+        label = ' '.join(table.cell(0, 6).text.split())
+        assert label == 'Capital Recovery Balance*'
+    text = ' '.join(' '.join(p.text for p in m.all_paragraphs(doc)).split()).lower()
+    assert 'presentation only' in text
+    assert 'not accounting principal' in text
+    assert 'not a payoff' in text
+    assert 'zero does not mean fully paid' in text
 
 
 def test_cli_generates_five_7x7_and_one_regular_specimen(tmp_path, monkeypatch):
