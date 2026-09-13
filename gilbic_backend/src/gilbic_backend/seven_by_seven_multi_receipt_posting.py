@@ -92,11 +92,12 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
             )
 
         try:
-            penalty_state = project_verified_seven_by_seven_penalty_state(
-                cursor,
-                loan_id=loan_id,
-                as_of_date=command.collection_date,
-            )
+            with cursor.connection.cursor() as penalty_cursor:
+                penalty_state = project_verified_seven_by_seven_penalty_state(
+                    penalty_cursor,
+                    loan_id=loan_id,
+                    as_of_date=command.collection_date,
+                )
         except SevenBySevenPenaltyCoordinatorError as error:
             raise CollectionRejected(
                 str(error),
@@ -154,17 +155,18 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
             return
 
         try:
-            frozen_penalty = freeze_verified_seven_by_seven_penalty_assessment(
-                cursor,
-                loan_id=loan_id,
-                through_date=command.collection_date,
-                source_transaction_id=transaction_id,
-            )
-            final_penalty = project_verified_seven_by_seven_penalty_state(
-                cursor,
-                loan_id=loan_id,
-                as_of_date=command.collection_date,
-            )
+            with cursor.connection.cursor() as penalty_cursor:
+                frozen_penalty = freeze_verified_seven_by_seven_penalty_assessment(
+                    penalty_cursor,
+                    loan_id=loan_id,
+                    through_date=command.collection_date,
+                    source_transaction_id=transaction_id,
+                )
+                final_penalty = project_verified_seven_by_seven_penalty_state(
+                    penalty_cursor,
+                    loan_id=loan_id,
+                    as_of_date=command.collection_date,
+                )
         except SevenBySevenPenaltyCoordinatorError as error:
             raise CollectionRejected(
                 str(error),
