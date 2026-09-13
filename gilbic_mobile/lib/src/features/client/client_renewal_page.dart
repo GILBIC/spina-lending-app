@@ -110,7 +110,9 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Renewal request submitted for Management review.'),
+          content: Text(
+            'Renewal request submitted. Your assigned Collector must recommend it before Management review.',
+          ),
         ),
       );
       await _load();
@@ -287,7 +289,7 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Continue here to review Management-approved terms, accept or decline, complete your own signer steps, and confirm cash only after you receive it.',
+                      'Continue here to review Management-approved terms, accept or decline, complete only your own signer step, and confirm cash only after you receive it. Any other required signer must use their own SPINA account.',
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
