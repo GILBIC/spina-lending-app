@@ -103,17 +103,23 @@ function supportRows(requests) {
     .join('')}</div>`;
 }
 
-function notificationRows(items) {
+export function clientNotificationRows(items) {
   if (!items.length) return emptyState('You have no new SPINA updates.');
   return `<div class="timeline">${items
     .slice(0, 30)
-    .map(
-      (item) => `<article class="timeline-item">
-        <strong>${escapeHtml(item.title || item.notification_type || 'SPINA update')}</strong>
+    .map((item) => {
+      const notificationId = String(item.notification_id || '').trim();
+      const isRead = item.is_read === true;
+      return `<article class="timeline-item">
+        <div class="section-heading">
+          <strong>${escapeHtml(item.title || item.notification_type || 'SPINA update')}</strong>
+          ${badge(isRead ? 'Read' : 'Unread', isRead ? 'success' : 'warning')}
+        </div>
         <span>${escapeHtml(item.message || '')}</span>
         <span class="meta">${formatDateTime(item.created_at)}</span>
-      </article>`,
-    )
+        ${!isRead && notificationId ? `<button class="button button-secondary" type="button" data-client-notification-read="${escapeHtml(notificationId)}">Mark as read</button>` : ''}
+      </article>`;
+    })
     .join('')}</div>`;
 }
 
@@ -161,6 +167,17 @@ export async function requestClientDeviceRevocation({
     { method: 'POST' },
   );
   return true;
+}
+
+export async function requestClientNotificationRead({ api, notificationId }) {
+  const normalized = String(notificationId || '').trim();
+  if (!normalized) {
+    throw new Error('A notification is required.');
+  }
+  return api.request(
+    `/api/v1/activity-notifications/${encodeURIComponent(normalized)}/read`,
+    { method: 'POST' },
+  );
 }
 
 function renderWorkspace(root, model, raw, errors) {
@@ -227,7 +244,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-updates">
     <div class="section-heading"><div><h2>Updates</h2><p>Notices intended for your account only.</p></div></div>
-    ${errors.notifications ? errorCard(errors.notifications) : notificationRows(model.notifications)}
+    ${errors.notifications ? errorCard(errors.notifications) : clientNotificationRows(model.notifications)}
   </section>
 
   <section class="section-card" id="client-account">
@@ -304,6 +321,26 @@ function bindClientAccountDeviceSecurity(context) {
   }
 }
 
+function bindClientNotificationReadActions(context) {
+  for (const button of context.root.querySelectorAll('[data-client-notification-read]')) {
+    button.addEventListener('click', async () => {
+      const notificationId = button.dataset.clientNotificationRead;
+      setButtonBusy(button, true, 'Marking…');
+      try {
+        await requestClientNotificationRead({
+          api: context.api,
+          notificationId,
+        });
+        showToast('Update marked as read.', 'success');
+        await mountClientWorkspace(context);
+      } catch (error) {
+        showToast(error.message, 'error');
+        setButtonBusy(button, false);
+      }
+    });
+  }
+}
+
 export async function mountClientWorkspace(context) {
   const { root, api, setNavigation } = context;
   setNavigation([
@@ -354,4 +391,5 @@ export async function mountClientWorkspace(context) {
   bindClientScheduleButtons(context);
   bindClientGcashPanel(context);
   bindClientAccountDeviceSecurity(context);
+  bindClientNotificationReadActions(context);
 }
