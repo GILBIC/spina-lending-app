@@ -594,10 +594,8 @@ class _RenewalRequestDialogState extends State<_RenewalRequestDialog> {
   }
 
   void _submit() {
-    final amount = double.tryParse(
-      _amountController.text.trim().replaceAll(',', ''),
-    );
-    if (amount == null || amount <= 0) {
+    final amount = _normalizeRequestedAmount(_amountController.text);
+    if (amount == null) {
       setState(() => _error = 'Enter a valid requested amount.');
       return;
     }
@@ -665,7 +663,7 @@ class _RenewalRequestDialogState extends State<_RenewalRequestDialog> {
 class _RenewalDraft {
   const _RenewalDraft({required this.amount, required this.message});
 
-  final double amount;
+  final String amount;
   final String message;
 }
 
@@ -689,6 +687,17 @@ class _LabelValue extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _normalizeRequestedAmount(String input) {
+  final normalized = input.trim().replaceAll(',', '');
+  final match = RegExp(r'^(\d+)(?:\.(\d{0,2}))?$').firstMatch(normalized);
+  if (match == null || !RegExp(r'[1-9]').hasMatch(normalized)) {
+    return null;
+  }
+  final whole = match.group(1)!;
+  final fraction = (match.group(2) ?? '').padRight(2, '0');
+  return '$whole.$fraction';
 }
 
 String _money(double value) {
