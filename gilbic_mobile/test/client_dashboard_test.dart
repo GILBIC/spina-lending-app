@@ -109,7 +109,9 @@ void main() {
       clientCode: 'CLIENT-001',
       clientName: 'Ana Client',
       clientStatus: 'active',
-      loans: <ClientLoan>[_regularLoan(status: 'paid', remainingBalance: 0)],
+      loans: <ClientLoan>[
+        _regularLoan(status: 'paid', remainingBalance: '0.00'),
+      ],
     );
 
     await tester.pumpWidget(
@@ -221,16 +223,16 @@ ClientLoanPortfolio _portfolio() => ClientLoanPortfolio(
   clientStatus: 'active',
   loans: <ClientLoan>[
     _regularLoan(),
-    ClientLoan(
+    const ClientLoan(
       loanId: 'seven-by-seven-loan',
       loanNumber: '7X7-001',
       loanTypeCode: 'seven_by_seven',
       loanTypeName: '7x7',
-      principal: 3000,
-      dailyAmount: 21,
+      principal: '3000.00',
+      dailyAmount: '21.00',
       status: 'active',
-      remainingBalance: 3000,
-      paidAmount: 0,
+      remainingBalance: '3000.00',
+      paidAmount: '0.00',
       passCount: 0,
       stateVersion: 0,
       paymentCount: 0,
@@ -240,20 +242,20 @@ ClientLoanPortfolio _portfolio() => ClientLoanPortfolio(
 
 ClientLoan _regularLoan({
   String status = 'active',
-  double remainingBalance = 4950,
+  String remainingBalance = '4950.00',
 }) {
   return ClientLoan(
     loanId: 'regular-loan',
     loanNumber: 'REG-001',
     loanTypeCode: 'regular',
     loanTypeName: 'Regular',
-    principal: 5000,
-    dailyAmount: 50,
+    principal: '5000.00',
+    dailyAmount: '50.00',
     dateReleased: DateTime(2026, 8, 1),
     dueDate: DateTime(2026, 11, 29),
     status: status,
     remainingBalance: remainingBalance,
-    paidAmount: 50,
+    paidAmount: '50.00',
     passCount: 0,
     lastPaymentDate: DateTime(2026, 8, 2),
     stateVersion: 3,
