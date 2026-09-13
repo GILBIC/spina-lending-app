@@ -34,6 +34,13 @@ TOTAL_LABELS = (
     'TOTAL OTHER LAWFUL SCHEDULED CHARGES', 'TOTAL AMOUNT PAYABLE',
     'FINAL SCHEDULED REMAINING PRINCIPAL',
 )
+ACKNOWLEDGMENT_LABELS = (
+    'IV. BORROWER ACKNOWLEDGMENT',
+    'I acknowledge receipt and review of the complete Schedule',
+    'Borrower Printed Name',
+    'Borrower Signature / Date',
+    'Management Approval / Evidence',
+)
 
 
 def require(condition: bool, message: str) -> None:
@@ -87,6 +94,15 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
         require(actual == expected, f'{path.name}: PDF rows do not match authoritative projection')
         require(len(actual) == count and actual[-1][-1] == '0.00', 'Wrong final row/principal')
         complete_text = '\n'.join(texts)
+        compact_pages = [' '.join(text.split()) for text in texts]
+        acknowledgment_pages = [
+            [number for number, text in enumerate(compact_pages, 1) if label in text]
+            for label in ACKNOWLEDGMENT_LABELS
+        ]
+        require(all(len(pages) == 1 for pages in acknowledgment_pages),
+                'Acknowledgment text/name/signature/approval is missing or duplicated')
+        require(len({pages[0] for pages in acknowledgment_pages}) == 1,
+                'Acknowledgment text/name/signature/approval is split across pages')
         require(product_label in complete_text, 'Wrong product label')
         if regular:
             require(
@@ -114,6 +130,7 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
             'other_scheduled_charges': '0.00', 'total_payable': str(result.total_due),
             'final_scheduled_remaining_principal': '0.00', 'maturity': result.maturity_date.isoformat(),
             'page_points': [576, 936], 'fillable_widgets': 0,
+            'acknowledgment_page': acknowledgment_pages[0][0],
             'fonts_observed': sorted(fonts), 'visual_review': 'SEPARATE_MANUAL_CHECK',
         }
 

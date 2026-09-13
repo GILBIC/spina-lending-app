@@ -241,11 +241,12 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         fill_table(tables[2], result.rows[7:])
     else:
         tables[2]._element.getparent().remove(tables[2]._element)
-    # Keep the five-row totals block together when it reaches a page boundary.
-    for row in tables[3].rows[:-1]:
-        for cell in row.cells:
-            for paragraph in cell.paragraphs:
-                paragraph.paragraph_format.keep_with_next = True
+    # Keep totals and the borrower name/signature/approval table together.
+    for table in (tables[3], tables[5]):
+        for row in table.rows[:-1]:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.keep_with_next = True
     mapping = {
         '{Controlled SEC company identity and registered office address}': context['company_line'],
         '{Borrower Full Name from Locked Loan}': context['borrower_name'],
@@ -296,6 +297,12 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
             p._element.getparent().remove(p._element)
         elif text.startswith('Row N is the actual'):
             set_text(p, text.replace('Row N', f'Row {count}'))
+        elif (
+            text == 'IV. BORROWER ACKNOWLEDGMENT'
+            or text.startswith('I acknowledge receipt and review of the complete Schedule')
+        ):
+            p.paragraph_format.keep_with_next = True
+            p.paragraph_format.keep_together = True
         elif count <= 7 and p._p.xpath('.//w:br[@w:type="page"]'):
             p._element.getparent().remove(p._element)
     for p in all_paragraphs(doc):
