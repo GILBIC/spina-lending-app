@@ -463,19 +463,7 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  final digits = parts.first;
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[index]);
-  }
-  return '₱$buffer.${parts.last}';
-}
+String _money(String value) => formatClientPaymentMoney(value);
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
