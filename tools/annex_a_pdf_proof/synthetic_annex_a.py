@@ -164,15 +164,28 @@ def row_values(row):
             f'{row.scheduled_remaining_principal:,.2f}']
 
 
+def _display_rows(case: dict) -> list[list[str]]:
+    """Prepare display cells without changing contractual principal/interest rows."""
+    result = case['projection']
+    values = [row_values(row) for row in result.rows]
+    if case.get('product') == 'Regular':
+        cumulative_due = Decimal('0.00')
+        for source, cells in zip(result.rows, values, strict=True):
+            cumulative_due += source.contractual_amount
+            balance = max(result.total_principal - cumulative_due, Decimal('0.00'))
+            cells[-1] = f'{balance:,.2f}'
+    return values
+
+
 def fill_table(table, rows):
     model = deepcopy(table.rows[1]._tr)
     for row in list(table.rows)[1:]:
         table._tbl.remove(row._tr)
-    for source in rows:
+    for values in rows:
         element = deepcopy(model)
         table._tbl.append(element)
         row = _Row(element, table)
-        for cell, value in zip(row.cells, row_values(source), strict=True):
+        for cell, value in zip(row.cells, values, strict=True):
             set_text(cell.paragraphs[0], value)
 
 
@@ -232,13 +245,15 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         raise SyntheticProofError('Modified synthetic fixture is not supported.')
     result = case['projection']
     terms = _display_terms(case, result)
+    display_rows = _display_rows(case)
+    regular = case.get('product') == 'Regular'
     doc = Document(template)
     tables = doc.tables
     if len(tables) != 6 or [len(t.columns) for t in tables] != [2, 7, 7, 2, 2, 2]:
         raise SyntheticProofError('Unexpected approved-template structure.')
-    fill_table(tables[1], result.rows[:7])
+    fill_table(tables[1], display_rows[:7])
     if count > 7:
-        fill_table(tables[2], result.rows[7:])
+        fill_table(tables[2], display_rows[7:])
     else:
         tables[2]._element.getparent().remove(tables[2]._element)
     # Keep totals and the borrower name/signature/approval table together.
@@ -270,7 +285,7 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         '{Total Interest Components}': f'{result.total_interest:,.2f}',
         '{Total Scheduled Charges / 0.00}': '0.00',
         '{Sum of All Contractual Installments}': f'{result.total_due:,.2f}',
-        '{Final Scheduled Remaining Principal}': f'{result.rows[-1].scheduled_remaining_principal:,.2f}',
+        '{Final Scheduled Remaining Principal}': display_rows[-1][-1],
         '{Exact Product-Specific Allocation from Locked Disclosure}': terms['allocation'],
         '{Exact Applicable Locked Disclosure Rule / None}': 'None / PHP 0.00 (synthetic disclosure; no penalty enabled)',
         '{Authenticated Approver / Locked Approval Reference}': context['approval_evidence'],
@@ -307,6 +322,19 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
             p._element.getparent().remove(p._element)
     for p in all_paragraphs(doc):
         replace_tokens(p, mapping)
+        if regular:
+            if p.text.startswith('* Scheduled Remaining Principal:'):
+                set_text(p, (
+                    '* Capital Recovery Balance (presentation only): Original principal '
+                    'less cumulative full scheduled installments, floored at zero. '
+                    'Not accounting principal and not a payoff or proof of payment. '
+                    'Zero does not mean fully paid; remaining scheduled payments still apply.'
+                ))
+            else:
+                replace_tokens(p, {
+                    'Scheduled Remaining Principal*': 'Capital Recovery Balance*',
+                    'FINAL SCHEDULED REMAINING PRINCIPAL': 'FINAL CAPITAL RECOVERY BALANCE',
+                })
         if p.text == '____________________________ / ______________':
             set_text(p, 'UNSIGNED TEST ONLY - DO NOT SIGN')
     # Use the existing last blank header paragraph, leaving logo bytes untouched.

@@ -8,6 +8,7 @@ changed here.
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal
 import hashlib
 import json
 from pathlib import Path
@@ -52,6 +53,16 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
     case = make_regular_case() if regular else make_case(count)
     result = case['projection']
     expected = [row_values(row) for row in result.rows]
+    balance_label = 'Capital Recovery Balance' if regular else 'Scheduled Remaining Principal'
+    total_labels = TOTAL_LABELS
+    if regular:
+        # Check the display independently; do not call the renderer's display helper.
+        cumulative_due = Decimal('0.00')
+        for source, cells in zip(result.rows, expected, strict=True):
+            cumulative_due += source.contractual_amount
+            balance = max(result.total_principal - cumulative_due, Decimal('0.00'))
+            cells[-1] = f'{balance:,.2f}'
+        total_labels = TOTAL_LABELS[:-1] + ('FINAL CAPITAL RECOVERY BALANCE',)
     identity = 'REGULAR-120' if regular else str(count)
     product_label = (
         'Regular Cash Loan (synthetic only)'
@@ -77,7 +88,7 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
             actual.extend(rows)
             if rows:
                 compact = ' '.join(text.split())
-                require('Scheduled Remaining Principal*' in compact, 'Repeated schedule heading missing')
+                require(balance_label + '*' in compact, 'Repeated schedule heading missing')
             for block in page.get_text('dict')['blocks']:
                 if block['type'] != 0:
                     continue
@@ -91,8 +102,8 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
                 for color in (drawing.get('color'), drawing.get('fill')):
                     if color is not None:
                         require(max(color) - min(color) < 0.002, 'Nonneutral PDF line or fill')
-        require(actual == expected, f'{path.name}: PDF rows do not match authoritative projection')
-        require(len(actual) == count and actual[-1][-1] == '0.00', 'Wrong final row/principal')
+        require(actual == expected, f'{path.name}: PDF rows do not match source components and approved display')
+        require(len(actual) == count and actual[-1][-1] == '0.00', 'Wrong final row/display balance')
         complete_text = '\n'.join(texts)
         compact_pages = [' '.join(text.split()) for text in texts]
         acknowledgment_pages = [
@@ -105,14 +116,20 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
                 'Acknowledgment text/name/signature/approval is split across pages')
         require(product_label in complete_text, 'Wrong product label')
         if regular:
+            explanation = ' '.join(compact_pages).lower()
+            for phrase in ('presentation only', 'not accounting principal',
+                           'not a payoff', 'zero does not mean fully paid'):
+                require(phrase in explanation, f'Missing Regular display explanation: {phrase}')
+            require('Scheduled Remaining Principal*' not in ' '.join(compact_pages),
+                    'Regular presentation balance is incorrectly labelled as principal')
             require(
                 '20.00% fixed contractual interest (synthetic fixture)' in complete_text,
                 'Wrong Regular synthetic interest disclosure',
             )
-        summaries = [i for i, text in enumerate(texts) if all(label in text for label in TOTAL_LABELS)]
+        summaries = [i for i, text in enumerate(texts) if all(label in text for label in total_labels)]
         require(len(summaries) == 1, 'Totals block is missing, duplicated or split')
         amounts = [result.total_principal, result.total_interest, 0, result.total_due, 0]
-        for label, amount in zip(TOTAL_LABELS, amounts, strict=True):
+        for label, amount in zip(total_labels, amounts, strict=True):
             require(complete_text.count(label) == 1, f'Duplicated total: {label}')
             require(re.search(re.escape(label) + r'\s+PHP\s+' + re.escape(f'{amount:,.2f}') + r'(?:\s|$)',
                               texts[summaries[0]]) is not None, f'Wrong total: {label}')
@@ -128,7 +145,10 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
             'installments': count, 'pages': len(doc), 'rows_by_page': per_page,
             'scheduled_principal': str(result.total_principal), 'contractual_interest': str(result.total_interest),
             'other_scheduled_charges': '0.00', 'total_payable': str(result.total_due),
-            'final_scheduled_remaining_principal': '0.00', 'maturity': result.maturity_date.isoformat(),
+            'final_scheduled_remaining_principal': str(result.rows[-1].scheduled_remaining_principal),
+            'display_balance_label': balance_label, 'final_display_balance': expected[-1][-1],
+            'display_balance_is_presentation_only': regular,
+            'maturity': result.maturity_date.isoformat(),
             'page_points': [576, 936], 'fillable_widgets': 0,
             'acknowledgment_page': acknowledgment_pages[0][0],
             'fonts_observed': sorted(fonts), 'visual_review': 'SEPARATE_MANUAL_CHECK',
