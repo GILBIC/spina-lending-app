@@ -43,6 +43,7 @@ def test_every_row_exact_once_with_matching_source_money(count, tmp_path):
     doc = Document(out)
     tables = [t for t in doc.tables if len(t.columns) == 7]
     actual = [[c.text for c in r.cells] for t in tables for r in t.rows[1:]]
+
     assert actual == [m.row_values(row) for row in case['projection'].rows]
     assert len(actual) == count
     assert actual[-1][-1] == '0.00'
@@ -158,19 +159,30 @@ def test_regular_fixture_uses_same_template_and_authoritative_component_rows(tmp
     assert len(actual) == 120
     # Independent expected values for this fixed 120 x PHP50 specimen only.
     expected_display = [
-        f'{max(Decimal("5000.00") - Decimal("50.00") * number, Decimal("0.00")):,.2f}'
+        f'{Decimal("6000.00") - Decimal("50.00") * number:,.2f}'
         for number in range(1, 121)
     ]
     assert [values[-1] for values in actual] == expected_display
-    assert [values[-1] for values in actual[:3]] == ['4,950.00', '4,900.00', '4,850.00']
-    assert actual[98][-1] == '50.00'
-    assert all(values[-1] == '0.00' for values in actual[99:])
+    assert [values[-1] for values in actual[:3]] == ['5,950.00', '5,900.00', '5,850.00']
+    assert actual[98][-1] == '1,050.00'
+    assert actual[99][-1] == '1,000.00'
+    assert actual[118][-1] == '50.00'
+    assert actual[119][-1] == '0.00'
+    assert all(Decimal(values[-1].replace(',', '')) > 0 for values in actual[:-1])
+    # Each displayed total equals the principal and interest still scheduled.
+    for number, values in enumerate(actual, start=1):
+        future = source_before[number:]
+        remaining_components = sum(
+            (row.principal_component + row.interest_component for row in future),
+            Decimal('0.00'),
+        )
+        assert Decimal(values[-1].replace(',', '')) == remaining_components
     all_text = '\n'.join(p.text for p in m.all_paragraphs(doc))
     assert 'Regular Cash Loan (synthetic only)' in all_text
     assert '7x7 Cash Loan (synthetic only)' not in all_text
 
 
-def test_regular_capital_recovery_balance_is_labelled_presentation_only(tmp_path):
+def test_regular_remaining_total_payable_has_consistent_labels_and_schedule_note(tmp_path):
     m = module()
     out = tmp_path / 'regular-presentation-label.docx'
     m.build_docx(template(), out, m.make_regular_case(), m.synthetic_context('REGULAR-120'))
@@ -180,12 +192,22 @@ def test_regular_capital_recovery_balance_is_labelled_presentation_only(tmp_path
     assert len(tables) == 2
     for table in tables:
         label = ' '.join(table.cell(0, 6).text.split())
-        assert label == 'Capital Recovery Balance*'
+        assert label == 'Remaining Total Payable*'
     text = ' '.join(' '.join(p.text for p in m.all_paragraphs(doc)).split()).lower()
-    assert 'presentation only' in text
-    assert 'not accounting principal' in text
-    assert 'not a payoff' in text
-    assert 'zero does not mean fully paid' in text
+    assert 'capital recovery balance' not in text
+    assert 'includes scheduled principal and interest' in text
+    assert 'assuming all scheduled payments are made fully and on time' in text
+    assert 'not a live account balance or payoff quote' in text
+    assert 'not proof of payment' in text
+    totals = next(t for t in doc.tables if t.cell(0, 0).text == 'TOTAL SCHEDULED PRINCIPAL')
+    assert [row.cells[0].text for row in totals.rows] == [
+        'TOTAL SCHEDULED PRINCIPAL', 'TOTAL CONTRACTUAL INTEREST',
+        'TOTAL OTHER LAWFUL SCHEDULED CHARGES', 'TOTAL AMOUNT PAYABLE',
+        'FINAL REMAINING TOTAL PAYABLE',
+    ]
+    assert [row.cells[1].text for row in totals.rows] == [
+        'PHP 5,000.00', 'PHP 1,000.00', 'PHP 0.00', 'PHP 6,000.00', 'PHP 0.00',
+    ]
 
 
 def test_cli_generates_five_7x7_and_one_regular_specimen(tmp_path, monkeypatch):
