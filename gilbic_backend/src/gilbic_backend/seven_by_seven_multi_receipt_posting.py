@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from psycopg import Connection
-from psycopg.types.json import Jsonb
 from spina_mobile_collections.contracts import (
-    ActorContext,
     CollectionCommand,
     CollectionEntryType,
     PaymentAllocationIntent,
-    PostedCollection,
 )
 from spina_mobile_collections.service import CollectionRejected
 
@@ -64,7 +60,7 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
         registered_device_id: UUID,
         route_entry_id: UUID,
         amount: Decimal,
-        accepted_at,
+        accepted_at: datetime,
         previous_balance: Decimal,
         official_balance: Decimal,
         pass_count_after: int,
