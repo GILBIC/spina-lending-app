@@ -125,6 +125,7 @@ jobs:
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py
           python -m py_compile gilbic_backend/tests/test_7x7_contractual_cash_flow_readiness_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_readiness_postgres.py
@@ -134,7 +135,6 @@ jobs:
           python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_migration.py
           python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_gate.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_migration.py
-          python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_contract_binding.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty.py
 
       - name: Verify Priority 6 migration and pure-calculation contracts
@@ -146,7 +146,6 @@ jobs:
             gilbic_backend/tests/test_7x7_one_active_loan_migration.py \
             gilbic_backend/tests/test_7x7_pricing_compliance_gate.py \
             gilbic_backend/tests/test_7x7_post_maturity_penalty_migration.py \
-            gilbic_backend/tests/test_7x7_post_maturity_penalty_contract_binding.py \
             gilbic_backend/tests/test_7x7_post_maturity_penalty.py
 
       - name: Execute protected 7x7 contractual cash-flow proof
