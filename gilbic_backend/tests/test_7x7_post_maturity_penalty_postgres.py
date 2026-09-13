@@ -325,14 +325,15 @@ def _declare_management_no_collection(
         """
         insert into lending.loan_schedule_adjustments (
             id, loan_id, schedule_id, adjustment_type,
-            no_collection_date, reason, expected_operational_version,
+            no_collection_date, event_date, reason, expected_operational_version,
             resulting_operational_version, actor_user_id
-        ) values (%s, %s, %s, 'no_collection', %s, %s, 0, 1, %s)
+        ) values (%s, %s, %s, 'no_collection', %s, %s, %s, 0, 1, %s)
         """,
         (
             adjustment_id,
             case["loan_id"],
             case["schedule_id"],
+            no_collection_date,
             no_collection_date,
             "Management-approved weather suspension",
             case["actor_id"],
@@ -599,8 +600,20 @@ def test_voided_assessment_source_or_later_backdated_cash_forces_management_revi
         connection.commit()
 
         connection.execute(
-            "update lending.collection_transactions set is_voided = true where id = %s",
-            (source_tx,),
+            """
+            update lending.collection_transactions
+            set is_voided = true,
+                voided_at = %s,
+                voided_by_user_id = %s,
+                void_reason = %s
+            where id = %s
+            """,
+            (
+                datetime.now(timezone.utc),
+                case["actor_id"],
+                "Task 4 synthetic audited source void",
+                source_tx,
+            ),
         )
         voided = _project(
             connection,
