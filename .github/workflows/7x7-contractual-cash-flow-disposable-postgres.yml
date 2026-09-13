@@ -118,7 +118,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install --disable-pip-version-check 'psycopg[binary]>=3.2,<4' 'pytest>=8.3,<9'
-          python -m pip install --disable-pip-version-check -e './spina_backend_mobile'
+          python -m pip install --disable-pip-version-check -e './spina_backend_mobile[test]'
 
       - name: Compile protected verifier
         shell: bash
