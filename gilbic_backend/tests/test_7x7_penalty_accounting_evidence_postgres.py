@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -169,9 +169,27 @@ def test_accounting_evidence_rolls_up_assessments_and_ignores_voided_penalty_pay
             False,
         )
 
+        voided_at = datetime.now(timezone.utc)
+        void_reason = "Task 7 accounting-evidence void proof"
         connection.execute(
-            "update lending.collection_transactions set is_voided = true where id = %s",
-            (penalty_payment,),
+            """
+            insert into lending.collection_transaction_voids (
+                transaction_id, voided_by_user_id, reason,
+                transaction_snapshot, state_before, state_after, voided_at
+            ) values (%s, %s, %s, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, %s)
+            """,
+            (penalty_payment, case["actor_id"], void_reason, voided_at),
+        )
+        connection.execute(
+            """
+            update lending.collection_transactions
+            set is_voided = true,
+                voided_at = %s,
+                voided_by_user_id = %s,
+                void_reason = %s
+            where id = %s
+            """,
+            (voided_at, case["actor_id"], void_reason, penalty_payment),
         )
 
         allocation_evidence = connection.execute(
