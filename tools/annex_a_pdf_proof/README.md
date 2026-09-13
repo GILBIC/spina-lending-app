@@ -1,3 +1,19 @@
+## 2026-09-13 update: bounded CI setup, exact asset still required
+
+The new `Annex A PDF proof` workflow selects only this diagnostic scope on a disposable Windows runner. It explicitly runs the 18 Arial-gate tests and the 24 template tests, converts all five fixed fixtures, checks existing schedule assertions, verifies reported Arial identity plus embedded resources, and publishes PDFs/reports/page images for separate visual review. It does not repeat the full financial/backend/mobile suites.
+
+The original DOCX upload is **still pending**. Put the unchanged source at `tools/annex_a_pdf_proof/assets/SPINA_Schedule_of_Payments_Annex_A_R2_Black_White_Draft.docx` on `docs/forms-documents-pdf-handoff`. The preflight requires the original 73022 bytes and SHA-256 below; missing or modified input is a blocking error, not a skipped test or fallback layout. A hash in this README is not an uploaded asset.
+
+`font_gate.py` rejects Liberation Sans, Arimo and other substitutions, empty evidence, and unembedded Arial resources. Its 18 tests passed locally after the initial 17 missing-module failures. The five previously delivered substituted-font PDFs were independently rejected. Exact-source preflight locally accepted the original and rejected missing/modified copies. YAML and inline Python syntax were checked. **Windows installation/conversion and end-to-end repository PDF proof have not run successfully yet**; no Arial-rendering or production acceptance is claimed by this setup.
+
+The runner uses installed Arial only and a SHA-256-pinned LibreOffice 26.2.5.2 installer from The Document Foundation. Installer provenance is the x64 entry of Microsoft winget-pkgs blob `63fdc92e77144fe63f8703dc8b2027ec0372db07`. No font files are copied, committed or uploaded as artifacts. Proof dependencies are isolated from application runtime dependencies.
+
+After a successful exact-head PDF proof, visually review all generated pages. Then add Regular's own authoritative schedule binding and product-specific tests to the shared forms, as approved; the current fixtures remain 7x7-only. Full packet, protected ownership/version binding, signatures, immutable retention and professional reviews remain open.
+
+---
+
+## Original recovery checkpoint (historical)
+
 # Annex A synthetic proof: recovered diagnostic tools
 
 PR #427, recovery import dated 2026-09-13. These four Python files are byte-for-byte copies from the delivered offline proof archive. They preserve that work in the repository; this commit does not implement production document generation.
