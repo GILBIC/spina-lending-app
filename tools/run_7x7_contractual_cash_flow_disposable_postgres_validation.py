@@ -28,6 +28,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_post_maturity_penalty_combined_pay.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_no_collection_voluntary.py",
     TEST_ROOT / "test_7x7_penalty_read_models.py",
+    TEST_ROOT / "test_7x7_penalty_accounting_evidence_postgres.py",
 )
 
 
@@ -77,8 +78,9 @@ def main() -> int:
             "readiness, contractual-interest maturity stopping, protected post-maturity "
             "penalty coordination, protected single-loan penalty collection/payoff, "
             "Combined Pay allocation of authoritative 7x7 penalty before Regular, "
-            "Management No Collection voluntary-path penalty alignment, and shared "
-            "Collector/Client server-authoritative penalty read models."
+            "Management No Collection voluntary-path penalty alignment, shared "
+            "Collector/Client server-authoritative penalty read models, and read-only "
+            "accounting penalty evidence rollup."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -154,9 +156,11 @@ def main() -> int:
             "No Collection voluntary receipts froze the same coordinator-authoritative "
             "penalty without charging protected amounts; Collector and Client schedule "
             "read models exposed the same server-authoritative penalty/payoff evidence "
-            "without UI-side penalty math; no second collection engine was created while "
-            "accounting policy/EIR/carrying conclusions and automatic posting stayed "
-            "separate."
+            "without UI-side penalty math; the read-only accounting view aggregated "
+            "multiple immutable assessments and only non-void penalty payments while "
+            "preserving voided allocation evidence for audit; no second collection engine "
+            "was created while accounting policy/EIR/carrying conclusions and automatic "
+            "posting stayed separate."
         )
         return 0
     except psycopg.Error as error:
