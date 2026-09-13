@@ -215,7 +215,7 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
               child: const Padding(
                 padding: EdgeInsets.all(14),
                 child: Text(
-                  'Approval is not the same as release. Review the approved principal, accept or decline yourself, complete your own identity/signature steps, and independently confirm cash only after you actually receive it.',
+                  'Approval is not the same as release. Review the approved principal, accept or decline yourself, complete only your own identity/signature step, and independently confirm cash only after you actually receive it. Any other required signer must use their own SPINA account.',
                 ),
               ),
             ),
