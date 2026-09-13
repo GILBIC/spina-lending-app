@@ -13,8 +13,13 @@ class _Cursor:
     def __init__(self) -> None:
         self.query = ""
 
-    def execute(self, query: str, params) -> None:
+    def execute(self, query: str, params=()) -> None:
         self.query = query
+
+    def fetchone(self):
+        if "to_regclass('lending.seven_by_seven_penalty_payment_allocations')" in self.query:
+            return (None,)
+        return None
 
     def fetchall(self):
         if "from lending.collection_transactions transaction" in self.query:
