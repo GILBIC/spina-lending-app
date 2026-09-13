@@ -97,6 +97,15 @@ def _schedule_payload(schedule: CollectorScheduleRecord) -> dict[str, object]:
             else None
         ),
         "maturity_projection_status": schedule.maturity_projection_status,
+        "penalty_status": schedule.penalty_status,
+        "projected_penalty": format(schedule.projected_penalty, "f"),
+        "assessed_penalty_balance": format(schedule.assessed_penalty_balance, "f"),
+        "penalty_base": format(schedule.penalty_base, "f"),
+        "remaining_cost_headroom": format(schedule.remaining_cost_headroom, "f"),
+        "exact_payoff_total": format(schedule.exact_payoff_total, "f"),
+        "management_review_required_reason": (
+            schedule.management_review_required_reason
+        ),
         "rows": [_row_payload(row) for row in schedule.rows],
     }
 

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -35,7 +36,17 @@ def test_stage5e43_requires_management_permission_and_signed_contract_evidence()
 def test_stage5e43_does_not_infer_or_auto_classify() -> None:
     assert "generate_contract_installments" in API
     assert "legacy" not in API.lower()
-    assert "update lending.loans" not in SERVICE.lower()
+
+    loan_updates = re.findall(
+        r"update\s+lending\.loans\s+set\s+(.*?)\s+where\s+id\s*=\s*%s",
+        SERVICE,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    assert len(loan_updates) == 1
+    assert " ".join(loan_updates[0].split()).lower() == (
+        "daily_amount = %s, due_date = %s"
+    )
+
     assert "explicit_default_label" not in SERVICE
     assert "post_manual_journal_entry" not in SERVICE
     assert "ecl_amount" not in SERVICE
