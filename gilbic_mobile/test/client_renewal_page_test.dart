@@ -68,7 +68,10 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Request history'), findsOneWidget);
-    expect(find.text('Pending Collector / Management review'), findsOneWidget);
+    expect(
+      find.text('Pending Collector recommendation / Management review'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('approved request continues into renewal workflow',
