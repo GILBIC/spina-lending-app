@@ -25,9 +25,32 @@ import {
 } from '../client-schedule.js';
 import { renderClientStatement } from '../client-statement.js';
 
-export function loanCard(loan) {
+function clientHomeObligationSummary(schedule) {
+  const penaltyStatus = String(schedule?.penalty_status || '').trim().toLowerCase();
+  if (penaltyStatus === 'management_review_required') {
+    const reason = String(schedule?.management_review_required_reason || '').trim();
+    return `<div class="notice-card" data-client-home-obligation>
+      <strong>Management review required</strong>
+      ${reason ? `<p>${escapeHtml(reason)}</p>` : ''}
+      <p class="meta">Open the authoritative schedule for details.</p>
+    </div>`;
+  }
+  if (!['projected', 'penalty_outstanding', 'cap_exhausted'].includes(penaltyStatus)) {
+    return '';
+  }
+  return `<div class="notice-card" data-client-home-obligation>
+    <strong>Exact payoff</strong>
+    <p>${formatAuthoritativeMoney(schedule?.exact_payoff_total)}</p>
+    <p class="meta">Server-authoritative post-maturity amount. Open the schedule for details.</p>
+  </div>`;
+}
+
+export function loanCard(loan, obligationSchedule = null) {
   const type = classifyLoanType(loan.loan_type_name ?? loan.loan_type_code);
   const typeLabel = type === 'seven-by-seven' ? '7x7' : loan.loan_type_name || 'Regular';
+  const obligationSummary = type === 'seven-by-seven'
+    ? clientHomeObligationSummary(obligationSchedule)
+    : '';
   return `<article class="loan-card ${type}">
     <div class="section-heading">
       <div>
@@ -44,6 +67,7 @@ export function loanCard(loan) {
       ${detailItem('Released', formatDate(loan.date_released))}
       ${detailItem('Due date', formatDate(loan.due_date))}
     </div>
+    ${obligationSummary}
     <div class="inline-actions">
       ${loan.pass_count ? `<span class="badge warning">Missed / PASS ${escapeHtml(loan.pass_count)}</span>` : ''}
       ${loan.advance_until ? `<span class="badge success">ADV through ${formatDate(loan.advance_until)}</span>` : ''}
@@ -51,6 +75,26 @@ export function loanCard(loan) {
     </div>
     <div data-client-schedule-panel hidden></div>
   </article>`;
+}
+
+export async function loadClientHomeObligationSchedules(api, portfolio) {
+  const candidates = asArray(portfolio?.loans).filter((loan) => {
+    const status = String(loan?.status || loan?.loan_status || '').trim().toLowerCase();
+    const type = classifyLoanType(loan?.loan_type_name ?? loan?.loan_type_code);
+    return status === 'active' && type === 'seven-by-seven' && loan?.loan_id;
+  });
+  const entries = await Promise.all(candidates.map(async (loan) => {
+    const loanId = String(loan.loan_id);
+    try {
+      const schedule = await api.request(
+        `/api/v1/client/loans/${encodeURIComponent(loanId)}/schedule`,
+      );
+      return [loanId, schedule];
+    } catch {
+      return null;
+    }
+  }));
+  return Object.fromEntries(entries.filter(Boolean));
 }
 
 function paymentRows(payments) {
@@ -354,6 +398,8 @@ export async function requestClientRenewalCashConfirmation({
 function renderWorkspace(root, model, raw, errors) {
   const latestPayment = model.payments[0];
   const renewalLoans = asArray(raw.renewals.loans).filter((loan) => loan.eligible === true && !loan.pending_request_id);
+  const homeSchedules = raw.homeObligationSchedules ?? {};
+  const renderLoan = (loan) => loanCard(loan, homeSchedules[loan.loan_id] ?? null);
   root.innerHTML = `<header class="workspace-header" id="client-overview">
     <div><p class="eyebrow">Client workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review your own official loans, payments, receipts, requests, and account security. Values come directly from SPINA.</p></div>
   </header>
@@ -366,7 +412,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-loans">
     <div class="section-heading"><div><h2>My loans</h2><p>Regular and 7x7 obligations are always shown separately.</p></div></div>
-    ${errors.loans ? errorCard(errors.loans) : model.allLoans.length ? `<div class="loan-grid">${model.regularLoans.map(loanCard).join('')}${model.sevenBySevenLoans.map(loanCard).join('')}${model.otherLoans.map(loanCard).join('')}</div>` : emptyState('No linked loan is available on this account.')}
+    ${errors.loans ? errorCard(errors.loans) : model.allLoans.length ? `<div class="loan-grid">${model.regularLoans.map(renderLoan).join('')}${model.sevenBySevenLoans.map(renderLoan).join('')}${model.otherLoans.map(renderLoan).join('')}</div>` : emptyState('No linked loan is available on this account.')}
   </section>
 
   <section class="section-card" id="client-payments">
@@ -631,6 +677,9 @@ export async function mountClientWorkspace(context) {
     settledRequest(api, '/api/v1/client/gcash/config', {}, { payment_available: false }),
     settledRequest(api, '/api/v1/activity-notifications', {}, []),
   ]);
+  const homeObligationSchedules = loans.error
+    ? {}
+    : await loadClientHomeObligationSchedules(api, loans.data);
   const raw = {
     account: account.data,
     loans: loans.data,
@@ -641,6 +690,7 @@ export async function mountClientWorkspace(context) {
     support: support.data,
     gcash: gcash.data,
     notifications: notifications.data,
+    homeObligationSchedules,
   };
   const model = buildClientViewModel(raw);
   renderWorkspace(root, model, raw, {
