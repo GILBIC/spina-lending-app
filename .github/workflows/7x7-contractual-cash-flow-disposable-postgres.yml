@@ -14,6 +14,7 @@ on:
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py'
@@ -31,6 +32,7 @@ on:
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_contract_binding.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_postgres.py'
+      - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_collection.py'
       - 'tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py'
       - '.github/workflows/7x7-contractual-cash-flow-disposable-postgres.yml'
   push:
@@ -46,6 +48,7 @@ on:
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py'
@@ -63,6 +66,7 @@ on:
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_contract_binding.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty.py'
       - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_postgres.py'
+      - 'gilbic_backend/tests/test_7x7_post_maturity_penalty_collection.py'
       - 'tools/run_7x7_contractual_cash_flow_disposable_postgres_validation.py'
       - '.github/workflows/7x7-contractual-cash-flow-disposable-postgres.yml'
 
@@ -114,6 +118,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install --disable-pip-version-check 'psycopg[binary]>=3.2,<4' 'pytest>=8.3,<9'
+          python -m pip install --disable-pip-version-check -e './spina_backend_mobile'
 
       - name: Compile protected verifier
         shell: bash
@@ -123,6 +128,7 @@ jobs:
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_advance_activation_posting.py
+          python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_no_collection_voluntary_financial.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_post_maturity_penalty.py
           python -m py_compile gilbic_backend/src/gilbic_backend/seven_by_seven_penalty_coordinator.py
@@ -131,6 +137,7 @@ jobs:
           python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_readiness_postgres.py
           python -m py_compile gilbic_backend/tests/test_7x7_contractual_interest_maturity.py
           python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_postgres.py
+          python -m py_compile gilbic_backend/tests/test_7x7_post_maturity_penalty_collection.py
           python -m py_compile gilbic_backend/tests/test_7x7_signed_schedule_accounting_alignment_migration.py
           python -m py_compile gilbic_backend/tests/test_7x7_one_active_loan_migration.py
           python -m py_compile gilbic_backend/tests/test_7x7_pricing_compliance_gate.py
