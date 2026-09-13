@@ -731,4 +731,4 @@ String _gcashMoneyFromCents(BigInt cents) => '₱${_gcashAmountFromCents(cents)}
 
 String _gcashMoney(String amount) => _gcashMoneyFromCents(_gcashCents(amount));
 
-String _money(double value) => '₱${value.toStringAsFixed(2)}';
+String _money(String value) => formatClientLoanMoney(value);
