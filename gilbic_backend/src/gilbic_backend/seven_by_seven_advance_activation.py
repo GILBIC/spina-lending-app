@@ -161,6 +161,27 @@ def _active_no_collection_interest_holidays(
     return tuple(holidays)
 
 
+def _penalty_payment_allocation_table_available(cursor: Any) -> bool:
+    """Return whether the 0118 penalty-allocation evidence table exists.
+
+    Historical disposable validators intentionally stop before migration 0118.
+    Their replay must remain valid and, by definition, cannot contain penalty
+    allocations. Current 0118+ schemas always use the immutable penalty evidence.
+    """
+
+    cursor.execute(
+        "select to_regclass('lending.seven_by_seven_penalty_payment_allocations')"
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return False
+    if isinstance(row, dict):
+        value = next(iter(row.values()))
+    else:
+        value = row[0]
+    return value is not None
+
+
 def _immediate_financial_receipt_amount(
     *,
     receipt_amount: Decimal | int | str,
@@ -195,11 +216,11 @@ def replay_verified_seven_by_seven_financial_state(
 ) -> SevenBySevenAdvanceFinancialReplay:
     """Replay immediate contractual cash plus matured active prepayment events.
 
-    Receipt custody cash is not itself the contractual financial event. The replay
-    uses the receipt's applied amount net of immutable penalty allocation so a
-    post-maturity penalty payment can never reduce principal or contractual
-    interest. Deferred Advance/No Collection prepayment is then removed until its
-    operational row becomes financially effective.
+    Receipt custody cash is not itself the contractual financial event. On 0118+
+    schemas the replay uses the receipt's applied amount net of immutable penalty
+    allocation so post-maturity penalty cash can never reduce principal or
+    contractual interest. Historical pre-0118 schemas have no penalty evidence by
+    definition and retain the prior applied-receipt replay unchanged.
 
     Gross Advance allocations remain immutable historical evidence. If audited
     Extra Principal shortening later classifies part of that Advance as Refund
@@ -231,42 +252,73 @@ def replay_verified_seven_by_seven_financial_state(
             "7x7 contractual maturity evidence is invalid. Management review is required."
         )
 
-    cursor.execute(
-        """
-        select
-            transaction.id,
-            transaction.collection_date,
-            transaction.entry_type,
-            greatest(
-                transaction.applied_amount
-                - coalesce(penalty_allocation.amount_applied, 0),
-                0
-            )::numeric(18,2) as receipt_amount,
-            coalesce(sum(allocation.amount_applied) filter (
-                where allocation.allocation_basis = %s
-            ), 0)::numeric(18,2) as deferred_amount,
-            transaction.accepted_at
-        from lending.collection_transactions transaction
-        left join lending.loan_installment_payment_allocations allocation
-          on allocation.transaction_id = transaction.id
-        left join lending.seven_by_seven_penalty_payment_allocations penalty_allocation
-          on penalty_allocation.transaction_id = transaction.id
-        where transaction.loan_id = %s
-          and transaction.is_voided = false
-          and transaction.applied_amount > 0
-          and transaction.collection_date <= %s
-          and transaction.entry_type in ('payment', 'advance')
-        group by
-            transaction.id,
-            transaction.collection_date,
-            transaction.entry_type,
-            transaction.applied_amount,
-            penalty_allocation.amount_applied,
-            transaction.accepted_at
-        order by transaction.collection_date, transaction.accepted_at, transaction.id
-        """,
-        (FUTURE_ADVANCE_BASIS, loan_id, through_date),
-    )
+    if _penalty_payment_allocation_table_available(cursor):
+        cursor.execute(
+            """
+            select
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                greatest(
+                    transaction.applied_amount
+                    - coalesce(penalty_allocation.amount_applied, 0),
+                    0
+                )::numeric(18,2) as receipt_amount,
+                coalesce(sum(allocation.amount_applied) filter (
+                    where allocation.allocation_basis = %s
+                ), 0)::numeric(18,2) as deferred_amount,
+                transaction.accepted_at
+            from lending.collection_transactions transaction
+            left join lending.loan_installment_payment_allocations allocation
+              on allocation.transaction_id = transaction.id
+            left join lending.seven_by_seven_penalty_payment_allocations penalty_allocation
+              on penalty_allocation.transaction_id = transaction.id
+            where transaction.loan_id = %s
+              and transaction.is_voided = false
+              and transaction.applied_amount > 0
+              and transaction.collection_date <= %s
+              and transaction.entry_type in ('payment', 'advance')
+            group by
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                transaction.applied_amount,
+                penalty_allocation.amount_applied,
+                transaction.accepted_at
+            order by transaction.collection_date, transaction.accepted_at, transaction.id
+            """,
+            (FUTURE_ADVANCE_BASIS, loan_id, through_date),
+        )
+    else:
+        cursor.execute(
+            """
+            select
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                transaction.applied_amount::numeric(18,2) as receipt_amount,
+                coalesce(sum(allocation.amount_applied) filter (
+                    where allocation.allocation_basis = %s
+                ), 0)::numeric(18,2) as deferred_amount,
+                transaction.accepted_at
+            from lending.collection_transactions transaction
+            left join lending.loan_installment_payment_allocations allocation
+              on allocation.transaction_id = transaction.id
+            where transaction.loan_id = %s
+              and transaction.is_voided = false
+              and transaction.applied_amount > 0
+              and transaction.collection_date <= %s
+              and transaction.entry_type in ('payment', 'advance')
+            group by
+                transaction.id,
+                transaction.collection_date,
+                transaction.entry_type,
+                transaction.applied_amount,
+                transaction.accepted_at
+            order by transaction.collection_date, transaction.accepted_at, transaction.id
+            """,
+            (FUTURE_ADVANCE_BASIS, loan_id, through_date),
+        )
     actual_rows = cursor.fetchall()
 
     cursor.execute(
