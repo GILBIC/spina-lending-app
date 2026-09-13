@@ -599,6 +599,35 @@ def test_voided_assessment_source_or_later_backdated_cash_forces_management_revi
             )
         connection.commit()
 
+        voided_at = datetime.now(timezone.utc)
+        void_reason = "Task 4 synthetic audited source void"
+        connection.execute(
+            """
+            insert into lending.collection_transaction_voids (
+                transaction_id,
+                voided_by_user_id,
+                reason,
+                transaction_snapshot,
+                previous_covered_dates,
+                state_before,
+                state_after,
+                voided_at
+            ) values (
+                %s, %s, %s,
+                '{}'::jsonb,
+                ARRAY[]::date[],
+                '{}'::jsonb,
+                '{}'::jsonb,
+                %s
+            )
+            """,
+            (
+                source_tx,
+                case["actor_id"],
+                void_reason,
+                voided_at,
+            ),
+        )
         connection.execute(
             """
             update lending.collection_transactions
@@ -609,9 +638,9 @@ def test_voided_assessment_source_or_later_backdated_cash_forces_management_revi
             where id = %s
             """,
             (
-                datetime.now(timezone.utc),
+                voided_at,
                 case["actor_id"],
-                "Task 4 synthetic audited source void",
+                void_reason,
                 source_tx,
             ),
         )
