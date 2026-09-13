@@ -3,10 +3,12 @@
 Run with SPINA_ANNEX_TEMPLATE set; missing assets fail rather than skip.
 These tests are not an application integration or production authorization.
 """
+from decimal import Decimal
 from importlib import import_module
 from importlib.util import find_spec
 import os
 from pathlib import Path
+import sys
 import zipfile
 
 from docx import Document
@@ -114,3 +116,52 @@ def test_totals_summary_stays_together(tmp_path):
     totals = next(t for t in d.tables if t.cell(0, 0).text == 'TOTAL SCHEDULED PRINCIPAL')
     for row in totals.rows[:-1]:
         assert all(p.paragraph_format.keep_with_next for cell in row.cells for p in cell.paragraphs)
+
+
+def test_regular_fixture_uses_same_template_and_authoritative_component_rows(tmp_path):
+    m = module()
+    assert hasattr(m, 'make_regular_case'), (
+        'Regular synthetic Annex A fixture is intentionally missing at this TDD RED step.'
+    )
+    case = m.make_regular_case()
+
+    assert case['product'] == 'Regular'
+    assert case['count'] == 120
+    assert case['projection'].total_principal == Decimal('5000.00')
+    assert case['projection'].total_interest == Decimal('1000.00')
+    assert case['projection'].total_due == Decimal('6000.00')
+
+    out = tmp_path / 'regular-proof.docx'
+    m.build_docx(template(), out, case, m.synthetic_context('REGULAR-120'))
+    doc = Document(out)
+    tables = [t for t in doc.tables if len(t.columns) == 7]
+    actual = [[c.text for c in r.cells] for t in tables for r in t.rows[1:]]
+
+    assert actual == [m.row_values(row) for row in case['projection'].rows]
+    assert len(actual) == 120
+    assert actual[-1][-1] == '0.00'
+    all_text = '\n'.join(p.text for p in m.all_paragraphs(doc))
+    assert 'Regular Cash Loan (synthetic only)' in all_text
+    assert '7x7 Cash Loan (synthetic only)' not in all_text
+
+
+def test_cli_generates_five_7x7_and_one_regular_specimen(tmp_path, monkeypatch):
+    m = module()
+    output_dir = tmp_path / 'specimens'
+    monkeypatch.setattr(
+        sys,
+        'argv',
+        [
+            'synthetic_annex_a.py',
+            '--template',
+            str(template()),
+            '--output-dir',
+            str(output_dir),
+        ],
+    )
+
+    m.main()
+
+    outputs = sorted(path.name for path in output_dir.glob('*.docx'))
+    assert len(outputs) == 6
+    assert 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.docx' in outputs
