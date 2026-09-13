@@ -8,7 +8,6 @@ import {
   escapeHtml,
   formatDate,
   formatDateTime,
-  formatMoney,
   loadingPanel,
   metricCard,
   settledRequest,
@@ -38,10 +37,10 @@ export function loanCard(loan) {
       ${badge(loan.status || loan.loan_status || 'unknown')}
     </div>
     <div class="loan-meta">
-      ${detailItem('Original principal', formatMoney(loan.principal))}
-      ${detailItem('Official balance', formatMoney(loan.remaining_balance))}
-      ${detailItem('Daily amount', formatMoney(loan.daily_amount))}
-      ${detailItem('Paid amount', formatMoney(loan.paid_amount))}
+      ${detailItem('Original principal', formatAuthoritativeMoney(loan.principal))}
+      ${detailItem('Official balance', formatAuthoritativeMoney(loan.remaining_balance))}
+      ${detailItem('Daily amount', formatAuthoritativeMoney(loan.daily_amount))}
+      ${detailItem('Paid amount', formatAuthoritativeMoney(loan.paid_amount))}
       ${detailItem('Released', formatDate(loan.date_released))}
       ${detailItem('Due date', formatDate(loan.due_date))}
     </div>
@@ -64,9 +63,9 @@ function paymentRows(payments) {
           <td>${formatDate(payment.collection_date)}</td>
           <td><strong>${escapeHtml(payment.loan_number || '—')}</strong><br><span class="meta">${escapeHtml(payment.loan_type_name || '')}</span></td>
           <td>${escapeHtml(payment.entry_type || 'payment')}</td>
-          <td>${formatMoney(payment.amount)}</td>
+          <td>${formatAuthoritativeMoney(payment.amount)}</td>
           <td>${escapeHtml(payment.receipt_number || '—')}</td>
-          <td>${formatMoney(payment.official_balance)}</td>
+          <td>${formatAuthoritativeMoney(payment.official_balance)}</td>
           <td>${payment.is_voided ? badge('voided', 'danger') : badge(payment.status || 'accepted')}</td>
         </tr>`,
       )
@@ -82,7 +81,7 @@ export function clientRenewalRows(requests) {
       const isPending = String(request.status || '').trim().toLowerCase() === 'pending';
       return `<article class="list-item">
         <div class="section-heading">
-          <div><strong>${escapeHtml(request.loan_number || 'Loan renewal')}</strong><div class="meta">Requested ${formatMoney(request.requested_amount)} · ${formatDateTime(request.submitted_at)}</div></div>
+          <div><strong>${escapeHtml(request.loan_number || 'Loan renewal')}</strong><div class="meta">Requested ${formatAuthoritativeMoney(request.requested_amount)} · ${formatDateTime(request.submitted_at)}</div></div>
           ${badge(request.status)}
         </div>
         ${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}
