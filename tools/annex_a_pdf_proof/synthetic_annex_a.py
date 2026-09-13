@@ -172,7 +172,7 @@ def _display_rows(case: dict) -> list[list[str]]:
         cumulative_due = Decimal('0.00')
         for source, cells in zip(result.rows, values, strict=True):
             cumulative_due += source.contractual_amount
-            balance = max(result.total_principal - cumulative_due, Decimal('0.00'))
+            balance = result.total_due - cumulative_due
             cells[-1] = f'{balance:,.2f}'
     return values
 
@@ -325,15 +325,15 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         if regular:
             if p.text.startswith('* Scheduled Remaining Principal:'):
                 set_text(p, (
-                    '* Capital Recovery Balance (presentation only): Original principal '
-                    'less cumulative full scheduled installments, floored at zero. '
-                    'Not accounting principal and not a payoff or proof of payment. '
-                    'Zero does not mean fully paid; remaining scheduled payments still apply.'
+                    '* Remaining Total Payable: Includes scheduled principal and interest '
+                    'remaining after this installment, assuming all scheduled payments are '
+                    'made fully and on time. This is not a live account balance or payoff '
+                    'quote and is not proof of payment.'
                 ))
             else:
                 replace_tokens(p, {
-                    'Scheduled Remaining Principal*': 'Capital Recovery Balance*',
-                    'FINAL SCHEDULED REMAINING PRINCIPAL': 'FINAL CAPITAL RECOVERY BALANCE',
+                    'Scheduled Remaining Principal*': 'Remaining Total Payable*',
+                    'FINAL SCHEDULED REMAINING PRINCIPAL': 'FINAL REMAINING TOTAL PAYABLE',
                 })
         if p.text == '____________________________ / ______________':
             set_text(p, 'UNSIGNED TEST ONLY - DO NOT SIGN')

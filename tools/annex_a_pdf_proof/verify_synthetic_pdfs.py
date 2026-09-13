@@ -53,16 +53,16 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
     case = make_regular_case() if regular else make_case(count)
     result = case['projection']
     expected = [row_values(row) for row in result.rows]
-    balance_label = 'Capital Recovery Balance' if regular else 'Scheduled Remaining Principal'
+    balance_label = 'Remaining Total Payable' if regular else 'Scheduled Remaining Principal'
     total_labels = TOTAL_LABELS
     if regular:
         # Check the display independently; do not call the renderer's display helper.
         cumulative_due = Decimal('0.00')
         for source, cells in zip(result.rows, expected, strict=True):
             cumulative_due += source.contractual_amount
-            balance = max(result.total_principal - cumulative_due, Decimal('0.00'))
+            balance = result.total_due - cumulative_due
             cells[-1] = f'{balance:,.2f}'
-        total_labels = TOTAL_LABELS[:-1] + ('FINAL CAPITAL RECOVERY BALANCE',)
+        total_labels = TOTAL_LABELS[:-1] + ('FINAL REMAINING TOTAL PAYABLE',)
     identity = 'REGULAR-120' if regular else str(count)
     product_label = (
         'Regular Cash Loan (synthetic only)'
@@ -117,9 +117,12 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
         require(product_label in complete_text, 'Wrong product label')
         if regular:
             explanation = ' '.join(compact_pages).lower()
-            for phrase in ('presentation only', 'not accounting principal',
-                           'not a payoff', 'zero does not mean fully paid'):
+            for phrase in ('includes scheduled principal and interest',
+                           'assuming all scheduled payments are made fully and on time',
+                           'not a live account balance or payoff quote', 'not proof of payment'):
                 require(phrase in explanation, f'Missing Regular display explanation: {phrase}')
+            require('capital recovery balance' not in explanation,
+                    'Superseded Regular capital-recovery label remains')
             require('Scheduled Remaining Principal*' not in ' '.join(compact_pages),
                     'Regular presentation balance is incorrectly labelled as principal')
             require(
