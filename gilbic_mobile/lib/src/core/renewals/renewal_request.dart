@@ -172,7 +172,7 @@ class RenewalRequestItem {
       'approved' => 'Approved — continue renewal steps',
       'rejected' => 'Rejected',
       'cancelled' => 'Cancelled',
-      _ => 'Pending Collector / Management review',
+      _ => 'Pending Collector recommendation / Management review',
     };
   }
 
