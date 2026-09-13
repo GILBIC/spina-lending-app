@@ -7,6 +7,7 @@ from uuid import UUID
 
 from psycopg.rows import dict_row
 
+from .area_management_repository import apply_due_client_area_transfers
 from .database import open_connection
 
 
@@ -231,10 +232,9 @@ def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
         if transaction_id is None or collector_user_id is None or not receipt_number:
             continue
         covered_raw = raw.get("covered_dates")
-        covered_dates = tuple(
-            _date_value(item)
-            for item in covered_raw
-        ) if isinstance(covered_raw, (list, tuple)) else ()
+        covered_dates = tuple(_date_value(item) for item in covered_raw) if isinstance(
+            covered_raw, (list, tuple)
+        ) else ()
         receipts.append(
             CollectorRouteReceiptRecord(
                 transaction_id=UUID(str(transaction_id)),
@@ -305,6 +305,8 @@ class PostgresCollectorRouteRepository:
         route_date: date,
     ) -> CollectorRouteRecord:
         with open_connection() as connection:
+            apply_due_client_area_transfers(connection, as_of_date=route_date)
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
@@ -594,8 +596,12 @@ class PostgresCollectorRouteRepository:
             remaining_balance = Decimal(row["remaining_balance"]).quantize(MONEY)
             contract_schedule_total = Decimal(row["contract_schedule_total"]).quantize(MONEY)
             contract_allocated_total = Decimal(row["contract_allocated_total"]).quantize(MONEY)
-            contract_unpaid_total = (contract_schedule_total - contract_allocated_total).quantize(MONEY)
-            contract_dpd_status = str(row["contract_dpd_status"] or "contract_schedule_required")
+            contract_unpaid_total = (
+                contract_schedule_total - contract_allocated_total
+            ).quantize(MONEY)
+            contract_dpd_status = str(
+                row["contract_dpd_status"] or "contract_schedule_required"
+            )
             contract_schedule_verified = bool(row["contract_schedule_verified"])
             contract_balance_reconciled = (
                 contract_dpd_status == "ready"
@@ -617,7 +623,9 @@ class PostgresCollectorRouteRepository:
             contract_collection_ready = (
                 contract_allocation_enabled and contract_schedule_ready
             )
-            today_scheduled = Decimal(row["contract_today_scheduled_amount"]).quantize(MONEY)
+            today_scheduled = Decimal(row["contract_today_scheduled_amount"]).quantize(
+                MONEY
+            )
             today_unpaid = Decimal(row["contract_today_unpaid_amount"]).quantize(MONEY)
             today_has_installment = int(row["contract_today_installment_count"]) > 0
             active_promise = active_promises.get((row["client_id"], row["loan_id"]))
@@ -644,7 +652,9 @@ class PostgresCollectorRouteRepository:
                     contract_allocation_enabled=contract_allocation_enabled,
                     contract_schedule_verified=contract_schedule_verified,
                     contract_dpd_status=contract_dpd_status,
-                    contract_payment_frequency=str(row["contract_payment_frequency"] or ""),
+                    contract_payment_frequency=str(
+                        row["contract_payment_frequency"] or ""
+                    ),
                     contract_reference=str(row["contract_reference"] or ""),
                     contract_schedule_version=(
                         int(row["contract_schedule_version"])
