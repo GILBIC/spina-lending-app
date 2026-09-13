@@ -27,6 +27,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_post_maturity_penalty_collection.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_combined_pay.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_no_collection_voluntary.py",
+    TEST_ROOT / "test_7x7_penalty_read_models.py",
 )
 
 
@@ -75,8 +76,9 @@ def main() -> int:
             "authority, one-active-7x7 enforcement, exact-term pricing/compliance "
             "readiness, contractual-interest maturity stopping, protected post-maturity "
             "penalty coordination, protected single-loan penalty collection/payoff, "
-            "Combined Pay allocation of authoritative 7x7 penalty before Regular, and "
-            "Management No Collection voluntary-path penalty alignment."
+            "Combined Pay allocation of authoritative 7x7 penalty before Regular, "
+            "Management No Collection voluntary-path penalty alignment, and shared "
+            "Collector/Client server-authoritative penalty read models."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -150,9 +152,11 @@ def main() -> int:
             "protected single-loan collection/payoff used contractual cash before penalty; "
             "Combined Pay included authoritative 7x7 penalty before Regular; Management "
             "No Collection voluntary receipts froze the same coordinator-authoritative "
-            "penalty without charging protected amounts; no second collection engine was "
-            "created while accounting policy/EIR/carrying conclusions and automatic "
-            "posting stayed separate."
+            "penalty without charging protected amounts; Collector and Client schedule "
+            "read models exposed the same server-authoritative penalty/payoff evidence "
+            "without UI-side penalty math; no second collection engine was created while "
+            "accounting policy/EIR/carrying conclusions and automatic posting stayed "
+            "separate."
         )
         return 0
     except psycopg.Error as error:
