@@ -168,7 +168,9 @@ class ReplayCursor:
     def execute(self, sql, params=()):
         normalized = " ".join(sql.split())
         self.executed.append((normalized, params))
-        if "transaction.amount as receipt_amount" in normalized:
+        if "to_regclass('lending.seven_by_seven_penalty_payment_allocations')" in normalized:
+            self._result = (None,)
+        elif "transaction.applied_amount::numeric(18,2) as receipt_amount" in normalized:
             self._result = []
         elif "active_advance.active_advance_allocated as amount_applied" in normalized:
             self._result = [
@@ -184,6 +186,9 @@ class ReplayCursor:
             self._result = []
         else:
             raise AssertionError(f"Unexpected SQL: {normalized}")
+
+    def fetchone(self):
+        return self._result
 
     def fetchall(self):
         return list(self._result or [])
