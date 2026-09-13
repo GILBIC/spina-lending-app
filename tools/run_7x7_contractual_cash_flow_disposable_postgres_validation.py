@@ -26,6 +26,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_7x7_post_maturity_penalty_postgres.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_collection.py",
     TEST_ROOT / "test_7x7_post_maturity_penalty_combined_pay.py",
+    TEST_ROOT / "test_7x7_post_maturity_penalty_no_collection_voluntary.py",
 )
 
 
@@ -73,8 +74,9 @@ def main() -> int:
             "migrations through 0059, then prove Priority #6 signed-schedule accounting "
             "authority, one-active-7x7 enforcement, exact-term pricing/compliance "
             "readiness, contractual-interest maturity stopping, protected post-maturity "
-            "penalty coordination, protected single-loan penalty collection/payoff, and "
-            "Combined Pay allocation of authoritative 7x7 penalty before Regular."
+            "penalty coordination, protected single-loan penalty collection/payoff, "
+            "Combined Pay allocation of authoritative 7x7 penalty before Regular, and "
+            "Management No Collection voluntary-path penalty alignment."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -146,9 +148,11 @@ def main() -> int:
             "same fingerprint; the post-maturity penalty coordinator was verified "
             "against the same protected replay and immutable evidence boundary; "
             "protected single-loan collection/payoff used contractual cash before penalty; "
-            "and Combined Pay included authoritative 7x7 penalty before Regular without "
-            "creating a second collection engine while accounting policy/EIR/carrying "
-            "conclusions and automatic posting stayed separate."
+            "Combined Pay included authoritative 7x7 penalty before Regular; Management "
+            "No Collection voluntary receipts froze the same coordinator-authoritative "
+            "penalty without charging protected amounts; no second collection engine was "
+            "created while accounting policy/EIR/carrying conclusions and automatic "
+            "posting stayed separate."
         )
         return 0
     except psycopg.Error as error:
