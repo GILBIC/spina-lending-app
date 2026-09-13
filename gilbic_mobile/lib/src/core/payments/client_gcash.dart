@@ -1,5 +1,7 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+final RegExp _moneyPattern = RegExp(r'^\d+(?:\.\d{1,2})?$');
+
 class ClientGcashCapability {
   const ClientGcashCapability({
     required this.provider,
@@ -43,17 +45,17 @@ class ClientGcashAllocation {
   });
 
   final String loanId;
-  final double amount;
+  final String amount;
 
   Map<String, dynamic> toPayload() => <String, dynamic>{
         'loan_id': loanId,
-        'amount': amount.toStringAsFixed(2),
+        'amount': amount,
       };
 
   factory ClientGcashAllocation.fromPayload(Map<String, dynamic> payload) {
     return ClientGcashAllocation(
       loanId: _requiredString(payload, 'loan_id'),
-      amount: _requiredDouble(payload, 'amount'),
+      amount: _requiredMoneyText(payload, 'amount'),
     );
   }
 }
@@ -82,7 +84,7 @@ class ClientGcashIntent {
   final String? providerReference;
   final String status;
   final String currency;
-  final double amount;
+  final String amount;
   final String? checkoutUrl;
   final String? qrValue;
   final DateTime? expiresAt;
@@ -109,7 +111,7 @@ class ClientGcashIntent {
       providerReference: _optionalString(payload['provider_reference']),
       status: _requiredString(payload, 'status'),
       currency: _requiredString(payload, 'currency'),
-      amount: _requiredDouble(payload, 'amount'),
+      amount: _requiredMoneyText(payload, 'amount'),
       checkoutUrl: _optionalString(payload['checkout_url']),
       qrValue: _optionalString(payload['qr_value']),
       expiresAt: _optionalDate(payload['expires_at']),
@@ -142,6 +144,28 @@ String? _optionalString(Object? value) {
   return text.isEmpty ? null : text;
 }
 
+String _requiredMoneyText(Map<String, dynamic> payload, String key) {
+  final text = payload[key]?.toString().trim() ?? '';
+  final match = _moneyPattern.firstMatch(text);
+  if (match == null) {
+    throw SpinaApiException(
+      'The SPINA server omitted $key from the GCash response.',
+      code: 'invalid_client_gcash_payload',
+    );
+  }
+  final parts = text.split('.');
+  final whole = BigInt.parse(parts.first);
+  final fraction = parts.length == 2 ? parts.last.padRight(2, '0') : '00';
+  final cents = whole * BigInt.from(100) + BigInt.parse(fraction);
+  if (cents <= BigInt.zero) {
+    throw SpinaApiException(
+      'The SPINA server omitted $key from the GCash response.',
+      code: 'invalid_client_gcash_payload',
+    );
+  }
+  return text;
+}
+
 bool _requiredBool(Map<String, dynamic> payload, String key) {
   final value = payload[key];
   if (value is bool) {
@@ -160,21 +184,6 @@ bool _requiredBool(Map<String, dynamic> payload, String key) {
     'The SPINA server omitted $key from the GCash response.',
     code: 'invalid_client_gcash_payload',
   );
-}
-
-double _requiredDouble(Map<String, dynamic> payload, String key) {
-  final value = payload[key];
-  if (value is num) {
-    return value.toDouble();
-  }
-  final parsed = double.tryParse(value?.toString() ?? '');
-  if (parsed == null) {
-    throw SpinaApiException(
-      'The SPINA server omitted $key from the GCash response.',
-      code: 'invalid_client_gcash_payload',
-    );
-  }
-  return parsed;
 }
 
 DateTime? _optionalDate(Object? value) {
