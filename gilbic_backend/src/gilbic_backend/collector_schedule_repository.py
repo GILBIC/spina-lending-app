@@ -3,12 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Any
 from uuid import UUID
 
 from psycopg.rows import dict_row
 
 from .area_management_repository import apply_due_client_area_transfers
 from .database import open_connection
+from .seven_by_seven_penalty_coordinator import (
+    project_verified_seven_by_seven_penalty_state,
+)
 
 
 MONEY = Decimal("0.01")
@@ -71,12 +75,70 @@ class CollectorScheduleRecord:
     base_maturity: date | None = None
     updated_maturity: date | None = None
     maturity_projection_status: str = "on_schedule"
+    penalty_status: str = "not_applicable"
+    projected_penalty: Decimal = ZERO
+    assessed_penalty_balance: Decimal = ZERO
+    penalty_base: Decimal = ZERO
+    remaining_cost_headroom: Decimal = ZERO
+    exact_payoff_total: Decimal = ZERO
+    management_review_required_reason: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class _PenaltyReadModel:
+    status: str = "not_applicable"
+    projected_penalty: Decimal = ZERO
+    assessed_penalty_balance: Decimal = ZERO
+    penalty_base: Decimal = ZERO
+    remaining_cost_headroom: Decimal = ZERO
+    exact_payoff_total: Decimal = ZERO
+    management_review_required_reason: str = ""
 
 
 def _money(value: Decimal | int | str | None) -> Decimal:
     if value is None:
         return ZERO
     return Decimal(value).quantize(MONEY, rounding=ROUND_HALF_UP)
+
+
+def _build_penalty_read_model(
+    *,
+    calculation_mode: str,
+    installment_records: tuple[CollectorScheduleRowRecord, ...],
+    penalty_state: Any | None,
+) -> _PenaltyReadModel:
+    if calculation_mode != "seven_by_seven":
+        return _PenaltyReadModel()
+    if penalty_state is None:
+        raise CollectorScheduleUnavailable(
+            "Server-authoritative 7x7 penalty state is unavailable."
+        )
+
+    status = str(penalty_state.status)
+    projected_penalty = _money(penalty_state.projected_penalty)
+    assessed_penalty_balance = _money(penalty_state.assessed_penalty_balance)
+    penalty_base = _money(penalty_state.penalty_base)
+    remaining_cost_headroom = _money(penalty_state.remaining_cost_headroom)
+    review_reason = str(penalty_state.management_review_required_reason or "")
+    contractual_outstanding = _money(
+        sum((item.remaining_amount for item in installment_records), ZERO)
+    )
+    exact_payoff_total = (
+        ZERO
+        if status == "management_review_required"
+        else _money(
+            contractual_outstanding + projected_penalty + assessed_penalty_balance
+        )
+    )
+    return _PenaltyReadModel(
+        status=status,
+        projected_penalty=projected_penalty,
+        assessed_penalty_balance=assessed_penalty_balance,
+        penalty_base=penalty_base,
+        remaining_cost_headroom=remaining_cost_headroom,
+        exact_payoff_total=exact_payoff_total,
+        management_review_required_reason=review_reason,
+    )
 
 
 def _semi_monthly_days(settings: object) -> tuple[int, int]:
@@ -380,6 +442,15 @@ class PostgresCollectorScheduleRepository:
                 )
                 no_collection_rows = cursor.fetchall()
 
+            penalty_state = None
+            if str(loan["calculation_mode"] or "") == "seven_by_seven":
+                with connection.cursor() as penalty_cursor:
+                    penalty_state = project_verified_seven_by_seven_penalty_state(
+                        penalty_cursor,
+                        loan_id=loan_id,
+                        as_of_date=as_of_date,
+                    )
+
         rows: list[CollectorScheduleRowRecord] = []
         for row in installment_rows:
             installment = _build_installment_row(
@@ -440,6 +511,12 @@ class PostgresCollectorScheduleRepository:
         else:
             maturity_status = "on_schedule"
 
+        penalty_read_model = _build_penalty_read_model(
+            calculation_mode=str(loan["calculation_mode"] or ""),
+            installment_records=installment_records,
+            penalty_state=penalty_state,
+        )
+
         for row in no_collection_rows:
             rows.append(
                 CollectorScheduleRowRecord(
@@ -481,4 +558,13 @@ class PostgresCollectorScheduleRepository:
             base_maturity=base_maturity,
             updated_maturity=updated_maturity,
             maturity_projection_status=maturity_status,
+            penalty_status=penalty_read_model.status,
+            projected_penalty=penalty_read_model.projected_penalty,
+            assessed_penalty_balance=penalty_read_model.assessed_penalty_balance,
+            penalty_base=penalty_read_model.penalty_base,
+            remaining_cost_headroom=penalty_read_model.remaining_cost_headroom,
+            exact_payoff_total=penalty_read_model.exact_payoff_total,
+            management_review_required_reason=(
+                penalty_read_model.management_review_required_reason
+            ),
         )
