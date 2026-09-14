@@ -84,6 +84,13 @@ class _FakeClientScheduleRepository implements ClientScheduleRepository {
       contractualMaturity: DateTime(2026, 10, 10),
       operationalMaturity: DateTime(2026, 10, 12),
       maturityStatus: 'extended',
+      penaltyStatus: 'not_applicable',
+      projectedPenalty: '0.00',
+      assessedPenaltyBalance: '0.00',
+      penaltyBase: '0.00',
+      remainingCostHeadroom: '0.00',
+      exactPayoffTotal: '0.00',
+      managementReviewRequiredReason: '',
       rows: <ClientScheduleRow>[
         ClientScheduleRow(
           paymentDate: DateTime(2026, 9, 12),

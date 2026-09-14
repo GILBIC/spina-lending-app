@@ -5,6 +5,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/client/client_dashboard.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
@@ -23,6 +25,7 @@ void main() {
             onSignOut: () async {},
             deviceIdentityProvider: _deviceIdentityProvider(),
             loanRepository: repository,
+            scheduleRepository: _FakeClientScheduleRepository(),
           ),
         ),
       );
@@ -47,6 +50,8 @@ void main() {
       expect(find.text('₱50.00'), findsOneWidget);
       expect(find.text('₱21.00'), findsOneWidget);
       expect(find.textContaining('amount due today'), findsNothing);
+      expect(find.text('Exact payoff'), findsNothing);
+      expect(find.text('Management review required'), findsNothing);
 
       expect(find.byKey(const Key('open-account-settings')), findsOneWidget);
       expect(find.byKey(const Key('open-notification-center')), findsOneWidget);
@@ -86,6 +91,7 @@ void main() {
             onSignOut: () async {},
             deviceIdentityProvider: _deviceIdentityProvider(),
             loanRepository: repository,
+            scheduleRepository: _FakeClientScheduleRepository(),
           ),
         ),
       );
@@ -121,6 +127,7 @@ void main() {
           onSignOut: () async {},
           deviceIdentityProvider: _deviceIdentityProvider(),
           loanRepository: _FakeClientLoanRepository(emptyPortfolio),
+          scheduleRepository: _FakeClientScheduleRepository(),
         ),
       ),
     );
@@ -155,6 +162,7 @@ void main() {
           onSignOut: () async {},
           deviceIdentityProvider: _deviceIdentityProvider(),
           loanRepository: repository,
+          scheduleRepository: _FakeClientScheduleRepository(),
         ),
       ),
     );
@@ -185,6 +193,7 @@ void main() {
             onSignOut: () async {},
             deviceIdentityProvider: _deviceIdentityProvider(),
             loanRepository: _FakeClientLoanRepository(_portfolio()),
+            scheduleRepository: _FakeClientScheduleRepository(),
           ),
         ),
       ),
@@ -282,6 +291,37 @@ class _FakeClientLoanRepository implements ClientLoanRepository {
     userId = session.userId;
     if (failure != null) throw failure!;
     return portfolio!;
+  }
+}
+
+class _FakeClientScheduleRepository implements ClientScheduleRepository {
+  @override
+  Future<ClientLoanSchedule> loadSchedule(
+    UserSession session, {
+    required String deviceId,
+    required String loanId,
+  }) async {
+    return ClientLoanSchedule(
+      loanId: loanId,
+      loanNumber: '7X7-001',
+      loanType: '7x7',
+      calculationMode: 'seven_by_seven',
+      isSevenBySeven: true,
+      paymentFrequency: 'daily',
+      readOnly: true,
+      pastDueAmount: '0.00',
+      pastDueCount: 0,
+      scheduleExtensionSlots: 0,
+      maturityStatus: 'scheduled',
+      penaltyStatus: 'not_applicable',
+      projectedPenalty: '0.00',
+      assessedPenaltyBalance: '0.00',
+      penaltyBase: '0.00',
+      remainingCostHeadroom: '0.00',
+      exactPayoffTotal: '0.00',
+      managementReviewRequiredReason: '',
+      rows: const <ClientScheduleRow>[],
+    );
   }
 }
 

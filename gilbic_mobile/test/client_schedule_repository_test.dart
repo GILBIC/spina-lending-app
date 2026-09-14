@@ -46,6 +46,13 @@ void main() {
               'contractual_maturity': '2026-10-10',
               'operational_maturity': '2026-10-12',
               'maturity_status': 'extended',
+              'penalty_status': 'not_applicable',
+              'projected_penalty': '0.00',
+              'assessed_penalty_balance': '0.00',
+              'penalty_base': '0.00',
+              'remaining_cost_headroom': '0.00',
+              'exact_payoff_total': '0.00',
+              'management_review_required_reason': '',
               'rows': <Object?>[
                 <String, Object?>{
                   'payment_date': '2026-09-12',
@@ -77,6 +84,8 @@ void main() {
     expect(schedule.contractualMaturity, DateTime(2026, 10, 10));
     expect(schedule.operationalMaturity, DateTime(2026, 10, 12));
     expect(schedule.pastDueAmount, '90071992547409.91');
+    expect(schedule.penaltyStatus, 'not_applicable');
+    expect(schedule.exactPayoffTotal, '0.00');
     expect(schedule.rows.single.amount, '90071992547409.91');
     expect(schedule.rows.single.remainingAmount, '90071992547409.90');
     expect(schedule.rows.single.note, 'Management-approved extension');

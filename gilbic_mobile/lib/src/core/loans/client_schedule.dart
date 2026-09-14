@@ -14,6 +14,13 @@ class ClientLoanSchedule {
     required this.pastDueCount,
     required this.scheduleExtensionSlots,
     required this.maturityStatus,
+    required this.penaltyStatus,
+    required this.projectedPenalty,
+    required this.assessedPenaltyBalance,
+    required this.penaltyBase,
+    required this.remainingCostHeadroom,
+    required this.exactPayoffTotal,
+    required this.managementReviewRequiredReason,
     required this.rows,
     this.contractualMaturity,
     this.operationalMaturity,
@@ -32,6 +39,13 @@ class ClientLoanSchedule {
   final DateTime? contractualMaturity;
   final DateTime? operationalMaturity;
   final String maturityStatus;
+  final String penaltyStatus;
+  final String projectedPenalty;
+  final String assessedPenaltyBalance;
+  final String penaltyBase;
+  final String remainingCostHeadroom;
+  final String exactPayoffTotal;
+  final String managementReviewRequiredReason;
   final List<ClientScheduleRow> rows;
 
   factory ClientLoanSchedule.fromPayload(Map<String, dynamic> payload) {
@@ -56,6 +70,22 @@ class ClientLoanSchedule {
       contractualMaturity: optionalDate(payload['contractual_maturity']),
       operationalMaturity: optionalDate(payload['operational_maturity']),
       maturityStatus: requiredString(payload, 'maturity_status'),
+      penaltyStatus: requiredString(payload, 'penalty_status'),
+      projectedPenalty: _requiredMoneyText(payload, 'projected_penalty'),
+      assessedPenaltyBalance: _requiredMoneyText(
+        payload,
+        'assessed_penalty_balance',
+      ),
+      penaltyBase: _requiredMoneyText(payload, 'penalty_base'),
+      remainingCostHeadroom: _requiredMoneyText(
+        payload,
+        'remaining_cost_headroom',
+      ),
+      exactPayoffTotal: _requiredMoneyText(payload, 'exact_payoff_total'),
+      managementReviewRequiredReason: _requiredScheduleTextAllowEmpty(
+        payload,
+        'management_review_required_reason',
+      ),
       rows: rawRows
           .map((row) => ClientScheduleRow.fromPayload(stringMap(row)))
           .toList(growable: false),
@@ -113,4 +143,18 @@ String _requiredMoneyText(Map<String, dynamic> payload, String key) {
     );
   }
   return text;
+}
+
+String _requiredScheduleTextAllowEmpty(
+  Map<String, dynamic> payload,
+  String key,
+) {
+  final value = payload[key];
+  if (value is! String) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid schedule text data.',
+      code: 'invalid_client_schedule_payload',
+    );
+  }
+  return value.trim();
 }
