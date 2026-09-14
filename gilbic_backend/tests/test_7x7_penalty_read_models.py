@@ -174,6 +174,11 @@ def test_collector_repository_uses_shared_penalty_coordinator_for_7x7(monkeypatc
     monkeypatch.setattr(collector_repository, "open_connection", lambda: connection)
     monkeypatch.setattr(
         collector_repository,
+        "apply_due_client_area_transfers",
+        lambda connection, *, as_of_date: None,
+    )
+    monkeypatch.setattr(
+        collector_repository,
         "project_verified_seven_by_seven_penalty_state",
         project,
         raising=False,
@@ -215,6 +220,11 @@ def test_collector_repository_does_not_project_penalty_for_regular(monkeypatch) 
         raise AssertionError("Regular schedule must not invoke the 7x7 penalty coordinator")
 
     monkeypatch.setattr(collector_repository, "open_connection", lambda: connection)
+    monkeypatch.setattr(
+        collector_repository,
+        "apply_due_client_area_transfers",
+        lambda connection, *, as_of_date: None,
+    )
     monkeypatch.setattr(
         collector_repository,
         "project_verified_seven_by_seven_penalty_state",
