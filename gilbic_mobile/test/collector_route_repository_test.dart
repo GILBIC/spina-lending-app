@@ -83,4 +83,98 @@ void main() {
     expect(route.entries.first.passCount, 1);
     expect(route.entries.last.advanceUntil, DateTime(2026, 8, 2));
   });
+
+  test('parses ordered stable Area hierarchy metadata from the route payload', () async {
+    final deviceStore = MemoryDeviceIdentityStore()
+      ..value = 'gilbic-route-hierarchy-device';
+    final repository = SpinaCollectorRouteRepository(
+      routeUri: Uri.parse('https://spina.test/route'),
+      deviceIdentityProvider: DeviceIdentityProvider(
+        store: deviceStore,
+        platformResolver: () => 'android',
+        appVersionResolver: () async => '0.4.0+4',
+      ),
+      client: MockClient((request) async {
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'route_date': '2026-09-09',
+                'collector_name': 'Collector One',
+                'areas': <String>['Cardona › Calahan'],
+                'expected_total': 200,
+                'area_nodes': <Object?>[
+                  <String, Object?>{
+                    'area_uid': 'cardona',
+                    'parent_area_uid': null,
+                    'name': 'Cardona',
+                    'full_path': 'Cardona',
+                    'depth': 0,
+                    'sort_order': 0,
+                    'is_legacy_unmapped': false,
+                  },
+                  <String, Object?>{
+                    'area_uid': 'calahan',
+                    'parent_area_uid': 'cardona',
+                    'name': 'Calahan',
+                    'full_path': 'Cardona › Calahan',
+                    'depth': 1,
+                    'sort_order': 0,
+                    'is_legacy_unmapped': false,
+                  },
+                  <String, Object?>{
+                    'area_uid': 'balayong',
+                    'parent_area_uid': 'calahan',
+                    'name': 'Balayong',
+                    'full_path': 'Cardona › Calahan › Balayong',
+                    'depth': 2,
+                    'sort_order': 0,
+                    'is_legacy_unmapped': false,
+                  },
+                ],
+                'entries': <Object?>[
+                  <String, Object?>{
+                    'route_entry_id': 'entry-hierarchy',
+                    'client_id': 'client-hierarchy',
+                    'loan_id': 'loan-hierarchy',
+                    'client_name': 'Ana Client',
+                    'area': 'Cardona › Calahan › Balayong',
+                    'area_uid': 'balayong',
+                    'loan_type': 'Regular',
+                    'daily_amount': 200,
+                    'remaining_balance': 4800,
+                    'pass_count': 0,
+                    'status': 'Pending',
+                  },
+                ],
+              },
+            }),
+          ),
+          200,
+          headers: const <String, String>{
+            'content-type': 'application/json; charset=utf-8',
+          },
+        );
+      }),
+    );
+
+    final route = await repository.fetchToday(session);
+
+    expect(
+      route.areaNodes.map((node) => node.areaUid),
+      <String>['cardona', 'calahan', 'balayong'],
+    );
+    expect(
+      route.areaNodes.map((node) => node.name),
+      <String>['Cardona', 'Calahan', 'Balayong'],
+    );
+    expect(route.areaNodes[1].parentAreaUid, 'cardona');
+    expect(route.areaNodes.last.fullPath, 'Cardona › Calahan › Balayong');
+    expect(route.areaNodes.last.depth, 2);
+    expect(route.areaNodes.last.sortOrder, 0);
+    expect(route.areaNodes.last.isLegacyUnmapped, isFalse);
+    expect(route.entries.single.areaUid, 'balayong');
+    expect(route.areas, <String>['Cardona › Calahan']);
+  });
 }

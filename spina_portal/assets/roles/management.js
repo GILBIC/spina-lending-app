@@ -1,3 +1,4 @@
+import { mountAreaManagement } from '../area-management.js';
 import { buildManagementViewModel } from '../presenters.js';
 import {
   bindClientAccountAdmin,
@@ -295,9 +296,16 @@ export async function mountManagementWorkspace(context) {
   const canManageAccounts = hasPermission(session, 'account.manage');
   const canManageDevices = hasPermission(session, 'device.manage');
   const canViewStaff = canManageAccounts || canManageDevices;
+  const canUseAreaManagement = [
+    'area.manage',
+    'area.collector.assign',
+    'area.client.assign',
+    'area.retire',
+  ].some((permission) => hasPermission(session, permission));
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
     { id: 'management-loans', label: 'Clients & loans' },
+    ...(canUseAreaManagement ? [{ id: 'management-area-management', label: 'Area Management' }] : []),
     { id: 'management-loan-operations', label: 'Loan operations' },
     ...(canDashboard ? [{ id: 'management-past-due-report', label: 'Past-due reasons' }] : []),
     ...(canViewFinancialStatements ? [{ id: 'management-financial-statements', label: 'Financial statements' }] : []),
@@ -349,6 +357,7 @@ export async function mountManagementWorkspace(context) {
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
   <section class="section-card" id="management-loan-operations"><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" placeholder="Client, receipt, loan, or collector" /><select name="status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Read-only server summary of Past-Due reasons. No penalty, balance, or schedule calculation is performed in Web.</p></div></div><form id="management-past-due-report-search" class="search-bar"><input type="date" name="start_date" aria-label="Start date" /><input type="date" name="end_date" aria-label="End date" /><input name="area" maxlength="200" placeholder="Area" /><select name="reason_code"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select><select name="event_kind"><option value="">All events</option><option value="unable_to_pay">Full Unable to Pay</option><option value="partial_payment">Partial-payment Past Due</option></select><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
@@ -368,4 +377,8 @@ export async function mountManagementWorkspace(context) {
   bindClientAccountAdmin(context);
   bindStaffInvite(context);
   bindStaffDevices(context, staffAccounts);
+  if (canUseAreaManagement) {
+    const areaRoot = root.querySelector('#management-area-management');
+    if (areaRoot) await mountAreaManagement({ ...context, root: areaRoot });
+  }
 }

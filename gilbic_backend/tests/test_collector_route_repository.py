@@ -119,6 +119,11 @@ def _load_route(monkeypatch, connection: FakeConnection):
         "open_connection",
         lambda: fake_open_connection(connection),
     )
+    monkeypatch.setattr(
+        module,
+        "apply_due_client_area_transfers",
+        lambda *args, **kwargs: 0,
+    )
     # These tests isolate the established route query and edit-authority behavior.
     # Active-promise lookup has its own focused tests and requires a different
     # cursor shape, so keep it out of this older repository fake rather than

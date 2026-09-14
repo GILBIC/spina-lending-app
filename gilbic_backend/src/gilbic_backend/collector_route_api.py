@@ -18,6 +18,7 @@ from .collector_route_renewal_repository import (
     PostgresCollectorRouteRenewalRepository,
 )
 from .collector_route_repository import (
+    CollectorRouteAreaNode,
     CollectorRouteEntryRecord,
     CollectorRouteReceiptRecord,
     CollectorRouteRecord,
@@ -67,6 +68,18 @@ def _receipt_payload(receipt: CollectorRouteReceiptRecord) -> dict[str, object]:
         "note": receipt.note,
         "covered_dates": [value.isoformat() for value in receipt.covered_dates],
         "accepted_at": receipt.accepted_at.isoformat() if receipt.accepted_at else None,
+    }
+
+
+def _area_node_payload(node: CollectorRouteAreaNode) -> dict[str, object]:
+    return {
+        "area_uid": str(node.area_uid),
+        "parent_area_uid": str(node.parent_area_uid) if node.parent_area_uid else None,
+        "name": node.name,
+        "full_path": node.full_path,
+        "depth": node.depth,
+        "sort_order": node.sort_order,
+        "is_legacy_unmapped": node.is_legacy_unmapped,
     }
 
 
@@ -264,6 +277,8 @@ def _entry_payload(
         "renewal_requested": bool(renewal_requests),
         "renewal_requests": list(renewal_requests),
     }
+    if entry.area_uid is not None:
+        payload["area_uid"] = str(entry.area_uid)
     if recorded_by_other:
         payload.update(
             {
@@ -304,6 +319,7 @@ def _route_payload(
         "route_date": route.route_date.isoformat(),
         "collector_name": route.collector_name,
         "areas": list(route.areas),
+        "area_nodes": [_area_node_payload(node) for node in route.area_nodes],
         "expected_total": str(route.expected_total),
         "entries": [
             _entry_payload(
