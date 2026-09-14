@@ -1,8 +1,8 @@
-"""Check six OFFLINE synthetic Annex A PDFs against existing SPINA rows.
+"""Check ten OFFLINE synthetic Annex A PDFs against existing SPINA rows.
 
 Requires PyMuPDF and the companion synthetic_annex_a.py. This verifier does not
 replace visual review, prove legal rates or authorize a real document. Only use
-with the five fixed 7x7 fixtures and one fixed Regular fixture. No PDF bytes are
+with the five fixed 7x7 fixtures and five fixed Regular fixtures. No PDF bytes are
 changed here.
 """
 from __future__ import annotations
@@ -19,8 +19,11 @@ import fitz
 from synthetic_annex_a import (
     CASES,
     NOTICE,
+    REGULAR_CASES,
     make_case,
     make_regular_case,
+    regular_specimen_identity,
+    regular_specimen_stem,
     row_values,
 )
 
@@ -49,9 +52,12 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
-def verify(path: Path, count: int, *, regular: bool = False) -> dict:
-    case = make_regular_case() if regular else make_case(count)
+def verify(
+    path: Path, count: int, *, regular: bool = False, payment_frequency: str = 'daily',
+) -> dict:
+    case = make_regular_case(payment_frequency=payment_frequency) if regular else make_case(count)
     result = case['projection']
+    require(count == len(result.rows), 'Wrong fixture installment count')
     expected = [row_values(row) for row in result.rows]
     balance_label = 'Remaining Total Payable' if regular else 'Scheduled Remaining Principal'
     total_labels = TOTAL_LABELS
@@ -63,7 +69,7 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
             balance = result.total_due - cumulative_due
             cells[-1] = f'{balance:,.2f}'
         total_labels = TOTAL_LABELS[:-1] + ('FINAL REMAINING TOTAL PAYABLE',)
-    identity = 'REGULAR-120' if regular else str(count)
+    identity = regular_specimen_identity(payment_frequency) if regular else str(count)
     product_label = (
         'Regular Cash Loan (synthetic only)'
         if regular
@@ -116,6 +122,14 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
                 'Acknowledgment text/name/signature/approval is split across pages')
         require(product_label in complete_text, 'Wrong product label')
         if regular:
+            first_page = compact_pages[0]
+            require('Payment Frequency ' + REGULAR_CASES[payment_frequency][3] in first_page,
+                    'Wrong Regular payment-frequency disclosure')
+            term = f"{count} scheduled {payment_frequency.replace('_', '-')} installments (synthetic)"
+            require('Contractual Loan Term ' + term in first_page, 'Wrong Regular installment term')
+            if payment_frequency == 'custom':
+                require('Variable; see complete schedule' in first_page,
+                        'Custom schedule incorrectly presented as a fixed installment')
             explanation = ' '.join(compact_pages).lower()
             for phrase in ('includes scheduled principal and interest',
                            'assuming all scheduled payments are made fully and on time',
@@ -145,6 +159,7 @@ def verify(path: Path, count: int, *, regular: bool = False) -> dict:
             'file': path.name, 'bytes': path.stat().st_size,
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'status': 'PASS',
             'product': 'Regular' if regular else '7x7',
+            'payment_frequency': payment_frequency if regular else 'daily',
             'installments': count, 'pages': len(doc), 'rows_by_page': per_page,
             'scheduled_principal': str(result.total_principal), 'contractual_interest': str(result.total_interest),
             'other_scheduled_charges': '0.00', 'total_payable': str(result.total_due),
@@ -169,10 +184,11 @@ def main() -> None:
         matches = list(args.pdf_dir.rglob(name))
         require(len(matches) == 1, f'Expected exactly one {name}')
         reports.append(verify(matches[0], count))
-    regular_name = 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.pdf'
-    regular_matches = list(args.pdf_dir.rglob(regular_name))
-    require(len(regular_matches) == 1, f'Expected exactly one {regular_name}')
-    reports.append(verify(regular_matches[0], 120, regular=True))
+    for frequency, terms in REGULAR_CASES.items():
+        regular_name = regular_specimen_stem(frequency) + '.pdf'
+        regular_matches = list(args.pdf_dir.rglob(regular_name))
+        require(len(regular_matches) == 1, f'Expected exactly one {regular_name}')
+        reports.append(verify(regular_matches[0], terms[0], regular=True, payment_frequency=frequency))
     output = json.dumps({'scope': 'OFFLINE_SYNTHETIC_PROOF_ONLY', 'results': reports}, indent=2)
     if args.report:
         require(not args.report.exists(), 'Do not overwrite an existing report')

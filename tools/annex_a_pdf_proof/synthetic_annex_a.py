@@ -1,7 +1,7 @@
 """Offline synthetic Annex A R2 layout proof; NOT a production document API.
 
 Requires python-docx and the separately supplied original hash-locked R2 DOCX.
-Only six fixed synthetic cases are supported: five 7x7 and one Regular.
+Only ten fixed synthetic cases are supported: five 7x7 and five Regular.
 Existing SPINA schedule and projection modules are imported, never copied into
 this tool or reimplemented. Run from a checkout with gilbic_backend/src on
 PYTHONPATH. Conversion/visual QA are separate from this DOCX assembly; no
@@ -38,6 +38,15 @@ TEMPLATE_SHA256 = '80ef81aec3141f9c96a5d78f1edd1e7367c8a6be9ab7dca92e81b07756217
 NOTICE = 'SYNTHETIC TEST COPY - NOT FOR SIGNING OR RELEASE'
 CASES = {1: ('1000.00', '1007.00'), 7: ('1000.00', '150.00'), 8: ('1000.00', '140.00'),
          60: ('3000.00', '71.00'), 104: ('3000.00', '50.00')}
+# Fixed proof terms, not product defaults or conversions of a 120-day contract.
+# Calendar exclusions are explicit approved rows below, never inferred here.
+REGULAR_CASES = {
+    'daily': (120, '50.00', date(2026, 9, 14), 'Daily (synthetic)', 'REGULAR-120'),
+    'weekly': (16, '375.00', date(2026, 9, 13), 'Weekly (synthetic)', 'REGULAR-W16'),
+    'semi_monthly': (8, '750.00', date(2027, 1, 15), 'Semi-monthly (15/30; synthetic)', 'REGULAR-SM8'),
+    'monthly': (4, '1500.00', date(2027, 1, 31), 'Monthly (synthetic)', 'REGULAR-M4'),
+    'custom': (4, '1200.00', date(2027, 1, 29), 'Custom approved dates (synthetic)', 'REGULAR-C4'),
+}
 KEYS = ('borrower_name', 'company_line', 'document_id', 'loan_id', 'cif_version',
         'packet_id', 'packet_version', 'schedule_id', 'schedule_version',
         'generated_at', 'approval_evidence')
@@ -63,22 +72,37 @@ def make_case(count: int) -> dict:
             'source': source, 'projection': projection}
 
 
-def make_regular_case() -> dict:
-    """Build the one fixed Regular proof fixture from existing schedule authority."""
+def make_regular_case(*, payment_frequency: str = 'daily') -> dict:
+    """Select one fixed Regular proof fixture; never accept arbitrary loan terms."""
+
+    if payment_frequency not in REGULAR_CASES:
+        raise SyntheticProofError('Only the five fixed Regular synthetic cases are supported.')
 
     principal = '5000.00'
     interest = '1000.00'
     total = '6000.00'
-    daily = '50.00'
-    count = 120
-    first_due_date = date(2026, 9, 14)
-    generic = generate_contract_installments(
-        payment_frequency='daily',
-        contractual_total=Decimal(total),
-        first_due_date=first_due_date,
-        installment_count=count,
-        regular_installment_amount=Decimal(daily),
-    )
+    count, daily, first_due_date, _, _ = REGULAR_CASES[payment_frequency]
+    if payment_frequency == 'custom':
+        # Already-approved synthetic dates and amounts; NOT a holiday calendar.
+        # Jan 30/31, Feb 1/7/8 are excluded in this example before signing.
+        generic = generate_contract_installments(
+            payment_frequency='custom',
+            contractual_total=Decimal(total),
+            custom_installments=(
+                (date(2027, 1, 29), Decimal('1200.00')),
+                (date(2027, 2, 2), Decimal('900.00')),
+                (date(2027, 2, 5), Decimal('1800.00')),
+                (date(2027, 2, 9), Decimal('2100.00')),
+            ),
+        )
+    else:
+        generic = generate_contract_installments(
+            payment_frequency=payment_frequency,
+            contractual_total=Decimal(total),
+            first_due_date=first_due_date,
+            installment_count=count,
+            regular_installment_amount=Decimal(daily),
+        )
     source = prepare_regular_contract_components(
         installments=generic,
         original_principal=Decimal(principal),
@@ -94,6 +118,7 @@ def make_regular_case() -> dict:
     )
     return {
         'product': 'Regular',
+        'payment_frequency': payment_frequency,
         'count': count,
         'principal': principal,
         'interest': interest,
@@ -102,6 +127,18 @@ def make_regular_case() -> dict:
         'source': source,
         'projection': projection,
     }
+
+
+def regular_specimen_stem(payment_frequency: str) -> str:
+    count = REGULAR_CASES[payment_frequency][0]
+    if payment_frequency == 'daily':
+        return 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows'
+    return f'SPINA_Annex_A_SYNTHETIC_REGULAR_{payment_frequency.upper()}_{count:03d}_rows'
+
+
+def regular_specimen_identity(payment_frequency: str) -> str:
+    # Compact references preserve the existing footer geometry.
+    return REGULAR_CASES[payment_frequency][4]
 
 
 def synthetic_context(count: int | str) -> dict[str, str]:
@@ -192,7 +229,7 @@ def fill_table(table, rows):
 def _expected_case(case: dict) -> dict:
     product = case.get('product', '7x7')
     if product == 'Regular':
-        return make_regular_case()
+        return make_regular_case(payment_frequency=case.get('payment_frequency', 'daily'))
     if product == '7x7':
         return make_case(case['count'])
     raise SyntheticProofError('Unsupported synthetic product fixture.')
@@ -200,12 +237,13 @@ def _expected_case(case: dict) -> dict:
 
 def _display_terms(case: dict, result) -> dict[str, str]:
     if case.get('product') == 'Regular':
+        frequency = case.get('payment_frequency', 'daily')
         return {
             'product': 'Regular Cash Loan (synthetic only)',
             'rate': f"{case['rate_percent']}% fixed contractual interest (synthetic fixture)",
             'basis': 'Fixed contractual interest on original principal; synthetic fixture only',
-            'frequency': 'Daily (synthetic)',
-            'term': f"{case['count']} scheduled daily installments (synthetic)",
+            'frequency': REGULAR_CASES[frequency][3],
+            'term': f"{case['count']} scheduled {frequency.replace('_', '-')} installments (synthetic)",
             'allocation': (
                 'Synthetic Regular principal/interest schedule rows only; '
                 'no payment-allocation rule represented'
@@ -293,6 +331,9 @@ def build_docx(template: Path, output: Path, case: dict, context: dict) -> None:
         '{Packet Version}': context['packet_version'], '{Schedule Version}': context['schedule_version'],
         '{Server Date/Time and Zone}': context['generated_at'],
     }
+    if regular and case.get('payment_frequency') == 'custom':
+        # Do not present the first custom amount as a fixed installment amount.
+        mapping = {'PHP {Agreed Installment Amount}': 'Variable; see complete schedule', **mapping}
     for p in list(doc.paragraphs):
         text = p.text
         if text.startswith('Working layout R2'):
@@ -360,10 +401,12 @@ def main():
         path = args.output_dir / f'SPINA_Annex_A_SYNTHETIC_{count:03d}_rows.docx'
         build_docx(args.template, path, make_case(count), synthetic_context(count))
         print(path)
-    regular = make_regular_case()
-    path = args.output_dir / 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.docx'
-    build_docx(args.template, path, regular, synthetic_context('REGULAR-120'))
-    print(path)
+    for frequency in REGULAR_CASES:
+        regular = make_regular_case(payment_frequency=frequency)
+        path = args.output_dir / (regular_specimen_stem(frequency) + '.docx')
+        context = synthetic_context(regular_specimen_identity(frequency))
+        build_docx(args.template, path, regular, context)
+        print(path)
 
 
 if __name__ == '__main__':
