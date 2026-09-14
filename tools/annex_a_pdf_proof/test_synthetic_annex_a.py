@@ -3,6 +3,8 @@
 Run with SPINA_ANNEX_TEMPLATE set; missing assets fail rather than skip.
 These tests are not an application integration or production authorization.
 """
+from copy import deepcopy
+from datetime import date, timedelta
 from decimal import Decimal
 from importlib import import_module
 from importlib.util import find_spec
@@ -210,7 +212,7 @@ def test_regular_remaining_total_payable_has_consistent_labels_and_schedule_note
     ]
 
 
-def test_cli_generates_five_7x7_and_one_regular_specimen(tmp_path, monkeypatch):
+def test_cli_generates_five_7x7_and_five_regular_specimens(tmp_path, monkeypatch):
     m = module()
     output_dir = tmp_path / 'specimens'
     monkeypatch.setattr(
@@ -228,8 +230,15 @@ def test_cli_generates_five_7x7_and_one_regular_specimen(tmp_path, monkeypatch):
     m.main()
 
     outputs = sorted(path.name for path in output_dir.glob('*.docx'))
-    assert len(outputs) == 6
-    assert 'SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.docx' in outputs
+    expected = {f'SPINA_Annex_A_SYNTHETIC_{count:03d}_rows.docx' for count in (1, 7, 8, 60, 104)}
+    expected.add('SPINA_Annex_A_SYNTHETIC_REGULAR_120_rows.docx')
+    expected.update({
+        'SPINA_Annex_A_SYNTHETIC_REGULAR_WEEKLY_016_rows.docx',
+        'SPINA_Annex_A_SYNTHETIC_REGULAR_SEMI_MONTHLY_008_rows.docx',
+        'SPINA_Annex_A_SYNTHETIC_REGULAR_MONTHLY_004_rows.docx',
+        'SPINA_Annex_A_SYNTHETIC_REGULAR_CUSTOM_004_rows.docx',
+    })
+    assert set(outputs) == expected
 
 
 @pytest.mark.parametrize('case_id', [1, 7, 8, 60, 104, 'REGULAR-120'])
@@ -264,3 +273,185 @@ def test_acknowledgment_text_name_and_signature_stay_together(case_id, tmp_path)
             for cell in row.cells for p in cell.paragraphs
         ), 'Borrower printed name, signature and approval must stay on one page.'
     assert template().read_bytes() == before
+
+
+# Fixed synthetic terms, not conversions of a 120-day contract or public holidays.
+# These cases exercise the existing signed-row boundary, not a holiday provider.
+REGULAR_CALENDAR_CASES = (
+    ('weekly', 'Weekly (synthetic)',
+     tuple(date(2026, 9, 13) + timedelta(days=7 * n) for n in range(16)),
+     ('375.00',) * 16),
+    ('semi_monthly', 'Semi-monthly (15/30; synthetic)',
+     tuple(date.fromisoformat(value) for value in (
+         '2027-01-15', '2027-01-30', '2027-02-15', '2027-02-28',
+         '2027-03-15', '2027-03-30', '2027-04-15', '2027-04-30',
+     )), ('750.00',) * 8),
+    ('monthly', 'Monthly (synthetic)',
+     tuple(date.fromisoformat(value) for value in (
+         '2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30',
+     )), ('1500.00',) * 4),
+    ('custom', 'Custom approved dates (synthetic)',
+     tuple(date.fromisoformat(value) for value in (
+         '2027-01-29', '2027-02-02', '2027-02-05', '2027-02-09',
+     )), ('1200.00', '900.00', '1800.00', '2100.00')),
+)
+
+
+@pytest.mark.parametrize('frequency,label,dates,amounts', REGULAR_CALENDAR_CASES)
+def test_regular_calendar_specimen_preserves_exact_signed_rows(
+    frequency, label, dates, amounts, tmp_path,
+):
+    m = module()
+    # Extend the fixed fixture factory only; arbitrary live loan inputs stay rejected.
+    case = m.make_regular_case(payment_frequency=frequency)
+    before = deepcopy(case)
+    template_before = template().read_bytes()
+    source = tuple(case['source'])
+    assert case['product'] == 'Regular'
+    assert [r.due_date for r in source] == list(dates)
+    assert [r.contractual_amount for r in source] == [Decimal(a) for a in amounts]
+    assert case['count'] == len(dates)
+    assert sum((r.principal_component for r in source), Decimal('0.00')) == Decimal('5000.00')
+    assert sum((r.interest_component for r in source), Decimal('0.00')) == Decimal('1000.00')
+
+    # Sundays and explicitly synthetic holidays can remain approved due dates.
+    if frequency in {'weekly', 'semi_monthly', 'monthly'}:
+        assert any(d.weekday() == 6 for d in dates)
+        synthetic_holidays = {dates[-1]}
+        assert synthetic_holidays <= {r.due_date for r in source}
+    else:
+        # Sunday + holiday overlap and consecutive exclusions, including the tail.
+        # These exact dates were selected before signing, not moved by the renderer.
+        excluded = {date.fromisoformat(value) for value in (
+            '2027-01-30', '2027-01-31', '2027-02-01', '2027-02-07', '2027-02-08',
+        )}
+        assert date(2027, 1, 31).weekday() == 6
+        assert not excluded.intersection(r.due_date for r in source)
+        assert source[-1].due_date == date(2027, 2, 9)
+
+    out = tmp_path / f'regular-{frequency}.docx'
+    m.build_docx(template(), out, case, m.synthetic_context(f'REGULAR-{frequency}'))
+    doc = Document(out)
+    tables = [t for t in doc.tables if len(t.columns) == 7]
+    actual = [[c.text for c in row.cells] for t in tables for row in t.rows[1:]]
+    assert len(tables) == (1 if len(source) <= 7 else 2)
+    assert len(actual) == len(source)
+    for index, (row, cells) in enumerate(zip(source, actual, strict=True)):
+        assert cells[:6] == [
+            str(index + 1), dates[index].isoformat(),
+            f'{row.principal_component:,.2f}', f'{row.interest_component:,.2f}',
+            '0.00', f'{Decimal(amounts[index]):,.2f}',
+        ]
+        future_components = sum(
+            (r.principal_component + r.interest_component for r in source[index + 1:]),
+            Decimal('0.00'),
+        )
+        assert cells[-1] == f'{future_components:,.2f}'
+    assert all(Decimal(cells[-1].replace(',', '')) > 0 for cells in actual[:-1])
+    assert actual[-1][-1] == '0.00'
+    for table in tables:
+        assert ' '.join(table.cell(0, 6).text.split()) == 'Remaining Total Payable*'
+    details = {r.cells[0].text: r.cells[1].text for r in doc.tables[0].rows}
+    assert details['Payment Frequency'] == label
+    assert 'daily' not in details['Contractual Loan Term'].lower()
+    assert details['Number of Installments'] == str(len(dates))
+    assert details['First Payment Date'] == dates[0].isoformat()
+    assert details['Contractual Maturity'] == dates[-1].isoformat()
+    assert details['Total Amount Payable'] == 'PHP 6,000.00'
+    summary = next(t for t in doc.tables if t.cell(0, 0).text == 'TOTAL SCHEDULED PRINCIPAL')
+    assert summary.cell(4, 0).text == 'FINAL REMAINING TOTAL PAYABLE'
+    assert [r.cells[1].text for r in summary.rows] == [
+        'PHP 5,000.00', 'PHP 1,000.00', 'PHP 0.00', 'PHP 6,000.00', 'PHP 0.00',
+    ]
+    assert case == before
+    assert template().read_bytes() == template_before
+
+
+@pytest.mark.parametrize('frequency,dates,blocked,final_date', (
+    ('daily', ('2027-01-30', '2027-01-31', '2027-02-01'),
+     ('2027-02-02', '2027-02-03'), '2027-02-04'),
+    ('weekly', ('2027-01-17', '2027-01-24', '2027-01-31'),
+     ('2027-02-07', '2027-02-14'), '2027-02-21'),
+    ('semi_monthly', ('2027-01-15', '2027-01-30', '2027-02-15'),
+     ('2027-02-28', '2027-03-15'), '2027-03-30'),
+    ('monthly', ('2027-01-31', '2027-02-28', '2027-03-31'),
+     ('2027-04-30', '2027-05-31'), '2027-06-30'),
+))
+def test_no_collection_tail_skips_only_explicit_blocked_dates(
+    frequency, dates, blocked, final_date,
+):
+    ncs = import_module('gilbic_backend.no_collection_schedule')
+    rows = tuple(ncs.OperationalInstallment(
+        installment_id=i + 1, installment_number=i + 1,
+        contractual_due_date=date.fromisoformat(value),
+        effective_due_date=date.fromisoformat(value),
+        contractual_amount=Decimal('400.00'), allocated_amount=Decimal('25.00'),
+    ) for i, value in enumerate(dates))
+    before = deepcopy(rows)
+    target = rows[-1].effective_due_date
+    excluded = tuple(date.fromisoformat(value) for value in blocked)
+    args = dict(installments=rows, no_collection_date=target, payment_frequency=frequency)
+    shifts = ncs.plan_no_collection_shift(**args, blocked_dates=excluded)
+    # Repeated Sunday/holiday classification cannot create a second adjustment.
+    assert shifts == ncs.plan_no_collection_shift(
+        **args, blocked_dates=(*excluded, *excluded, target, target),
+    )
+    assert len(shifts) == 1
+    assert shifts[0].new_effective_due_date == date.fromisoformat(final_date)
+    assert shifts[0].contractual_due_date == target
+    assert shifts[0].prior_effective_due_date == target
+    assert shifts[0].contractual_amount == Decimal('400.00')
+    assert shifts[0].installment_id == rows[-1].installment_id
+    assert rows == before  # No signed date or existing allocation is mutated.
+
+
+def test_consecutive_no_collection_collision_fails_closed_without_rewriting_rows():
+    ncs = import_module('gilbic_backend.no_collection_schedule')
+    rows = tuple(ncs.OperationalInstallment(
+        installment_id=i + 1, installment_number=i + 1,
+        contractual_due_date=date(2027, 1, 30) + timedelta(days=i),
+        effective_due_date=date(2027, 1, 30) + timedelta(days=i),
+        contractual_amount=Decimal('50.00'),
+    ) for i in range(3))
+    before = deepcopy(rows)
+    with pytest.raises(ncs.NoCollectionScheduleError, match='lose installment order'):
+        ncs.plan_no_collection_shift(
+            installments=rows, no_collection_date=date(2027, 1, 30),
+            payment_frequency='daily',
+            blocked_dates=(date(2027, 1, 31), date(2027, 2, 1)),
+        )
+    assert rows == before
+    with pytest.raises(ncs.NoCollectionScheduleError, match='No installment'):
+        ncs.plan_no_collection_shift(
+            installments=rows, no_collection_date=date(2027, 2, 7),
+            payment_frequency='daily',
+        )
+    assert rows == before
+
+
+@pytest.mark.parametrize('cash,keep_shift,status', (
+    ('30.00', True, 'partial_shifted_prepayment'),
+    ('40.00', False, 'full_voluntary_completion'),
+))
+def test_sunday_holiday_voluntary_exception_keeps_existing_7x7_rule(cash, keep_shift, status):
+    # This is the existing 7x7 rule, NOT a new Regular allocation policy.
+    nc = import_module('gilbic_backend.seven_by_seven_no_collection_voluntary')
+    sunday_holiday = date(2027, 1, 31)  # Synthetic holiday; no statutory calendar claim.
+    assert sunday_holiday.weekday() == 6
+    affected = nc.NoCollectionAffectedInstallment(
+        installment_id=1, installment_number=1,
+        contractual_amount=Decimal('50.00'), prepaid_amount=Decimal('10.00'),
+    )
+    before = deepcopy(affected)
+    result = nc.plan_seven_by_seven_no_collection_voluntary_payment(
+        transaction_amount=Decimal(cash), collection_date=sunday_holiday,
+        no_collection_date=sunday_holiday, past_due_obligations=(),
+        affected_installment=affected,
+    )
+    assert result.status == status
+    assert result.keep_no_collection_shift is keep_shift
+    assert result.keep_interest_holiday is keep_shift
+    assert result.receipt_amount == Decimal(cash)
+    assert result.affected_total_after == Decimal(cash) + Decimal('10.00')
+    assert sum((r.amount_applied for r in result.instructions), Decimal('0.00')) == Decimal(cash)
+    assert affected == before
