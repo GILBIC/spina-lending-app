@@ -7,6 +7,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .client_loan_api import client_loan_repository_dependency
+from .client_loan_repository import (
+    ClientBorrowerNotLinked,
+    ClientLoanPortfolio,
+    ClientLoanRecord,
+    PostgresClientLoanRepository,
+)
 from .client_payment_repository import (
     ClientPaymentBorrowerNotLinked,
     ClientPaymentRecord,
@@ -81,6 +88,43 @@ def _timeline_payload(timeline: ClientPaymentTimeline) -> dict[str, object]:
     }
 
 
+def _statement_loan_payload(record: ClientLoanRecord) -> dict[str, object]:
+    return {
+        "loan_id": str(record.loan_id),
+        "loan_number": record.loan_number,
+        "loan_type_code": record.loan_type_code,
+        "loan_type_name": record.loan_type_name,
+        "principal": _decimal(record.principal),
+        "daily_amount": _decimal(record.daily_amount),
+        "interest_rate": _decimal(record.interest_rate),
+        "date_released": (
+            record.date_released.isoformat() if record.date_released else None
+        ),
+        "due_date": record.due_date.isoformat() if record.due_date else None,
+        "status": record.status,
+        "remaining_balance": _decimal(record.remaining_balance),
+        "state_version": record.state_version,
+        "payment_count": record.payment_count,
+    }
+
+
+def _statement_payload(
+    portfolio: ClientLoanPortfolio,
+    timeline: ClientPaymentTimeline,
+) -> dict[str, object]:
+    return {
+        "client": {
+            "client_id": str(portfolio.client_id),
+            "client_code": portfolio.client_code,
+            "client_name": portfolio.client_name,
+            "area": portfolio.area,
+            "status": portfolio.client_status,
+        },
+        "loans": [_statement_loan_payload(record) for record in portfolio.loans],
+        "payments": [_payment_payload(record) for record in timeline.payments],
+    }
+
+
 def create_client_payment_router() -> APIRouter:
     router = APIRouter(tags=["client payments"])
 
@@ -117,5 +161,41 @@ def create_client_payment_router() -> APIRouter:
                 detail={"code": error.code, "message": str(error)},
             ) from error
         return {"success": True, "data": _timeline_payload(timeline)}
+
+    @router.get("/api/v1/client/statement")
+    @router.get("/api/mobile/v1/client/statement", include_in_schema=False)
+    def get_client_statement(
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        loans: PostgresClientLoanRepository = Depends(client_loan_repository_dependency),
+        payments: PostgresClientPaymentRepository = Depends(
+            client_payment_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        if "client" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "client_role_required",
+                    "message": "Only a linked client account can view its Statement.",
+                },
+            )
+        try:
+            portfolio = loans.list_for_user(user_id=actor.user_id)
+            timeline = payments.list_for_user(user_id=actor.user_id)
+        except (ClientBorrowerNotLinked, ClientPaymentBorrowerNotLinked) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": error.code, "message": str(error)},
+            ) from error
+        return {"success": True, "data": _statement_payload(portfolio, timeline)}
 
     return router

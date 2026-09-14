@@ -16,7 +16,7 @@ abstract interface class ClientRenewalRepository {
     UserSession session, {
     required String deviceId,
     required String loanId,
-    required double requestedAmount,
+    required String requestedAmount,
     required String message,
   });
 
@@ -69,7 +69,7 @@ class SpinaRenewalRepository
     UserSession session, {
     required String deviceId,
     required String loanId,
-    required double requestedAmount,
+    required String requestedAmount,
     required String message,
   }) async {
     final payload = await _send(
@@ -79,7 +79,7 @@ class SpinaRenewalRepository
       path: '/api/mobile/v1/client/renewals',
       body: <String, Object?>{
         'loan_id': loanId,
-        'requested_amount': requestedAmount.toStringAsFixed(2),
+        'requested_amount': requestedAmount,
         'message': message,
       },
     );
