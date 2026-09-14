@@ -21,6 +21,10 @@ from .collection_posting import DIRECT_BALANCE_MODE
 from .per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
 )
+from .seven_by_seven_advance_activation import (
+    SevenBySevenAdvanceActivationError,
+    replay_verified_seven_by_seven_financial_state,
+)
 from .seven_by_seven_extra_principal_posting import (
     ExtraPrincipalPostingRejected,
     SevenBySevenExtraPrincipalPostingResult,
@@ -31,6 +35,12 @@ from .seven_by_seven_operational_allocator import (
     SevenBySevenAllocationError,
     SevenBySevenCashEvent,
     allocate_seven_by_seven_payments,
+)
+from .seven_by_seven_penalty_coordinator import (
+    SevenBySevenPenaltyCoordinatorError,
+    allocate_verified_seven_by_seven_penalty_cash,
+    freeze_verified_seven_by_seven_penalty_assessment,
+    project_verified_seven_by_seven_penalty_state,
 )
 from .seven_by_seven_schedule_allocation import (
     SevenBySevenScheduleAllocationError,
@@ -55,13 +65,13 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
     locked, its closing principal must exactly match the reconciled operational
     balance, and the pending cash event is accepted only when the canonical
     fixed-original-principal, interest-first allocator can apply it without an
-    overpayment residue.
+    unauthorized overpayment residue.
 
     When an active verified signed schedule exists, a normal PAYMENT also writes
-    contractual installment-allocation evidence. That schedule allocation is a
-    separate dimension from the interest-first cash composition: it clears only
-    Past Due / Due Today schedule rows, oldest first, and never silently spills
-    into a future Advance.
+    contractual installment-allocation evidence. After signed maturity, the
+    contractual allocator still runs first and only its residual may settle an
+    already-authorized post-maturity penalty. Penalty never enters contractual
+    replay, principal, or interest.
     """
 
     def post_collection(
@@ -241,7 +251,10 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             self._revalidate_seven_by_seven_mode(loan)
 
             previous_balance = self._money(loan["remaining_balance"])
-            if previous_balance <= ZERO:
+            if previous_balance <= ZERO and (
+                command.entry_type is not CollectionEntryType.PAYMENT
+                or is_extra_principal
+            ):
                 raise CollectionRejected(
                     "This loan is already fully paid.",
                     code="loan_already_paid",
@@ -270,8 +283,13 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             last_payment_date: date | None = loan["last_payment_date"]
             advance_until_after: date | None = loan["advance_until"]
             official_balance = previous_balance
+            contractual_complete = False
             loan_fully_paid = False
             schedule_instructions = ()
+            penalty_post_maturity = False
+            penalty_cash = ZERO
+            penalty_assessed = ZERO
+            penalty_outstanding_after = ZERO
             extra_principal_interest_before = ZERO
             extra_principal_interest_today = ZERO
             extra_principal_result: SevenBySevenExtraPrincipalPostingResult | None = (
@@ -305,19 +323,132 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     allocation_details["seven_by_seven_schedule_allocation_state"] = (
                         "advance_integration_pending"
                     )
-                elif command.entry_type is CollectionEntryType.PAYMENT:
-                    if is_extra_principal:
-                        allocation_details.update(
-                            {
-                                "payment_allocation_intent": (
-                                    PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION.value
-                                ),
-                                "seven_by_seven_schedule_allocation_state": (
-                                    "extra_principal_operational_pending"
-                                ),
-                            }
+                elif command.entry_type is CollectionEntryType.PAYMENT and is_extra_principal:
+                    allocation_details.update(
+                        {
+                            "payment_allocation_intent": (
+                                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION.value
+                            ),
+                            "seven_by_seven_schedule_allocation_state": (
+                                "extra_principal_operational_pending"
+                            ),
+                        }
+                    )
+
+                penalty_state = None
+                if (
+                    command.entry_type is CollectionEntryType.PAYMENT
+                    and not is_extra_principal
+                ):
+                    with connection.cursor() as penalty_cursor:
+                        penalty_state = project_verified_seven_by_seven_penalty_state(
+                            penalty_cursor,
+                            loan_id=loan_id,
+                            as_of_date=command.collection_date,
                         )
-                    else:
+                    penalty_post_maturity = (
+                        penalty_state.contractual_maturity is not None
+                        and command.collection_date > penalty_state.contractual_maturity
+                    )
+                    if (
+                        penalty_post_maturity
+                        and penalty_state.status == "management_review_required"
+                    ):
+                        raise CollectionRejected(
+                            penalty_state.management_review_required_reason
+                            or "Management review is required before collecting a post-maturity 7x7 payment.",
+                            code="seven_by_seven_penalty_management_review_required",
+                        )
+
+                result, line = self._allocate_seven_by_seven_pending_event(
+                    cursor,
+                    loan=loan,
+                    command=command,
+                    amount=amount,
+                    previous_balance=previous_balance,
+                )
+                contractual_complete = result.complete
+
+                if (
+                    command.entry_type is CollectionEntryType.PAYMENT
+                    and not is_extra_principal
+                    and penalty_post_maturity
+                    and penalty_state is not None
+                ):
+                    penalty_cash = self._money(line.unallocated_cash)
+                    penalty_due = self._money(
+                        penalty_state.assessed_penalty_balance
+                        + penalty_state.projected_penalty
+                    )
+                    if penalty_cash > penalty_due:
+                        raise CollectionRejected(
+                            "The amount is higher than the exact 7x7 payoff for this date. "
+                            "Refresh the route and enter the exact amount received.",
+                            code="amount_exceeds_seven_by_seven_payoff",
+                        )
+                    contractual_cash = self._money(amount - penalty_cash)
+                    penalty_assessed = self._money(penalty_state.projected_penalty)
+                    penalty_outstanding_after = self._money(
+                        max(ZERO, penalty_due - penalty_cash)
+                    )
+                    if contractual_cash > ZERO:
+                        try:
+                            schedule_instructions = (
+                                plan_verified_seven_by_seven_scheduled_payment(
+                                    cursor,
+                                    loan_id=loan_id,
+                                    collection_date=command.collection_date,
+                                    transaction_amount=contractual_cash,
+                                )
+                            )
+                        except SevenBySevenVerifiedScheduleNotFound as error:
+                            raise CollectionRejected(
+                                str(error), code=error.code
+                            ) from error
+                        except SevenBySevenScheduleAllocationError as error:
+                            raise CollectionRejected(
+                                str(error), code=error.code
+                            ) from error
+                        else:
+                            allocation_details[
+                                "seven_by_seven_schedule_allocation_state"
+                            ] = "verified_due_rows_planned"
+                    elif penalty_cash > ZERO:
+                        covered_dates = ()
+                        allocation_details[
+                            "seven_by_seven_schedule_allocation_state"
+                        ] = "penalty_only"
+                    if not line.event_applied and penalty_cash <= ZERO:
+                        raise CollectionRejected(
+                            "This 7x7 loan is already fully paid. Refresh the route.",
+                            code="loan_already_paid",
+                        )
+                    allocation_details.update(
+                        {
+                            "seven_by_seven_penalty_assessed": str(penalty_assessed),
+                            "seven_by_seven_penalty_paid": str(penalty_cash),
+                            "seven_by_seven_penalty_outstanding": str(
+                                penalty_outstanding_after
+                            ),
+                            "seven_by_seven_penalty_status": penalty_state.status,
+                        }
+                    )
+                else:
+                    if not line.event_applied:
+                        raise CollectionRejected(
+                            "This 7x7 loan is already fully paid. Refresh the route.",
+                            code="loan_already_paid",
+                        )
+                    if line.unallocated_cash > ZERO:
+                        raise CollectionRejected(
+                            "The amount is higher than the exact 7x7 payoff for this date. "
+                            "Refresh the route and enter the exact amount received.",
+                            code="amount_exceeds_seven_by_seven_payoff",
+                        )
+                    if (
+                        command.entry_type is CollectionEntryType.PAYMENT
+                        and not is_extra_principal
+                    ):
                         try:
                             schedule_instructions = (
                                 plan_verified_seven_by_seven_scheduled_payment(
@@ -328,9 +459,6 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                                 )
                             )
                         except SevenBySevenVerifiedScheduleNotFound:
-                            # Transitional compatibility for already-existing 7x7 loans
-                            # that predate verified schedule registration. Such loans are
-                            # not eligible to treat Collector View Schedule as authoritative.
                             allocation_details[
                                 "seven_by_seven_schedule_allocation_state"
                             ] = "verified_schedule_required"
@@ -343,24 +471,6 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                                 "seven_by_seven_schedule_allocation_state"
                             ] = "verified_due_rows_planned"
 
-                result, line = self._allocate_seven_by_seven_pending_event(
-                    cursor,
-                    loan=loan,
-                    command=command,
-                    amount=amount,
-                    previous_balance=previous_balance,
-                )
-                if not line.event_applied:
-                    raise CollectionRejected(
-                        "This 7x7 loan is already fully paid. Refresh the route.",
-                        code="loan_already_paid",
-                    )
-                if line.unallocated_cash > ZERO:
-                    raise CollectionRejected(
-                        "The amount is higher than the exact 7x7 payoff for this date. "
-                        "Refresh the route and enter the exact amount received.",
-                        code="amount_exceeds_seven_by_seven_payoff",
-                    )
                 if is_extra_principal:
                     extra_principal_interest_before = self._money(
                         line.opening_interest_arrears
@@ -382,7 +492,6 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                         )
 
                 official_balance = result.closing_remaining_principal
-                loan_fully_paid = result.complete
                 pass_count_after = 0
                 last_payment_date = command.collection_date
                 if command.entry_type is CollectionEntryType.ADVANCE:
@@ -454,15 +563,6 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     loan_id,
                 ),
             )
-            if loan_fully_paid:
-                cursor.execute(
-                    """
-                    update lending.loans
-                    set status = 'paid', updated_at = %s
-                    where id = %s
-                    """,
-                    (accepted_at, loan_id),
-                )
 
             details = {
                 "source": "gilbic_mobile",
@@ -488,6 +588,9 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     collection_date,
                     entry_type,
                     amount,
+                    applied_amount,
+                    unallocated_amount,
+                    allocation_state,
                     advance_from,
                     advance_until,
                     recorded_at,
@@ -503,8 +606,8 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     details
                 ) values (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s
+                    %s, 0.00, 'fully_allocated', %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s
                 )
                 """,
                 (
@@ -517,6 +620,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     route_entry_id,
                     command.collection_date,
                     command.entry_type.value,
+                    amount,
                     amount,
                     command.advance_from,
                     command.advance_until,
@@ -563,6 +667,68 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 )
                 allocation_details["seven_by_seven_schedule_allocation_state"] = (
                     "verified_due_rows_allocated"
+                )
+
+            if penalty_post_maturity:
+                try:
+                    with connection.cursor() as penalty_cursor:
+                        frozen_penalty = freeze_verified_seven_by_seven_penalty_assessment(
+                            penalty_cursor,
+                            loan_id=loan_id,
+                            through_date=command.collection_date,
+                            source_transaction_id=transaction_id,
+                        )
+                        if frozen_penalty.status == "management_review_required":
+                            raise CollectionRejected(
+                                frozen_penalty.management_review_required_reason
+                                or "Management review is required before assessing this 7x7 penalty.",
+                                code="seven_by_seven_penalty_management_review_required",
+                            )
+                        if penalty_cash > ZERO:
+                            allocate_verified_seven_by_seven_penalty_cash(
+                                penalty_cursor,
+                                loan_id=loan_id,
+                                transaction_id=transaction_id,
+                                amount_applied=penalty_cash,
+                            )
+                        final_penalty = project_verified_seven_by_seven_penalty_state(
+                            penalty_cursor,
+                            loan_id=loan_id,
+                            as_of_date=command.collection_date,
+                        )
+                except SevenBySevenPenaltyCoordinatorError as error:
+                    raise CollectionRejected(
+                        str(error),
+                        code="seven_by_seven_penalty_management_review_required",
+                    ) from error
+                if final_penalty.status == "management_review_required":
+                    raise CollectionRejected(
+                        final_penalty.management_review_required_reason
+                        or "Management review is required before completing this 7x7 payment.",
+                        code="seven_by_seven_penalty_management_review_required",
+                    )
+                final_penalty_outstanding = self._money(
+                    final_penalty.assessed_penalty_balance
+                )
+                if final_penalty_outstanding != penalty_outstanding_after:
+                    raise CollectionRejected(
+                        "The post-maturity 7x7 penalty changed while the payment was being saved. Refresh and review the exact payoff.",
+                        code="seven_by_seven_penalty_management_review_required",
+                    )
+                loan_fully_paid = (
+                    contractual_complete and final_penalty_outstanding <= ZERO
+                )
+            else:
+                loan_fully_paid = contractual_complete
+
+            if loan_fully_paid:
+                cursor.execute(
+                    """
+                    update lending.loans
+                    set status = 'paid', updated_at = %s
+                    where id = %s
+                    """,
+                    (accepted_at, loan_id),
                 )
 
             for covered_date in covered_dates:
@@ -612,6 +778,15 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                             "seven_by_seven_policy": SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
                             "seven_by_seven_schedule_allocation_state": allocation_details.get(
                                 "seven_by_seven_schedule_allocation_state"
+                            ),
+                            "seven_by_seven_penalty_assessed": allocation_details.get(
+                                "seven_by_seven_penalty_assessed"
+                            ),
+                            "seven_by_seven_penalty_paid": allocation_details.get(
+                                "seven_by_seven_penalty_paid"
+                            ),
+                            "seven_by_seven_penalty_outstanding": allocation_details.get(
+                                "seven_by_seven_penalty_outstanding"
                             ),
                             "covered_dates": [
                                 value.isoformat() for value in covered_dates
@@ -743,52 +918,28 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
         amount: Decimal,
         previous_balance: Decimal,
     ):
-        cursor.execute(
-            """
-            select id, collection_date, amount
-            from lending.collection_transactions
-            where loan_id = %s
-              and is_voided = false
-              and entry_type in ('payment', 'advance')
-              and amount > 0
-            order by collection_date, accepted_at, id
-            """,
-            (loan["loan_id"],),
-        )
-        rows = cursor.fetchall()
-        historical_events = tuple(
-            SevenBySevenCashEvent(
-                event_id=str(row["id"]),
-                collection_date=row["collection_date"],
-                amount=self._money(row["amount"]),
-            )
-            for row in rows
-        )
         payment_start = loan["date_released"] + __import__("datetime").timedelta(days=1)
         try:
-            historical = allocate_seven_by_seven_payments(
+            historical = replay_verified_seven_by_seven_financial_state(
+                cursor,
+                loan_id=loan["loan_id"],
                 original_principal=self._money(loan["principal"]),
                 daily_interest_per_1000=self._money(loan["daily_interest_per_1000"]),
                 payment_start=payment_start,
-                events=historical_events,
+                through_date=command.collection_date,
             )
-        except SevenBySevenAllocationError as error:
+        except SevenBySevenAdvanceActivationError as error:
             raise CollectionRejected(
                 "Existing 7x7 collection history is not safe for mobile allocation. "
                 "Use SPINA desktop and ask Management to reconcile it.",
                 code="seven_by_seven_history_not_ready",
             ) from error
 
-        if historical.closing_remaining_principal != previous_balance:
+        if historical.result.closing_remaining_principal != previous_balance:
             raise CollectionRejected(
                 "The 7x7 operational balance does not match the protected Desktop-parity "
                 "allocation. Use SPINA desktop and ask Management to reconcile it.",
                 code="seven_by_seven_balance_not_reconciled",
-            )
-        if historical.complete:
-            raise CollectionRejected(
-                "This 7x7 loan is already fully paid. Refresh the route.",
-                code="loan_already_paid",
             )
 
         pending_event = SevenBySevenCashEvent(
@@ -801,7 +952,9 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 original_principal=self._money(loan["principal"]),
                 daily_interest_per_1000=self._money(loan["daily_interest_per_1000"]),
                 payment_start=payment_start,
-                events=(*historical_events, pending_event),
+                events=(*historical.historical_events, pending_event),
+                contractual_maturity=historical.contractual_maturity,
+                interest_holiday_dates=historical.interest_holiday_dates,
             )
         except SevenBySevenAllocationError as error:
             raise CollectionRejected(

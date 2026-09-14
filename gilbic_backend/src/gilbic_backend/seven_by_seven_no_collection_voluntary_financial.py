@@ -54,6 +54,9 @@ def project_no_collection_voluntary_financial_state(
 
     The caller writes the immutable receipt/evidence only after this projection
     succeeds, then performs a full database replay and requires an exact match.
+    The baseline's verified contractual maturity remains authoritative while this
+    projection adds the pending receipt; operational schedule shifts never extend
+    normal contractual interest.
     """
 
     prior_balance = money(previous_balance)
@@ -113,6 +116,7 @@ def project_no_collection_voluntary_financial_state(
             daily_interest_per_1000=daily_interest_per_1000,
             payment_start=payment_start,
             events=tuple(events),
+            contractual_maturity=baseline.contractual_maturity,
             interest_holiday_dates=tuple(sorted(holidays)),
         )
     except SevenBySevenAllocationError as error:
