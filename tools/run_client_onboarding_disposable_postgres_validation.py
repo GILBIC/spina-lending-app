@@ -19,6 +19,13 @@ TARGET_TEST = (
     / "tests"
     / "test_client_onboarding_promotion_postgres.py"
 )
+CIF_TEST = (
+    ROOT / "gilbic_backend" / "tests" / "test_client_cif_review_confirmation_postgres.py"
+)
+CIF_MIGRATIONS = (
+    ROOT / "gilbic_backend" / "sql" / "0114_add_client_cif_first_loan_foundation.sql",
+    ROOT / "gilbic_backend" / "sql" / "0119_add_client_cif_review_confirmation.sql",
+)
 BOOTSTRAP_THROUGH = 112
 DISPOSABLE_DATABASE_PREFIX = "spina_onboarding_"
 
@@ -40,8 +47,9 @@ def validate(base_database_url: str) -> None:
         raise RuntimeError(
             "Onboarding disposable validation requires SPINA_ALLOW_DISPOSABLE_DATABASE=1."
         )
-    if not TARGET_TEST.is_file():
-        raise RuntimeError(f"Required onboarding PostgreSQL test is missing: {TARGET_TEST}")
+    for path in (TARGET_TEST, CIF_TEST, *CIF_MIGRATIONS):
+        if not path.is_file():
+            raise RuntimeError(f"Required onboarding/CIF proof file is missing: {path}")
 
     base_params = disposable._safe_local_connection_params(base_database_url)
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
@@ -63,9 +71,14 @@ def validate(base_database_url: str) -> None:
         disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
+        # Apply only the CIF prerequisites; do not advance unrelated financial
+        # migrations or create a second database/workflow for this proof.
+        with psycopg.connect(test_url, autocommit=True) as connection:
+            for path in CIF_MIGRATIONS:
+                connection.execute(path.read_text(encoding="utf-8"))
 
         completed = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", str(TARGET_TEST)],
+            [sys.executable, "-m", "pytest", "-q", str(TARGET_TEST), str(CIF_TEST)],
             cwd=ROOT,
             env=_test_environment(test_url),
             text=True,
@@ -85,8 +98,9 @@ def validate(base_database_url: str) -> None:
                 disposable._drop_database(admin, database_name)
 
     print(
-        "Onboarding disposable PostgreSQL validation passed: schema through 0112 "
-        "was replayed in a fresh loopback database and normal/bypass promotion "
+        "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
+        "plus CIF migrations 0114/0119 was replayed in a fresh loopback database; "
+        "confirmation integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."
     )
