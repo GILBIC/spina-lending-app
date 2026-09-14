@@ -5,6 +5,8 @@ from decimal import Decimal
 from typing import Any, Sequence
 from uuid import UUID
 
+from psycopg.types.json import Jsonb
+
 from .contract_schedule_engine import (
     AllocationInstruction,
     ContractInstallment,
@@ -43,6 +45,7 @@ def store_contract_schedule(
     installments: Sequence[ContractInstallment],
     created_by_user_id: UUID | None = None,
     supersede_active: bool = False,
+    settings: dict[str, object] | None = None,
 ) -> UUID:
     """Persist one exact signed-contract schedule in the caller's transaction.
 
@@ -53,7 +56,9 @@ def store_contract_schedule(
     Component-bearing installments are inserted with their principal/interest
     components in the same immutable row creation. Verified schedule rows are
     protected from UPDATE after insertion, so component initialization must not
-    depend on a follow-up mutation.
+    depend on a follow-up mutation. Optional schedule settings are likewise
+    written only on initial row creation and remain protected by the existing
+    verified schedule terms guard.
     """
 
     reference = contract_reference.strip()
@@ -63,6 +68,8 @@ def store_contract_schedule(
         raise ContractScheduleConflict("Contractual grace days cannot be negative.")
     if not installments:
         raise ContractScheduleConflict("At least one contractual installment is required.")
+
+    schedule_settings = dict(settings or {})
 
     cursor.execute(
         "select id from lending.loans where id = %s for update",
@@ -111,10 +118,11 @@ def store_contract_schedule(
             contract_signed_date,
             effective_from,
             grace_days,
+            settings,
             supersedes_schedule_id,
             created_by_user_id
         )
-        values (%s, %s, 'active', %s, %s, %s, %s, %s, %s, %s)
+        values (%s, %s, 'active', %s, %s, %s, %s, %s, %s, %s, %s)
         returning id
         """,
         (
@@ -125,6 +133,7 @@ def store_contract_schedule(
             contract_signed_date,
             effective_from,
             grace_days,
+            Jsonb(schedule_settings),
             supersedes_schedule_id,
             created_by_user_id,
         ),

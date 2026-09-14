@@ -11,9 +11,13 @@ from .collector_schedule_repository import (
     CollectorScheduleRecord,
     CollectorScheduleRowRecord,
     _build_installment_row,
+    _build_penalty_read_model,
     _money,
 )
 from .database import open_connection
+from .seven_by_seven_penalty_coordinator import (
+    project_verified_seven_by_seven_penalty_state,
+)
 
 
 ZERO = Decimal("0.00")
@@ -336,6 +340,15 @@ class PostgresClientLoanRepository:
                 )
                 no_collection_rows = cursor.fetchall()
 
+            penalty_state = None
+            if str(loan["calculation_mode"] or "") == "seven_by_seven":
+                with connection.cursor() as penalty_cursor:
+                    penalty_state = project_verified_seven_by_seven_penalty_state(
+                        penalty_cursor,
+                        loan_id=loan_id,
+                        as_of_date=as_of_date,
+                    )
+
         rows: list[CollectorScheduleRowRecord] = []
         for row in installment_rows:
             installment = _build_installment_row(
@@ -396,6 +409,12 @@ class PostgresClientLoanRepository:
         else:
             maturity_status = "on_schedule"
 
+        penalty_read_model = _build_penalty_read_model(
+            calculation_mode=str(loan["calculation_mode"] or ""),
+            installment_records=installment_records,
+            penalty_state=penalty_state,
+        )
+
         for row in no_collection_rows:
             rows.append(
                 CollectorScheduleRowRecord(
@@ -437,6 +456,15 @@ class PostgresClientLoanRepository:
             base_maturity=base_maturity,
             updated_maturity=updated_maturity,
             maturity_projection_status=maturity_status,
+            penalty_status=penalty_read_model.status,
+            projected_penalty=penalty_read_model.projected_penalty,
+            assessed_penalty_balance=penalty_read_model.assessed_penalty_balance,
+            penalty_base=penalty_read_model.penalty_base,
+            remaining_cost_headroom=penalty_read_model.remaining_cost_headroom,
+            exact_payoff_total=penalty_read_model.exact_payoff_total,
+            management_review_required_reason=(
+                penalty_read_model.management_review_required_reason
+            ),
         )
 
     @staticmethod
