@@ -266,3 +266,213 @@ def test_migration_rerun_preserves_confirmation_and_guards(runtime_url) -> None:
                 (first["id"],),
             )
         assert _read(connection, first["id"]) == first
+
+
+# Real-query acceptance reuses this file's loopback/disposable guard and rollback
+# fixture. These schema fixtures do not stand in for office-role authorization.
+def _seed_summary_case(connection: psycopg.Connection) -> dict[str, UUID]:
+    case = _seed_case(connection)
+    case["applicant"] = uuid4()
+    connection.execute(
+        """
+        insert into lending.client_onboarding_applicants (
+            id, application_reference, status, promoted_client_id,
+            full_name, phone_number, email, present_address,
+            national_id_egov_evidence_reference, national_id_status,
+            tin_id_egov_evidence_reference, tin_id_status,
+            meralco_bill_evidence_reference, meralco_bill_status,
+            collector_visit_status, collector_visit_evidence_reference,
+            eligibility_reviewed_by_user_id, eligibility_reviewed_at,
+            privacy_consent, accuracy_declaration
+        ) values (
+            %s, %s, 'eligible_for_cif', %s,
+            'Synthetic Intake Name', '00000000001', NULL, 'Synthetic intake address',
+            'SYNTHETIC-NATIONAL', 'passed', 'SYNTHETIC-TIN', 'passed',
+            'SYNTHETIC-RESIDENCE', 'passed', 'passed', 'SYNTHETIC-VISIT',
+            %s, now(), true, true
+        )
+        """,
+        (case["applicant"], f"SYN-REVIEW-{case['applicant'].hex}", case["client"], case["actor"]),
+    )
+    return case
+
+
+def _summary_repository(connection: psycopg.Connection, monkeypatch):
+    from contextlib import contextmanager
+
+    from gilbic_backend import client_cif_repository as repository_module
+
+    @contextmanager
+    def test_connection():
+        # Real PostgreSQL connection/SQL, only connection acquisition is redirected.
+        # A savepoint preserves the surrounding fixture's final rollback.
+        with connection.transaction():
+            yield connection
+
+    monkeypatch.setattr(repository_module, "open_connection", test_connection)
+    return repository_module.PostgresClientCifRepository()
+
+
+def _summary_state(connection: psycopg.Connection, case: dict[str, UUID]):
+    return {
+        "counts": _unrelated_counts(connection),
+        "confirmations": connection.execute(
+            "select * from lending.client_cif_review_confirmations order by id"
+        ).fetchall(),
+        "clients": connection.execute(
+            "select * from lending.clients where id in (%s, %s) order by id",
+            (case["client"], case["other"]),
+        ).fetchall(),
+        "versions": connection.execute(
+            "select * from lending.client_cif_versions where client_id = %s order by id",
+            (case["client"],),
+        ).fetchall(),
+        "applicant": connection.execute(
+            "select * from lending.client_onboarding_applicants where id = %s",
+            (case["applicant"],),
+        ).fetchone(),
+    }
+
+
+@pytest.mark.parametrize(
+    "cif_status,liveness",
+    [("draft", "pending"), ("draft", "failed"), ("draft", "passed"), ("active", "passed")],
+)
+def test_summary_real_query_preserves_state_and_reads_cif_not_intake(
+    connection, monkeypatch, cif_status, liveness
+) -> None:
+    case = _seed_summary_case(connection)
+    connection.execute(
+        """
+        update lending.client_cif_versions
+        set email = 'synthetic-cif@example.com', baseline_liveness_status = %s,
+            baseline_face_scan_evidence_reference = %s
+        where id = %s
+        """,
+        (liveness, None if liveness == "pending" else "SYNTHETIC-FACE", case["cif"]),
+    )
+    if cif_status == "active":
+        connection.execute(
+            """
+            update lending.client_cif_versions
+            set status = 'active', activated_at = now(),
+                expires_at = now() + interval '5 years',
+                review_due_at = now() + interval '5 years' - interval '90 days'
+            where id = %s
+            """,
+            (case["cif"],),
+        )
+        connection.execute(
+            "update lending.clients set status = 'active' where id = %s", (case["client"],)
+        )
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+
+    record = repository.get_review_summary(client_id=case["client"])
+    repeated = repository.get_review_summary(client_id=case["client"])
+
+    assert repeated == record
+    assert record.id == case["cif"]
+    assert record.client_id == case["client"]
+    assert record.version_number == 1 and record.is_current is True
+    assert record.status == cif_status
+    assert record.baseline_liveness_status == liveness
+    assert record.full_name == "Synthetic CIF Borrower"
+    assert record.phone_number == "00000000000"
+    assert record.email == "synthetic-cif@example.com"
+    assert record.present_address == "Synthetic office test address"
+    assert _summary_state(connection, case) == before
+
+
+def test_summary_real_query_selects_current_version_and_preserves_old_evidence(
+    connection, monkeypatch
+) -> None:
+    case = _seed_summary_case(connection)
+    other_case = _seed_summary_case(connection)  # Same name, different stable identity.
+    first = _insert(connection, case)
+    connection.execute(
+        "update lending.client_cif_versions set is_current = false, status = 'superseded' "
+        "where id = %s",
+        (case["cif"],),
+    )
+    connection.execute(
+        "update lending.client_cif_versions set is_current = true, "
+        "present_address = 'Synthetic revised CIF address' where id = %s",
+        (case["next_cif"],),
+    )
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+    other_before = _summary_state(connection, other_case)
+
+    record = repository.get_review_summary(client_id=case["client"])
+    other_record = repository.get_review_summary(client_id=other_case["client"])
+
+    assert record.id == case["next_cif"] and record.version_number == 2
+    assert record.is_current is True and record.status == "draft"
+    assert record.client_id == case["client"]
+    assert record.present_address == "Synthetic revised CIF address"
+    assert other_record.id == other_case["cif"]
+    assert other_record.client_id == other_case["client"]
+    assert _read(connection, first["id"]) == first
+    assert _summary_state(connection, case) == before
+    assert _summary_state(connection, other_case) == other_before
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "requirements_incomplete", "under_verification", "requirements_rejected",
+        "wrong_link", "no_applicant", "no_current", "superseded",
+        "blocked", "closed", "no_cif", "unknown_client",
+    ],
+)
+def test_summary_real_query_rejects_unavailable_cif_without_writes(
+    connection, monkeypatch, scenario
+) -> None:
+    from gilbic_backend.client_cif_repository import ClientCifConflict
+
+    case = _seed_summary_case(connection)
+    requested_client = case["client"]
+    if scenario in {"requirements_incomplete", "under_verification", "requirements_rejected"}:
+        connection.execute(
+            "update lending.client_onboarding_applicants set status = %s where id = %s",
+            (scenario, case["applicant"]),
+        )
+    elif scenario == "wrong_link":
+        connection.execute(
+            "update lending.client_onboarding_applicants set promoted_client_id = %s where id = %s",
+            (case["other"], case["applicant"]),
+        )
+    elif scenario == "no_applicant":
+        connection.execute(
+            "delete from lending.client_onboarding_applicants where id = %s", (case["applicant"],)
+        )
+    elif scenario == "no_current":
+        connection.execute(
+            "update lending.client_cif_versions set is_current = false where id = %s",
+            (case["cif"],),
+        )
+    elif scenario == "superseded":
+        connection.execute(
+            "update lending.client_cif_versions set status = 'superseded' where id = %s",
+            (case["cif"],),
+        )
+    elif scenario in {"blocked", "closed"}:
+        connection.execute(
+            "update lending.clients set status = %s where id = %s", (scenario, case["client"])
+        )
+    elif scenario == "no_cif":
+        connection.execute(
+            "delete from lending.client_cif_versions where client_id = %s", (case["client"],)
+        )
+    elif scenario == "unknown_client":
+        requested_client = uuid4()
+    else:
+        raise AssertionError(f"Unhandled synthetic scenario: {scenario}")
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+
+    with pytest.raises(ClientCifConflict, match="No eligible current CIF is available"):
+        repository.get_review_summary(client_id=requested_client)
+
+    assert _summary_state(connection, case) == before
