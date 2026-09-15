@@ -129,6 +129,50 @@ _CIF_SELECT_COLUMNS = """
 """
 
 
+_CIF_INFORMATION_FIELDS = ("full_name", "phone_number", "email", "present_address")
+
+
+def _cif_information_snapshot(value: Mapping[str, object]) -> dict[str, str | None]:
+    if not isinstance(value, Mapping) or set(value) != set(_CIF_INFORMATION_FIELDS):
+        raise ValueError("Exactly the four CIF information fields are required.")
+    for field in _CIF_INFORMATION_FIELDS:
+        if not isinstance(value[field], str) and not (
+            field == "email" and value[field] is None
+        ):
+            raise ValueError(
+                "CIF information fields must be text; only email may be null."
+            )
+    # Never normalize the reviewed snapshot: it must match the stored values exactly.
+    return {field: cast(str | None, value[field]) for field in _CIF_INFORMATION_FIELDS}
+
+
+def normalize_cif_information(value: Mapping[str, object]) -> dict[str, str | None]:
+    """Validate new information using the existing office-intake text conventions."""
+
+    information = _cif_information_snapshot(value)
+    limits = {
+        "full_name": (2, 200),
+        "phone_number": (7, 40),
+        "present_address": (5, 500),
+    }
+    for field, (minimum, maximum) in limits.items():
+        raw = cast(str, information[field])
+        normalized = (
+            "".join(character for character in raw if character.isdigit())
+            if field == "phone_number"
+            else " ".join(raw.split())
+        )
+        if len(raw) > maximum or not minimum <= len(normalized) <= maximum:
+            raise ValueError(f"Invalid CIF {field.replace('_', ' ')}.")
+        information[field] = normalized
+    email = information["email"]
+    if email is not None:
+        if len(email) > 320:
+            raise ValueError("CIF email is too long.")
+        information["email"] = email.strip().lower() or None
+    return information
+
+
 class PostgresClientCifRepository:
     def get_review_summary(self, *, client_id: UUID) -> ClientCifVersion:
         """Read the current eligible CIF without creating or changing any state."""
@@ -156,6 +200,124 @@ class PostgresClientCifRepository:
                 if current is None:
                     raise ClientCifConflict("No eligible current CIF is available.")
                 return _record_from_row(current)
+
+    def correct_draft_information(
+        self,
+        *,
+        actor_user_id: UUID,
+        client_id: UUID,
+        cif_version_id: UUID,
+        expected_information: Mapping[str, object],
+        corrected_information: Mapping[str, object],
+        reason: str,
+    ) -> ClientCifVersion:
+        """Correct an unconfirmed current draft and audit in one transaction."""
+
+        expected = _cif_information_snapshot(expected_information)
+        corrected = normalize_cif_information(corrected_information)
+        if not isinstance(reason, str):
+            raise ValueError("A CIF correction reason is required.")
+        normalized_reason = " ".join(reason.split())
+        if len(reason) > 500 or not 3 <= len(normalized_reason) <= 500:
+            raise ValueError(
+                "A CIF correction reason of 3 to 500 characters is required."
+            )
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    f"""
+                    select {_CIF_SELECT_COLUMNS}
+                    from lending.client_cif_versions cif
+                    join lending.client_onboarding_applicants applicant
+                      on applicant.promoted_client_id = cif.client_id
+                    join lending.clients client
+                      on client.id = cif.client_id
+                    where cif.client_id = %s
+                      and cif.id = %s
+                      and cif.is_current = true
+                      and cif.status = 'draft'
+                      and client.status = 'inactive'
+                      and applicant.status = 'eligible_for_cif'
+                    for update of cif, applicant, client
+                    """,
+                    (client_id, cif_version_id),
+                )
+                current = cursor.fetchone()
+                if current is None:
+                    raise ClientCifConflict(
+                        "No eligible current CIF draft is available."
+                    )
+                cursor.execute(
+                    """
+                    select id from lending.client_cif_review_confirmations
+                    where client_id = %s and cif_version_id = %s
+                    limit 1
+                    """,
+                    (client_id, cif_version_id),
+                )
+                if cursor.fetchone() is not None:
+                    raise ClientCifConflict(
+                        "Confirmed CIF information requires a new review/version cycle."
+                    )
+                if any(
+                    current[field] != expected[field]
+                    for field in _CIF_INFORMATION_FIELDS
+                ):
+                    raise ClientCifConflict("CIF changed; refresh the office review.")
+                changed_fields = [
+                    field
+                    for field in _CIF_INFORMATION_FIELDS
+                    if current[field] != corrected[field]
+                ]
+                if not changed_fields:
+                    return _record_from_row(current)
+                cursor.execute(
+                    f"""
+                    update lending.client_cif_versions
+                    set full_name = %s,
+                        phone_number = %s,
+                        email = %s,
+                        present_address = %s,
+                        updated_at = now()
+                    where id = %s and client_id = %s
+                      and is_current = true and status = 'draft'
+                    returning {_CIF_RETURNING_COLUMNS}
+                    """,
+                    (
+                        corrected["full_name"],
+                        corrected["phone_number"],
+                        corrected["email"],
+                        corrected["present_address"],
+                        cif_version_id,
+                        client_id,
+                    ),
+                )
+                updated = cursor.fetchone()
+                if updated is None:
+                    raise ClientCifConflict(
+                        "The current CIF draft could not be corrected."
+                    )
+                cursor.execute(
+                    """
+                    insert into core.audit_logs (
+                        actor_user_id, action, target_type, target_id, details
+                    )
+                    values (%s, 'client_cif.draft_information_corrected',
+                            'client_cif_version', %s,
+                            jsonb_build_object('client_id', %s::text,
+                                               'changed_fields', to_jsonb(%s::text[]),
+                                               'reason', %s::text))
+                    """,
+                    (
+                        actor_user_id,
+                        cif_version_id,
+                        client_id,
+                        changed_fields,
+                        normalized_reason,
+                    ),
+                )
+                return _record_from_row(updated)
 
     def begin_draft(
         self,

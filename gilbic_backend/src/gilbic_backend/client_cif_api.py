@@ -5,7 +5,7 @@ from typing import NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -15,6 +15,7 @@ from .client_cif_repository import (
     ClientCifLivenessStatus,
     ClientCifVersion,
     PostgresClientCifRepository,
+    normalize_cif_information,
 )
 from .request_auth import authenticated_device_context
 
@@ -27,6 +28,43 @@ class BaselineLiveFaceRequest(BaseModel):
 
     evidence_reference: str = Field(min_length=1, max_length=500)
     liveness_status: ClientCifLivenessStatus
+
+
+class CifReviewInformation(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    full_name: str
+    phone_number: str
+    email: str | None
+    present_address: str
+
+
+class CorrectCifDraftInformationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cif_version_id: UUID
+    expected_information: CifReviewInformation
+    corrected_information: CifReviewInformation
+    reason: str = Field(min_length=3, max_length=500)
+
+    @field_validator("corrected_information")
+    @classmethod
+    def validate_new_information(
+        cls, value: CifReviewInformation
+    ) -> CifReviewInformation:
+        return CifReviewInformation.model_validate(
+            normalize_cif_information(value.model_dump())
+        )
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 3:
+            raise ValueError(
+                "A CIF correction reason of at least 3 characters is required."
+            )
+        return normalized
 
 
 def client_cif_repository_dependency() -> PostgresClientCifRepository:
@@ -108,6 +146,50 @@ def create_client_cif_router() -> APIRouter:
         )
         try:
             record = cif.get_review_summary(client_id=client_id)
+        except ClientCifConflict as error:
+            _raise_cif_conflict(error)
+        response.headers["Cache-Control"] = "no-store"
+        payload = _summary_payload(record)
+        payload.update(
+            {
+                "cif_version_id": str(record.id),
+                "full_name": record.full_name,
+                "phone_number": record.phone_number,
+                "email": record.email,
+                "present_address": record.present_address,
+                "review_scope": "cif_information_only",
+            }
+        )
+        return payload
+
+    @router.patch("/api/v1/management/clients/{client_id}/cif/draft-information")
+    def correct_cif_draft_information(
+        client_id: UUID,
+        body: CorrectCifDraftInformationRequest,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        cif: PostgresClientCifRepository = Depends(client_cif_repository_dependency),
+    ) -> dict[str, object]:
+        actor = _office_cif_actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            record = cif.correct_draft_information(
+                actor_user_id=actor.user_id,
+                client_id=client_id,
+                cif_version_id=body.cif_version_id,
+                expected_information=body.expected_information.model_dump(),
+                corrected_information=body.corrected_information.model_dump(),
+                reason=body.reason,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
         except ClientCifConflict as error:
             _raise_cif_conflict(error)
         response.headers["Cache-Control"] = "no-store"
