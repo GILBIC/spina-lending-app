@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import NoReturn
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from .account_repository import AccountContext, PostgresAccountRepository
@@ -89,6 +89,40 @@ def _raise_cif_conflict(error: ClientCifConflict) -> NoReturn:
 
 def create_client_cif_router() -> APIRouter:
     router = APIRouter(tags=["client-cif"])
+
+    @router.get("/api/v1/management/clients/{client_id}/cif/review-summary")
+    def get_cif_review_summary(
+        client_id: UUID,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        cif: PostgresClientCifRepository = Depends(client_cif_repository_dependency),
+    ) -> dict[str, object]:
+        _office_cif_actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            record = cif.get_review_summary(client_id=client_id)
+        except ClientCifConflict as error:
+            _raise_cif_conflict(error)
+        response.headers["Cache-Control"] = "no-store"
+        payload = _summary_payload(record)
+        payload.update(
+            {
+                "cif_version_id": str(record.id),
+                "full_name": record.full_name,
+                "phone_number": record.phone_number,
+                "email": record.email,
+                "present_address": record.present_address,
+                "review_scope": "cif_information_only",
+            }
+        )
+        return payload
 
     @router.post(
         "/api/v1/management/clients/{client_id}/cif/draft",

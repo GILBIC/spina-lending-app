@@ -130,6 +130,33 @@ _CIF_SELECT_COLUMNS = """
 
 
 class PostgresClientCifRepository:
+    def get_review_summary(self, *, client_id: UUID) -> ClientCifVersion:
+        """Read the current eligible CIF without creating or changing any state."""
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    f"""
+                    select {_CIF_SELECT_COLUMNS}
+                    from lending.client_cif_versions cif
+                    join lending.client_onboarding_applicants applicant
+                      on applicant.promoted_client_id = cif.client_id
+                    join lending.clients client
+                      on client.id = cif.client_id
+                    where cif.client_id = %s
+                      and cif.is_current = true
+                      and cif.status in ('draft', 'active')
+                      and client.status in ('inactive', 'active')
+                      and applicant.status = 'eligible_for_cif'
+                    limit 1
+                    """,
+                    (client_id,),
+                )
+                current = cursor.fetchone()
+                if current is None:
+                    raise ClientCifConflict("No eligible current CIF is available.")
+                return _record_from_row(current)
+
     def begin_draft(
         self,
         *,
