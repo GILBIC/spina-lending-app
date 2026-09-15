@@ -476,3 +476,320 @@ def test_summary_real_query_rejects_unavailable_cif_without_writes(
         repository.get_review_summary(client_id=requested_client)
 
     assert _summary_state(connection, case) == before
+
+
+# Correction write-path proof uses real SQL and the same disposable database.
+# API authorization remains covered separately; these are synthetic DB fixtures.
+_CORRECTION_REASON = "Applicant corrected information during synthetic office review."
+_INFORMATION_FIELDS = ("full_name", "phone_number", "email", "present_address")
+
+
+def _correction_payload(connection, case):
+    information = connection.execute(
+        "select full_name, phone_number, email, present_address "
+        "from lending.client_cif_versions where id = %s",
+        (case["cif"],),
+    ).fetchone()
+    assert information is not None
+    return {
+        "actor_user_id": case["actor"],
+        "client_id": case["client"],
+        "cif_version_id": case["cif"],
+        "expected_information": dict(information),
+        "corrected_information": {**information, "phone_number": "09171111111"},
+        "reason": _CORRECTION_REASON,
+    }
+
+
+def _assert_correction_state(connection, case, before, corrected, server_time):
+    from copy import deepcopy
+
+    expected = deepcopy(before)
+    expected["counts"]["core.audit_logs"] += 1
+    version = next(row for row in expected["versions"] if row["id"] == case["cif"])
+    changed = [field for field in _INFORMATION_FIELDS if version[field] != corrected[field]]
+    version.update(corrected)
+    version["updated_at"] = server_time
+    # Includes old CIF versions, confirmations, original intake, both Clients,
+    # liveness/private references and counts of unrelated financial/Auth tables.
+    assert _summary_state(connection, case) == expected
+    audit = connection.execute(
+        "select actor_user_id, action, target_type, target_id, details "
+        "from core.audit_logs where target_id = %s "
+        "and action = 'client_cif.draft_information_corrected'",
+        (case["cif"],),
+    ).fetchall()
+    assert audit == [{
+        "actor_user_id": case["actor"],
+        "action": "client_cif.draft_information_corrected",
+        "target_type": "client_cif_version",
+        "target_id": case["cif"],
+        "details": {
+            "client_id": str(case["client"]),
+            "changed_fields": changed,
+            "reason": _CORRECTION_REASON,
+        },
+    }]
+
+
+@pytest.mark.parametrize("field", [*_INFORMATION_FIELDS, "all"])
+def test_correction_real_sql_updates_only_information_and_audit(
+    connection, monkeypatch, field
+) -> None:
+    case = _seed_summary_case(connection)
+    connection.execute(
+        """
+        update lending.client_cif_versions
+        set email = 'synthetic-before@example.com', updated_at = '2000-01-01 00:00:00+00',
+            national_id_egov_evidence_reference = 'SYNTHETIC-PRIVATE-NATIONAL',
+            tin_id_egov_evidence_reference = 'SYNTHETIC-PRIVATE-TIN',
+            meralco_bill_evidence_reference = 'SYNTHETIC-PRIVATE-RESIDENCE'
+        where id = %s
+        """,
+        (case["cif"],),
+    )
+    other_case = _seed_summary_case(connection)  # Identical name must not select this CIF.
+    payload = _correction_payload(connection, case)
+    raw = {
+        "full_name": "  Synthetic   Corrected Borrower ",
+        "phone_number": "0917-111-1111",
+        "email": " UPDATED@EXAMPLE.COM ",
+        "present_address": " Synthetic   corrected office address ",
+    }
+    normalized = {
+        "full_name": "Synthetic Corrected Borrower",
+        "phone_number": "09171111111",
+        "email": "updated@example.com",
+        "present_address": "Synthetic corrected office address",
+    }
+    changed_fields = _INFORMATION_FIELDS if field == "all" else (field,)
+    # A blank optional email explicitly clears it; the all-fields case sets one.
+    if field == "email":
+        raw[field], normalized[field] = "   ", None
+    payload["corrected_information"] = {
+        **payload["expected_information"], **{key: raw[key] for key in changed_fields},
+    }
+    corrected = {
+        **payload["expected_information"], **{key: normalized[key] for key in changed_fields},
+    }
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+    other_before = _summary_state(connection, other_case)
+    server_time = connection.execute("select now() as value").fetchone()["value"]
+
+    record = repository.correct_draft_information(**payload)
+
+    assert record.id == case["cif"] and record.client_id == case["client"]
+    assert {key: getattr(record, key) for key in _INFORMATION_FIELDS} == corrected
+    _assert_correction_state(connection, case, before, corrected, server_time)
+    other_before["counts"]["core.audit_logs"] += 1
+    assert _summary_state(connection, other_case) == other_before
+
+
+@pytest.mark.parametrize("field", _INFORMATION_FIELDS)
+def test_correction_real_sql_rejects_stale_review_without_writes(
+    connection, monkeypatch, field
+) -> None:
+    from gilbic_backend.client_cif_repository import ClientCifConflict
+
+    case = _seed_summary_case(connection)
+    payload = _correction_payload(connection, case)
+    payload["expected_information"][field] = "Obsolete reviewed value"
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+    with pytest.raises(ClientCifConflict, match="refresh the office review"):
+        repository.correct_draft_information(**payload)
+    assert _summary_state(connection, case) == before
+
+
+@pytest.mark.parametrize("scenario", [
+    "confirmed", "active", "superseded", "noncurrent", "wrong_version", "wrong_client",
+    "blocked", "closed", "requirements_incomplete", "under_verification",
+    "requirements_rejected", "wrong_link",
+])
+def test_correction_real_sql_rejects_ineligible_or_confirmed_target(
+    connection, monkeypatch, scenario
+) -> None:
+    from gilbic_backend.client_cif_repository import ClientCifConflict
+
+    case = _seed_summary_case(connection)
+    payload = _correction_payload(connection, case)
+    if scenario == "confirmed":
+        _insert(connection, case)
+    elif scenario == "active":
+        connection.execute(
+            """
+            update lending.client_cif_versions set status = 'active',
+                baseline_liveness_status = 'passed',
+                baseline_face_scan_evidence_reference = 'SYNTHETIC-FACE',
+                activated_at = now(), expires_at = now() + interval '5 years',
+                review_due_at = now() + interval '5 years' - interval '90 days'
+            where id = %s
+            """,
+            (case["cif"],),
+        )
+        connection.execute(
+            "update lending.clients set status = 'active' where id = %s", (case["client"],)
+        )
+    elif scenario == "superseded":
+        connection.execute(
+            "update lending.client_cif_versions set status = 'superseded' where id = %s",
+            (case["cif"],),
+        )
+    elif scenario == "noncurrent":
+        connection.execute(
+            "update lending.client_cif_versions set is_current = false where id = %s",
+            (case["cif"],),
+        )
+    elif scenario == "wrong_version":
+        payload["cif_version_id"] = case["next_cif"]
+    elif scenario == "wrong_client":
+        payload["client_id"] = case["other"]
+    elif scenario in {"blocked", "closed"}:
+        connection.execute(
+            "update lending.clients set status = %s where id = %s", (scenario, case["client"])
+        )
+    elif scenario in {"requirements_incomplete", "under_verification", "requirements_rejected"}:
+        connection.execute(
+            "update lending.client_onboarding_applicants set status = %s where id = %s",
+            (scenario, case["applicant"]),
+        )
+    elif scenario == "wrong_link":
+        connection.execute(
+            "update lending.client_onboarding_applicants set promoted_client_id = %s where id = %s",
+            (case["other"], case["applicant"]),
+        )
+    else:
+        raise AssertionError(scenario)
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+    with pytest.raises(ClientCifConflict):
+        repository.correct_draft_information(**payload)
+    assert _summary_state(connection, case) == before
+
+
+def test_correction_real_sql_normalized_noop_preserves_timestamp_and_audit(
+    connection, monkeypatch
+) -> None:
+    case = _seed_summary_case(connection)
+    payload = _correction_payload(connection, case)
+    payload["corrected_information"] = {
+        **payload["expected_information"], "full_name": "  Synthetic   CIF Borrower  ",
+    }
+    repository = _summary_repository(connection, monkeypatch)
+    before = _summary_state(connection, case)
+    record = repository.correct_draft_information(**payload)
+    assert record.id == case["cif"] and record.status == "draft"
+    assert _summary_state(connection, case) == before
+
+
+def test_correction_real_sql_audit_failure_rolls_back_information(connection, monkeypatch) -> None:
+    case = _seed_summary_case(connection)
+    payload = _correction_payload(connection, case)
+    repository = _summary_repository(connection, monkeypatch)
+    # Added only inside the rollback-isolated fixture. Never disable an existing guard.
+    name = f"cif_audit_failure_{case['cif'].hex}"
+    connection.execute(sql.SQL(
+        "create function pg_temp.{}() returns trigger language plpgsql as $$ "
+        "begin raise exception 'SYNTHETIC CIF correction audit failure' "
+        "using errcode = '23514'; end; $$"
+    ).format(sql.Identifier(name)))
+    connection.execute(sql.SQL(
+        "create trigger {} before insert on core.audit_logs for each row "
+        "when (NEW.action = 'client_cif.draft_information_corrected' "
+        "and NEW.target_id = {}::uuid) execute function pg_temp.{}()"
+    ).format(sql.Identifier(name), sql.Literal(str(case["cif"])), sql.Identifier(name)))
+    before = _summary_state(connection, case)
+    with pytest.raises(psycopg.errors.CheckViolation, match="SYNTHETIC CIF correction audit failure"):
+        repository.correct_draft_information(**payload)
+    assert _summary_state(connection, case) == before
+
+
+@pytest.mark.parametrize("winner", ["correction", "confirmation"])
+def test_correction_real_sql_waits_for_lock_and_rechecks_committed_state(
+    runtime_url, monkeypatch, winner
+) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from contextlib import contextmanager
+    from queue import Queue
+    from threading import Event, get_ident
+    from time import monotonic
+
+    from gilbic_backend import client_cif_repository as module
+
+    # Intentional committed synthetic rows, like the migration-rerun proof above:
+    # only this module's guarded, disposable database is used and later dropped.
+    options = "-c lock_timeout=10000 -c statement_timeout=15000"
+    with psycopg.connect(runtime_url, autocommit=True, row_factory=dict_row) as observer:
+        with observer.transaction():
+            case = _seed_summary_case(observer)
+        payload = _correction_payload(observer, case)
+        before = _summary_state(observer, case)
+        owner = psycopg.connect(runtime_url, row_factory=dict_row, options=options, connect_timeout=5)
+        owner_thread = get_ident()
+        contender_pid = Queue()
+
+        @contextmanager
+        def actual_transaction():
+            if get_ident() == owner_thread:
+                with owner.transaction():
+                    yield owner
+            else:
+                with psycopg.connect(
+                    runtime_url, row_factory=dict_row, options=options, connect_timeout=5
+                ) as contender:
+                    contender_pid.put(contender.info.backend_pid)
+                    yield contender
+
+        monkeypatch.setattr(module, "open_connection", actual_transaction)
+        repository = module.PostgresClientCifRepository()
+        executor = ThreadPoolExecutor(max_workers=1)
+        try:
+            owner.execute(
+                "select cif.id from lending.client_cif_versions cif "
+                "join lending.client_onboarding_applicants applicant "
+                "on applicant.promoted_client_id = cif.client_id "
+                "join lending.clients client on client.id = cif.client_id "
+                "where cif.id = %s for update of cif, applicant, client",
+                (case["cif"],),
+            )
+            server_time = owner.execute("select now() as value").fetchone()["value"]
+            waiting_payload = {
+                **payload,
+                "corrected_information": {**payload["expected_information"], "phone_number": "09172222222"},
+            }
+            future = executor.submit(repository.correct_draft_information, **waiting_payload)
+            pid = contender_pid.get(timeout=5)
+            deadline = monotonic() + 5
+            while True:
+                blockers = observer.execute(
+                    "select pg_blocking_pids(%s) as blockers", (pid,)
+                ).fetchone()["blockers"]
+                if owner.info.backend_pid in blockers:
+                    break
+                assert monotonic() < deadline, "Correction did not wait on the held CIF lock"
+                Event().wait(0.02)
+            if winner == "correction":
+                repository.correct_draft_information(**payload)
+                message = "refresh the office review"
+            else:
+                # Schema-level fixture only, not the unfinished confirmation API.
+                confirmation = _insert(owner, case)
+                message = "new review/version cycle"
+            owner.commit()
+            with pytest.raises(module.ClientCifConflict, match=message):
+                future.result(timeout=15)
+            if winner == "correction":
+                _assert_correction_state(
+                    observer, case, before, payload["corrected_information"], server_time
+                )
+            else:
+                before["confirmations"] = sorted(
+                    [*before["confirmations"], confirmation], key=lambda row: row["id"]
+                )
+                assert _summary_state(observer, case) == before
+        finally:
+            # Unblock the worker even if an assertion fails; SQL timeouts bound shutdown.
+            owner.rollback()
+            executor.shutdown(wait=True, cancel_futures=True)
+            owner.close()
