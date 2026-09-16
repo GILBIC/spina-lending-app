@@ -10,8 +10,10 @@ allocate payments, post accounting, render documents or write to any record.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, DecimalException, Inexact, localcontext
+from types import MappingProxyType
 
 
 CENT = Decimal("0.01")
@@ -45,6 +47,31 @@ class LoanDocumentTaxBreakdown:
     net_proceeds: Decimal
     total_scheduled_payable: Decimal
     tax_lines: tuple[LoanDocumentTaxLine, ...]
+
+    def template_amounts(self) -> Mapping[str, str]:
+        """Format reconciled amounts for the existing T02/T03 placeholders.
+
+        This does not authenticate sources or fill unrelated disclosure fields.
+        Repeated tokens and document-specific aliases reuse the same amounts.
+        """
+        taxes = {line.code: line.amount for line in self.tax_lines}
+        amounts = {
+            "{Approved Principal/Gross Loan Amount}": self.principal,
+            "{Approved Gross Principal}": self.principal,
+            "{DST Upfront Amount}": taxes["dst"],
+            "{Renewal Offset Amount}": self.renewal_offset,
+            "{Authoritative total deductions}": self.total_upfront_deductions,
+            "{Total Approved Deductions}": self.total_upfront_deductions,
+            "{Authoritative net proceeds}": self.net_proceeds,
+            "{Authorized Net Proceeds}": self.net_proceeds,
+            "{Total Contractual Interest}": self.contractual_interest,
+            "{GRT Recovery in Repayments}": taxes["grt_recovery"],
+            "{Other Scheduled Charges}": self.other_scheduled_charges,
+            "{Authoritative Scheduled Total}": self.total_scheduled_payable,
+        }
+        return MappingProxyType(
+            {token: format(amount, ",.2f") for token, amount in amounts.items()}
+        )
 
 
 def _require_money(value: Decimal, field: str) -> None:
