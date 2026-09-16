@@ -188,3 +188,117 @@ def test_repeated_preparation_has_same_visible_amounts_and_no_extra_charge(sourc
         builder.build_tax_amount_preview(template=source, output=output)
     assert _paragraphs(_parts(outputs[0])) == _paragraphs(_parts(outputs[1]))
     assert source.read_bytes() == before
+
+
+def _pdf_amount_counts(text):
+    return {
+        amount: len(re.findall(r"(?<![\d.,])" + re.escape(amount) + r"(?![\d.,])", text))
+        for amount in sorted(set(EXPECTED.values()))
+    }
+
+
+def test_pinned_pdf_preserves_amounts_pages_and_saves_review_evidence(source, tmp_path):
+    """Exercise the existing builder and real converter on the isolated CI runner.
+
+    Artifacts are partial synthetic previews, not an approved borrower packet.
+    Missing pinned-runner prerequisites fail rather than silently skipping.
+    """
+    import hashlib
+    import json
+    import os
+    import subprocess
+
+    import fitz
+
+    soffice = os.environ.get("SPINA_SOFFICE", "")
+    proof_output = os.environ.get("SPINA_PROOF_OUTPUT", "")
+    assert soffice and Path(soffice).is_file(), "Pinned SPINA_SOFFICE is required"
+    assert proof_output, "SPINA_PROOF_OUTPUT is required"
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+        capture_output=True, text=True, timeout=15,
+    ).stdout.strip()
+    assert re.fullmatch(r"[0-9a-f]{40}", commit)
+    event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+    assert event_path, "GitHub event is required to verify the proof revision"
+    event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    expected_commit = event.get("pull_request", {}).get("head", {}).get(
+        "sha", os.environ.get("GITHUB_SHA", "")
+    )
+    assert commit == expected_commit, "Proof must match the requested revision"
+    version = subprocess.run(
+        [soffice, "--version"], check=True, capture_output=True, text=True, timeout=30,
+    ).stdout.strip()
+    assert "LibreOffice 26.2.5.2" in version, "Use the existing pinned converter"
+
+    from font_gate import verify_arial_pdf
+
+    before = source.read_bytes()
+    expected_text = "\n".join(_replaced(text) for text in _paragraphs(_parts(source)))
+    expected_counts = _pdf_amount_counts(expected_text)
+    assert all(expected_counts.values()), "Every fixture amount must be exercised"
+    output = Path(proof_output).resolve() / "Tax-Previews" / source.name.split("_")[0]
+    assert not output.is_relative_to(ROOT.resolve()), "Keep proof files outside checkout"
+    output.mkdir(parents=True, exist_ok=False)
+    docx_path = tmp_path / (source.name.split("_")[0] + "_SYNTHETIC_AMOUNT_PREVIEW.docx")
+    _module().build_tax_amount_preview(template=source, output=docx_path)
+    profile = tmp_path / "lo-profile"
+    profile.mkdir()
+    converted = subprocess.run(
+        [soffice, "-env:UserInstallation=" + profile.resolve().as_uri(),
+         "--headless", "--norestore", "--convert-to", "pdf:writer_pdf_Export",
+         "--outdir", str(output), str(docx_path.resolve())],
+        check=True, capture_output=True, text=True, timeout=180,
+    )
+    (output / "conversion.txt").write_text(
+        version + "\n" + converted.stdout + converted.stderr, encoding="utf-8"
+    )
+    pdf = output / (docx_path.stem + ".pdf")
+    assert pdf.is_file() and pdf.stat().st_size > 0, "Converter did not create PDF"
+    assert source.read_bytes() == before
+    pages_dir = output / "Pages"
+    pages_dir.mkdir()
+    with fitz.open(pdf) as document:
+        assert len(document) > 0
+        # Preserve review evidence even if a subsequent font/layout check fails.
+        for number, page in enumerate(document, 1):
+            page.get_pixmap(dpi=144, alpha=False).save(pages_dir / f"page-{number}.png")
+        page_texts = [page.get_text() for page in document]
+        sizes = []
+        for number, page in enumerate(document, 1):
+            sizes.append([page.rect.width, page.rect.height])
+            # Observe raw Folio export drift; never scale/rewrite the PDF to pass.
+            assert abs(page.rect.width - 576) <= 1 and abs(page.rect.height - 936) <= 1
+            assert not list(page.widgets() or ()), "Preview must not be a fillable PDF"
+            assert re.search(
+                rf"\bPage\s+{number}\s+of\s+{len(document)}\b", page_texts[number - 1],
+                re.IGNORECASE,
+            ), f"Incorrect page counter on page {number}"
+            for word in page.get_text("words", clip=fitz.Rect(-10000, -10000, 10000, 10000)):
+                assert (word[0] >= -0.5 and word[1] >= -0.5
+                        and word[2] <= page.rect.width + 0.5
+                        and word[3] <= page.rect.height + 0.5), (number, word)
+        text = " ".join(" ".join(page_texts).split())
+        assert NOTICE in " ".join(page_texts[0].split())
+        assert _pdf_amount_counts(text) == expected_counts, "PDF changed an amount/occurrence"
+        assert not any(token in text for token in EXPECTED)
+        assert "{Borrower Full Name}" in text and "DRAFT" in text
+        assert "Do not sign or issue" in text
+        assert "within the agreed repayments" in text
+        assert "Amount Financed}" in text or "amount financed}" in text
+        fonts = verify_arial_pdf(pdf)  # Actual font check; no substitution bypass.
+        report = {
+            "scope": "SYNTHETIC_AMOUNT_PREVIEW_PDF_ONLY", "status": "PASS",
+            "commit": commit, "template_sha256": hashlib.sha256(before).hexdigest(),
+            "docx_sha256": hashlib.sha256(docx_path.read_bytes()).hexdigest(),
+            "pdf_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+            "pdf_bytes": pdf.stat().st_size, "converter": version,
+            "pages": len(document), "page_points": sizes,
+            "folio_export_tolerance_pt": 1, "page_boxes_modified": False,
+            "amount_occurrences": expected_counts, "fonts": fonts,
+            "visual_review": "PENDING_MANUAL_REVIEW",
+            "source_binding_implemented": False, "production_issuance_enabled": False,
+        }
+    (output / "verification.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
