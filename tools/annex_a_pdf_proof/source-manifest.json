@@ -1,0 +1,41 @@
+{
+  "scope": "RECOVERED_DIAGNOSTIC_TOOLS_ONLY",
+  "archive": {
+    "name": "SPINA_Annex_A_Synthetic_PDF_Proof.zip",
+    "bytes": 392590,
+    "sha256": "b38689bb928d4bff124088b4834251203c27612dd54f07fe99a794b10d3f3145"
+  },
+  "external_template": {
+    "path": "Source_Template/SPINA_Schedule_of_Payments_Annex_A_R2_Black_White_Draft.docx",
+    "bytes": 73022,
+    "sha256": "80ef81aec3141f9c96a5d78f1edd1e7367c8a6be9ab7dca92e81b07756217ddb",
+    "expected_git_blob": "4426f2cccb23de6609c66c9e781d784ce825c448",
+    "included_in_this_import": false
+  },
+  "recovered_tools": [
+    {
+      "path": "prepare_specimen_pdf.py",
+      "bytes": 1786,
+      "sha256": "35df65161eeedbb2d52170c709b69b9a71d6bb852085fdcf1bdfc6b22d7b4577",
+      "git_blob": "56f50547052913aafe113828e45a8f2cfe1d55a7"
+    },
+    {
+      "path": "synthetic_annex_a.py",
+      "bytes": 11990,
+      "sha256": "4b763da0491e5c051ac5f431af1152600c1b30c7c9822c34f6c93533b8304090",
+      "git_blob": "a32f2e293b23d89419495d2c980596b8a2bd1230"
+    },
+    {
+      "path": "test_synthetic_annex_a.py",
+      "bytes": 4431,
+      "sha256": "5d48854edc8d6b497f5dd0ac995a7de370b2c3dc6d868ad4adbd0f6c93598287",
+      "git_blob": "1827801c74fea93a91589ac5e57ac8bfd59f8b34"
+    },
+    {
+      "path": "verify_synthetic_pdfs.py",
+      "bytes": 6124,
+      "sha256": "d4f2c9157c1f681cd83eb9a62228214c0844ad6e598aac420a5307ac15a7a7ba",
+      "git_blob": "6d8d247a7893acf5faefa49f1e5d5c309a3be4cd"
+    }
+  ]
+}

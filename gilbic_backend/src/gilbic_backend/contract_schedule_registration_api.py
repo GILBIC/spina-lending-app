@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal
 from uuid import UUID
 
@@ -16,6 +16,7 @@ from .contract_schedule_engine import (
     ContractScheduleError,
     PaymentFrequency,
     generate_contract_installments,
+    prepare_regular_contract_components,
 )
 from .contract_schedule_registration_repository import (
     ContractScheduleLoanContext,
@@ -328,6 +329,29 @@ def _generate_verified_terms(
                 "missing_contractual_total",
                 "Contractual total is required for this signed schedule.",
             )
+
+        regular_contractual_interest: Decimal | None = None
+        if context.calculation_mode in {"fixed_daily", "fixed_total"}:
+            interest_rate = getattr(context, "interest_rate", None)
+            if interest_rate is None or Decimal(interest_rate) <= 0:
+                raise _invalid_terms(
+                    "missing_regular_contract_interest_rate",
+                    "The approved Regular contractual interest rate is required.",
+                )
+            regular_contractual_interest = (
+                Decimal(context.principal)
+                * Decimal(interest_rate)
+                / Decimal("100")
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            expected_regular_total = (
+                Decimal(context.principal) + regular_contractual_interest
+            )
+            if body.contractual_total != expected_regular_total:
+                raise _invalid_terms(
+                    "regular_contractual_total_mismatch",
+                    "The supplied Regular contractual total must equal the authoritative principal plus approved contractual interest.",
+                )
+
         custom_rows = tuple(
             (item.due_date, item.amount) for item in body.custom_installments
         )
@@ -343,7 +367,21 @@ def _generate_verified_terms(
             )
         except ContractScheduleError as error:
             raise _invalid_terms("invalid_contract_schedule_terms", str(error)) from error
-        installments = generic_rows
+
+        if regular_contractual_interest is not None:
+            try:
+                installments = prepare_regular_contract_components(
+                    installments=generic_rows,
+                    original_principal=Decimal(context.principal),
+                    contractual_interest=regular_contractual_interest,
+                )
+            except ContractScheduleError as error:
+                raise _invalid_terms(
+                    "invalid_regular_contract_schedule_components",
+                    str(error),
+                ) from error
+        else:
+            installments = generic_rows
 
     if installments[0].due_date < body.effective_from:
         raise _invalid_terms(

@@ -44,6 +44,12 @@ class ContractInstallment:
 
 
 @dataclass(frozen=True, slots=True)
+class RegularContractInstallment(ContractInstallment):
+    principal_component: Decimal
+    interest_component: Decimal
+
+
+@dataclass(frozen=True, slots=True)
 class OutstandingInstallment:
     installment_id: InstallmentId
     installment_number: int
@@ -123,6 +129,90 @@ def generate_contract_installments(
         )
         for index, due_date in enumerate(due_dates)
     )
+
+
+def prepare_regular_contract_components(
+    *,
+    installments: Sequence[ContractInstallment],
+    original_principal: Decimal,
+    contractual_interest: Decimal,
+) -> tuple[RegularContractInstallment, ...]:
+    """Attach cent-exact Regular principal/interest components without changing rows."""
+
+    rows = tuple(installments)
+    if not rows:
+        raise ContractScheduleError(
+            "Regular contractual component preparation requires at least one installment."
+        )
+
+    principal = Decimal(original_principal)
+    interest = Decimal(contractual_interest)
+    if principal != principal.quantize(MONEY) or interest != interest.quantize(MONEY):
+        raise ContractScheduleError(
+            "Regular contractual principal and interest must be exact cent amounts."
+        )
+    if principal <= 0:
+        raise ContractScheduleError("Regular contractual principal must be greater than zero.")
+    if interest < 0:
+        raise ContractScheduleError("Regular contractual interest cannot be negative.")
+
+    schedule_total = sum(
+        (Decimal(row.contractual_amount) for row in rows),
+        Decimal("0.00"),
+    )
+    if any(
+        Decimal(row.contractual_amount) != Decimal(row.contractual_amount).quantize(MONEY)
+        or Decimal(row.contractual_amount) <= 0
+        for row in rows
+    ):
+        raise ContractScheduleError(
+            "Regular contractual installment amounts must be positive exact cent amounts."
+        )
+
+    expected_total = principal + interest
+    if schedule_total != expected_total:
+        raise ContractScheduleError(
+            "Regular contractual schedule total must equal principal plus interest."
+        )
+
+    prepared: list[RegularContractInstallment] = []
+    cumulative_amount = Decimal("0.00")
+    cumulative_principal = Decimal("0.00")
+    for row in rows:
+        amount = Decimal(row.contractual_amount)
+        cumulative_amount += amount
+        target_principal = (
+            principal * cumulative_amount / schedule_total
+        ).quantize(MONEY, rounding=ROUND_HALF_UP)
+        principal_component = target_principal - cumulative_principal
+        interest_component = amount - principal_component
+        if (
+            principal_component < 0
+            or interest_component < 0
+            or principal_component + interest_component != amount
+        ):
+            raise ContractScheduleError(
+                "Regular proportional component allocation could not be reconciled safely."
+            )
+        prepared.append(
+            RegularContractInstallment(
+                installment_number=row.installment_number,
+                due_date=row.due_date,
+                contractual_amount=amount,
+                principal_component=principal_component,
+                interest_component=interest_component,
+            )
+        )
+        cumulative_principal = target_principal
+
+    if (
+        sum((row.principal_component for row in prepared), Decimal("0.00")) != principal
+        or sum((row.interest_component for row in prepared), Decimal("0.00")) != interest
+    ):
+        raise ContractScheduleError(
+            "Regular proportional component allocation did not reconcile exact totals."
+        )
+    return tuple(prepared)
 
 
 def plan_payment_allocation(
