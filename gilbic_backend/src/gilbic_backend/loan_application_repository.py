@@ -29,6 +29,18 @@ class LoanApplicationVersionRecord:
     recorded_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class LoanApplicationReviewConfirmationRecord:
+    id: UUID
+    application_version_id: UUID
+    application_id: UUID
+    client_id: UUID
+    cif_version_id: UUID
+    applicant_confirmation_evidence_reference: str
+    witnessed_by_user_id: UUID
+    confirmed_at: datetime
+
+
 class LoanApplicationError(RuntimeError):
     code = "loan_application_error"
 
@@ -74,6 +86,23 @@ def _record_from_row(row: Mapping[str, object]) -> LoanApplicationVersionRecord:
     )
 
 
+def _confirmation_record_from_row(
+    row: Mapping[str, object],
+) -> LoanApplicationReviewConfirmationRecord:
+    return LoanApplicationReviewConfirmationRecord(
+        id=cast(UUID, row["id"]),
+        application_version_id=cast(UUID, row["application_version_id"]),
+        application_id=cast(UUID, row["application_id"]),
+        client_id=cast(UUID, row["client_id"]),
+        cif_version_id=cast(UUID, row["cif_version_id"]),
+        applicant_confirmation_evidence_reference=str(
+            row["applicant_confirmation_evidence_reference"]
+        ),
+        witnessed_by_user_id=cast(UUID, row["witnessed_by_user_id"]),
+        confirmed_at=cast(datetime, row["confirmed_at"]),
+    )
+
+
 def _information_json(
     information: LoanApplicationInformation,
 ) -> dict[str, object]:
@@ -95,6 +124,159 @@ def _row_matches_save(
 
 
 class PostgresLoanApplicationRepository:
+    def confirm_review(
+        self,
+        *,
+        actor_user_id: UUID,
+        client_id: UUID,
+        application_id: UUID,
+        application_version_id: UUID,
+        applicant_confirmation_evidence_reference: str,
+    ) -> LoanApplicationReviewConfirmationRecord:
+        evidence_reference = applicant_confirmation_evidence_reference.strip()
+        if not evidence_reference:
+            raise LoanApplicationConflict(
+                "Applicant confirmation evidence reference is required."
+            )
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                self._require_actor(cursor, actor_user_id)
+
+                header = cursor.execute(
+                    """
+                    select id
+                    from lending.loan_applications
+                    where id = %s and client_id = %s
+                    for update
+                    """,
+                    (application_id, client_id),
+                ).fetchone()
+                if header is None:
+                    raise LoanApplicationConflict("Application was not found.")
+
+                version = cursor.execute(
+                    _VERSION_SELECT
+                    + """
+                    where version.id = %s
+                      and version.application_id = %s
+                      and version.client_id = %s
+                    """,
+                    (application_version_id, application_id, client_id),
+                ).fetchone()
+                if version is None:
+                    raise LoanApplicationConflict("Application version was not found.")
+
+                existing = cursor.execute(
+                    """
+                    select
+                        id,
+                        application_version_id,
+                        application_id,
+                        client_id,
+                        cif_version_id,
+                        applicant_confirmation_evidence_reference,
+                        witnessed_by_user_id,
+                        confirmed_at
+                    from lending.loan_application_review_confirmations
+                    where application_version_id = %s
+                    """,
+                    (application_version_id,),
+                ).fetchone()
+                if existing is not None:
+                    if (
+                        existing["application_id"] != application_id
+                        or existing["client_id"] != client_id
+                        or existing["cif_version_id"] != version["cif_version_id"]
+                        or existing["witnessed_by_user_id"] != actor_user_id
+                        or existing["applicant_confirmation_evidence_reference"]
+                        != evidence_reference
+                    ):
+                        raise LoanApplicationConflict(
+                            "Application version was already confirmed with different evidence or witness."
+                        )
+                    return _confirmation_record_from_row(existing)
+
+                latest = cursor.execute(
+                    """
+                    select id
+                    from lending.loan_application_versions
+                    where application_id = %s and client_id = %s
+                    order by version_number desc
+                    limit 1
+                    """,
+                    (application_id, client_id),
+                ).fetchone()
+                if latest is None or latest["id"] != application_version_id:
+                    raise LoanApplicationConflict(
+                        "Only the latest application version can be confirmed."
+                    )
+
+                cif_version_id = cast(UUID, version["cif_version_id"])
+                self._require_eligible_source(
+                    cursor,
+                    client_id=client_id,
+                    cif_version_id=cif_version_id,
+                )
+
+                information = LoanApplicationInformation.model_validate(
+                    version["information"]
+                )
+                if information.missing_fields():
+                    raise LoanApplicationConflict(
+                        "Application information is incomplete and cannot be confirmed."
+                    )
+
+                cif_confirmation = cursor.execute(
+                    """
+                    select 1
+                    from lending.client_cif_review_confirmations
+                    where client_id = %s and cif_version_id = %s
+                    limit 1
+                    """,
+                    (client_id, cif_version_id),
+                ).fetchone()
+                if cif_confirmation is None:
+                    raise LoanApplicationConflict(
+                        "CIF review confirmation is required before confirming the application."
+                    )
+
+                created = cursor.execute(
+                    """
+                    insert into lending.loan_application_review_confirmations (
+                        application_version_id,
+                        application_id,
+                        client_id,
+                        cif_version_id,
+                        applicant_confirmation_evidence_reference,
+                        witnessed_by_user_id
+                    )
+                    values (%s, %s, %s, %s, %s, %s)
+                    returning
+                        id,
+                        application_version_id,
+                        application_id,
+                        client_id,
+                        cif_version_id,
+                        applicant_confirmation_evidence_reference,
+                        witnessed_by_user_id,
+                        confirmed_at
+                    """,
+                    (
+                        application_version_id,
+                        application_id,
+                        client_id,
+                        cif_version_id,
+                        evidence_reference,
+                        actor_user_id,
+                    ),
+                ).fetchone()
+                if created is None:
+                    raise LoanApplicationConflict(
+                        "Application review confirmation was not readable after creation."
+                    )
+                return _confirmation_record_from_row(created)
+
     def create_draft(
         self,
         *,

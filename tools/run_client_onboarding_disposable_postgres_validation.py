@@ -41,6 +41,7 @@ CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0114_add_client_cif_first_loan_foundation.sql",
     ROOT / "gilbic_backend" / "sql" / "0119_add_client_cif_review_confirmation.sql",
     ROOT / "gilbic_backend" / "sql" / "0120_add_loan_application_history.sql",
+    ROOT / "gilbic_backend" / "sql" / "0121_add_loan_application_review_confirmation.sql",
 )
 BOOTSTRAP_THROUGH = 112
 DISPOSABLE_DATABASE_PREFIX = "spina_onboarding_"
@@ -134,7 +135,7 @@ def validate(base_database_url: str) -> None:
 
     print(
         "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
-        "plus CIF/application migrations 0114/0119/0120 was replayed in a fresh loopback database; "
+        "plus CIF/application migrations 0114/0119/0120/0121 was replayed in a fresh loopback database; "
         "confirmation/application-history integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."
