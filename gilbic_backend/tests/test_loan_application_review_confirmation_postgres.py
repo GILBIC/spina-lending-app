@@ -361,6 +361,7 @@ def test_post_confirmation_correction_uses_new_version_and_new_confirmation(
 ) -> None:
     repository, case, first = _seed_confirmable(connection, monkeypatch)
     first_confirmation = _confirm(repository, case, first, "SYNTHETIC-ACK-V1")
+    original_confirmation = _read(connection, first_confirmation.id)
     second = _append(
         repository,
         case,
@@ -375,12 +376,16 @@ def test_post_confirmation_correction_uses_new_version_and_new_confirmation(
     assert first.id != second.id
     assert first_confirmation.id != second_confirmation.id
     rows = _confirmation_rows(connection, first.application_id)
-    assert [row["application_version_id"] for row in rows] == [first.id, second.id]
-    assert [row["applicant_confirmation_evidence_reference"] for row in rows] == [
-        "SYNTHETIC-ACK-V1",
-        "SYNTHETIC-ACK-V2",
-    ]
-    assert _read(connection, first_confirmation.id)["application_version_id"] == first.id
+    # Both writes share this transaction's now(); UUID order is not version order.
+    assert len(rows) == 2
+    assert {
+        row["application_version_id"]: row["applicant_confirmation_evidence_reference"]
+        for row in rows
+    } == {
+        first.id: "SYNTHETIC-ACK-V1",
+        second.id: "SYNTHETIC-ACK-V2",
+    }
+    assert _read(connection, first_confirmation.id) == original_confirmation
 
 
 def test_identical_confirmation_retry_returns_original_without_duplicate(
