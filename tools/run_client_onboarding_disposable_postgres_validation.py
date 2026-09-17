@@ -31,6 +31,7 @@ APPLICATION_HISTORY_TEST = (
 CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0114_add_client_cif_first_loan_foundation.sql",
     ROOT / "gilbic_backend" / "sql" / "0119_add_client_cif_review_confirmation.sql",
+    ROOT / "gilbic_backend" / "sql" / "0120_add_loan_application_history.sql",
 )
 BOOTSTRAP_THROUGH = 112
 DISPOSABLE_DATABASE_PREFIX = "spina_onboarding_"
@@ -77,7 +78,7 @@ def validate(base_database_url: str) -> None:
         disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        # Apply only the CIF prerequisites; do not advance unrelated financial
+        # Apply only CIF/application prerequisites; do not advance unrelated financial
         # migrations or create a second database/workflow for this proof.
         with psycopg.connect(test_url, autocommit=True) as connection:
             for path in CIF_MIGRATIONS:
@@ -106,8 +107,8 @@ def validate(base_database_url: str) -> None:
 
     print(
         "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
-        "plus CIF migrations 0114/0119 was replayed in a fresh loopback database; "
-        "confirmation integrity, immutability and rerun tests passed; normal/bypass promotion "
+        "plus CIF/application migrations 0114/0119/0120 was replayed in a fresh loopback database; "
+        "confirmation/application-history integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."
     )
