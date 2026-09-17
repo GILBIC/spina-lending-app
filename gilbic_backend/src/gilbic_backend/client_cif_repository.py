@@ -201,6 +201,47 @@ class PostgresClientCifRepository:
                     raise ClientCifConflict("No eligible current CIF is available.")
                 return _record_from_row(current)
 
+    def get_active_source_for_new_loan(
+        self, *, client_id: UUID, cif_version_id: UUID
+    ) -> ClientCifVersion:
+        """Read one exact valid CIF as a new-loan prerequisite, not approval.
+
+        Final approval must revalidate sources in its own transaction. Historical
+        documents use their retained snapshots, not this current-CIF selector.
+        """
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    f"""
+                    select {_CIF_SELECT_COLUMNS}
+                    from lending.client_cif_versions cif
+                    join lending.client_onboarding_applicants applicant
+                      on applicant.promoted_client_id = cif.client_id
+                    join lending.clients client
+                      on client.id = cif.client_id
+                    where cif.client_id = %s
+                      and cif.id = %s
+                      and cif.is_current = true
+                      and cif.status = 'active'
+                      and client.status = 'active'
+                      and applicant.status = 'eligible_for_cif'
+                      and cif.activated_at <= now()
+                      and cif.expires_at > now()
+                      and cif.reverification_required_at is null
+                      and cif.baseline_liveness_status = 'passed'
+                      and btrim(coalesce(cif.baseline_face_scan_evidence_reference, '')) <> ''
+                    limit 1
+                    """,
+                    (client_id, cif_version_id),
+                )
+                current = cursor.fetchone()
+                if current is None:
+                    raise ClientCifConflict(
+                        "No eligible active CIF is available for this new loan."
+                    )
+                return _record_from_row(current)
+
     def correct_draft_information(
         self,
         *,
