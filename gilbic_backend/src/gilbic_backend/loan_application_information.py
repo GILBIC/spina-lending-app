@@ -3,9 +3,19 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
 
 _REQUIRED_REQUEST_FIELDS = (
@@ -70,3 +80,74 @@ class LoanRequestInformation(BaseModel):
         return tuple(
             name for name in _REQUIRED_REQUEST_FIELDS if getattr(self, name) is None
         )
+
+
+# Reuse value validation without inheriting any request or approval fields.
+_RepaymentText = Annotated[
+    str | None, BeforeValidator(LoanRequestInformation.normalize_request_text)
+]
+_RepaymentMoney = Annotated[
+    Decimal,
+    Field(decimal_places=2, allow_inf_nan=False),
+    BeforeValidator(LoanRequestInformation.require_exact_amount_input),
+    AfterValidator(LoanRequestInformation.require_exact_cents),
+]
+
+
+class LoanObligationInformation(BaseModel):
+    """One declared debt row; missing information is not a zero balance."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    creditor: _RepaymentText = None
+    outstanding_balance: _RepaymentMoney | None = Field(default=None, ge=0)
+    periodic_payment_amount: _RepaymentMoney | None = Field(default=None, ge=0)
+    payment_frequency: _RepaymentText = None
+    notes: _RepaymentText = None
+
+    def missing_fields(self) -> tuple[str, ...]:
+        return tuple(
+            name
+            for name in (
+                "creditor", "outstanding_balance", "periodic_payment_amount",
+                "payment_frequency",
+            )
+            if getattr(self, name) is None
+        )
+
+
+class LoanRepaymentInformation(BaseModel):
+    """Declared repayment facts only, not verified ability or loan approval."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    repayment_source: _RepaymentText = None
+    source_details: _RepaymentText = None
+    monthly_gross_income: _RepaymentMoney | None = Field(default=None, ge=0)
+    monthly_net_income: _RepaymentMoney | None = None
+    has_existing_obligations: StrictBool | None = None
+    obligations: tuple[LoanObligationInformation, ...] = ()
+
+    @model_validator(mode="after")
+    def reject_contradictory_declaration(self) -> LoanRepaymentInformation:
+        if self.has_existing_obligations is False and self.obligations:
+            raise ValueError("No-obligations declaration conflicts with entered debts.")
+        return self
+
+    def missing_fields(self) -> tuple[str, ...]:
+        """Report this block's missing facts, never full application readiness."""
+        missing = [
+            name
+            for name in (
+                "repayment_source", "source_details", "monthly_gross_income",
+                "monthly_net_income", "has_existing_obligations",
+            )
+            if getattr(self, name) is None
+        ]
+        if self.has_existing_obligations is True and not self.obligations:
+            missing.append("obligations")
+        for index, row in enumerate(self.obligations):
+            missing.extend(
+                f"obligations[{index}].{name}" for name in row.missing_fields()
+            )
+        return tuple(missing)
