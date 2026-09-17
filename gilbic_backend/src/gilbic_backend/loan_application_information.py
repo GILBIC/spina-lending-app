@@ -151,3 +151,22 @@ class LoanRepaymentInformation(BaseModel):
                 f"obligations[{index}].{name}" for name in row.missing_fields()
             )
         return tuple(missing)
+
+
+class LoanApplicationInformation(BaseModel):
+    """Request and repayment facts only, not full T01 or saved confirmation."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    request: LoanRequestInformation = Field(default_factory=LoanRequestInformation)
+    repayment: LoanRepaymentInformation = Field(default_factory=LoanRepaymentInformation)
+
+    def missing_fields(self) -> tuple[str, ...]:
+        """Report missing facts in these two sections, not approval readiness."""
+        return tuple(
+            f"{section}.{name}"
+            for section, information in (
+                ("request", self.request), ("repayment", self.repayment)
+            )
+            for name in information.missing_fields()
+        )
