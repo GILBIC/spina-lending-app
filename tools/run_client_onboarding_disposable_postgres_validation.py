@@ -28,6 +28,9 @@ CIF_LOAN_SOURCE_TEST = (
 APPLICATION_HISTORY_TEST = (
     ROOT / "gilbic_backend" / "tests" / "test_loan_application_history_postgres.py"
 )
+APPLICATION_REPOSITORY_TEST = (
+    ROOT / "gilbic_backend" / "tests" / "test_loan_application_repository_postgres.py"
+)
 CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0114_add_client_cif_first_loan_foundation.sql",
     ROOT / "gilbic_backend" / "sql" / "0119_add_client_cif_review_confirmation.sql",
@@ -54,7 +57,7 @@ def validate(base_database_url: str) -> None:
         raise RuntimeError(
             "Onboarding disposable validation requires SPINA_ALLOW_DISPOSABLE_DATABASE=1."
         )
-    for path in (TARGET_TEST, CIF_TEST, CIF_LOAN_SOURCE_TEST, APPLICATION_HISTORY_TEST, *CIF_MIGRATIONS):
+    for path in (TARGET_TEST, CIF_TEST, CIF_LOAN_SOURCE_TEST, APPLICATION_HISTORY_TEST, APPLICATION_REPOSITORY_TEST, *CIF_MIGRATIONS):
         if not path.is_file():
             raise RuntimeError(f"Required onboarding/CIF proof file is missing: {path}")
 
@@ -86,7 +89,8 @@ def validate(base_database_url: str) -> None:
 
         completed = subprocess.run(
             [sys.executable, "-m", "pytest", "-q",
-             str(TARGET_TEST), str(CIF_TEST), str(CIF_LOAN_SOURCE_TEST), str(APPLICATION_HISTORY_TEST)],
+             str(TARGET_TEST), str(CIF_TEST), str(CIF_LOAN_SOURCE_TEST), str(APPLICATION_HISTORY_TEST),
+             str(APPLICATION_REPOSITORY_TEST)],
             cwd=ROOT,
             env=_test_environment(test_url),
             text=True,
