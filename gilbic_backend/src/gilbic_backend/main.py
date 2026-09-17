@@ -55,6 +55,7 @@ from .greenfield_regular_renewal_rollforward_api import (
     create_greenfield_regular_renewal_rollforward_router,
 )
 from .initial_capital_funding_api import create_initial_capital_funding_router
+from .loan_application_api import create_loan_application_router
 from .loan_disbursement_cancellation_api import (
     create_loan_disbursement_cancellation_router,
 )
@@ -168,6 +169,7 @@ def create_app() -> FastAPI:
     app.include_router(create_client_account_router())
     app.include_router(create_client_onboarding_router())
     app.include_router(create_client_cif_router())
+    app.include_router(create_loan_application_router())
     app.include_router(create_management_alerts_audit_router())
     app.include_router(create_management_dashboard_overview_router())
     app.include_router(create_management_employee_activity_router())
