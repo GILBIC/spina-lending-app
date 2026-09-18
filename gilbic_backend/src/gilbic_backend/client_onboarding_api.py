@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import PostgresAccountRepository
@@ -141,6 +141,63 @@ def client_onboarding_repository_dependency() -> PostgresClientOnboardingReposit
 
 def create_client_onboarding_router() -> APIRouter:
     router = APIRouter(tags=["client-onboarding"])
+
+    @router.get(
+        "/api/v1/management/onboarding/applicants/"
+        "by-reference/{application_reference:path}/cif-client"
+    )
+    def get_cif_client_by_reference(
+        application_reference: str,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        onboarding: PostgresClientOnboardingRepository = Depends(
+            client_onboarding_repository_dependency
+        ),
+    ) -> dict[str, str]:
+        try:
+            actor = authenticated_device_context(
+                authorization=authorization,
+                device_identifier=x_device_id,
+                auth=auth,
+                accounts=accounts,
+                permission="client_onboarding.requirement.review",
+                permission_error="Onboarding requirement review permission is required.",
+            )
+            if not any(role in actor.roles for role in ("employee", "management")):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Employee or Management role is required for CIF work.",
+                )
+            reference = application_reference.strip()
+            if not reference:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Office intake reference is required.",
+                )
+            record = onboarding.find_cif_client_by_reference(
+                application_reference=reference
+            )
+            if (
+                record is None
+                or record.status != "eligible_for_cif"
+                or record.promoted_client_id is None
+            ):
+                raise HTTPException(
+                    status_code=404,
+                    detail="No eligible CIF client is available.",
+                )
+        except HTTPException as error:
+            error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
+            raise
+
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            "application_reference": record.application_reference,
+            "client_id": str(record.promoted_client_id),
+        }
 
     @router.post(
         "/api/v1/management/onboarding/applicants",

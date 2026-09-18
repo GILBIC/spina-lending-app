@@ -1,4 +1,5 @@
 import { buildManagementViewModel } from '../presenters.js';
+import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import {
   bindClientAccountAdmin,
   clientAccountAdminMarkup,
@@ -267,7 +268,11 @@ function bindLoanSearch(context) {
 }
 
 export async function mountManagementWorkspace(context) {
+  if (context.signal?.aborted) return;
+  context.officeCifCleanup?.();
+  context.officeCifCleanup = null;
   const { root, api, session, setNavigation } = context;
+  const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canDashboard = hasPermission(session, 'management.dashboard.view');
   const canRenewals = hasPermission(session, 'renewal.manage');
   const canSupport = hasPermission(session, 'support.manage');
@@ -276,6 +281,7 @@ export async function mountManagementWorkspace(context) {
   const canViewStaff = canManageAccounts || canManageDevices;
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
+    ...(canReviewCif ? [{ id: 'management-cif-review', label: 'CIF review' }] : []),
     { id: 'management-loans', label: 'Clients & loans' },
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
@@ -295,11 +301,13 @@ export async function mountManagementWorkspace(context) {
     canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
     canViewStaff ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
   ]);
+  if (context.signal?.aborted) return;
   const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data });
   const staffAccounts = asArray(staff.data.accounts);
 
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
+  ${canReviewCif ? `<section class="section-card" id="management-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
@@ -308,6 +316,11 @@ export async function mountManagementWorkspace(context) {
   ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff, inspect registered phones, and apply only server-authorized device changes.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" style="margin-top:1rem">${emptyState('Select a staff account to review registered phones.')}</div></section>` : ''}
   <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
 
+  if (canReviewCif) {
+    context.officeCifCleanup = mountOfficeCifSelection({
+      root: root.querySelector('[data-office-cif-selection]'), api, session, signal: context.signal,
+    });
+  }
   bindLoanSearch(context);
   bindRenewals(context);
   bindSupport(context);

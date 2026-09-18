@@ -12,6 +12,10 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('client-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   employee: Object.freeze([
+    action('employee-cif-review', 'CIF information review', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/cif-client', {
+      section: 'Office functions',
+      permission: 'client_onboarding.requirement.review',
+    }),
     action('employee-account', 'My account & devices', '/api/v1/account', { section: 'Updates & account' }),
     action('employee-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates & account' }),
     action('employee-remittance', 'Remittance notifications', '/api/v1/notifications', {
@@ -42,6 +46,10 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('collector-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   management: Object.freeze([
+    action('management-cif-review', 'CIF information review', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/cif-client', {
+      section: 'Review',
+      permission: 'client_onboarding.requirement.review',
+    }),
     action('management-account', 'My account & devices', '/api/v1/account', { section: 'Administration' }),
     action('management-overview', 'Live overview', '/api/v1/management/dashboard-overview', {
       section: 'Overview',

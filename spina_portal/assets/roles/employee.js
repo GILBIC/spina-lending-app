@@ -1,4 +1,5 @@
 import { buildEmployeeViewModel } from '../presenters.js';
+import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import {
   asArray,
   badge,
@@ -139,12 +140,17 @@ function bindActions(context) {
 }
 
 export async function mountEmployeeWorkspace(context) {
+  if (context.signal?.aborted) return;
+  context.officeCifCleanup?.();
+  context.officeCifCleanup = null;
   const { root, api, session, setNavigation } = context;
+  const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canViewRemittance = hasPermission(session, 'remittance.view');
   const canReceiveRemittance = hasPermission(session, 'remittance.receive');
   const canManageSupport = hasPermission(session, 'support.manage');
   setNavigation([
     { id: 'employee-overview', label: 'My workday' },
+    ...(canReviewCif ? [{ id: 'employee-cif-review', label: 'CIF review' }] : []),
     ...(canViewRemittance ? [{ id: 'employee-remittance', label: 'Remittance' }] : []),
     ...(canManageSupport ? [{ id: 'employee-support', label: 'Client support' }] : []),
     { id: 'employee-updates', label: 'Updates' },
@@ -162,6 +168,7 @@ export async function mountEmployeeWorkspace(context) {
       ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] })
       : Promise.resolve({ data: { requests: [] }, error: null }),
   ]);
+  if (context.signal?.aborted) return;
   const model = buildEmployeeViewModel({
     session,
     account: account.data,
@@ -187,10 +194,16 @@ export async function mountEmployeeWorkspace(context) {
     <div class="section-heading"><div><h2>Not connected yet</h2><p>These items are visible for clarity but cannot create or change an official record.</p></div></div>
     <div class="card-grid">${model.unavailable.map((item) => `<article class="data-card"><h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.message)}</p>${badge('unavailable', 'warning')}</article>`).join('')}</div>
   </section>
+  ${canReviewCif ? `<section class="section-card" id="employee-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
   ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : remittanceRows(model.remittances, canReceiveRemittance)}</section>` : ''}
   ${canManageSupport ? `<section class="section-card" id="employee-support"><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
   <section class="section-card" id="employee-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
   <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}</section>`;
 
+  if (canReviewCif) {
+    context.officeCifCleanup = mountOfficeCifSelection({
+      root: root.querySelector('[data-office-cif-selection]'), api, session, signal: context.signal,
+    });
+  }
   bindActions(context);
 }

@@ -175,4 +175,6 @@ Before implementation, inspect and reuse existing disbursement, schedule, receip
 
 ## Low-friction execution protocol
 
-After each strict test-only head, perform one exact-head CI read and stop. Management may answer only **Red** or **Green / All green**. On Red, inspect the exact matching failure and add only the minimum production correction. On Green, independently verify the exact matching head/checks before advancing. Re-read the live PR head immediately before every Git write to avoid overwriting concurrent work.
+Management's 2026-09-18 direction supersedes the earlier test-only-head pause protocol: complete related changes as one usable batch, then run tests and fix failures through Red to Green. Do not split tests, repository, API and UI into separate mandatory publication rounds or stop for a user signal between local steps. Preserve published regression contracts and full CI requirements.
+
+Publish the reviewed batch once, verify the matching CI head, and address real failures without asking Management to drive every step. Red/Green remains an optional status signal. Save one clear GitHub/Notion/local handoff per completed batch or interruption. Re-read the live PR head before publishing to avoid overwriting concurrent work. PR remains Draft/open/unmerged; merge and production boundaries are unchanged.
