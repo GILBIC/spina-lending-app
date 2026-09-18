@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import NoReturn
 from uuid import UUID
 
@@ -11,6 +11,7 @@ from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .client_cif_repository import (
+    ClientCifAccessDenied,
     ClientCifConflict,
     ClientCifLivenessStatus,
     ClientCifVersion,
@@ -64,6 +65,22 @@ class CorrectCifDraftInformationRequest(BaseModel):
             raise ValueError(
                 "A CIF correction reason of at least 3 characters is required."
             )
+        return normalized
+
+
+class ConfirmCifReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cif_version_id: UUID
+    expected_information: CifReviewInformation
+    applicant_confirmation_evidence_reference: str = Field(strict=True)
+
+    @field_validator("applicant_confirmation_evidence_reference")
+    @classmethod
+    def normalize_evidence_reference(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Applicant confirmation evidence reference is required.")
         return normalized
 
 
@@ -205,6 +222,54 @@ def create_client_cif_router() -> APIRouter:
             }
         )
         return payload
+
+    @router.post(
+        "/api/v1/management/clients/{client_id}/cif/review-confirmations",
+        status_code=status.HTTP_201_CREATED,
+    )
+    def confirm_cif_review(
+        client_id: UUID,
+        body: ConfirmCifReviewRequest,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        cif: PostgresClientCifRepository = Depends(client_cif_repository_dependency),
+    ) -> dict[str, object]:
+        actor = _office_cif_actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            record = cif.confirm_review(
+                actor_user_id=actor.user_id,
+                client_id=client_id,
+                cif_version_id=body.cif_version_id,
+                expected_information=body.expected_information.model_dump(),
+                applicant_confirmation_evidence_reference=(
+                    body.applicant_confirmation_evidence_reference
+                ),
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except ClientCifAccessDenied as error:
+            raise HTTPException(status_code=403, detail=str(error)) from error
+        except ClientCifConflict as error:
+            _raise_cif_conflict(error)
+        response.headers["Cache-Control"] = "no-store"
+        confirmed_at = record.confirmed_at.astimezone(timezone.utc)
+        return {
+            "review_confirmation_id": str(record.id),
+            "client_id": str(record.client_id),
+            "cif_version_id": str(record.cif_version_id),
+            "review_cycle_number": record.review_cycle_number,
+            "witnessed_by_user_id": str(record.witnessed_by_user_id),
+            "confirmed_at": confirmed_at.isoformat().replace("+00:00", "Z"),
+            "review_scope": "cif_information_only",
+        }
 
     @router.post(
         "/api/v1/management/clients/{client_id}/cif/draft",
