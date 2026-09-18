@@ -24,6 +24,43 @@ class ClientOnboardingRecord:
 
 
 class PostgresClientOnboardingRepository:
+    def find_cif_client_by_reference(
+        self, *, application_reference: str
+    ) -> ClientOnboardingRecord | None:
+        """Find an eligible Client by the exact office intake reference."""
+        if not isinstance(application_reference, str):
+            raise ValueError("Office intake reference must be a nonblank string.")
+        reference = application_reference.strip()
+        if not reference:
+            raise ValueError("Office intake reference must be a nonblank string.")
+
+        with open_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    select
+                        applicant.application_reference,
+                        applicant.status,
+                        applicant.promoted_client_id
+                    from lending.client_onboarding_applicants as applicant
+                    join lending.clients as client
+                        on client.id = applicant.promoted_client_id
+                    where lower(applicant.application_reference) = lower(%s)
+                      and applicant.status = 'eligible_for_cif'
+                      and client.status in ('inactive', 'active')
+                    """,
+                    (reference,),
+                )
+                row = cursor.fetchone()
+
+        if row is None:
+            return None
+        return ClientOnboardingRecord(
+            application_reference=str(row[0]),
+            status=cast(ClientOnboardingStatus, str(row[1])),
+            promoted_client_id=row[2],
+        )
+
     def submit_applicant(
         self,
         *,
