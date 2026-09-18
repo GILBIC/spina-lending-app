@@ -22,6 +22,9 @@ TARGET_TEST = (
 CIF_TEST = (
     ROOT / "gilbic_backend" / "tests" / "test_client_cif_review_confirmation_postgres.py"
 )
+ONBOARDING_CIF_SELECTION_TEST = (
+    ROOT / "gilbic_backend" / "tests" / "test_client_onboarding_cif_selection_postgres.py"
+)
 CIF_CONFIRMATION_REPOSITORY_TEST = (
     ROOT
     / "gilbic_backend"
@@ -72,6 +75,7 @@ def validate(base_database_url: str) -> None:
         )
     for path in (
         TARGET_TEST,
+        ONBOARDING_CIF_SELECTION_TEST,
         CIF_TEST,
         CIF_CONFIRMATION_REPOSITORY_TEST,
         CIF_LOAN_SOURCE_TEST,
@@ -116,6 +120,7 @@ def validate(base_database_url: str) -> None:
                 "pytest",
                 "-q",
                 str(TARGET_TEST),
+                str(ONBOARDING_CIF_SELECTION_TEST),
                 str(CIF_TEST),
                 str(CIF_CONFIRMATION_REPOSITORY_TEST),
                 str(CIF_LOAN_SOURCE_TEST),
