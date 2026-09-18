@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
+from .area_management_api import create_area_management_router
 from .auth_api import create_auth_router
 from .client_account_api import create_client_account_router
 from .client_cif_api import create_client_cif_router
@@ -18,6 +19,7 @@ from .collection_void_api import create_collection_void_router
 from .collector_cash_accountability_api import (
     create_collector_cash_accountability_router,
 )
+from .collector_client_detail_api import create_collector_client_detail_router
 from .collector_route_api import create_collector_route_router
 from .collector_schedule_api import create_collector_schedule_router
 from .combined_collection_api import create_combined_collection_router
@@ -166,6 +168,7 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_area_management_router())
     app.include_router(create_client_account_router())
     app.include_router(create_client_onboarding_router())
     app.include_router(create_client_cif_router())
@@ -231,6 +234,7 @@ def create_app() -> FastAPI:
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_collector_schedule_router())
+    app.include_router(create_collector_client_detail_router())
     app.include_router(create_collector_cash_accountability_router())
     app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())

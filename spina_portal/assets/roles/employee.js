@@ -1,3 +1,4 @@
+import { mountAreaManagement } from '../area-management.js';
 import { buildEmployeeViewModel } from '../presenters.js';
 import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import {
@@ -148,9 +149,16 @@ export async function mountEmployeeWorkspace(context) {
   const canViewRemittance = hasPermission(session, 'remittance.view');
   const canReceiveRemittance = hasPermission(session, 'remittance.receive');
   const canManageSupport = hasPermission(session, 'support.manage');
+  const canUseAreaManagement = [
+    'area.manage',
+    'area.collector.assign',
+    'area.client.assign',
+    'area.retire',
+  ].some((permission) => hasPermission(session, permission));
   setNavigation([
     { id: 'employee-overview', label: 'My workday' },
     ...(canReviewCif ? [{ id: 'employee-cif-review', label: 'CIF review' }] : []),
+    ...(canUseAreaManagement ? [{ id: 'employee-area-management', label: 'Area Management' }] : []),
     ...(canViewRemittance ? [{ id: 'employee-remittance', label: 'Remittance' }] : []),
     ...(canManageSupport ? [{ id: 'employee-support', label: 'Client support' }] : []),
     { id: 'employee-updates', label: 'Updates' },
@@ -195,6 +203,7 @@ export async function mountEmployeeWorkspace(context) {
     <div class="card-grid">${model.unavailable.map((item) => `<article class="data-card"><h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.message)}</p>${badge('unavailable', 'warning')}</article>`).join('')}</div>
   </section>
   ${canReviewCif ? `<section class="section-card" id="employee-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
+  ${canUseAreaManagement ? '<section class="section-card" id="employee-area-management"></section>' : ''}
   ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : remittanceRows(model.remittances, canReceiveRemittance)}</section>` : ''}
   ${canManageSupport ? `<section class="section-card" id="employee-support"><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
   <section class="section-card" id="employee-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
@@ -206,4 +215,8 @@ export async function mountEmployeeWorkspace(context) {
     });
   }
   bindActions(context);
+  if (canUseAreaManagement) {
+    const areaRoot = root.querySelector('#employee-area-management');
+    if (areaRoot) await mountAreaManagement({ ...context, root: areaRoot });
+  }
 }

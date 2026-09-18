@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_collection_location_repository.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
@@ -13,9 +14,13 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_collection_location_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_schedule_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_tools_sheet.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_route_tree.dart';
 
 class CollectorRoutePage extends StatefulWidget {
   const CollectorRoutePage({
@@ -24,6 +29,7 @@ class CollectorRoutePage extends StatefulWidget {
     this.paymentRepository,
     this.combinedPaymentRepository,
     this.correctionRepository,
+    this.collectionLocationRepository,
     this.deviceIdentityProvider,
     this.deviceSequence,
     super.key,
@@ -34,6 +40,7 @@ class CollectorRoutePage extends StatefulWidget {
   final PaymentSubmissionRepository? paymentRepository;
   final CombinedPaymentSubmissionRepository? combinedPaymentRepository;
   final CollectionCorrectionRepository? correctionRepository;
+  final CollectorCollectionLocationRepository? collectionLocationRepository;
   final DeviceIdentityProvider? deviceIdentityProvider;
   final CollectionDeviceSequence? deviceSequence;
 
@@ -45,10 +52,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   late final PaymentSubmissionRepository _paymentRepository;
   late final CombinedPaymentSubmissionRepository _combinedPaymentRepository;
   late final CollectionCorrectionRepository _correctionRepository;
+  late final CollectorCollectionLocationRepository _collectionLocationRepository;
   late final DeviceIdentityProvider _deviceIdentityProvider;
   late final CollectionDeviceSequence _deviceSequence;
 
   final Set<String> _expandedClients = <String>{};
+  final Set<String> _expandedAreaUids = <String>{};
   final Set<String> _payingLoanIds = <String>{};
   final Map<String, PaymentSubmissionDraft> _pendingDirectDrafts =
       <String, PaymentSubmissionDraft>{};
@@ -68,6 +77,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         SpinaCombinedPaymentSubmissionRepository();
     _correctionRepository =
         widget.correctionRepository ?? SpinaCollectionCorrectionRepository();
+    _collectionLocationRepository =
+        widget.collectionLocationRepository ??
+        SpinaCollectorCollectionLocationRepository();
     _deviceIdentityProvider =
         widget.deviceIdentityProvider ?? DeviceIdentityProvider();
     _deviceSequence = widget.deviceSequence ?? SecureCollectionDeviceSequence();
@@ -557,12 +569,73 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     return null;
   }
 
-  void _toggleClient(String clientId) {
+  void _toggleArea(String areaUid) {
     setState(() {
-      if (!_expandedClients.add(clientId)) {
-        _expandedClients.remove(clientId);
+      if (!_expandedAreaUids.add(areaUid)) {
+        _expandedAreaUids.remove(areaUid);
       }
     });
+  }
+
+  Future<void> _toggleClient(String clientId) async {
+    final loaded = _result;
+    if (loaded == null || !mounted) return;
+
+    CollectorRouteClientGroup? client;
+    for (final areaGroup in groupCollectorRoute(loaded.route)) {
+      for (final candidate in areaGroup.clients) {
+        if (candidate.clientId == clientId) {
+          client = candidate;
+          break;
+        }
+      }
+      if (client != null) break;
+    }
+    final selectedClient = client;
+    if (selectedClient == null) return;
+
+    final selection = await showModalBottomSheet<CollectorClientToolSelection>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => CollectorClientToolsSheet(
+        client: selectedClient,
+        directPayBlockedReasonFor: (entry) =>
+            _directPayBlockedReason(loaded, entry),
+        detailsBlockedReasonFor: (entry) =>
+            _detailsBlockedReason(loaded, entry),
+        correctionBlockedReasonFor: (entry) =>
+            _correctionBlockedReason(loaded, entry),
+      ),
+    );
+    if (!mounted || selection == null) return;
+
+    final entry = selection.entry;
+    switch (selection.kind) {
+      case CollectorClientToolKind.paymentDetails:
+        if (entry != null) await _openCollectionDetails(loaded, entry);
+      case CollectorClientToolKind.correction:
+        if (entry != null) await _openCorrection(loaded, entry);
+      case CollectorClientToolKind.schedule:
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => CollectorClientSchedulePage(
+              session: widget.session,
+              client: selectedClient,
+            ),
+          ),
+        );
+      case CollectorClientToolKind.collectionLocation:
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => CollectorClientCollectionLocationPage(
+              session: widget.session,
+              client: selectedClient,
+              repository: _collectionLocationRepository,
+            ),
+          ),
+        );
+    }
   }
 
   @override
@@ -621,6 +694,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     final loaded = result!;
     final route = loaded.route;
     final areaGroups = groupCollectorRoute(route);
+    final areaTree = route.areaNodes.isEmpty
+        ? const <CollectorRouteTreeNode>[]
+        : buildCollectorRouteTree(route);
     final clientCount = areaGroups.fold<int>(
       0,
       (total, group) => total + group.clientCount,
@@ -680,6 +756,31 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               child: Text(
                 'No clients are assigned to this route.',
                 textAlign: TextAlign.center,
+              ),
+            )
+          else if (areaTree.isNotEmpty)
+            CollectorRouteTree(
+              roots: areaTree,
+              expandedAreaUids: _expandedAreaUids,
+              expandedClients: _expandedClients,
+              directPayBlockedReasonFor: (entry) =>
+                  _directPayBlockedReason(loaded, entry),
+              payingLoanIds: _payingLoanIds,
+              pendingDirectLoanIds: _pendingPaymentLoanIds(),
+              onToggleArea: _toggleArea,
+              onToggleClient: _toggleClient,
+              onRecord: (entry) => _payNow(loaded, entry),
+              onRecordCombined: (client) => _payCombined(loaded, client),
+              detailsBuilder: (entry) => _LoanDetails(
+                entry: entry,
+                blockedReason: _directPayBlockedReason(loaded, entry),
+                detailsBlockedReason: _detailsBlockedReason(loaded, entry),
+                correctionBlockedReason: _correctionBlockedReason(
+                  loaded,
+                  entry,
+                ),
+                onDetails: () => _openCollectionDetails(loaded, entry),
+                onEdit: () => _openCorrection(loaded, entry),
               ),
             )
           else
