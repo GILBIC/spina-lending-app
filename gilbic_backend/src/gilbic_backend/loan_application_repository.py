@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import cast
 from uuid import UUID
@@ -27,6 +27,12 @@ class LoanApplicationVersionRecord:
     information: LoanApplicationInformation
     recorded_by_user_id: UUID
     recorded_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class LoanApplicationReferenceReview(LoanApplicationVersionRecord):
+    cif_version_number: int
+    requested_loan_type_name: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +130,48 @@ def _row_matches_save(
 
 
 class PostgresLoanApplicationRepository:
+    def get_latest_by_reference(
+        self,
+        *,
+        actor_user_id: UUID,
+        client_id: UUID,
+        application_reference: str,
+    ) -> LoanApplicationReferenceReview | None:
+        reference = application_reference.strip()
+        if not reference:
+            raise ValueError("Application reference is required.")
+
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                self._require_actor(cursor, actor_user_id)
+                row = cursor.execute(
+                    f"""
+                    select
+                        version.*,
+                        cif.version_number as cif_version_number,
+                        loan_type.name as requested_loan_type_name
+                    from ({_VERSION_SELECT}) version
+                    join lending.client_cif_versions cif
+                      on cif.id = version.cif_version_id
+                     and cif.client_id = version.client_id
+                    left join lending.loan_types loan_type
+                      on loan_type.id::text =
+                         version.information -> 'request' ->> 'requested_loan_type_id'
+                    where version.client_id = %s
+                      and version.application_reference = %s
+                    order by version.version_number desc
+                    limit 1
+                    """,
+                    (client_id, reference),
+                ).fetchone()
+                if row is None:
+                    return None
+                return LoanApplicationReferenceReview(
+                    **asdict(_record_from_row(row)),
+                    cif_version_number=int(row["cif_version_number"]),
+                    requested_loan_type_name=row["requested_loan_type_name"],
+                )
+
     def confirm_review(
         self,
         *,

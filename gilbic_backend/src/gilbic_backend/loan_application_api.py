@@ -109,6 +109,60 @@ def create_loan_application_router() -> APIRouter:
 
     @router.get(
         "/api/v1/management/clients/{client_id}/loan-applications/"
+        "by-reference/{application_reference:path}/review-summary"
+    )
+    def get_application_reference_review_summary(
+        client_id: UUID,
+        application_reference: str,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        applications: PostgresLoanApplicationRepository = Depends(
+            loan_application_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        try:
+            actor = _office_application_actor(
+                authorization=authorization,
+                x_device_id=x_device_id,
+                auth=auth,
+                accounts=accounts,
+            )
+            reference = application_reference.strip()
+            if not reference:
+                raise HTTPException(
+                    status_code=400, detail="Application reference is required."
+                )
+            record = applications.get_latest_by_reference(
+                actor_user_id=actor.user_id,
+                client_id=client_id,
+                application_reference=reference,
+            )
+            if record is None:
+                raise HTTPException(
+                    status_code=404, detail="Application review is unavailable."
+                )
+        except LoanApplicationAccessDenied as error:
+            raise HTTPException(
+                status_code=403,
+                detail=str(error),
+                headers={"Cache-Control": "no-store"},
+            ) from error
+        except HTTPException as error:
+            error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
+            raise
+
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            **_application_payload(record),
+            "cif_version_number": record.cif_version_number,
+            "requested_loan_type_name": record.requested_loan_type_name,
+        }
+
+    @router.get(
+        "/api/v1/management/clients/{client_id}/loan-applications/"
         "{application_id}/versions/{version_number}/review-summary"
     )
     def get_application_review_summary(
