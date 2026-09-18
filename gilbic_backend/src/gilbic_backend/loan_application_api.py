@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Response
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -35,6 +35,14 @@ class CreateLoanApplicationDraftRequest(BaseModel):
         if not reference:
             raise ValueError("Application reference is required.")
         return reference
+
+
+class AppendLoanApplicationDraftRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cif_version_id: UUID
+    expected_version_number: Annotated[int, Field(strict=True, ge=1)]
+    information: LoanApplicationInformation
 
 
 def _office_application_actor(
@@ -150,6 +158,47 @@ def create_loan_application_router() -> APIRouter:
                 client_id=client_id,
                 cif_version_id=payload.cif_version_id,
                 application_reference=payload.application_reference,
+                information=payload.information,
+            )
+        except LoanApplicationAccessDenied as error:
+            raise HTTPException(status_code=403, detail=str(error)) from error
+        except LoanApplicationConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+        response.headers["Cache-Control"] = "no-store"
+        return _application_payload(record)
+
+    @router.post(
+        "/api/v1/management/clients/{client_id}/loan-applications/"
+        "{application_id}/draft-versions",
+        status_code=200,
+    )
+    def append_application_draft(
+        client_id: UUID,
+        application_id: UUID,
+        payload: AppendLoanApplicationDraftRequest,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        applications: PostgresLoanApplicationRepository = Depends(
+            loan_application_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = _office_application_actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            record = applications.append_draft(
+                actor_user_id=actor.user_id,
+                client_id=client_id,
+                application_id=application_id,
+                cif_version_id=payload.cif_version_id,
+                expected_version_number=payload.expected_version_number,
                 information=payload.information,
             )
         except LoanApplicationAccessDenied as error:
