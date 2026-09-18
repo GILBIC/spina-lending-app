@@ -1,4 +1,5 @@
 import { mountOfficeCifReview } from './office-cif-review.js';
+import { mountOfficeCifCorrection } from './office-cif-correction.js';
 import { normalizeRole } from './roles.js';
 import { emptyState, errorCard, hasPermission, loadingPanel } from './ui.js';
 
@@ -26,15 +27,24 @@ export function mountOfficeCifSelection({ root, api, session, signal }) {
   let clearButton;
   let statusRoot;
   let reviewRoot;
+  let correctionRoot;
+  let correctionCleanup;
 
-  function invalidate() {
-    currentRequest = {};
+  function clearReview() {
     if (reviewRoot) {
       // The review panel owns its request token. A null selection invalidates
       // any pending summary before clearing its message and previous PII.
       void mountOfficeCifReview({ root: reviewRoot, api, session, clientId: null });
       reviewRoot.innerHTML = '';
     }
+  }
+
+  function invalidate() {
+    currentRequest = {};
+    correctionCleanup?.();
+    correctionCleanup = null;
+    if (correctionRoot) correctionRoot.innerHTML = '';
+    clearReview();
     if (statusRoot) statusRoot.innerHTML = '';
   }
 
@@ -82,7 +92,24 @@ export function mountOfficeCifSelection({ root, api, session, signal }) {
         throw new Error('The office intake response is invalid or does not match the entered reference.');
       }
       statusRoot.innerHTML = '';
-      await mountOfficeCifReview({ root: reviewRoot, api, session, clientId: selection.client_id });
+      const refreshReview = async () => {
+        if (disposed || currentRequest !== request) return;
+        return mountOfficeCifReview({ root: reviewRoot, api, session, clientId: selection.client_id });
+      };
+      const review = await refreshReview();
+      if (!review || disposed || currentRequest !== request) return;
+      correctionCleanup = mountOfficeCifCorrection({
+        root: correctionRoot, api, session, clientId: selection.client_id, signal,
+        onEditing: clearReview,
+        onClosed: refreshReview,
+        onSaved: refreshReview,
+        onAccessDenied: () => {
+          if (disposed || currentRequest !== request) return;
+          invalidate();
+          input.value = '';
+          statusRoot.innerHTML = emptyState('Office access is no longer available. Sign in again before continuing.');
+        },
+      });
     } catch (error) {
       if (disposed || currentRequest !== request) return;
       statusRoot.innerHTML = `<div role="alert">${errorCard(error, 'Office intake is unavailable.')}</div>`;
@@ -114,13 +141,15 @@ export function mountOfficeCifSelection({ root, api, session, signal }) {
     </div>
   </form>
   <div data-office-cif-status role="status" aria-live="polite"></div>
-  <div data-office-cif-review aria-live="polite"></div>`;
+  <div data-office-cif-review aria-live="polite"></div>
+  <div data-office-cif-correction aria-live="polite"></div>`;
 
   form = root.querySelector('form');
   input = form.querySelector('input');
   clearButton = form.querySelector('button[type="button"]');
   statusRoot = root.querySelector('[data-office-cif-status]');
   reviewRoot = root.querySelector('[data-office-cif-review]');
+  correctionRoot = root.querySelector('[data-office-cif-correction]');
   form.addEventListener('submit', openReview);
   input.addEventListener('input', invalidate);
   input.addEventListener('change', invalidate);

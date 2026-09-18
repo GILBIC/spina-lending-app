@@ -70,6 +70,7 @@ export async function mountOfficeCifReview({ root, api, session, clientId }) {
       throw new Error('The CIF review response is invalid or does not match the selected Client.');
     }
     root.innerHTML = reviewMarkup(review);
+    return review;
   } catch (error) {
     if (currentRequests.get(root) !== request) return;
     root.innerHTML = errorCard(error, 'CIF information is unavailable.');

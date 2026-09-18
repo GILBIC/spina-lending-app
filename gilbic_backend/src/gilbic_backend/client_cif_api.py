@@ -149,6 +149,7 @@ def create_client_cif_router() -> APIRouter:
     def get_cif_review_summary(
         client_id: UUID,
         response: Response,
+        include_correction_availability: bool = False,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
@@ -162,7 +163,12 @@ def create_client_cif_router() -> APIRouter:
             accounts=accounts,
         )
         try:
-            record = cif.get_review_summary(client_id=client_id)
+            if include_correction_availability:
+                record = cif.get_review_summary(
+                    client_id=client_id, include_correction_availability=True,
+                )
+            else:
+                record = cif.get_review_summary(client_id=client_id)
         except ClientCifConflict as error:
             _raise_cif_conflict(error)
         response.headers["Cache-Control"] = "no-store"
@@ -177,6 +183,10 @@ def create_client_cif_router() -> APIRouter:
                 "review_scope": "cif_information_only",
             }
         )
+        if include_correction_availability:
+            payload["can_correct_information"] = (
+                getattr(record, "can_correct_information", False) is True
+            )
         return payload
 
     @router.patch("/api/v1/management/clients/{client_id}/cif/draft-information")

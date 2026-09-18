@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Literal, cast
 from uuid import UUID
@@ -37,6 +37,11 @@ class ClientCifVersion:
     review_due_at: datetime | None
     reverification_required_at: datetime | None
     reverification_reason: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ClientCifCorrectionSummary(ClientCifVersion):
+    can_correct_information: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -357,14 +362,27 @@ class PostgresClientCifRepository:
                     )
                 return _confirmation_record_from_row(created)
 
-    def get_review_summary(self, *, client_id: UUID) -> ClientCifVersion:
+    def get_review_summary(
+        self, *, client_id: UUID, include_correction_availability: bool = False,
+    ) -> ClientCifVersion:
         """Read the current eligible CIF without creating or changing any state."""
+
+        columns = _CIF_SELECT_COLUMNS
+        if include_correction_availability:
+            columns += """,
+                (cif.status = 'draft' and client.status = 'inactive'
+                 and not exists (
+                    select 1 from lending.client_cif_review_confirmations confirmation
+                    where confirmation.client_id = cif.client_id
+                      and confirmation.cif_version_id = cif.id
+                 )) as can_correct_information
+            """
 
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     f"""
-                    select {_CIF_SELECT_COLUMNS}
+                    select {columns}
                     from lending.client_cif_versions cif
                     join lending.client_onboarding_applicants applicant
                       on applicant.promoted_client_id = cif.client_id
@@ -382,7 +400,13 @@ class PostgresClientCifRepository:
                 current = cursor.fetchone()
                 if current is None:
                     raise ClientCifConflict("No eligible current CIF is available.")
-                return _record_from_row(current)
+                record = _record_from_row(current)
+                if include_correction_availability:
+                    return ClientCifCorrectionSummary(
+                        **asdict(record),
+                        can_correct_information=current["can_correct_information"] is True,
+                    )
+                return record
 
     def get_active_source_for_new_loan(
         self, *, client_id: UUID, cif_version_id: UUID
