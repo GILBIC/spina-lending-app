@@ -142,11 +142,7 @@ def _client(
 
     repository = DraftRepository(error=repository_error)
     app = create_app()
-    if not any(
-        getattr(route, "path", None) == ROUTE_PATH
-        and "POST" in getattr(route, "methods", set())
-        for route in app.routes
-    ):
+    if "post" not in app.openapi().get("paths", {}).get(ROUTE_PATH, {}):
         pytest.fail("Loan application draft creation API is not implemented")
     app.dependency_overrides[auth_client_dependency] = lambda: Auth()
     app.dependency_overrides[account_repository_dependency] = lambda: Accounts()
