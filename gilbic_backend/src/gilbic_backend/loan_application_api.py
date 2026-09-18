@@ -45,6 +45,21 @@ class AppendLoanApplicationDraftRequest(BaseModel):
     information: LoanApplicationInformation
 
 
+class ConfirmLoanApplicationReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    application_version_id: UUID
+    applicant_confirmation_evidence_reference: str
+
+    @field_validator("applicant_confirmation_evidence_reference")
+    @classmethod
+    def normalize_evidence_reference(cls, value: str) -> str:
+        reference = value.strip()
+        if not reference:
+            raise ValueError("Applicant confirmation evidence reference is required.")
+        return reference
+
+
 def _office_application_actor(
     *,
     authorization: str | None,
@@ -208,5 +223,58 @@ def create_loan_application_router() -> APIRouter:
 
         response.headers["Cache-Control"] = "no-store"
         return _application_payload(record)
+
+    @router.post(
+        "/api/v1/management/clients/{client_id}/loan-applications/"
+        "{application_id}/review-confirmations",
+        status_code=201,
+    )
+    def confirm_application_review(
+        client_id: UUID,
+        application_id: UUID,
+        payload: ConfirmLoanApplicationReviewRequest,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        applications: PostgresLoanApplicationRepository = Depends(
+            loan_application_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = _office_application_actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            record = applications.confirm_review(
+                actor_user_id=actor.user_id,
+                client_id=client_id,
+                application_id=application_id,
+                application_version_id=payload.application_version_id,
+                applicant_confirmation_evidence_reference=(
+                    payload.applicant_confirmation_evidence_reference
+                ),
+            )
+        except LoanApplicationAccessDenied as error:
+            raise HTTPException(status_code=403, detail=str(error)) from error
+        except LoanApplicationConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            "review_confirmation_id": str(record.id),
+            "client_id": str(record.client_id),
+            "application_id": str(record.application_id),
+            "application_version_id": str(record.application_version_id),
+            "cif_version_id": str(record.cif_version_id),
+            "witnessed_by_user_id": str(record.witnessed_by_user_id),
+            "confirmed_at": record.confirmed_at.astimezone(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "review_scope": "loan_application_information_only",
+        }
 
     return router
