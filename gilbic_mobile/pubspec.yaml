@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  crypto: ^3.0.7
   flutter_secure_storage: ^10.3.1
   file_saver: ^0.4.0
   http: ^1.6.0

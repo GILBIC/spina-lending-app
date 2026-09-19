@@ -1,5 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/account/managed_client_account_page.dart';
+import 'package:gilbic_mobile/src/features/areas/area_management_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_workspace_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_payment_proofs_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_past_due_reasons_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -39,6 +44,11 @@ import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.da
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 const _managementDestinations = <(String, Type)>[
+  ('management-office', OfficeWorkspacePage),
+  ('management-areas', AreaManagementPage),
+  ('management-client-accounts', ManagedClientAccountPage),
+  ('management-payment-proofs', ManagementPaymentProofsPage),
+  ('management-past-due-reasons', ManagementPastDueReasonsPage),
   ('management-alerts-activity', ManagementAlertsAuditPage),
   ('management-loans', ManagementLoanPortfolioPage),
   (
@@ -666,6 +676,9 @@ const _managementSession = UserSession(
   rawRole: 'Management',
   accessToken: 'management-token',
   permissions: <String>[
+    'client_onboarding.requirement.review',
+    'area.manage',
+    'client_payment_proof.review',
     'management.dashboard.view',
     'employee.activity.review',
     'accounting.view',

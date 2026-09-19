@@ -12,6 +12,11 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/account/managed_client_account_page.dart';
+import 'package:gilbic_mobile/src/features/areas/area_management_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_workspace_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_payment_proofs_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_past_due_reasons_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_alerts_audit_page.dart';
@@ -234,6 +239,26 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     }
 
     final page = switch (module.action) {
+      _ManagementAction.office => OfficeWorkspacePage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _ManagementAction.areas => AreaManagementPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _ManagementAction.clientAccounts => ManagedClientAccountPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _ManagementAction.paymentProofs => ManagementPaymentProofsPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _ManagementAction.pastDueReasons => ManagementPastDueReasonsPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
       _ManagementAction.alertsActivity => ManagementAlertsAuditPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -1202,6 +1227,11 @@ class _ManagementModuleShortcut extends StatelessWidget {
 }
 
 enum _ManagementAction {
+  office('management-office'),
+  areas('management-areas'),
+  clientAccounts('management-client-accounts'),
+  paymentProofs('management-payment-proofs'),
+  pastDueReasons('management-past-due-reasons'),
   alertsActivity('management-alerts-activity'),
   myAccountDevices('management-my-account-devices'),
   offlinePolicy('management-offline-policy'),
@@ -1298,7 +1328,8 @@ class _ManagementSection {
       modules: modules
           .where(
             (module) =>
-                module.action != _ManagementAction.clientRegistrationApprovals &&
+                module.action !=
+                    _ManagementAction.clientRegistrationApprovals &&
                 module.isAvailableFor(session),
           )
           .toList(growable: false),
@@ -1313,6 +1344,13 @@ const _managementSections = <_ManagementSection>[
     description: 'See alerts and activity that may need your attention first.',
     modules: <_ManagementModule>[
       _ManagementModule(
+        'Payment proof review',
+        'Review uploaded evidence and corrections without changing balances',
+        Icons.receipt_long_outlined,
+        action: _ManagementAction.paymentProofs,
+        requiredPermissions: <String>['client_payment_proof.review'],
+      ),
+      _ManagementModule(
         'Alerts & activity',
         'Payments, custody changes, approvals, failures, and other updates',
         Icons.notifications_active_outlined,
@@ -1325,6 +1363,26 @@ const _managementSections = <_ManagementSection>[
     title: 'Clients & loans',
     description: 'Review active lending relationships and protected changes.',
     modules: <_ManagementModule>[
+      _ManagementModule(
+        'Office onboarding & release',
+        'Intake, CIF and application reviews, contracts, release, and credential handoff',
+        Icons.assignment_outlined,
+        action: _ManagementAction.office,
+        requiredPermissions: <String>['client_onboarding.requirement.review'],
+      ),
+      _ManagementModule(
+        'Area management',
+        'Maintain areas, assign collectors, and review borrower transfers',
+        Icons.map_outlined,
+        action: _ManagementAction.areas,
+        requiredPermissions: <String>[
+          'area.manage',
+          'area.collector.assign',
+          'area.client.assign',
+          'area.retire',
+        ],
+        permissionMode: _PermissionMode.any,
+      ),
       _ManagementModule(
         'Loan portfolio',
         'Active clients, balances, due dates, and loan status',
@@ -1387,6 +1445,13 @@ const _managementSections = <_ManagementSection>[
     title: 'People, access & requests',
     description: 'Manage staff access, borrower requests, and support reviews.',
     modules: <_ManagementModule>[
+      _ManagementModule(
+        'Create Client account',
+        'Generate managed access for an existing active unlinked borrower',
+        Icons.person_add_alt,
+        action: _ManagementAction.clientAccounts,
+        requiredPermissions: <String>['account.manage'],
+      ),
       _ManagementModule(
         'Staff & devices',
         'Invite staff, review access, and manage registered devices',
@@ -1451,6 +1516,13 @@ const _managementSections = <_ManagementSection>[
     description:
         'Review financial status and use protected accounting workflows.',
     modules: <_ManagementModule>[
+      _ManagementModule(
+        'Past-due reasons',
+        'Review missed and partial payment reasons, areas, and remaining amounts',
+        Icons.query_stats,
+        action: _ManagementAction.pastDueReasons,
+        requiredPermissions: <String>['management.dashboard.view'],
+      ),
       _ManagementModule(
         'Financial Accounting',
         'Periods, accounts, readiness, and loan policy controls',

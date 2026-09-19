@@ -304,7 +304,13 @@ void main() {
         expect(resetRequests, 1);
         expect(find.byKey(const Key('client-password-reset-result')), findsOneWidget);
         expect(find.text('spina.c.001'), findsOneWidget);
+        expect(find.text('test-generated-value-1'), findsNothing);
+        await tester.tap(find.byKey(const Key('client-password-reset-reveal')));
+        await tester.pumpAndSettle();
         expect(find.text('test-generated-value-1'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('client-password-reset-reveal')));
+        await tester.pumpAndSettle();
+        expect(find.text('test-generated-value-1'), findsNothing);
         expect(
           find.text('SPINA account credentials were sent by email.'),
           findsOneWidget,

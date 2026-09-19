@@ -2,6 +2,11 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+
+bool isCollectorRouteAccessRejected(Object error) =>
+    error is SpinaApiException &&
+    const <int>{401, 403, 426}.contains(error.statusCode);
 
 class CollectorRouteLoadResult {
   const CollectorRouteLoadResult({
@@ -26,9 +31,9 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
     required CollectorRouteRepository remote,
     required CollectorRouteCache cache,
     DateTime Function()? now,
-  })  : _remote = remote,
-        _cache = cache,
-        _now = now ?? DateTime.now;
+  }) : _remote = remote,
+       _cache = cache,
+       _now = now ?? DateTime.now;
 
   final CollectorRouteRepository _remote;
   final CollectorRouteCache _cache;
@@ -43,7 +48,8 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
       try {
         await _cache.writeForUser(session.userId, route, syncedAt);
       } on Object {
-        warning = 'The route is online, but its offline copy could not be updated.';
+        warning =
+            'The route is online, but its offline copy could not be updated.';
       }
       return CollectorRouteLoadResult(
         route: route,
@@ -52,6 +58,14 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
         warning: warning,
       );
     } on Object catch (remoteError, remoteStackTrace) {
+      if (isCollectorRouteAccessRejected(remoteError)) {
+        try {
+          await _cache.clearForUser(session.userId);
+        } on Object {
+          // Access rejection must remain blocked even if storage cleanup fails.
+        }
+        Error.throwWithStackTrace(remoteError, remoteStackTrace);
+      }
       CollectorRouteCacheSnapshot? cached;
       try {
         cached = await _cache.readForUser(session.userId);
@@ -63,7 +77,8 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
           route: cached.route,
           syncedAt: cached.syncedAt,
           isFromCache: true,
-          warning: 'Offline copy shown because the Gilbic server could not be reached.',
+          warning:
+              'Offline copy shown because the Gilbic server could not be reached.',
         );
       }
       Error.throwWithStackTrace(remoteError, remoteStackTrace);
