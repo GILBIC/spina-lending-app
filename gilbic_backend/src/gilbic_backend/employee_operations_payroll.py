@@ -9,8 +9,8 @@ from uuid import uuid4
 
 from .employee_authorization import EmployeeAccessDenied
 from .employee_operations import (
-    EmployeeConflict,
     MANILA,
+    EmployeeConflict,
     day_pay,
     money,
     money_text,
@@ -18,7 +18,6 @@ from .employee_operations import (
     weekly_performance_benefit,
     weekly_tax,
 )
-
 
 LABELS = {
     "basic_pay": "Basic pay",

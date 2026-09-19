@@ -1,13 +1,12 @@
-from types import SimpleNamespace
 from datetime import date
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-
 from gilbic_backend.employee_authorization import (
     EmployeeAccessDenied,
-    configured_employee_owner_id,
     configure_employee_responsibility,
+    configured_employee_owner_id,
     is_employee_owner,
     require_employee_action,
     require_employee_actor,

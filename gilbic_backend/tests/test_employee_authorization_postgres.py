@@ -5,8 +5,6 @@ from uuid import uuid4
 
 import psycopg
 import pytest
-from psycopg.rows import dict_row
-
 from gilbic_backend.account_repository import AccountContext
 from gilbic_backend.employee_authorization import (
     EmployeeAccessDenied,
@@ -16,11 +14,15 @@ from gilbic_backend.employee_authorization import (
     save_employee_journal_draft,
 )
 from gilbic_backend.first_loan_repository import FirstLoanAccessDenied, _actor
+from psycopg.rows import dict_row
 from test_client_cif_review_confirmation_postgres import (
     DATABASE_URL,
-    connection as connection,
-    runtime_url as runtime_url,
+    connection,
+    runtime_url,
 )
+
+# Explicit fixture re-exports preserve pytest discovery from the shared module.
+__all__ = ["connection", "runtime_url"]
 
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="Guarded disposable database required"
@@ -208,12 +210,15 @@ def test_preparation_creates_existing_accounting_draft_and_reuses_it(
         ).fetchone()["n"]
         == 2
     )
-    with pytest.raises(psycopg.Error, match="unknown|inactive|non-posting"):
-        with connection.transaction(), connection.cursor(row_factory=dict_row) as c:
-            save_employee_journal_draft(
-                c,
-                actor=combined,
-                posting_date=date(2036, 1, 5),
-                description="Invalid account",
-                lines=[{**lines[0], "account_code": "NONEXISTENT"}, lines[1]],
-            )
+    with (
+        pytest.raises(psycopg.Error, match="unknown|inactive|non-posting"),
+        connection.transaction(),
+        connection.cursor(row_factory=dict_row) as c,
+    ):
+        save_employee_journal_draft(
+            c,
+            actor=combined,
+            posting_date=date(2036, 1, 5),
+            description="Invalid account",
+            lines=[{**lines[0], "account_code": "NONEXISTENT"}, lines[1]],
+        )

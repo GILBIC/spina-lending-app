@@ -5,13 +5,10 @@ from __future__ import annotations
 import os
 import re
 from datetime import date, datetime, timedelta, timezone
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from psycopg.rows import dict_row
-from psycopg.conninfo import make_conninfo
-
 from gilbic_backend.account_repository import AccountContext
 from gilbic_backend.employee_authorization import EmployeeAccessDenied
 from gilbic_backend.employee_operations import EmployeeConflict
@@ -21,6 +18,9 @@ from gilbic_backend.employee_operations_repository import (
     PostgresEmployeeOperationsRepository,
 )
 from gilbic_backend.employee_operations_workspace import build_workspace
+from psycopg.conninfo import make_conninfo
+from psycopg.rows import dict_row
+
 from tools import run_stage5d17_disposable_postgres_validation as disposable
 
 URL = os.getenv("GILBIC_TEST_DATABASE_URL")
@@ -633,11 +633,10 @@ def test_immutable_evidence_and_private_schema_access(database):
     row = case.connection.execute(
         "select id from core.employee_leave_ledger where employee_id=%s", (employee,)
     ).fetchone()
-    with pytest.raises(psycopg.errors.RaiseException):
-        with case.connection.transaction():
-            case.connection.execute(
-                "delete from core.employee_leave_ledger where id=%s", (row["id"],)
-            )
+    with pytest.raises(psycopg.errors.RaiseException), case.connection.transaction():
+        case.connection.execute(
+            "delete from core.employee_leave_ledger where id=%s", (row["id"],)
+        )
     public = case.connection.execute(
         "select count(*) as n from pg_class c cross join lateral aclexplode(coalesce(c.relacl,acldefault('r',c.relowner))) a where c.oid='core.employee_payroll'::regclass and a.grantee=0"
     ).fetchone()
@@ -705,18 +704,18 @@ def test_recovery_cannot_repeat_and_survives_recalculation_until_case_reversed(
         response_opportunity="Employee response considered",
     )
     current = case.payroll()
-    payload = dict(
-        employee_id=employee,
-        original_payroll_id=original["id"],
-        component="lawful_recovery",
-        amount="-100.00",
-        reason="Separate reviewed loss recovery",
-        lawful_basis="Synthetic professional-reviewed legal basis",
-        responsibility_evidence="Synthetic actual responsibility",
-        employee_response="Synthetic response considered",
-        maximum_authorized_recovery="100.00",
-        shortage_id=shortage["id"],
-    )
+    payload = {
+        "employee_id": employee,
+        "original_payroll_id": original["id"],
+        "component": "lawful_recovery",
+        "amount": "-100.00",
+        "reason": "Separate reviewed loss recovery",
+        "lawful_basis": "Synthetic professional-reviewed legal basis",
+        "responsibility_evidence": "Synthetic actual responsibility",
+        "employee_response": "Synthetic response considered",
+        "maximum_authorized_recovery": "100.00",
+        "shortage_id": shortage["id"],
+    }
     case.call("owner", "payroll_adjustment", **payload)
     assert case.record("payroll", current["id"])["payload"]["net_pay"] == "4700.00"
     with pytest.raises(EmployeeConflict, match="unrecovered"):
@@ -912,13 +911,13 @@ def test_create_commands_cannot_reset_approved_requests_confirmed_shortages_or_d
 ):
     case = database
     employee = case.users["one"].user_id
-    request_fields = dict(
-        employee_id=employee,
-        work_date="2026-09-28",
-        minutes=60,
-        leave_kind="ordinary",
-        reason="Synthetic approved request",
-    )
+    request_fields = {
+        "employee_id": employee,
+        "work_date": "2026-09-28",
+        "minutes": 60,
+        "leave_kind": "ordinary",
+        "reason": "Synthetic approved request",
+    }
     request = case.call("one", "leave_request", **request_fields)
     case.call(
         "owner",
@@ -938,13 +937,13 @@ def test_create_commands_cannot_reset_approved_requests_confirmed_shortages_or_d
             **request_fields,
         )
     assert case.record("requests", request["id"])["status"] == "approved"
-    shortage_fields = dict(
-        employee_id=employee,
-        work_date="2026-09-18",
-        expected_cash="1000.00",
-        accounted_cash="900.00",
-        evidence="Synthetic cash evidence",
-    )
+    shortage_fields = {
+        "employee_id": employee,
+        "work_date": "2026-09-18",
+        "expected_cash": "1000.00",
+        "accounted_cash": "900.00",
+        "evidence": "Synthetic cash evidence",
+    }
     shortage = case.call("one", "shortage_report", **shortage_fields)
     case.call(
         "owner",
@@ -965,14 +964,14 @@ def test_create_commands_cannot_reset_approved_requests_confirmed_shortages_or_d
             **shortage_fields,
         )
     assert case.record("shortages", shortage["id"])["status"] == "confirmed"
-    advance_fields = dict(
-        employee_id=employee,
-        amount="300.00",
-        reason="Synthetic advance",
-        installments=[{"due_date": "2026-09-26", "amount": "300.00"}],
-        employee_acknowledgment="Employee agrees",
-        payroll_authorization="Reviewed authorization",
-    )
+    advance_fields = {
+        "employee_id": employee,
+        "amount": "300.00",
+        "reason": "Synthetic advance",
+        "installments": [{"due_date": "2026-09-26", "amount": "300.00"}],
+        "employee_acknowledgment": "Employee agrees",
+        "payroll_authorization": "Reviewed authorization",
+    }
     advance = case.call("one", "advance_request", **advance_fields)
     case.call(
         "owner",
@@ -1047,16 +1046,16 @@ def test_external_payment_reference_cannot_be_reapplied_with_a_fresh_request_id(
         decision="approved",
         reason="Approved",
     )
-    payment = dict(
-        id=payroll["id"],
-        employee_id=employee,
-        amount="100.00",
-        occurred_at="2026-09-19T18:00:00+08:00",
-        payment_method="gcash",
-        reference="SYN-TRANSFER-ONLY-ONCE",
-        settlement_evidence="Owner verified receiving evidence",
-        result="completed",
-    )
+    payment = {
+        "id": payroll["id"],
+        "employee_id": employee,
+        "amount": "100.00",
+        "occurred_at": "2026-09-19T18:00:00+08:00",
+        "payment_method": "gcash",
+        "reference": "SYN-TRANSFER-ONLY-ONCE",
+        "settlement_evidence": "Owner verified receiving evidence",
+        "result": "completed",
+    }
     case.call("owner", "payroll_payment", expected_version=2, **payment)
     with pytest.raises(EmployeeConflict, match="reference"):
         case.call("owner", "payroll_payment", expected_version=3, **payment)
@@ -1142,14 +1141,14 @@ def test_repeated_advance_terms_are_reviewed_without_losing_state(database):
         employee_acknowledgment="Agreed",
         payroll_authorization="Reviewed authorization",
     )
-    terms = dict(
-        employee_id=employee,
-        id=advance["id"],
-        installments=[{"due_date": "2026-10-03", "amount": "100.00"}],
-        employee_acknowledgment="Agreed changed date",
-        payroll_authorization="Reviewed same principal",
-        reason="Requested date change",
-    )
+    terms = {
+        "employee_id": employee,
+        "id": advance["id"],
+        "installments": [{"due_date": "2026-10-03", "amount": "100.00"}],
+        "employee_acknowledgment": "Agreed changed date",
+        "payroll_authorization": "Reviewed same principal",
+        "reason": "Requested date change",
+    }
     case.call("one", "advance_terms", expected_version=1, **terms)
     with pytest.raises(EmployeeConflict, match="proposal"):
         case.call("one", "advance_terms", expected_version=2, **terms)
@@ -1300,21 +1299,21 @@ def test_restricted_backup_cannot_use_payroll_or_request_duties_for_accounting_o
         duties=["prepare_payroll", "review_requests"],
         reason="Two limited backup duties",
     )
-    accounting = dict(
-        preparation_kind="reconciliation",
-        description="Synthetic supporting reconciliation",
-        as_of="2026-09-19",
-        evidence="Synthetic statement",
-        statement_balance="100.00",
-        ledger_balance="100.00",
-    )
-    shortage = dict(
-        employee_id=other,
-        work_date="2026-09-19",
-        expected_cash="100.00",
-        accounted_cash="90.00",
-        evidence="Synthetic count evidence",
-    )
+    accounting = {
+        "preparation_kind": "reconciliation",
+        "description": "Synthetic supporting reconciliation",
+        "as_of": "2026-09-19",
+        "evidence": "Synthetic statement",
+        "statement_balance": "100.00",
+        "ledger_balance": "100.00",
+    }
+    shortage = {
+        "employee_id": other,
+        "work_date": "2026-09-19",
+        "expected_cash": "100.00",
+        "accounted_cash": "90.00",
+        "evidence": "Synthetic count evidence",
+    }
     with pytest.raises(EmployeeAccessDenied):
         case.call("one", "accounting_prepare", **accounting)
     with pytest.raises(EmployeeAccessDenied):

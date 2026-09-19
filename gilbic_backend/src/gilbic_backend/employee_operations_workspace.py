@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from .employee_authorization import configured_employee_owner_id, is_employee_owner
-from .employee_operations import EmployeeConflict, MANILA
+from .employee_operations import MANILA, EmployeeConflict
 from .employee_operations_repository import TABLES, plain
 
 
@@ -89,9 +89,12 @@ def allowed(tx, domain, row, caps):
             actions.append("payroll_payment")
         if owner and status in ("paid", "partially_paid"):
             actions.append("payroll_adjustment")
-    elif domain == "accounting_preparations" and caps["can_prepare_accounting"]:
-        if owner or row["created_by"] == str(tx.actor.user_id):
-            actions = ["accounting_prepare"]
+    elif (
+        domain == "accounting_preparations"
+        and caps["can_prepare_accounting"]
+        and (owner or row["created_by"] == str(tx.actor.user_id))
+    ):
+        actions = ["accounting_prepare"]
     return actions
 
 

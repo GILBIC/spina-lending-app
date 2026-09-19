@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import calendar
-from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
 from collections.abc import Sequence
+from datetime import date, datetime, timedelta, timezone
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, TypedDict
 from zoneinfo import ZoneInfo
 
 MANILA = ZoneInfo("Asia/Manila")
-ZERO = Decimal("0")
+ZERO = Decimal(0)
 CENT = Decimal("0.01")
 
 
@@ -145,11 +145,11 @@ def leave_accrual_minutes(
 def weekly_tax(taxable: Decimal) -> Decimal:
     """BIR RR11-2018 weekly table effective 2023 onward; reviewed exemptions outside."""
     brackets = [
-        (Decimal("153846"), Decimal("42259.50"), Decimal(".35")),
-        (Decimal("38462"), Decimal("7644.30"), Decimal(".30")),
-        (Decimal("15385"), Decimal("1875"), Decimal(".25")),
-        (Decimal("7692"), Decimal("432.60"), Decimal(".20")),
-        (Decimal("4808"), ZERO, Decimal(".15")),
+        (Decimal(153846), Decimal("42259.50"), Decimal(".35")),
+        (Decimal(38462), Decimal("7644.30"), Decimal(".30")),
+        (Decimal(15385), Decimal(1875), Decimal(".25")),
+        (Decimal(7692), Decimal("432.60"), Decimal(".20")),
+        (Decimal(4808), ZERO, Decimal(".15")),
     ]
     for threshold, base, rate in brackets:
         if taxable > threshold:

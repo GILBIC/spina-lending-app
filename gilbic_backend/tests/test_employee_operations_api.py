@@ -3,8 +3,6 @@ from uuid import uuid4
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from psycopg import errors
-
 from gilbic_backend.account_repository import AccountContext
 from gilbic_backend.employee_authorization import EmployeeAccessDenied
 from gilbic_backend.employee_operations import EmployeeConflict
@@ -13,6 +11,7 @@ from gilbic_backend.employee_operations_api import (
     employee_operations_context,
     employee_operations_repository_dependency,
 )
+from psycopg import errors
 
 
 class Repository:
@@ -131,7 +130,7 @@ def test_domain_denial_and_database_validation_are_controlled(client, error, cod
 
 
 def test_uncertain_action_readback_and_timestamp_validation(client):
-    http, actor, repo = client
+    http, actor, _repo = client
     request_id = uuid4()
     result = http.get(
         "/api/v1/employee-operations/workspace", params={"request_id": str(request_id)}

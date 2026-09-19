@@ -4,22 +4,26 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
-    BeforeValidator,
-    AfterValidator,
     TypeAdapter,
 )
+from pydantic_core import PydanticCustomError
 
 
 def _money_text(value: object) -> object:
     if not isinstance(value, str):
-        raise ValueError("Money must be a decimal string, never a JSON number")
+        raise PydanticCustomError(
+            "value_error",
+            "Value error, Money must be a decimal string, never a JSON number",
+        )
     return value
 
 
@@ -383,38 +387,36 @@ class AccountingPrepare(Command):
 
 
 EmployeeAction = Annotated[
-    Union[
-        ProfileSave,
-        ScheduleSave,
-        BackupSave,
-        CalendarSave,
-        StatutoryMonthSave,
-        StatutoryRemittance,
-        AttendanceRecord,
-        CorrectionRequest,
-        LeaveRequest,
-        ShiftRequest,
-        OvertimeRequest,
-        LeaveConversionRequest,
-        RequestDecide,
-        LeaveBalanceAdjust,
-        TaskSave,
-        TaskProgress,
-        AdvanceRequest,
-        AdvanceTerms,
-        AdvanceDecide,
-        AdvanceDisburse,
-        AdvanceRepay,
-        ShortageReport,
-        ShortageRespond,
-        ShortageDecide,
-        PayrollPrepare,
-        PayrollApprove,
-        PayrollPayment,
-        PayrollAdjustment,
-        PayrollHistoryImport,
-        AccountingPrepare,
-    ],
+    ProfileSave
+    | ScheduleSave
+    | BackupSave
+    | CalendarSave
+    | StatutoryMonthSave
+    | StatutoryRemittance
+    | AttendanceRecord
+    | CorrectionRequest
+    | LeaveRequest
+    | ShiftRequest
+    | OvertimeRequest
+    | LeaveConversionRequest
+    | RequestDecide
+    | LeaveBalanceAdjust
+    | TaskSave
+    | TaskProgress
+    | AdvanceRequest
+    | AdvanceTerms
+    | AdvanceDecide
+    | AdvanceDisburse
+    | AdvanceRepay
+    | ShortageReport
+    | ShortageRespond
+    | ShortageDecide
+    | PayrollPrepare
+    | PayrollApprove
+    | PayrollPayment
+    | PayrollAdjustment
+    | PayrollHistoryImport
+    | AccountingPrepare,
     Field(discriminator="action"),
 ]
 

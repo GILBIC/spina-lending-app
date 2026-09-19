@@ -8,33 +8,33 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
+from typing import Literal, NotRequired, TypedDict, TypeVar, cast, overload
 from uuid import UUID, uuid4
-from typing import Literal, NotRequired, TypeVar, TypedDict, cast, overload
 
 from psycopg import Cursor, sql
 from psycopg.rows import DictRow, dict_row
 from psycopg.types.json import Jsonb
 
+from . import employee_operations_models as commands
 from .account_repository import AccountContext
 from .database import open_connection
 from .employee_authorization import (
     EmployeeAccessDenied,
-    is_employee_owner,
-    require_employee_actor,
-    require_employee_action,
     configure_employee_responsibility,
+    is_employee_owner,
+    require_employee_action,
+    require_employee_actor,
 )
 from .employee_operations import (
+    MANILA,
     AttendanceEvent,
     EmployeeConflict,
-    MANILA,
     attendance_day,
     leave_accrual_minutes,
     money_text,
 )
-from . import employee_operations_models as commands
 from .employee_operations_models import EmployeeAction
 
 TABLES = {
@@ -587,9 +587,9 @@ class EmployeeTransaction:
     def validate_schedule(p):
         if len(set(p["work_days"])) != len(p["work_days"]):
             raise EmployeeConflict("Working days cannot repeat")
-        start = datetime.strptime(p["start_time"], "%H:%M")
-        end = datetime.strptime(p["end_time"], "%H:%M")
-        duration = int((end - start).total_seconds() / 60)
+        start = time.fromisoformat(p["start_time"])
+        end = time.fromisoformat(p["end_time"])
+        duration = (end.hour - start.hour) * 60 + end.minute - start.minute
         if duration <= 0 or duration - p["meal_minutes"] != 480:
             raise EmployeeConflict(
                 "The ordinary schedule must contain eight working hours plus its meal period"
@@ -753,12 +753,13 @@ class EmployeeTransaction:
             raise EmployeeConflict(
                 "Use one request per scheduled day, up to eight hours"
             )
-        if c.action == "leave_request" and c.leave_kind == "ordinary":
-            if (
-                self.leave_balance(c.employee_id, c.work_date)["available_minutes"]
-                < c.minutes
-            ):
-                raise EmployeeConflict("Insufficient eligible ordinary leave balance")
+        if (
+            c.action == "leave_request"
+            and c.leave_kind == "ordinary"
+            and self.leave_balance(c.employee_id, c.work_date)["available_minutes"]
+            < c.minutes
+        ):
+            raise EmployeeConflict("Insufficient eligible ordinary leave balance")
         row = self.save("requests", c.id, c.employee_id, p, "pending")
         self.invalidate(c.employee_id)
         return row
@@ -1248,24 +1249,24 @@ class PostgresEmployeeOperationsRepository:
     def workspace(self, *, actor: AccountContext, request_id=None):
         from .employee_operations_workspace import build_workspace
 
-        with open_connection() as connection:
-            with (
-                connection.transaction(),
-                connection.cursor(row_factory=dict_row) as cursor,
-            ):
-                cursor.execute(
-                    "select pg_advisory_xact_lock(hashtext('spina.employee_operations'))"
-                )
-                require_employee_actor(cursor, actor)
-                return build_workspace(EmployeeTransaction(cursor, actor), request_id)
+        with (
+            open_connection() as connection,
+            connection.transaction(),
+            connection.cursor(row_factory=dict_row) as cursor,
+        ):
+            cursor.execute(
+                "select pg_advisory_xact_lock(hashtext('spina.employee_operations'))"
+            )
+            require_employee_actor(cursor, actor)
+            return build_workspace(EmployeeTransaction(cursor, actor), request_id)
 
     def execute(self, *, actor: AccountContext, command: EmployeeAction):
-        with open_connection() as connection:
-            with (
-                connection.transaction(),
-                connection.cursor(row_factory=dict_row) as cursor,
-            ):
-                return self.execute_in_transaction(cursor, actor=actor, command=command)
+        with (
+            open_connection() as connection,
+            connection.transaction(),
+            connection.cursor(row_factory=dict_row) as cursor,
+        ):
+            return self.execute_in_transaction(cursor, actor=actor, command=command)
 
     @staticmethod
     def execute_in_transaction(

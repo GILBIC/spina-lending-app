@@ -2,15 +2,14 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 import pytest
-
 from gilbic_backend.employee_operations import (
     EmployeeConflict,
     attendance_day,
     day_pay,
     leave_accrual_minutes,
     principal_installment,
-    weekly_tax,
     weekly_performance_benefit,
+    weekly_tax,
 )
 
 
@@ -36,11 +35,11 @@ def test_confirmed_shortage_sets_benefit_zero_without_negative_deduction():
 
 
 def test_overtime_is_paid_separately_and_leave_does_not_manufacture_overtime():
-    value = day_pay(daily_rate=Decimal("800"), working_minutes=540, leave_minutes=0)
-    assert value["basic_pay"] == Decimal("800")
-    assert value["overtime"] == Decimal("125")
+    value = day_pay(daily_rate=Decimal(800), working_minutes=540, leave_minutes=0)
+    assert value["basic_pay"] == Decimal(800)
+    assert value["overtime"] == Decimal(125)
     with pytest.raises(EmployeeConflict, match="overlap"):
-        day_pay(daily_rate=Decimal("800"), working_minutes=300, leave_minutes=240)
+        day_pay(daily_rate=Decimal(800), working_minutes=300, leave_minutes=240)
 
 
 @pytest.mark.parametrize(
@@ -56,7 +55,7 @@ def test_overtime_is_paid_separately_and_leave_does_not_manufacture_overtime():
 )
 def test_covered_day_premiums(kind, rest, expected):
     value = day_pay(
-        daily_rate=Decimal("800"),
+        daily_rate=Decimal(800),
         working_minutes=480,
         leave_minutes=0,
         day_kind=kind,
@@ -66,12 +65,8 @@ def test_covered_day_premiums(kind, rest, expected):
 
 
 def test_principal_cap_and_insufficient_pay_do_not_create_negative_wages():
-    assert principal_installment(
-        Decimal("500"), Decimal("80"), Decimal("200")
-    ) == Decimal("80")
-    assert principal_installment(
-        Decimal("500"), Decimal("800"), Decimal("200")
-    ) == Decimal("0")
+    assert principal_installment(Decimal(500), Decimal(80), Decimal(200)) == Decimal(80)
+    assert principal_installment(Decimal(500), Decimal(800), Decimal(200)) == Decimal(0)
 
 
 def test_ordinary_leave_is_unavailable_before_one_year_then_proportional():
@@ -81,9 +76,9 @@ def test_ordinary_leave_is_unavailable_before_one_year_then_proportional():
 
 
 def test_weekly_tax_bracket_uses_decimal_and_does_not_repeat_monthly_amount():
-    assert weekly_tax(Decimal("4808")) == Decimal("0.00")
-    assert weekly_tax(Decimal("6000")) == Decimal("178.80")
-    assert weekly_tax(Decimal("8000")) == Decimal("494.20")
+    assert weekly_tax(Decimal(4808)) == Decimal("0.00")
+    assert weekly_tax(Decimal(6000)) == Decimal("178.80")
+    assert weekly_tax(Decimal(8000)) == Decimal("494.20")
 
 
 def event(kind, hour, previous=None, identity="x"):

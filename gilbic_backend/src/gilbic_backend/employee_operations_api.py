@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import Annotated
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from psycopg import OperationalError, errors
+
 from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
@@ -21,10 +24,12 @@ def employee_operations_repository_dependency():
 
 
 def employee_operations_context(
-    authorization: str | None = Header(default=None, alias="Authorization"),
-    x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
-    auth: SupabaseAuthClient = Depends(auth_client_dependency),
-    accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+    auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+    accounts: Annotated[
+        PostgresAccountRepository, Depends(account_repository_dependency)
+    ],
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+    x_device_id: Annotated[str | None, Header(alias="X-Device-Id")] = None,
 ) -> AccountContext:
     actor = authenticated_device_context(
         authorization=authorization,
@@ -85,17 +90,23 @@ def create_employee_operations_router():
 
     @router.get("/workspace")
     def workspace(
-        request_id: UUID | None = Query(default=None),
-        actor: AccountContext = Depends(employee_operations_context),
-        repository=Depends(employee_operations_repository_dependency),
+        actor: Annotated[AccountContext, Depends(employee_operations_context)],
+        repository: Annotated[
+            PostgresEmployeeOperationsRepository,
+            Depends(employee_operations_repository_dependency),
+        ],
+        request_id: Annotated[UUID | None, Query()] = None,
     ):
         return _call(lambda: repository.workspace(actor=actor, request_id=request_id))
 
     @router.post("/actions")
     def action(
         command: EmployeeAction,
-        actor: AccountContext = Depends(employee_operations_context),
-        repository=Depends(employee_operations_repository_dependency),
+        actor: Annotated[AccountContext, Depends(employee_operations_context)],
+        repository: Annotated[
+            PostgresEmployeeOperationsRepository,
+            Depends(employee_operations_repository_dependency),
+        ],
     ):
         return _call(lambda: repository.execute(actor=actor, command=command))
 

@@ -10,17 +10,16 @@ from uuid import uuid4
 
 import psycopg
 import pytest
-from psycopg import sql
-from psycopg.rows import dict_row
-
 import test_employee_operations_postgres as employee_proofs
 from gilbic_backend.employee_operations import EmployeeConflict
 from gilbic_backend.employee_operations_models import ACTION_ADAPTER
 from gilbic_backend.employee_operations_repository import (
     PostgresEmployeeOperationsRepository,
 )
-from tools import run_stage5d17_disposable_postgres_validation as disposable
+from psycopg import sql
+from psycopg.rows import dict_row
 
+from tools import run_stage5d17_disposable_postgres_validation as disposable
 
 BASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
