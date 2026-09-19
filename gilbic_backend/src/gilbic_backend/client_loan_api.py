@@ -47,6 +47,7 @@ def _loan_payload(record: ClientLoanRecord) -> dict[str, object]:
             record.date_released.isoformat() if record.date_released else None
         ),
         "due_date": record.due_date.isoformat() if record.due_date else None,
+        "first_payment_date": record.first_payment_date.isoformat() if record.first_payment_date else None,
         "status": record.status,
         "remaining_balance": _decimal(record.remaining_balance),
         "paid_amount": _decimal(record.paid_amount),

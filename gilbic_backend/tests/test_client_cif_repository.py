@@ -119,7 +119,10 @@ def _wire_repository(monkeypatch: pytest.MonkeyPatch, connection: FakeConnection
 
 
 def _sql(connection: FakeConnection) -> list[str]:
-    return [" ".join(query.lower().split()) for query, _ in connection.cursor_instance.executions]
+    return [
+        " ".join(query.lower().split())
+        for query, _ in connection.cursor_instance.executions
+    ]
 
 
 def test_begin_draft_requires_eligible_promoted_inactive_client_and_seeds_version_one(
@@ -143,7 +146,10 @@ def test_begin_draft_requires_eligible_promoted_inactive_client_and_seeds_versio
 
     queries = _sql(connection)
     assert "from lending.client_onboarding_applicants applicant" in queries[0]
-    assert "join lending.clients client on client.id = applicant.promoted_client_id" in queries[0]
+    assert (
+        "join lending.clients client on client.id = applicant.promoted_client_id"
+        in queries[0]
+    )
     assert "applicant.promoted_client_id = %s" in queries[0]
     assert "applicant.status = 'eligible_for_cif'" in queries[0]
     assert "client.status = 'inactive'" in queries[0]
@@ -214,7 +220,10 @@ def test_begin_draft_is_idempotent_when_current_draft_already_exists(
     assert record.status == "draft"
 
     queries = _sql(connection)
-    assert sum("insert into lending.client_cif_versions" in query for query in queries) == 0
+    assert (
+        sum("insert into lending.client_cif_versions" in query for query in queries)
+        == 0
+    )
 
 
 def test_record_baseline_live_face_updates_only_the_current_draft(
@@ -290,8 +299,23 @@ def test_activate_current_requires_passed_liveness_and_face_evidence(
 def test_activate_current_marks_cif_and_existing_client_active_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    connection = FakeConnection([READY_DRAFT_ROW, ACTIVE_ROW])
+    snapshot = {
+        key: READY_DRAFT_ROW[key]
+        for key in ("full_name", "phone_number", "email", "present_address")
+    }
+    confirmation = {
+        "review_snapshot": snapshot,
+        "applicant_confirmation_evidence_reference": f"office-evidence:{CIF_ID}",
+        "witnessed_by_user_id": ACTOR_USER_ID,
+    }
+    connection = FakeConnection([READY_DRAFT_ROW, confirmation, ACTIVE_ROW])
     module, repository = _wire_repository(monkeypatch, connection)
+    evidence_calls = []
+    monkeypatch.setattr(
+        module,
+        "require_evidence",
+        lambda cursor, **values: evidence_calls.append(values),
+    )
 
     record = repository.activate_current(
         actor_user_id=ACTOR_USER_ID,
@@ -303,6 +327,9 @@ def test_activate_current_marks_cif_and_existing_client_active_once(
     assert record.activated_at == ACTIVE_ROW["activated_at"]
     assert record.expires_at == ACTIVE_ROW["expires_at"]
     assert record.review_due_at == ACTIVE_ROW["review_due_at"]
+    assert len(evidence_calls) == 1
+    assert evidence_calls[0]["purpose"] == "cif_review"
+    assert evidence_calls[0]["review_snapshot"]["information"] == snapshot
 
     queries = _sql(connection)
     cif_update = next(
@@ -311,10 +338,14 @@ def test_activate_current_marks_cif_and_existing_client_active_once(
     assert "status = 'active'" in cif_update
     assert "activated_at = now()" in cif_update
     assert "expires_at = now() + interval '5 years'" in cif_update
-    assert "review_due_at = now() + interval '5 years' - interval '90 days'" in cif_update
+    assert (
+        "review_due_at = now() + interval '5 years' - interval '90 days'" in cif_update
+    )
     assert "activated_by_user_id = %s" in cif_update
 
-    client_update = next(query for query in queries if "update lending.clients" in query)
+    client_update = next(
+        query for query in queries if "update lending.clients" in query
+    )
     assert "status = 'active'" in client_update
     assert "where id = %s" in client_update
     assert "status = 'inactive'" in client_update

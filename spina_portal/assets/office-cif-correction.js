@@ -45,6 +45,7 @@ function editedInformation(fields) {
 
 export function mountOfficeCifCorrection({
   root, api, session, clientId, signal, onEditing, onClosed, onSaved, onAccessDenied,
+  allowSuccessor = false, includeIdentity = false,
 }) {
   mounts.get(root)?.();
   root.innerHTML = '';
@@ -55,6 +56,8 @@ export function mountOfficeCifCorrection({
   let expectedInformation = null;
   let fields = {};
   let listeners = [];
+  let successor = false;
+  const identityFields = ['birth_date', 'birth_place', 'civil_status', 'citizenship'];
 
   function listen(element, event, handler) {
     element.addEventListener(event, handler);
@@ -138,16 +141,23 @@ export function mountOfficeCifCorrection({
     state = 'editing';
     original = { cif_version_id: review.cif_version_id, version_number: review.version_number };
     expectedInformation = Object.fromEntries(INFORMATION.map((name) => [name, review[name]]));
+    if (review.identity_information != null) expectedInformation.identity_information = { ...review.identity_information };
     replaceContent(`<form class="entry-form">
       ${FIELDS.map(([name, label, minimum, maximum]) => {
         const attributes = `name="${name}" maxlength="${maximum}"${minimum ? ` minlength="${minimum}" required` : ''}`;
         return `<label>${label}${['present_address', 'reason'].includes(name)
           ? `<textarea ${attributes}></textarea>` : `<input type="${name === 'phone_number' ? 'tel' : 'text'}" ${attributes} autocomplete="off" />`}</label>`;
       }).join('')}
-      <div class="action-row"><button class="button button-primary" type="submit">Save correction</button>${cancelMarkup()}</div>
+      ${includeIdentity ? identityFields.map(name => `<label>${name.replaceAll('_', ' ')} (optional)<input name="${name}" type="${name === 'birth_date' ? 'date' : 'text'}" maxlength="${name === 'birth_place' ? 300 : 100}" autocomplete="off" /></label>`).join('') : ''}
+      ${successor ? '<p>A new CIF draft will preserve the earlier review and activation history. This new draft requires fresh review and verification.</p>' : ''}
+      <div class="action-row"><button class="button button-primary" type="submit">${successor ? 'Start new review cycle' : 'Save correction'}</button>${cancelMarkup()}</div>
     </form><div data-correction-status role="status" aria-live="polite"></div>`);
     fields = Object.fromEntries(FIELDS.map(([name]) => [name, root.querySelector(`[name="${name}"]`)]));
     for (const name of INFORMATION) fields[name].value = review[name] ?? '';
+    if (includeIdentity) for (const name of identityFields) {
+      fields[name] = root.querySelector(`[name="${name}"]`);
+      fields[name].value = review.identity_information?.[name] ?? '';
+    }
     listen(root.querySelector('form'), 'submit', save);
     bindCancel();
   }
@@ -163,13 +173,14 @@ export function mountOfficeCifCorrection({
     if (!current(token)) return;
     try {
       const review = await api.request(
-        `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary?include_correction_availability=true`,
+        `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary?include_correction_availability=true${includeIdentity ? '&include_identity_information=true' : ''}`,
       );
       if (!current(token)) return;
       if (!validReview(review, clientId) || typeof review.can_correct_information !== 'boolean') {
         throw new Error('The current CIF response is invalid or does not match this Client.');
       }
-      if (!review.can_correct_information) {
+      successor = !review.can_correct_information && allowSuccessor;
+      if (!review.can_correct_information && !allowSuccessor) {
         state = 'unavailable';
         replaceContent(`<p class="notice-card">This CIF is read-only. Corrections are unavailable for its current state.</p>
           <div class="detail-grid">${FIELDS.slice(0, 4).map(([name, label]) => `<div class="detail-item"><span>${label}</span><strong>${escapeHtml(review[name] ?? 'Not provided')}</strong></div>`).join('')}</div>
@@ -197,6 +208,12 @@ export function mountOfficeCifCorrection({
     let edited;
     try {
       edited = editedInformation(fields);
+      if (includeIdentity) {
+        const identity = Object.fromEntries(identityFields.map(name => [name, fields[name].value.trim() || null]));
+        if (expectedInformation.identity_information || Object.values(identity).some(value => value !== null)) {
+          edited.information.identity_information = identity;
+        }
+      }
     } catch (error) {
       showError(error);
       return;
@@ -209,9 +226,9 @@ export function mountOfficeCifCorrection({
     let saved;
     try {
       saved = await api.request(
-        `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/draft-information`,
+        `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/${successor ? 'review-cycles' : 'draft-information'}`,
         {
-          method: 'PATCH',
+          method: successor ? 'POST' : 'PATCH',
           body: {
             cif_version_id: original.cif_version_id,
             expected_information: { ...expectedInformation },
@@ -221,7 +238,8 @@ export function mountOfficeCifCorrection({
         },
       );
       if (!current(token)) return;
-      if (!validReview(saved, clientId, original)) {
+      if (!validReview(saved, clientId, successor ? null : original)
+        || (successor && (saved.cif_version_id === original.cif_version_id || saved.version_number <= original.version_number))) {
         throw new Error('The save response could not be verified.');
       }
     } catch (error) {

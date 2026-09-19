@@ -26,6 +26,17 @@ const OBLIGATION = [
   ['payment_frequency', 'Payment frequency', 'text'],
   ['notes', 'Notes', 'text'],
 ];
+const EMPLOYMENT = [
+  ['employer_or_business_name', 'Employer or business name', 'text'],
+  ['position_or_business_nature', 'Position or nature of business', 'text'],
+  ['length_of_employment_or_operation', 'Length of employment or operation', 'text'],
+  ['employer_or_business_address', 'Employer or business address', 'text'],
+  ['contact_number', 'Employer or business contact number', 'text'],
+];
+const REFERENCE = [
+  ['full_name', 'Name', 'text'], ['relationship', 'Relationship', 'text'],
+  ['phone_number', 'Phone number', 'text'], ['address', 'Address', 'text'],
+];
 
 function object(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function uuid(value) { return typeof value === 'string' && UUID.test(value); }
@@ -50,7 +61,11 @@ function validFields(value, fields, extra = []) {
     && fields.every(([name, , kind]) => nullable(value[name], kind));
 }
 function validInformation(value) {
-  return hasKeys(value, ['request', 'repayment']) && validFields(value.request, REQUEST)
+  return (hasKeys(value, ['request', 'repayment']) || (hasKeys(value, ['request', 'repayment', 'details'])
+      && hasKeys(value.details, ['schema_version', 'employment', 'references'])
+      && value.details.schema_version === 1 && validFields(value.details.employment, EMPLOYMENT)
+      && Array.isArray(value.details.references) && value.details.references.every((row) => validFields(row, REFERENCE))))
+    && validFields(value.request, REQUEST)
     && validFields(value.repayment, REPAYMENT, ['obligations'])
     && Array.isArray(value.repayment.obligations)
     && value.repayment.obligations.every((row) => validFields(row, OBLIGATION))
@@ -60,7 +75,11 @@ function sameInformation(left, right) {
   return REQUEST.every(([name]) => left.request[name] === right.request[name])
     && REPAYMENT.every(([name]) => left.repayment[name] === right.repayment[name])
     && left.repayment.obligations.length === right.repayment.obligations.length
-    && left.repayment.obligations.every((row, index) => OBLIGATION.every(([name]) => row[name] === right.repayment.obligations[index][name]));
+    && left.repayment.obligations.every((row, index) => OBLIGATION.every(([name]) => row[name] === right.repayment.obligations[index][name]))
+    && ((!left.details && !right.details) || (left.details && right.details
+      && EMPLOYMENT.every(([name]) => left.details.employment[name] === right.details.employment[name])
+      && left.details.references.length === right.details.references.length
+      && left.details.references.every((row, index) => REFERENCE.every(([name]) => row[name] === right.details.references[index][name]))));
 }
 function validApplication(value, clientId, reference, enriched = false) {
   if (!object(value) || !sameId(value.client_id, clientId)
@@ -109,6 +128,7 @@ export function mountOfficeApplicationEntry({
   let context = null;
   let fields = {};
   let rowCount = 0;
+  let referenceCount = 0;
   let listeners = [];
 
   function listen(element, event, handler) {
@@ -174,6 +194,7 @@ export function mountOfficeApplicationEntry({
   function setDisabled(disabled) {
     for (const field of Object.values(fields)) field.disabled = disabled;
     for (const button of root.querySelectorAll('[data-obligation-action]')) button.disabled = disabled;
+    for (const button of root.querySelectorAll('[data-reference-action]')) button.disabled = disabled;
     updateSave();
   }
 
@@ -207,24 +228,33 @@ export function mountOfficeApplicationEntry({
         return [name, raw.trim() ? raw : null];
       }));
     }
-    return {
+    const information = {
       request: values(REQUEST),
       repayment: { ...values(REPAYMENT), obligations: Array.from({ length: rowCount }, (_, index) => values(OBLIGATION, `obligation_${index}_`)) },
     };
+    const employment = values(EMPLOYMENT);
+    if (original?.information.details || referenceCount || Object.values(employment).some((value) => value !== null)) {
+      information.details = { schema_version: 1, employment,
+        references: Array.from({ length: referenceCount }, (_, index) => values(REFERENCE, `reference_${index}_`)) };
+    }
+    return information;
   }
 
-  function changeRows(index) {
+  function changeRows(index, references = false) {
     if (disposed || state !== 'editing') return;
     const values = readInformation();
     const selectedSource = sourceChosen();
-    if (index === null) values.repayment.obligations.push(blank(OBLIGATION));
-    else values.repayment.obligations.splice(index, 1);
+    if (references && !values.details) values.details = { schema_version: 1, employment: blank(EMPLOYMENT), references: [] };
+    const rows = references ? values.details.references : values.repayment.obligations;
+    if (index === null) rows.push(blank(references ? REFERENCE : OBLIGATION));
+    else rows.splice(index, 1);
     renderForm(values, selectedSource);
   }
 
   function renderForm(information, selectedSource = false) {
     state = 'editing';
     rowCount = information.repayment.obligations.length;
+    referenceCount = information.details?.references.length ?? 0;
     replaceContent(`<form class="entry-form">
       <h3>${original ? 'Edit application information' : 'New application'}</h3>
       <p>Loan application reference: ${escapeHtml(reference)}</p>
@@ -238,6 +268,13 @@ export function mountOfficeApplicationEntry({
       ${information.repayment.obligations.map((_, index) => `<section class="data-card"><h5>Obligation ${index + 1}</h5>${OBLIGATION.map((definition) => fieldMarkup(definition, `obligation_${index}_`)).join('')}
         <button class="button button-outline" type="button" data-obligation-action="remove-${index}">Remove obligation ${index + 1}</button></section>`).join('')}
       <button class="button button-outline" type="button" data-obligation-action="add">Add obligation</button>
+      <h4>Employment or business details</h4>
+      <p>Optional declared information. These entries do not verify employment, income, or a reference.</p>
+      ${EMPLOYMENT.map((definition) => fieldMarkup(definition)).join('')}
+      <h4>References or emergency contacts</h4><p>Optional; add the contacts the applicant provides.</p>
+      ${(information.details?.references ?? []).map((_, index) => `<section class="data-card"><h5>Reference ${index + 1}</h5>${REFERENCE.map((definition) => fieldMarkup(definition, `reference_${index}_`)).join('')}
+        <button class="button button-outline" type="button" data-reference-action="remove-${index}">Remove reference ${index + 1}</button></section>`).join('')}
+      <button class="button button-outline" type="button" data-reference-action="add">Add reference</button>
       <div class="action-row"><button class="button button-primary" type="submit">Save application</button>${cancelMarkup()}</div>
     </form><div data-entry-status role="status" aria-live="polite"></div>`);
     function fill(definitions, values, prefix = '') {
@@ -250,6 +287,8 @@ export function mountOfficeApplicationEntry({
     fill(REQUEST, information.request);
     fill(REPAYMENT, information.repayment);
     information.repayment.obligations.forEach((row, index) => fill(OBLIGATION, row, `obligation_${index}_`));
+    fill(EMPLOYMENT, information.details?.employment ?? blank(EMPLOYMENT));
+    information.details?.references.forEach((row, index) => fill(REFERENCE, row, `reference_${index}_`));
     if (sourceChanged()) {
       fields.use_current_cif = root.querySelector('[name="use_current_cif"]');
       fields.use_current_cif.checked = selectedSource;
@@ -259,6 +298,10 @@ export function mountOfficeApplicationEntry({
     listen(root.querySelector('[data-obligation-action="add"]'), 'click', () => changeRows(null));
     information.repayment.obligations.forEach((_, index) => {
       listen(root.querySelector(`[data-obligation-action="remove-${index}"]`), 'click', () => changeRows(index));
+    });
+    listen(root.querySelector('[data-reference-action="add"]'), 'click', () => changeRows(null, true));
+    information.details?.references.forEach((_, index) => {
+      listen(root.querySelector(`[data-reference-action="remove-${index}"]`), 'click', () => changeRows(index, true));
     });
     bindCancel();
     updateSave();

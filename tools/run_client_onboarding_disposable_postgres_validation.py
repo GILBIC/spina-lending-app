@@ -14,19 +14,25 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
 TARGET_TEST = (
+    ROOT / "gilbic_backend" / "tests" / "test_client_onboarding_promotion_postgres.py"
+)
+CIF_TEST = (
     ROOT
     / "gilbic_backend"
     / "tests"
-    / "test_client_onboarding_promotion_postgres.py"
-)
-CIF_TEST = (
-    ROOT / "gilbic_backend" / "tests" / "test_client_cif_review_confirmation_postgres.py"
+    / "test_client_cif_review_confirmation_postgres.py"
 )
 CIF_CORRECTION_AVAILABILITY_TEST = (
-    ROOT / "gilbic_backend" / "tests" / "test_client_cif_correction_availability_postgres.py"
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_client_cif_correction_availability_postgres.py"
 )
 ONBOARDING_CIF_SELECTION_TEST = (
-    ROOT / "gilbic_backend" / "tests" / "test_client_onboarding_cif_selection_postgres.py"
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_client_onboarding_cif_selection_postgres.py"
 )
 CIF_CONFIRMATION_REPOSITORY_TEST = (
     ROOT
@@ -44,10 +50,16 @@ APPLICATION_REPOSITORY_TEST = (
     ROOT / "gilbic_backend" / "tests" / "test_loan_application_repository_postgres.py"
 )
 APPLICATION_REFERENCE_REVIEW_TEST = (
-    ROOT / "gilbic_backend" / "tests" / "test_loan_application_reference_review_postgres.py"
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_loan_application_reference_review_postgres.py"
 )
 APPLICATION_ENTRY_CONTEXT_TEST = (
-    ROOT / "gilbic_backend" / "tests" / "test_loan_application_entry_context_postgres.py"
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_loan_application_entry_context_postgres.py"
 )
 APPLICATION_CONFIRMATION_TEST = (
     ROOT
@@ -57,9 +69,37 @@ APPLICATION_CONFIRMATION_TEST = (
 )
 CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0114_add_client_cif_first_loan_foundation.sql",
+    ROOT
+    / "gilbic_backend"
+    / "sql"
+    / "0115_align_7x7_signed_schedule_accounting_authority.sql",
+    ROOT / "gilbic_backend" / "sql" / "0116_enforce_one_active_7x7_per_client.sql",
+    ROOT / "gilbic_backend" / "sql" / "0117_add_7x7_pricing_compliance_readiness.sql",
+    ROOT
+    / "gilbic_backend"
+    / "sql"
+    / "0118_add_7x7_post_maturity_penalty_authority.sql",
     ROOT / "gilbic_backend" / "sql" / "0119_add_client_cif_review_confirmation.sql",
     ROOT / "gilbic_backend" / "sql" / "0120_add_loan_application_history.sql",
-    ROOT / "gilbic_backend" / "sql" / "0121_add_loan_application_review_confirmation.sql",
+    ROOT
+    / "gilbic_backend"
+    / "sql"
+    / "0121_add_loan_application_review_confirmation.sql",
+    ROOT / "gilbic_backend" / "sql" / "0122_add_office_review_evidence.sql",
+    ROOT / "gilbic_backend" / "sql" / "0123_add_first_loan_office_release.sql",
+    ROOT / "gilbic_backend" / "sql" / "0124_add_loan_application_details.sql",
+    ROOT / "gilbic_backend" / "sql" / "0125_add_versioned_privacy_acknowledgments.sql",
+)
+FULL_FLOW_TESTS = tuple(
+    ROOT / "gilbic_backend" / "tests" / name
+    for name in (
+        "test_client_onboarding_case_postgres.py",
+        "test_loan_application_extended_postgres.py",
+        "test_office_review_evidence_postgres.py",
+        "test_first_loan_postgres.py",
+        "test_first_loan_credentials_postgres.py",
+        "test_privacy_records_postgres.py",
+    )
 )
 BOOTSTRAP_THROUGH = 112
 DISPOSABLE_DATABASE_PREFIX = "spina_onboarding_"
@@ -94,6 +134,7 @@ def validate(base_database_url: str) -> None:
         APPLICATION_REFERENCE_REVIEW_TEST,
         APPLICATION_ENTRY_CONTEXT_TEST,
         APPLICATION_CONFIRMATION_TEST,
+        *FULL_FLOW_TESTS,
         *CIF_MIGRATIONS,
     ):
         if not path.is_file():
@@ -119,8 +160,7 @@ def validate(base_database_url: str) -> None:
         disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        # Apply only CIF/application prerequisites; do not advance unrelated financial
-        # migrations or create a second database/workflow for this proof.
+        # Replay the CIF/application/release prerequisites in one disposable proof.
         with psycopg.connect(test_url, autocommit=True) as connection:
             for path in CIF_MIGRATIONS:
                 connection.execute(path.read_text(encoding="utf-8"))
@@ -142,6 +182,7 @@ def validate(base_database_url: str) -> None:
                 str(APPLICATION_REFERENCE_REVIEW_TEST),
                 str(APPLICATION_ENTRY_CONTEXT_TEST),
                 str(APPLICATION_CONFIRMATION_TEST),
+                *(str(path) for path in FULL_FLOW_TESTS),
             ],
             cwd=ROOT,
             env=_test_environment(test_url),
@@ -157,13 +198,15 @@ def validate(base_database_url: str) -> None:
     finally:
         disposable.BOOTSTRAP_THROUGH = original_bootstrap_through
         if created:
-            print(f"Dropping onboarding disposable PostgreSQL database: {database_name}")
+            print(
+                f"Dropping onboarding disposable PostgreSQL database: {database_name}"
+            )
             with psycopg.connect(admin_url, autocommit=True) as admin:
                 disposable._drop_database(admin, database_name)
 
     print(
         "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
-        "plus CIF/application migrations 0114/0119/0120/0121 was replayed in a fresh loopback database; "
+        "plus CIF/application/release migrations 0114 through 0125 was replayed in a fresh loopback database; "
         "confirmation/application-history integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."

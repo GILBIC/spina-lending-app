@@ -10,6 +10,17 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from .database import open_connection
+from .client_cif_identity_information import (
+    CifIdentityInformation,
+    cif_information_from_row,
+)
+from .office_review_evidence_repository import (
+    OfficeReviewEvidenceAccessDenied,
+    OfficeReviewEvidenceConflict,
+    _require_actor as _require_review_actor,
+    cif_review_snapshot,
+    require_evidence,
+)
 
 
 ClientCifStatus = Literal["draft", "active", "superseded"]
@@ -45,12 +56,18 @@ class ClientCifCorrectionSummary(ClientCifVersion):
 
 
 @dataclass(frozen=True, slots=True)
+class ClientCifIdentitySummary(ClientCifVersion):
+    identity_information: dict | None
+    can_correct_information: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class ClientCifReviewConfirmationRecord:
     id: UUID
     client_id: UUID
     cif_version_id: UUID
     review_cycle_number: int
-    review_snapshot: dict[str, str | None]
+    review_snapshot: dict[str, object]
     applicant_confirmation_evidence_reference: str
     witnessed_by_user_id: UUID
     confirmed_at: datetime
@@ -173,9 +190,14 @@ _CIF_SELECT_COLUMNS = """
 _CIF_INFORMATION_FIELDS = ("full_name", "phone_number", "email", "present_address")
 
 
-def _cif_information_snapshot(value: Mapping[str, object]) -> dict[str, str | None]:
-    if not isinstance(value, Mapping) or set(value) != set(_CIF_INFORMATION_FIELDS):
-        raise ValueError("Exactly the four CIF information fields are required.")
+def _cif_information_snapshot(value: Mapping[str, object]) -> dict:
+    if not isinstance(value, Mapping) or set(value) not in (
+        set(_CIF_INFORMATION_FIELDS),
+        {*_CIF_INFORMATION_FIELDS, "identity_information"},
+    ):
+        raise ValueError(
+            "The four CIF fields and optional identity information are required."
+        )
     for field in _CIF_INFORMATION_FIELDS:
         if not isinstance(value[field], str) and not (
             field == "email" and value[field] is None
@@ -184,7 +206,11 @@ def _cif_information_snapshot(value: Mapping[str, object]) -> dict[str, str | No
                 "CIF information fields must be text; only email may be null."
             )
     # Never normalize the reviewed snapshot: it must match the stored values exactly.
-    return {field: cast(str | None, value[field]) for field in _CIF_INFORMATION_FIELDS}
+    result = {field: value[field] for field in _CIF_INFORMATION_FIELDS}
+    if value.get("identity_information") is not None:
+        CifIdentityInformation.model_validate(value["identity_information"])
+        result["identity_information"] = dict(value["identity_information"])
+    return result
 
 
 def normalize_cif_information(value: Mapping[str, object]) -> dict[str, str | None]:
@@ -211,10 +237,162 @@ def normalize_cif_information(value: Mapping[str, object]) -> dict[str, str | No
         if len(email) > 320:
             raise ValueError("CIF email is too long.")
         information["email"] = email.strip().lower() or None
+    if information.get("identity_information") is not None:
+        information["identity_information"] = CifIdentityInformation.model_validate(
+            information["identity_information"]
+        ).model_dump(mode="json")
     return information
 
 
+def _review_record_from_row(row):
+    record = _record_from_row(row)
+    if row.get("identity_information") is not None:
+        return ClientCifIdentitySummary(
+            **asdict(record), identity_information=row["identity_information"]
+        )
+    return record
+
+
 class PostgresClientCifRepository:
+    def begin_review_cycle(
+        self,
+        *,
+        actor_user_id: UUID,
+        client_id: UUID,
+        cif_version_id: UUID,
+        expected_information: Mapping[str, object],
+        corrected_information: Mapping[str, object],
+        reason: str,
+    ) -> ClientCifVersion:
+        expected = _cif_information_snapshot(expected_information)
+        corrected = normalize_cif_information(corrected_information)
+        reason = " ".join(reason.split())
+        if not 3 <= len(reason) <= 500:
+            raise ValueError(
+                "A review-cycle reason of 3 to 500 characters is required."
+            )
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                try:
+                    _require_review_actor(cursor, actor_user_id)
+                except OfficeReviewEvidenceAccessDenied as error:
+                    raise ClientCifAccessDenied(str(error)) from error
+                current = cursor.execute(
+                    f"""
+                    select {_CIF_SELECT_COLUMNS}, cif.identity_information, client.status as client_status,
+                           applicant.status as applicant_status,
+                           exists (select 1 from lending.client_cif_review_cycles cycle
+                                   where cycle.cif_version_id = cif.id) as is_successor
+                    from lending.client_cif_versions cif
+                    join lending.clients client on client.id = cif.client_id
+                    join lending.client_onboarding_applicants applicant
+                      on applicant.promoted_client_id = cif.client_id
+                    where cif.id = %s and cif.client_id = %s
+                    for update of cif, client, applicant
+                    """,
+                    (cif_version_id, client_id),
+                ).fetchone()
+                if current is None:
+                    raise ClientCifConflict(
+                        "No eligible CIF review cycle is available."
+                    )
+                previous = cursor.execute(
+                    f"""
+                    select {_CIF_SELECT_COLUMNS}, cif.identity_information, cycle.reason, cycle.created_by_user_id
+                    from lending.client_cif_review_cycles cycle
+                    join lending.client_cif_versions cif on cif.id = cycle.cif_version_id
+                    where cycle.predecessor_cif_version_id = %s and cycle.client_id = %s
+                    """,
+                    (cif_version_id, client_id),
+                ).fetchone()
+                saved = cif_information_from_row(current)
+                if saved != expected:
+                    raise ClientCifConflict("CIF changed; refresh the office review.")
+                if previous is not None:
+                    if (
+                        previous["reason"] != reason
+                        or previous["created_by_user_id"] != actor_user_id
+                        or cif_information_from_row(previous) != corrected
+                    ):
+                        raise ClientCifConflict(
+                            "Review cycle was already started with different information."
+                        )
+                    return _review_record_from_row(previous)
+                if not (
+                    current["is_current"]
+                    and (
+                        (
+                            current["status"] == "active"
+                            and current["client_status"] == "active"
+                        )
+                        or (
+                            current["status"] == "draft"
+                            and (
+                                current["client_status"] == "inactive"
+                                or (
+                                    current["client_status"] == "active"
+                                    and current["is_successor"]
+                                )
+                            )
+                        )
+                    )
+                    and current["applicant_status"] == "eligible_for_cif"
+                ):
+                    raise ClientCifConflict(
+                        "No eligible CIF review cycle is available."
+                    )
+                confirmed = cursor.execute(
+                    "select 1 from lending.client_cif_review_confirmations where cif_version_id = %s",
+                    (cif_version_id,),
+                ).fetchone()
+                if confirmed is None and current["status"] != "active":
+                    raise ClientCifConflict(
+                        "Correct the unconfirmed draft before starting another review cycle."
+                    )
+                number = cursor.execute(
+                    "select coalesce(max(version_number), 0) + 1 as next_version "
+                    "from lending.client_cif_versions where client_id = %s",
+                    (client_id,),
+                ).fetchone()["next_version"]
+                # Retain historical information, activation dates and verification
+                # evidence. Existing Client servicing remains active throughout.
+                cursor.execute(
+                    "update lending.client_cif_versions set is_current = false where id = %s",
+                    (cif_version_id,),
+                )
+                created = cursor.execute(
+                    f"""
+                    insert into lending.client_cif_versions (
+                        client_id, version_number, full_name, phone_number, email, present_address,
+                        national_id_egov_evidence_reference, tin_id_egov_evidence_reference,
+                        meralco_bill_evidence_reference, created_by_user_id, identity_information
+                    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    returning {_CIF_RETURNING_COLUMNS}, identity_information
+                    """,
+                    (
+                        client_id,
+                        number,
+                        corrected["full_name"],
+                        corrected["phone_number"],
+                        corrected["email"],
+                        corrected["present_address"],
+                        current["national_id_egov_evidence_reference"],
+                        current["tin_id_egov_evidence_reference"],
+                        current["meralco_bill_evidence_reference"],
+                        actor_user_id,
+                        Jsonb(corrected["identity_information"])
+                        if "identity_information" in corrected
+                        else None,
+                    ),
+                ).fetchone()
+                cursor.execute(
+                    "insert into lending.client_cif_review_cycles "
+                    "(cif_version_id, client_id, predecessor_cif_version_id, reason, created_by_user_id) "
+                    "values (%s, %s, %s, %s, %s)",
+                    (created["id"], client_id, cif_version_id, reason, actor_user_id),
+                )
+                return _review_record_from_row(created)
+
     def confirm_review(
         self,
         *,
@@ -259,9 +437,11 @@ class PostgresClientCifRepository:
 
                 current = cursor.execute(
                     f"""
-                    select {_CIF_SELECT_COLUMNS},
+                    select {_CIF_SELECT_COLUMNS}, cif.identity_information,
                            applicant.status as applicant_status,
-                           client.status as client_status
+                           client.status as client_status,
+                           exists (select 1 from lending.client_cif_review_cycles cycle
+                                   where cycle.cif_version_id = cif.id) as is_successor
                     from lending.client_cif_versions cif
                     join lending.client_onboarding_applicants applicant
                       on applicant.promoted_client_id = cif.client_id
@@ -282,6 +462,25 @@ class PostgresClientCifRepository:
                     """,
                     (cif_version_id,),
                 ).fetchone()
+
+                def verify_evidence():
+                    try:
+                        require_evidence(
+                            cursor,
+                            evidence_reference=evidence_reference,
+                            actor_user_id=actor_user_id,
+                            client_id=client_id,
+                            purpose="cif_review",
+                            subject_id=cif_version_id,
+                            review_snapshot=cif_review_snapshot(
+                                client_id=client_id,
+                                cif_version_id=cif_version_id,
+                                information=expected,
+                            ),
+                        )
+                    except OfficeReviewEvidenceConflict as error:
+                        raise ClientCifConflict(str(error)) from error
+
                 if existing is not None:
                     if (
                         existing["client_id"] != client_id
@@ -293,6 +492,7 @@ class PostgresClientCifRepository:
                         raise ClientCifConflict(
                             "CIF version was already confirmed with different review evidence or witness."
                         )
+                    verify_evidence()
                     return _confirmation_record_from_row(existing)
 
                 if current is None:
@@ -303,7 +503,13 @@ class PostgresClientCifRepository:
                     and (
                         (
                             str(current["status"]) == "draft"
-                            and str(current["client_status"]) == "inactive"
+                            and (
+                                str(current["client_status"]) == "inactive"
+                                or (
+                                    str(current["client_status"]) == "active"
+                                    and current["is_successor"]
+                                )
+                            )
                         )
                         or (
                             str(current["status"]) == "active"
@@ -313,10 +519,7 @@ class PostgresClientCifRepository:
                 ):
                     raise ClientCifConflict("No eligible current CIF is available.")
 
-                saved = {
-                    field: cast(str | None, current[field])
-                    for field in _CIF_INFORMATION_FIELDS
-                }
+                saved = cif_information_from_row(current)
                 try:
                     normalize_cif_information(saved)
                 except ValueError as error:
@@ -325,6 +528,7 @@ class PostgresClientCifRepository:
                     ) from error
                 if saved != expected:
                     raise ClientCifConflict("CIF changed; refresh the office review.")
+                verify_evidence()
 
                 cycle = cursor.execute(
                     """
@@ -363,14 +567,23 @@ class PostgresClientCifRepository:
                 return _confirmation_record_from_row(created)
 
     def get_review_summary(
-        self, *, client_id: UUID, include_correction_availability: bool = False,
+        self,
+        *,
+        client_id: UUID,
+        include_correction_availability: bool = False,
+        include_identity_information: bool = False,
     ) -> ClientCifVersion:
         """Read the current eligible CIF without creating or changing any state."""
 
         columns = _CIF_SELECT_COLUMNS
+        if include_identity_information:
+            columns += ", cif.identity_information"
         if include_correction_availability:
             columns += """,
-                (cif.status = 'draft' and client.status = 'inactive'
+                (cif.status = 'draft' and (client.status = 'inactive' or (
+                    client.status = 'active' and exists (
+                        select 1 from lending.client_cif_review_cycles cycle where cycle.cif_version_id = cif.id
+                    )))
                  and not exists (
                     select 1 from lending.client_cif_review_confirmations confirmation
                     where confirmation.client_id = cif.client_id
@@ -401,10 +614,18 @@ class PostgresClientCifRepository:
                 if current is None:
                     raise ClientCifConflict("No eligible current CIF is available.")
                 record = _record_from_row(current)
+                if include_identity_information:
+                    return ClientCifIdentitySummary(
+                        **asdict(record),
+                        identity_information=current["identity_information"],
+                        can_correct_information=current.get("can_correct_information")
+                        is True,
+                    )
                 if include_correction_availability:
                     return ClientCifCorrectionSummary(
                         **asdict(record),
-                        can_correct_information=current["can_correct_information"] is True,
+                        can_correct_information=current["can_correct_information"]
+                        is True,
                     )
                 return record
 
@@ -475,7 +696,7 @@ class PostgresClientCifRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     f"""
-                    select {_CIF_SELECT_COLUMNS}
+                    select {_CIF_SELECT_COLUMNS}, cif.identity_information
                     from lending.client_cif_versions cif
                     join lending.client_onboarding_applicants applicant
                       on applicant.promoted_client_id = cif.client_id
@@ -485,7 +706,10 @@ class PostgresClientCifRepository:
                       and cif.id = %s
                       and cif.is_current = true
                       and cif.status = 'draft'
-                      and client.status = 'inactive'
+                      and (client.status = 'inactive' or (
+                          client.status = 'active' and exists (
+                              select 1 from lending.client_cif_review_cycles cycle where cycle.cif_version_id = cif.id
+                          )))
                       and applicant.status = 'eligible_for_cif'
                     for update of cif, applicant, client
                     """,
@@ -508,18 +732,15 @@ class PostgresClientCifRepository:
                     raise ClientCifConflict(
                         "Confirmed CIF information requires a new review/version cycle."
                     )
-                if any(
-                    current[field] != expected[field]
-                    for field in _CIF_INFORMATION_FIELDS
-                ):
+                if cif_information_from_row(current) != expected:
                     raise ClientCifConflict("CIF changed; refresh the office review.")
                 changed_fields = [
                     field
-                    for field in _CIF_INFORMATION_FIELDS
-                    if current[field] != corrected[field]
+                    for field in (*_CIF_INFORMATION_FIELDS, "identity_information")
+                    if expected.get(field) != corrected.get(field)
                 ]
                 if not changed_fields:
-                    return _record_from_row(current)
+                    return _review_record_from_row(current)
                 cursor.execute(
                     f"""
                     update lending.client_cif_versions
@@ -527,16 +748,20 @@ class PostgresClientCifRepository:
                         phone_number = %s,
                         email = %s,
                         present_address = %s,
+                        identity_information = %s,
                         updated_at = now()
                     where id = %s and client_id = %s
                       and is_current = true and status = 'draft'
-                    returning {_CIF_RETURNING_COLUMNS}
+                    returning {_CIF_RETURNING_COLUMNS}, identity_information
                     """,
                     (
                         corrected["full_name"],
                         corrected["phone_number"],
                         corrected["email"],
                         corrected["present_address"],
+                        Jsonb(corrected["identity_information"])
+                        if "identity_information" in corrected
+                        else None,
                         cif_version_id,
                         client_id,
                     ),
@@ -565,7 +790,7 @@ class PostgresClientCifRepository:
                         normalized_reason,
                     ),
                 )
-                return _record_from_row(updated)
+                return _review_record_from_row(updated)
 
     def begin_draft(
         self,
@@ -676,6 +901,7 @@ class PostgresClientCifRepository:
         client_id: UUID,
         evidence_reference: str,
         liveness_status: ClientCifLivenessStatus,
+        cif_version_id: UUID | None = None,
     ) -> ClientCifVersion:
         """Record controlled baseline face/liveness evidence on the current draft."""
 
@@ -698,9 +924,16 @@ class PostgresClientCifRepository:
                     where client_id = %s
                       and is_current = true
                       and status = 'draft'
+                      and (%s::uuid is null or id = %s)
                     returning {_CIF_RETURNING_COLUMNS}
                     """,
-                    (normalized_reference, normalized_status, client_id),
+                    (
+                        normalized_reference,
+                        normalized_status,
+                        client_id,
+                        cif_version_id,
+                        cif_version_id,
+                    ),
                 )
                 updated = cursor.fetchone()
                 if updated is None:
@@ -714,6 +947,7 @@ class PostgresClientCifRepository:
         *,
         actor_user_id: UUID,
         client_id: UUID,
+        cif_version_id: UUID | None = None,
     ) -> ClientCifVersion:
         """Activate a ready current CIF and the existing Client exactly once."""
 
@@ -721,7 +955,7 @@ class PostgresClientCifRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     f"""
-                    select {_CIF_SELECT_COLUMNS}
+                    select {_CIF_SELECT_COLUMNS}, cif.identity_information
                     from lending.client_cif_versions cif
                     join lending.client_onboarding_applicants applicant
                       on applicant.promoted_client_id = cif.client_id
@@ -729,16 +963,20 @@ class PostgresClientCifRepository:
                       on client.id = cif.client_id
                     where cif.client_id = %s
                       and cif.is_current = true
+                      and (%s::uuid is null or cif.id = %s)
                       and cif.status in ('draft', 'active')
                       and applicant.status = 'eligible_for_cif'
                       and (
-                            (cif.status = 'draft' and client.status = 'inactive')
+                            (cif.status = 'draft' and (client.status = 'inactive' or (
+                                client.status = 'active' and exists (
+                                    select 1 from lending.client_cif_review_cycles cycle where cycle.cif_version_id = cif.id
+                                ))))
                             or (cif.status = 'active' and client.status = 'active')
                       )
                     limit 1
                     for update of cif, applicant, client
                     """,
-                    (client_id,),
+                    (client_id, cif_version_id, cif_version_id),
                 )
                 current = cursor.fetchone()
                 if current is None:
@@ -760,6 +998,37 @@ class PostgresClientCifRepository:
                     raise ClientCifConflict(
                         "CIF activation requires passed liveness and baseline face evidence."
                     )
+
+                cursor.execute(
+                    "select review_snapshot, applicant_confirmation_evidence_reference, witnessed_by_user_id "
+                    "from lending.client_cif_review_confirmations where client_id=%s and cif_version_id=%s",
+                    (client_id, current["id"]),
+                )
+                confirmation = cursor.fetchone()
+                if confirmation is None or confirmation[
+                    "review_snapshot"
+                ] != cif_information_from_row(current):
+                    raise ClientCifConflict(
+                        "CIF activation requires confirmation of the exact saved information."
+                    )
+                try:
+                    require_evidence(
+                        cursor,
+                        evidence_reference=confirmation[
+                            "applicant_confirmation_evidence_reference"
+                        ],
+                        actor_user_id=confirmation["witnessed_by_user_id"],
+                        client_id=client_id,
+                        purpose="cif_review",
+                        subject_id=current["id"],
+                        review_snapshot=cif_review_snapshot(
+                            client_id=client_id,
+                            cif_version_id=current["id"],
+                            information=confirmation["review_snapshot"],
+                        ),
+                    )
+                except OfficeReviewEvidenceConflict as error:
+                    raise ClientCifConflict(str(error)) from error
 
                 cursor.execute(
                     f"""

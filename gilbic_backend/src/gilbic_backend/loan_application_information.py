@@ -1,9 +1,10 @@
 """Draft loan-request facts, separate from reusable CIF and approved terms."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -14,6 +15,7 @@ from pydantic import (
     Field,
     StrictBool,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -170,3 +172,71 @@ class LoanApplicationInformation(BaseModel):
             )
             for name in information.missing_fields()
         )
+
+
+class LoanApplicationEmployment(BaseModel):
+    """Applicant declarations; no verified-income or employment claim."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    employer_or_business_name: _RepaymentText = None
+    position_or_business_nature: _RepaymentText = None
+    length_of_employment_or_operation: _RepaymentText = None
+    employer_or_business_address: _RepaymentText = None
+    contact_number: _RepaymentText = None
+
+
+class LoanApplicationReference(BaseModel):
+    """One optional declared reference or emergency contact, without a quota."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    full_name: _RepaymentText = None
+    relationship: _RepaymentText = None
+    phone_number: _RepaymentText = None
+    address: _RepaymentText = None
+
+
+class LoanApplicationDetails(BaseModel):
+    """Versioned additional application facts, separate from CIF and evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    employment: LoanApplicationEmployment = Field(default_factory=LoanApplicationEmployment)
+    references: tuple[LoanApplicationReference, ...] = ()
+
+    @field_validator("schema_version", mode="before")
+    @classmethod
+    def exact_schema_version(cls, value: object) -> object:
+        if type(value) is not int or value != 1:
+            raise ValueError("Application details schema version must be integer 1.")
+        return value
+
+
+class ExtendedLoanApplicationInformation(LoanApplicationInformation):
+    """Add facts without changing the published two-section legacy contract."""
+
+    details: LoanApplicationDetails | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_information(self, handler) -> dict[str, Any]:
+        values = handler(self)
+        if self.details is None:
+            values.pop("details", None)
+        return values
+
+
+LoanApplicationDraftInformation = LoanApplicationInformation | ExtendedLoanApplicationInformation
+
+
+def parse_loan_application_information(value: object) -> LoanApplicationInformation:
+    """Keep legacy snapshots exact while including extension facts in new ones."""
+    if isinstance(value, LoanApplicationInformation):
+        return value
+    model = (
+        ExtendedLoanApplicationInformation
+        if isinstance(value, Mapping) and "details" in value
+        else LoanApplicationInformation
+    )
+    return model.model_validate(value)

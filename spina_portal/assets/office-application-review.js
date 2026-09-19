@@ -1,5 +1,6 @@
 import { normalizeRole } from './roles.js';
 import { mountOfficeApplicationEntry } from './office-application-entry.js';
+import { mountOfficeEvidenceCapture } from './office-evidence-capture.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -27,6 +28,17 @@ const OBLIGATION = [
   ['payment_frequency', 'Payment frequency', 'text'],
   ['notes', 'Notes', 'text'],
 ];
+const EMPLOYMENT = [
+  ['employer_or_business_name', 'Employer or business name', 'text'],
+  ['position_or_business_nature', 'Position or nature of business', 'text'],
+  ['length_of_employment_or_operation', 'Length of employment or operation', 'text'],
+  ['employer_or_business_address', 'Employer or business address', 'text'],
+  ['contact_number', 'Employer or business contact number', 'text'],
+];
+const REFERENCE = [
+  ['full_name', 'Name', 'text'], ['relationship', 'Relationship', 'text'],
+  ['phone_number', 'Phone number', 'text'], ['address', 'Address', 'text'],
+];
 
 function isUuid(value) { return typeof value === 'string' && UUID.test(value); }
 function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
@@ -50,6 +62,15 @@ function hasKeys(object, keys) {
 function validFields(object, fields, extraKeys = []) {
   return hasKeys(object, [...fields.map(([name]) => name), ...extraKeys])
     && fields.every(([name, , kind]) => isNullable(object[name], kind));
+}
+
+function validInformationShape(information) {
+  return hasKeys(information, ['request', 'repayment'])
+    || (hasKeys(information, ['request', 'repayment', 'details'])
+      && hasKeys(information.details, ['schema_version', 'employment', 'references'])
+      && information.details.schema_version === 1 && validFields(information.details.employment, EMPLOYMENT)
+      && Array.isArray(information.details.references)
+      && information.details.references.every((row) => validFields(row, REFERENCE)));
 }
 
 function missingLabels(information) {
@@ -77,7 +98,7 @@ function validReview(review, clientId, reference) {
     || typeof review.recorded_at !== 'string'
     || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(review.recorded_at)
     || Number.isNaN(Date.parse(review.recorded_at))
-    || !hasKeys(review.information, ['request', 'repayment'])
+    || !validInformationShape(review.information)
     || !validFields(review.information.request, REQUEST)
     || !validFields(review.information.repayment, REPAYMENT, ['obligations'])) return false;
   const repayment = review.information.repayment;
@@ -98,6 +119,31 @@ function display(value, kind = 'text') {
 
 function detail(label, value) {
   return `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  return isObject(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+}
+
+function printableCif(context, review) {
+  const snapshot = context?.review_snapshot;
+  const identities = ['client_id', 'cif_version_id', 'application_id', 'application_version_id'];
+  if (!isObject(context) || context.purpose !== 'application_review' || !isObject(snapshot)
+    || snapshot.schema_version !== 1 || snapshot.scope !== 'application_information_review'
+    || !identities.every(key => context[key] === review[key] && snapshot[key] === review[key])
+    || JSON.stringify(canonical(snapshot.information)) !== JSON.stringify(canonical(review.information))) return null;
+  const cif = snapshot.cif_information;
+  const names = ['full_name', 'phone_number', 'email', 'present_address'];
+  if (!(hasKeys(cif, names) || hasKeys(cif, [...names, 'identity_information']))
+    || !['full_name', 'phone_number', 'present_address'].every(key => typeof cif[key] === 'string')
+    || !isNullable(cif.email, 'text')) return null;
+  const identityFields = [['birth_date', 'Date of birth', 'date'], ['birth_place', 'Place of birth', 'text'],
+    ['civil_status', 'Civil status', 'text'], ['citizenship', 'Citizenship', 'text']];
+  if (Object.hasOwn(cif, 'identity_information') && !validFields(cif.identity_information, identityFields)) return null;
+  return `<article><h2>Linked CIF version ${escapeHtml(review.cif_version_number)}</h2><div class="detail-grid">
+    ${[['full_name', 'Full name'], ['phone_number', 'Phone number'], ['email', 'Email'], ['present_address', 'Residential address']].map(([name, label]) => detail(label, display(cif[name]))).join('')}
+    ${cif.identity_information ? identityFields.map(([name, label]) => detail(label, display(cif.identity_information[name]))).join('') : ''}</div></article>`;
 }
 
 function reviewMarkup(review) {
@@ -121,6 +167,12 @@ function reviewMarkup(review) {
     <div class="detail-grid">${REPAYMENT.map(([name, label, kind]) => detail(label, display(repayment[name], kind))).join('')}</div>
     <h4>Declared obligations</h4>
     ${repayment.obligations.length ? `<div class="list-stack">${repayment.obligations.map((row, index) => `<section class="data-card"><h5>Obligation ${index + 1}</h5><div class="detail-grid">${OBLIGATION.map(([name, label, kind]) => detail(label, display(row[name], kind))).join('')}</div></section>`).join('')}</div>` : '<p>No obligation rows were provided.</p>'}
+    ${review.information.details ? `<h4>Employment or business details</h4>
+      <p>Declared information saved with this application version.</p>
+      <div class="detail-grid">${EMPLOYMENT.map(([name, label]) => detail(label, display(review.information.details.employment[name]))).join('')}</div>
+      <h4>References or emergency contacts</h4>
+      ${review.information.details.references.length ? review.information.details.references.map((row, index) => `<section class="data-card"><h5>Reference ${index + 1}</h5><div class="detail-grid">${REFERENCE.map(([name, label]) => detail(label, display(row[name]))).join('')}</div></section>`).join('') : '<p>No reference rows were provided.</p>'}`
+    : '<p>Employment and reference details were not recorded in this saved version.</p>'}
     <h4>Missing request and repayment facts</h4>
     <p>This list covers only request and repayment information. It does not assess whether the full application is complete or ready for approval.</p>
     ${review.missing_fields.length ? `<ul>${review.missing_fields.map((field) => `<li>${escapeHtml(labels[field])}</li>`).join('')}</ul>` : '<p>No missing request or repayment facts were reported.</p>'}
@@ -142,11 +194,17 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   let entryCleanup;
   let newButton;
   let selectedReview;
+  let confirmationCleanup;
+  let printCleanup;
 
   function invalidate() {
     currentRequest = {};
     entryCleanup?.();
     entryCleanup = null;
+    confirmationCleanup?.();
+    confirmationCleanup = null;
+    printCleanup?.();
+    printCleanup = null;
     selectedReview = null;
     if (reviewRoot) reviewRoot.innerHTML = '';
     if (statusRoot) statusRoot.innerHTML = '';
@@ -210,14 +268,129 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
       }
       statusRoot.innerHTML = '';
       selectedReview = review;
-      reviewRoot.innerHTML = `${reviewMarkup(review)}<button class="button button-outline" type="button" data-edit-application>Edit application information</button>`;
+      reviewRoot.innerHTML = `${reviewMarkup(review)}<button class="button button-outline" type="button" data-edit-application>Edit application information</button>
+        <button class="button button-outline" type="button" data-prepare-application-confirmation${review.missing_fields.length ? ' disabled' : ''}>Prepare applicant confirmation</button>
+        <button class="button button-outline" type="button" data-print-application>Print saved application review</button>
+        ${review.missing_fields.length ? '<p>Complete the missing request and repayment facts before applicant confirmation.</p>' : ''}
+        <div data-application-confirmation></div>`;
       reviewRoot.querySelector('[data-edit-application]').addEventListener('click', () => {
         if (selectedReview === review) openEntry(review.client_id, review);
+      });
+      reviewRoot.querySelector('[data-prepare-application-confirmation]').addEventListener('click', () => {
+        if (selectedReview === review && !review.missing_fields.length) prepareConfirmation(review);
+      });
+      reviewRoot.querySelector('[data-print-application]').addEventListener('click', () => {
+        if (selectedReview === review) printReview(review);
       });
     } catch (error) {
       if (disposed || currentRequest !== token) return;
       statusRoot.innerHTML = `<div role="alert">${errorCard(error, 'Application review is unavailable.')}</div>`;
     }
+  }
+
+  async function printReview(review) {
+    if (disposed || selectedReview !== review || printCleanup) return;
+    const token = currentRequest;
+    let frame;
+    let cancelled = false;
+    const button = reviewRoot.querySelector('[data-print-application]');
+    button.disabled = true;
+    const cleanup = () => {
+      cancelled = true;
+      if (frame) { frame.onload = null; frame.remove(); frame.srcdoc = ''; }
+      if (printCleanup === cleanup) printCleanup = null;
+      if (!disposed && selectedReview === review) button.disabled = false;
+    };
+    printCleanup = cleanup;
+    const active = () => !disposed && !cancelled && currentRequest === token && selectedReview === review;
+    try {
+      const query = new URLSearchParams({ purpose: 'application_review', cif_version_id: review.cif_version_id,
+        application_id: review.application_id, application_version_id: review.application_version_id });
+      const context = await api.request(`/api/v1/management/clients/${encodeURIComponent(review.client_id)}/review-evidence/context?${query}`, { signal });
+      if (!active()) return;
+      const cif = printableCif(context, review);
+      if (!cif) throw new Error('The printable review does not match this saved application and attached CIF.');
+      frame = document.createElement('iframe');
+      frame.setAttribute('title', 'Saved application review print copy');
+      frame.setAttribute('sandbox', 'allow-modals allow-same-origin');
+      frame.style.cssText = 'position:fixed;width:0;height:0;border:0;';
+      frame.onload = () => {
+        if (!active()) return;
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+        finally { cleanup(); }
+      };
+      frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>Saved application review</title><style>body{font:12pt Arial,sans-serif;color:#000;margin:20mm}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10pt}.detail-item span,.detail-item strong{display:block;overflow-wrap:anywhere}.detail-item span{font-size:10pt;font-weight:normal}h2,h3,h4,h5{break-after:avoid}article,section{margin-bottom:16pt}section{break-inside:avoid}</style></head><body>${cif}${reviewMarkup(review)}</body></html>`;
+      document.body.appendChild(frame);
+    } catch (error) {
+      if (active()) {
+        if ([401,403].includes(error?.status)) { dispose(); return; }
+        statusRoot.innerHTML = errorCard(error);
+      }
+      cleanup();
+    }
+  }
+
+  function prepareConfirmation(review) {
+    if (disposed || selectedReview !== review) return;
+    confirmationCleanup?.();
+    const token = currentRequest;
+    const container = reviewRoot.querySelector('[data-application-confirmation]');
+    const prepare = reviewRoot.querySelector('[data-prepare-application-confirmation]');
+    prepare.disabled = true;
+    container.innerHTML = '<h4>Applicant review confirmation</h4><p>This confirms the reviewed application information only. Approval, final loan signing, and release remain separate.</p><div data-application-signed-evidence></div><button type="button" class="button button-primary" data-confirm-application disabled>Record application confirmation</button><div data-application-confirmation-status role="status" aria-live="polite"></div>';
+    const status = container.querySelector('[data-application-confirmation-status]');
+    const confirm = container.querySelector('[data-confirm-application]');
+    let evidence;
+    let pending = false;
+    let closed = false;
+    const active = () => !disposed && !closed && currentRequest === token && selectedReview === review;
+    const captureCleanup = mountOfficeEvidenceCapture({
+      root: container.querySelector('[data-application-signed-evidence]'), api, session,
+      clientId: review.client_id, cifVersionId: review.cif_version_id, purpose: 'application_review',
+      applicationId: review.application_id, applicationVersionId: review.application_version_id, signal,
+      onCaptured(record) { if (active()) { evidence = record; confirm.disabled = false; } },
+      onAccessDenied() { if (active()) dispose(); },
+    });
+    function cleanup() {
+      if (closed) return;
+      closed = true;
+      evidence = null;
+      captureCleanup();
+      confirm.removeEventListener('click', saveConfirmation);
+      container.innerHTML = '';
+    }
+    async function saveConfirmation() {
+      if (!active() || pending || !evidence) return;
+      pending = true;
+      confirm.disabled = true;
+      status.innerHTML = loadingPanel('Recording applicant confirmation…');
+      try {
+        const saved = await api.request(`/api/v1/management/clients/${encodeURIComponent(review.client_id)}/loan-applications/${encodeURIComponent(review.application_id)}/review-confirmations`, {
+          method: 'POST', signal, body: { application_version_id: review.application_version_id, applicant_confirmation_evidence_reference: evidence.evidence_reference },
+        });
+        if (!active()) return;
+        if (!isObject(saved) || !isUuid(saved.review_confirmation_id)
+          || !['client_id', 'application_id', 'application_version_id', 'cif_version_id'].every(name => isUuid(saved[name]) && saved[name].toLowerCase() === review[name].toLowerCase())
+          || saved.review_scope !== 'loan_application_information_only'
+          || typeof saved.confirmed_at !== 'string' || Number.isNaN(Date.parse(saved.confirmed_at))) {
+          throw new Error('The application confirmation response could not be verified.');
+        }
+        evidence = null;
+        status.textContent = 'Applicant application review confirmed. Approval, final loan signing, and release remain separate.';
+      } catch (error) {
+        if (!active()) return;
+        if ([401, 403].includes(error?.status)) { dispose(); return; }
+        const retry = [400, 422].includes(error?.status);
+        if (retry) confirm.disabled = false;
+        else {
+          evidence = null;
+          captureCleanup();
+        }
+        status.innerHTML = `${errorCard(error)}${retry ? '' : '<p>Open the application review again before another confirmation attempt.</p>'}`;
+      } finally { pending = false; }
+    }
+    confirm.addEventListener('click', saveConfirmation);
+    confirmationCleanup = cleanup;
   }
 
   function openEntry(clientId, review = null) {

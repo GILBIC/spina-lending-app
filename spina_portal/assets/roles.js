@@ -12,6 +12,12 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('client-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   employee: Object.freeze([
+    action('employee-first-loan', 'First-loan office workflow', '/api/v1/management/first-loans/by-application/{application_id}', {
+      section: 'Office functions', permission: 'client_onboarding.requirement.review',
+    }),
+    action('employee-onboarding', 'Office intake and requirements', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/case', {
+      section: 'Office functions', permission: 'client_onboarding.requirement.review',
+    }),
     action('employee-application-review', 'Loan application review', '/api/v1/management/clients/{client_id}/loan-applications/by-reference/{application_reference}/review-summary', {
       section: 'Office functions',
       permission: 'client_onboarding.requirement.review',
@@ -32,6 +38,9 @@ export const ROLE_ENDPOINTS = Object.freeze({
     }),
   ]),
   collector: Object.freeze([
+    action('collector-onboarding', 'Residence visit', '/api/v1/collector/onboarding/applicants/by-reference/{application_reference}/visit-case', {
+      section: 'Onboarding', permission: 'client_onboarding.visit.record',
+    }),
     action('collector-account', 'My account & devices', '/api/v1/account', { section: 'Account' }),
     action('collector-route', "Today's route", '/api/v1/collector/routes/today', {
       section: 'Collection',
@@ -50,6 +59,12 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('collector-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   management: Object.freeze([
+    action('management-first-loan', 'First-loan office workflow', '/api/v1/management/first-loans/by-application/{application_id}', {
+      section: 'Office functions', permission: 'client_onboarding.requirement.review',
+    }),
+    action('management-onboarding', 'Office intake and requirements', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/case', {
+      section: 'Review', permission: 'client_onboarding.requirement.review',
+    }),
     action('management-application-review', 'Loan application review', '/api/v1/management/clients/{client_id}/loan-applications/by-reference/{application_reference}/review-summary', {
       section: 'Review',
       permission: 'client_onboarding.requirement.review',

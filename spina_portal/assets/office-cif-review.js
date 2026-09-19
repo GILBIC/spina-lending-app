@@ -40,7 +40,7 @@ function reviewMarkup(review) {
   </article>`;
 }
 
-export async function mountOfficeCifReview({ root, api, session, clientId }) {
+export async function mountOfficeCifReview({ root, api, session, clientId, onUnavailable }) {
   const request = {};
   currentRequests.set(root, request);
   root.innerHTML = '';
@@ -74,5 +74,6 @@ export async function mountOfficeCifReview({ root, api, session, clientId }) {
   } catch (error) {
     if (currentRequests.get(root) !== request) return;
     root.innerHTML = errorCard(error, 'CIF information is unavailable.');
+    onUnavailable?.(error);
   }
 }

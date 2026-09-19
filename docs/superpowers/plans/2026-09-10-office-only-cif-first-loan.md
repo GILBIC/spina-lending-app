@@ -175,6 +175,8 @@ Before implementation, inspect and reuse existing disbursement, schedule, receip
 
 ## Low-friction execution protocol
 
+Management clarified on 2026-09-19: finish the entire remaining Priority #4 implementation as one continuous task, then run the combined checks and fix failures through Red to Green. Do not end the task after individual batches or require repeated Green signals. Keep interruption-safe checkpoints while implementation continues. Published milestones advance only after acceptance, not from commit or test counts.
+
 Management's 2026-09-18 direction supersedes the earlier test-only-head pause protocol: complete related changes as one usable batch, then run tests and fix failures through Red to Green. Do not split tests, repository, API and UI into separate mandatory publication rounds or stop for a user signal between local steps. Preserve published regression contracts and full CI requirements.
 
 Publish the reviewed batch once, verify the matching CI head, and address real failures without asking Management to drive every step. Red/Green remains an optional status signal. Save one clear GitHub/Notion/local handoff per completed batch or interruption. Re-read the live PR head before publishing to avoid overwriting concurrent work. PR remains Draft/open/unmerged; merge and production boundaries are unchanged.

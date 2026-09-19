@@ -2,6 +2,8 @@ import { mountAreaManagement } from '../area-management.js';
 import { buildEmployeeViewModel } from '../presenters.js';
 import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import { mountOfficeApplicationReview } from '../office-application-review.js';
+import { mountOfficeFirstLoan } from '../office-first-loan.js';
+import { mountOfficeOnboarding } from '../office-onboarding.js';
 import {
   asArray,
   badge,
@@ -147,6 +149,10 @@ export async function mountEmployeeWorkspace(context) {
   context.officeCifCleanup = null;
   context.officeApplicationCleanup?.();
   context.officeApplicationCleanup = null;
+  context.officeFirstLoanCleanup?.();
+  context.officeFirstLoanCleanup = null;
+  context.officeOnboardingCleanup?.();
+  context.officeOnboardingCleanup = null;
   const { root, api, session, setNavigation } = context;
   const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canViewRemittance = hasPermission(session, 'remittance.view');
@@ -160,8 +166,9 @@ export async function mountEmployeeWorkspace(context) {
   ].some((permission) => hasPermission(session, permission));
   setNavigation([
     { id: 'employee-overview', label: 'My workday' },
+    ...(canReviewCif ? [{ id: 'employee-onboarding', label: 'Office intake' }] : []),
     ...(canReviewCif ? [{ id: 'employee-cif-review', label: 'CIF review' }] : []),
-    ...(canReviewCif ? [{ id: 'employee-application-review', label: 'Application review' }] : []),
+    ...(canReviewCif ? [{ id: 'employee-application-review', label: 'Application review' }, { id: 'employee-first-loan', label: 'First loan' }] : []),
     ...(canUseAreaManagement ? [{ id: 'employee-area-management', label: 'Area Management' }] : []),
     ...(canViewRemittance ? [{ id: 'employee-remittance', label: 'Remittance' }] : []),
     ...(canManageSupport ? [{ id: 'employee-support', label: 'Client support' }] : []),
@@ -206,8 +213,10 @@ export async function mountEmployeeWorkspace(context) {
     <div class="section-heading"><div><h2>Not connected yet</h2><p>These items are visible for clarity but cannot create or change an official record.</p></div></div>
     <div class="card-grid">${model.unavailable.map((item) => `<article class="data-card"><h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.message)}</p>${badge('unavailable', 'warning')}</article>`).join('')}</div>
   </section>
+  ${canReviewCif ? '<section class="section-card" id="employee-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
   ${canReviewCif ? `<section class="section-card" id="employee-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
   ${canReviewCif ? '<section class="section-card" id="employee-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
+  ${canReviewCif ? '<section class="section-card" id="employee-first-loan"><h2>First-loan approval and office release</h2><div data-office-first-loan></div></section>' : ''}
   ${canUseAreaManagement ? '<section class="section-card" id="employee-area-management"></section>' : ''}
   ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : remittanceRows(model.remittances, canReceiveRemittance)}</section>` : ''}
   ${canManageSupport ? `<section class="section-card" id="employee-support"><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
@@ -215,6 +224,12 @@ export async function mountEmployeeWorkspace(context) {
   <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}</section>`;
 
   if (canReviewCif) {
+    context.officeFirstLoanCleanup = mountOfficeFirstLoan({
+      root: root.querySelector('[data-office-first-loan]'), api, session, signal: context.signal,
+    });
+    context.officeOnboardingCleanup = mountOfficeOnboarding({
+      root: root.querySelector('[data-office-onboarding]'), api, session, signal: context.signal,
+    });
     context.officeCifCleanup = mountOfficeCifSelection({
       root: root.querySelector('[data-office-cif-selection]'), api, session, signal: context.signal,
     });

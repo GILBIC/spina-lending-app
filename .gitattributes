@@ -1,0 +1,2 @@
+# Preserve the byte identity used to verify controlled form review mirrors.
+docs/forms-documents/**/templates/*.md text eol=lf

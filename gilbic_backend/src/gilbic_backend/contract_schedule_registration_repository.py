@@ -34,8 +34,8 @@ class ContractScheduleLoanContext:
     daily_interest_per_1000: Decimal
     principal: Decimal
     daily_amount: Decimal
-    date_released: date
-    due_date: date
+    date_released: date | None
+    due_date: date | None
     loan_status: str
     active_schedule_id: UUID | None
     active_schedule_version: int | None

@@ -31,6 +31,8 @@ void main() {
     expect(find.textContaining('Remaining: ₱4,950.00'), findsOneWidget);
     expect(find.text('Official remaining balance'), findsWidgets);
     expect(find.text('₱4,950.00'), findsWidgets);
+    expect(find.text('First contractual payment'), findsWidgets);
+    expect(find.text('2026-08-10'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('client-loan-seven-by-seven-loan')),
@@ -95,6 +97,7 @@ class _FakeClientLoanRepository implements ClientLoanRepository {
           dailyAmount: 50,
           interestRate: 20,
           dateReleased: DateTime(2026, 8, 1),
+          firstPaymentDate: DateTime(2026, 8, 10),
           dueDate: DateTime(2026, 11, 29),
           status: 'active',
           remainingBalance: 4950,

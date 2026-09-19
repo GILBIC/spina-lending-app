@@ -103,9 +103,7 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
                 padding: const EdgeInsets.all(12),
                 child: Text(
                   _errorMessage!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
             ),
@@ -260,8 +258,11 @@ class _LoanCard extends StatelessWidget {
             emphasized: true,
           ),
           _AmountRow(label: 'Principal', value: _money(loan.principal)),
-          _AmountRow(label: 'Paid toward balance', value: _money(loan.paidAmount)),
-          _AmountRow(label: 'Daily amount', value: _money(loan.dailyAmount)),
+          _AmountRow(
+            label: 'Paid toward balance',
+            value: _money(loan.paidAmount),
+          ),
+          _AmountRow(label: 'Required payment', value: _money(loan.dailyAmount)),
           if (loan.interestRate != null)
             _AmountRow(
               label: 'Interest rate',
@@ -276,6 +277,10 @@ class _LoanCard extends StatelessWidget {
           ),
           const Divider(height: 24),
           _DetailRow(label: 'Released', value: _date(loan.dateReleased)),
+          _DetailRow(
+            label: 'First contractual payment',
+            value: _date(loan.firstPaymentDate),
+          ),
           _DetailRow(label: 'Due date', value: _date(loan.dueDate)),
           _DetailRow(
             label: 'Last payment',

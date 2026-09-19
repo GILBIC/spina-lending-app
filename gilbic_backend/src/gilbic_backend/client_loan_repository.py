@@ -57,6 +57,7 @@ class ClientLoanRecord:
     advance_until: date | None
     state_version: int
     payment_count: int
+    first_payment_date: date | None = None
 
     @property
     def paid_amount(self) -> Decimal:
@@ -106,6 +107,12 @@ class PostgresClientLoanRepository:
                         loan.interest_rate,
                         loan.date_released,
                         loan.due_date,
+                        (select min(installment.due_date)
+                         from lending.loan_contract_schedules schedule
+                         join lending.loan_contract_installments installment on installment.schedule_id=schedule.id
+                         join lending.loan_contract_schedule_registrations registration on registration.schedule_id=schedule.id
+                         where schedule.loan_id=loan.id and schedule.status='active'
+                           and registration.verified_at is not null) as first_payment_date,
                         loan.status,
                         coalesce(state.remaining_balance, loan.principal)
                             as remaining_balance,
@@ -492,4 +499,5 @@ class PostgresClientLoanRepository:
             advance_until=row["advance_until"],
             state_version=int(row["state_version"]),
             payment_count=int(row["payment_count"]),
+            first_payment_date=row.get("first_payment_date"),
         )

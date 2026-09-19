@@ -10,7 +10,7 @@ const CLIENT = '11111111-1111-4111-8111-111111111111';
 const CIF = '22222222-2222-4222-8222-222222222222';
 const REFERENCE = 'APP-OFFICE-TEST';
 const SUMMARY = `/api/v1/management/clients/${CLIENT}/cif/review-summary`;
-const EDIT = `${SUMMARY}?include_correction_availability=true`;
+const EDIT = `${SUMMARY}?include_correction_availability=true&include_identity_information=true`;
 const PATCH = `/api/v1/management/clients/${CLIENT}/cif/draft-information`;
 const LOOKUP = `/api/v1/management/onboarding/applicants/by-reference/${REFERENCE}/cif-client`;
 

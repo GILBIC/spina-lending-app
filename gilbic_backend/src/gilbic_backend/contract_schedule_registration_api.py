@@ -174,8 +174,8 @@ def _loan_context_payload(context: ContractScheduleLoanContext) -> dict[str, obj
         "daily_interest_per_1000": _decimal(context.daily_interest_per_1000),
         "principal": _decimal(context.principal),
         "daily_amount": _decimal(context.daily_amount),
-        "date_released": context.date_released.isoformat(),
-        "due_date": context.due_date.isoformat(),
+        "date_released": context.date_released.isoformat() if context.date_released else None,
+        "due_date": context.due_date.isoformat() if context.due_date else None,
         "loan_status": context.loan_status,
         "active_schedule_id": (
             str(context.active_schedule_id) if context.active_schedule_id else None

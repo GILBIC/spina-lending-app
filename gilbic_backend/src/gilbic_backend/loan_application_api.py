@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
-from .loan_application_information import LoanApplicationInformation
+from .loan_application_information import LoanApplicationDraftInformation
 from .loan_application_repository import (
     APPLICATION_REVIEW_PERMISSION,
     LoanApplicationAccessDenied,
@@ -19,6 +19,7 @@ from .loan_application_repository import (
     PostgresLoanApplicationRepository,
 )
 from .request_auth import authenticated_device_context
+from .office_review_evidence_route import PrivateOfficeRoute
 
 
 class CreateLoanApplicationDraftRequest(BaseModel):
@@ -26,7 +27,7 @@ class CreateLoanApplicationDraftRequest(BaseModel):
 
     cif_version_id: UUID
     application_reference: str
-    information: LoanApplicationInformation
+    information: LoanApplicationDraftInformation
 
     @field_validator("application_reference")
     @classmethod
@@ -42,7 +43,7 @@ class AppendLoanApplicationDraftRequest(BaseModel):
 
     cif_version_id: UUID
     expected_version_number: Annotated[int, Field(strict=True, ge=1)]
-    information: LoanApplicationInformation
+    information: LoanApplicationDraftInformation
 
 
 class ConfirmLoanApplicationReviewRequest(BaseModel):
@@ -105,7 +106,7 @@ def loan_application_repository_dependency() -> PostgresLoanApplicationRepositor
 
 
 def create_loan_application_router() -> APIRouter:
-    router = APIRouter(tags=["loan-applications"])
+    router = APIRouter(tags=["loan-applications"], route_class=PrivateOfficeRoute)
 
     @router.get(
         "/api/v1/management/clients/{client_id}/loan-applications/entry-context"
@@ -133,11 +134,15 @@ def create_loan_application_router() -> APIRouter:
             )
         except LoanApplicationAccessDenied as error:
             raise HTTPException(
-                status_code=403, detail=str(error), headers={"Cache-Control": "no-store"}
+                status_code=403,
+                detail=str(error),
+                headers={"Cache-Control": "no-store"},
             ) from error
         except LoanApplicationConflict as error:
             raise HTTPException(
-                status_code=409, detail=str(error), headers={"Cache-Control": "no-store"}
+                status_code=409,
+                detail=str(error),
+                headers={"Cache-Control": "no-store"},
             ) from error
         except HTTPException as error:
             error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}

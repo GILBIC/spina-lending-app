@@ -4,6 +4,7 @@ This confirms only the applicant's review of saved CIF/application information.
 It does not approve a loan, sign a contract, release cash, create credentials,
 or start a schedule.
 """
+
 from __future__ import annotations
 
 from importlib import import_module
@@ -14,11 +15,15 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
+from office_review_evidence_test_support import (
+    private_evidence_root as private_evidence_root,
+)
 from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from gilbic_backend.loan_application_information import LoanApplicationInformation
+from office_review_evidence_test_support import capture_cif, capture_application
 from test_client_cif_review_confirmation_postgres import (
     DATABASE_URL,
     _insert as _insert_cif_confirmation,
@@ -105,6 +110,11 @@ def _confirm(
     evidence: str = "SYNTHETIC-APPLICATION-CONFIRMATION",
     **changes: Any,
 ):
+    if (
+        evidence == "SYNTHETIC-APPLICATION-CONFIRMATION"
+        and "protected_captures" in case
+    ):
+        evidence = case["protected_captures"][version.id]
     values = {
         "actor_user_id": case["actor"],
         "client_id": case["client"],
@@ -203,6 +213,7 @@ def _seed_confirmable(connection, monkeypatch, role: str = "employee"):
     _insert_cif_confirmation(
         connection,
         case,
+        applicant_confirmation_evidence_reference=capture_cif(connection, case),
         review_snapshot=Jsonb(
             {
                 "full_name": "Synthetic CIF Borrower",
@@ -220,6 +231,9 @@ def _seed_confirmable(connection, monkeypatch, role: str = "employee"):
         information=information,
     )
     assert version.information.missing_fields() == ()
+    case["protected_captures"] = {
+        version.id: capture_application(connection, case, version)
+    }
     return repository, case, version
 
 
@@ -227,9 +241,7 @@ def _seed_confirmable(connection, monkeypatch, role: str = "employee"):
 def test_confirmation_binds_exact_saved_version_and_server_witness_time(
     connection, monkeypatch, role
 ) -> None:
-    repository, case, version = _seed_confirmable(
-        connection, monkeypatch, role
-    )
+    repository, case, version = _seed_confirmable(connection, monkeypatch, role)
     before = _unrelated_counts(connection)
 
     confirmation = _confirm(repository, case, version)
@@ -245,7 +257,7 @@ def test_confirmation_binds_exact_saved_version_and_server_witness_time(
     assert (
         confirmation.applicant_confirmation_evidence_reference
         == stored["applicant_confirmation_evidence_reference"]
-        == "SYNTHETIC-APPLICATION-CONFIRMATION"
+        == case["protected_captures"][version.id]
     )
     assert (
         confirmation.witnessed_by_user_id
@@ -360,7 +372,7 @@ def test_post_confirmation_correction_uses_new_version_and_new_confirmation(
     connection, monkeypatch
 ) -> None:
     repository, case, first = _seed_confirmable(connection, monkeypatch)
-    first_confirmation = _confirm(repository, case, first, "SYNTHETIC-ACK-V1")
+    first_confirmation = _confirm(repository, case, first)
     original_confirmation = _read(connection, first_confirmation.id)
     second = _append(
         repository,
@@ -370,7 +382,10 @@ def test_post_confirmation_correction_uses_new_version_and_new_confirmation(
             "5000.00", purpose="Synthetic corrected request after review"
         ),
     )
-    second_confirmation = _confirm(repository, case, second, "SYNTHETIC-ACK-V2")
+    case["protected_captures"][second.id] = capture_application(
+        connection, case, second
+    )
+    second_confirmation = _confirm(repository, case, second)
 
     assert second.version_number == 2
     assert first.id != second.id
@@ -382,8 +397,8 @@ def test_post_confirmation_correction_uses_new_version_and_new_confirmation(
         row["application_version_id"]: row["applicant_confirmation_evidence_reference"]
         for row in rows
     } == {
-        first.id: "SYNTHETIC-ACK-V1",
-        second.id: "SYNTHETIC-ACK-V2",
+        first.id: case["protected_captures"][first.id],
+        second.id: case["protected_captures"][second.id],
     }
     assert _read(connection, first_confirmation.id) == original_confirmation
 
@@ -473,13 +488,9 @@ def test_confirmation_rechecks_permission_at_confirmation_time(
 
 
 @pytest.mark.parametrize("field", ["application_id", "client_id", "cif_version_id"])
-def test_schema_rejects_cross_record_binding(
-    connection, monkeypatch, field
-) -> None:
+def test_schema_rejects_cross_record_binding(connection, monkeypatch, field) -> None:
     _, case, version = _seed_confirmable(connection, monkeypatch)
-    _, other, other_version = _seed_confirmable(
-        connection, monkeypatch, "management"
-    )
+    _, other, other_version = _seed_confirmable(connection, monkeypatch, "management")
     values = {
         "application_id": other_version.application_id,
         "client_id": other["client"],
@@ -527,9 +538,7 @@ def test_schema_rejects_invalid_confirmation_metadata(
 
 
 @pytest.mark.parametrize("operation", ["update", "delete", "truncate"])
-def test_confirmation_history_is_immutable(
-    connection, monkeypatch, operation
-) -> None:
+def test_confirmation_history_is_immutable(connection, monkeypatch, operation) -> None:
     repository, case, version = _seed_confirmable(connection, monkeypatch)
     confirmation = _confirm(repository, case, version)
     statements = {

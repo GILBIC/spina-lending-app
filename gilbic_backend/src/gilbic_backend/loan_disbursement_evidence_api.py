@@ -135,7 +135,9 @@ def _readiness_payload(record: LoanDisbursementReadinessRecord) -> dict[str, obj
         "loan_type_name": record.loan_type_name,
         "calculation_mode": record.calculation_mode,
         "principal": format(record.principal, "f"),
-        "date_released": record.date_released.isoformat(),
+        "date_released": (
+            record.date_released.isoformat() if record.date_released is not None else None
+        ),
         "loan_status": record.loan_status,
         "disbursement_event_id": (
             str(record.disbursement_event_id)

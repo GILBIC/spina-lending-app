@@ -10,7 +10,16 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from .database import open_connection
-from .loan_application_information import LoanApplicationInformation
+from .office_review_evidence_repository import (
+    OfficeReviewEvidenceConflict,
+    application_review_snapshot,
+    cif_review_snapshot,
+    require_evidence,
+)
+from .loan_application_information import (
+    LoanApplicationInformation,
+    parse_loan_application_information,
+)
 
 
 APPLICATION_REVIEW_PERMISSION = "client_onboarding.requirement.review"
@@ -101,7 +110,7 @@ def _record_from_row(row: Mapping[str, object]) -> LoanApplicationVersionRecord:
         client_id=cast(UUID, row["client_id"]),
         cif_version_id=cast(UUID, row["cif_version_id"]),
         version_number=int(cast(int, row["version_number"])),
-        information=LoanApplicationInformation.model_validate(row["information"]),
+        information=parse_loan_application_information(row["information"]),
         recorded_by_user_id=cast(UUID, row["recorded_by_user_id"]),
         recorded_at=cast(datetime, row["recorded_at"]),
     )
@@ -292,6 +301,54 @@ class PostgresLoanApplicationRepository:
                     """,
                     (application_version_id,),
                 ).fetchone()
+
+                def verify_evidence():
+                    cif_confirmation = cursor.execute(
+                        "select review_snapshot, applicant_confirmation_evidence_reference, witnessed_by_user_id "
+                        "from lending.client_cif_review_confirmations where client_id = %s and cif_version_id = %s",
+                        (client_id, version["cif_version_id"]),
+                    ).fetchone()
+                    if cif_confirmation is None:
+                        raise LoanApplicationConflict(
+                            "CIF review confirmation is required before confirming the application."
+                        )
+                    try:
+                        require_evidence(
+                            cursor,
+                            evidence_reference=cif_confirmation[
+                                "applicant_confirmation_evidence_reference"
+                            ],
+                            actor_user_id=cif_confirmation["witnessed_by_user_id"],
+                            client_id=client_id,
+                            purpose="cif_review",
+                            subject_id=version["cif_version_id"],
+                            review_snapshot=cif_review_snapshot(
+                                client_id=client_id,
+                                cif_version_id=version["cif_version_id"],
+                                information=cif_confirmation["review_snapshot"],
+                            ),
+                        )
+                        require_evidence(
+                            cursor,
+                            evidence_reference=evidence_reference,
+                            actor_user_id=actor_user_id,
+                            client_id=client_id,
+                            purpose="application_review",
+                            subject_id=application_version_id,
+                            review_snapshot=application_review_snapshot(
+                                client_id=client_id,
+                                cif_version_id=version["cif_version_id"],
+                                application_id=application_id,
+                                application_version_id=application_version_id,
+                                information=_record_from_row(
+                                    version
+                                ).information.model_dump(mode="json"),
+                                cif_information=cif_confirmation["review_snapshot"],
+                            ),
+                        )
+                    except OfficeReviewEvidenceConflict as error:
+                        raise LoanApplicationConflict(str(error)) from error
+
                 if existing is not None:
                     if (
                         existing["application_id"] != application_id
@@ -304,6 +361,7 @@ class PostgresLoanApplicationRepository:
                         raise LoanApplicationConflict(
                             "Application version was already confirmed with different evidence or witness."
                         )
+                    verify_evidence()
                     return _confirmation_record_from_row(existing)
 
                 latest = cursor.execute(
@@ -328,27 +386,27 @@ class PostgresLoanApplicationRepository:
                     cif_version_id=cif_version_id,
                 )
 
-                information = LoanApplicationInformation.model_validate(
-                    version["information"]
-                )
+                information = parse_loan_application_information(version["information"])
                 if information.missing_fields():
                     raise LoanApplicationConflict(
                         "Application information is incomplete and cannot be confirmed."
                     )
 
-                cif_confirmation = cursor.execute(
-                    """
-                    select 1
-                    from lending.client_cif_review_confirmations
-                    where client_id = %s and cif_version_id = %s
-                    limit 1
-                    """,
-                    (client_id, cif_version_id),
-                ).fetchone()
-                if cif_confirmation is None:
-                    raise LoanApplicationConflict(
-                        "CIF review confirmation is required before confirming the application."
+                from .office_review_evidence_repository import load_review_context
+
+                try:
+                    load_review_context(
+                        cursor,
+                        client_id=client_id,
+                        cif_version_id=cif_version_id,
+                        purpose="application_review",
+                        application_id=application_id,
+                        application_version_id=application_version_id,
+                        lock=True,
                     )
+                except OfficeReviewEvidenceConflict as error:
+                    raise LoanApplicationConflict(str(error)) from error
+                verify_evidence()
 
                 created = cursor.execute(
                     """
@@ -525,7 +583,9 @@ class PostgresLoanApplicationRepository:
                     version_number=expected_version_number,
                 )
                 if expected is None:
-                    raise LoanApplicationConflict("Expected application version was not found.")
+                    raise LoanApplicationConflict(
+                        "Expected application version was not found."
+                    )
 
                 next_version_number = expected_version_number + 1
                 next_version = self._version_by_id(

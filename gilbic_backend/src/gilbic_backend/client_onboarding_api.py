@@ -9,7 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
-from .client_onboarding_repository import PostgresClientOnboardingRepository
+from .client_onboarding_repository import (
+    ClientOnboardingAccessDenied,
+    PostgresClientOnboardingRepository,
+)
 from .request_auth import authenticated_device_context
 
 
@@ -141,6 +144,89 @@ def client_onboarding_repository_dependency() -> PostgresClientOnboardingReposit
 
 def create_client_onboarding_router() -> APIRouter:
     router = APIRouter(tags=["client-onboarding"])
+
+    def read_case(
+        *, scope: Literal["office", "collector"], application_reference: str,
+        response: Response, authorization, x_device_id, auth, accounts, onboarding,
+    ) -> dict[str, object]:
+        try:
+            permission = (
+                "client_onboarding.requirement.review" if scope == "office"
+                else "client_onboarding.visit.record"
+            )
+            actor = authenticated_device_context(
+                authorization=authorization, device_identifier=x_device_id,
+                auth=auth, accounts=accounts, permission=permission,
+                permission_error="Onboarding case permission is required.",
+            )
+            roles = ("employee", "management") if scope == "office" else ("collector",)
+            if not any(role in actor.roles for role in roles):
+                raise HTTPException(status_code=403, detail="This role cannot read this onboarding case.")
+            reference = application_reference.strip()
+            if not reference:
+                raise HTTPException(status_code=400, detail="Office intake reference is required.")
+            try:
+                record = onboarding.get_case_by_reference(
+                    actor_user_id=actor.user_id, application_reference=reference, scope=scope,
+                )
+            except ClientOnboardingAccessDenied as error:
+                raise HTTPException(status_code=403, detail="Onboarding case access is unavailable.") from error
+            if record is None:
+                raise HTTPException(status_code=404, detail="Office intake record is unavailable.")
+        except HTTPException as error:
+            error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
+            raise
+        payload = {
+            key: record[key] for key in (
+                "application_reference", "status", "full_name", "phone_number", "present_address",
+            )
+        }
+        payload["applicant_id"] = str(record["applicant_id"])
+        if scope == "collector":
+            payload["collector_visit"] = {
+                key: record["collector_visit"][key] for key in ("status", "note", "evidence_reference")
+            }
+        else:
+            payload.update({key: record[key] for key in (
+                "email", "privacy_consent", "accuracy_declaration", "bypassed_requirements", "bypass_reason",
+            )})
+            payload["client_id"] = str(record["client_id"]) if record["client_id"] else None
+            payload["requirements"] = {
+                name: {key: record["requirements"][name][key] for key in ("status", "evidence_reference")}
+                for name in ("national_id", "tin_id", "meralco_bill")
+            }
+            payload["requirements"]["collector_visit"] = {
+                key: record["requirements"]["collector_visit"][key]
+                for key in ("status", "note", "evidence_reference")
+            }
+        response.headers["Cache-Control"] = "no-store"
+        return payload
+
+    @router.get("/api/v1/management/onboarding/applicants/by-reference/{application_reference:path}/case")
+    def get_office_case(
+        application_reference: str, response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        onboarding: PostgresClientOnboardingRepository = Depends(client_onboarding_repository_dependency),
+    ) -> dict[str, object]:
+        return read_case(scope="office", application_reference=application_reference,
+                         response=response, authorization=authorization, x_device_id=x_device_id,
+                         auth=auth, accounts=accounts, onboarding=onboarding)
+
+    @router.get("/api/v1/collector/onboarding/applicants/by-reference/{application_reference:path}/visit-case")
+    def get_collector_visit_case(
+        application_reference: str, response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        onboarding: PostgresClientOnboardingRepository = Depends(client_onboarding_repository_dependency),
+    ) -> dict[str, object]:
+        return read_case(scope="collector", application_reference=application_reference,
+                         response=response, authorization=authorization, x_device_id=x_device_id,
+                         auth=auth, accounts=accounts, onboarding=onboarding)
 
     @router.get(
         "/api/v1/management/onboarding/applicants/"

@@ -5,7 +5,7 @@ from typing import NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
 
 from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -19,6 +19,8 @@ from .client_cif_repository import (
     normalize_cif_information,
 )
 from .request_auth import authenticated_device_context
+from .office_review_evidence_route import PrivateOfficeRoute
+from .client_cif_identity_information import CifIdentityInformation
 
 
 _CIF_PERMISSION = "client_onboarding.requirement.review"
@@ -29,6 +31,12 @@ class BaselineLiveFaceRequest(BaseModel):
 
     evidence_reference: str = Field(min_length=1, max_length=500)
     liveness_status: ClientCifLivenessStatus
+    cif_version_id: UUID | None = None
+
+
+class ActivateCifRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cif_version_id: UUID
 
 
 class CifReviewInformation(BaseModel):
@@ -38,6 +46,14 @@ class CifReviewInformation(BaseModel):
     phone_number: str
     email: str | None
     present_address: str
+    identity_information: CifIdentityInformation | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_information(self, handler):
+        result = handler(self)
+        if self.identity_information is None:
+            result.pop("identity_information", None)
+        return result
 
 
 class CorrectCifDraftInformationRequest(BaseModel):
@@ -54,7 +70,7 @@ class CorrectCifDraftInformationRequest(BaseModel):
         cls, value: CifReviewInformation
     ) -> CifReviewInformation:
         return CifReviewInformation.model_validate(
-            normalize_cif_information(value.model_dump())
+            normalize_cif_information(value.model_dump(mode="json"))
         )
 
     @field_validator("reason")
@@ -120,6 +136,16 @@ def _summary_payload(record: ClientCifVersion) -> dict[str, object]:
     }
 
 
+def _information_payload(record: ClientCifVersion) -> dict[str, object]:
+    payload = {
+        key: getattr(record, key)
+        for key in ("full_name", "phone_number", "email", "present_address")
+    }
+    if getattr(record, "identity_information", None) is not None:
+        payload["identity_information"] = record.identity_information
+    return payload
+
+
 def _iso_timestamp(value: datetime | None) -> str | None:
     if value is None:
         return None
@@ -143,13 +169,73 @@ def _raise_cif_conflict(error: ClientCifConflict) -> NoReturn:
 
 
 def create_client_cif_router() -> APIRouter:
-    router = APIRouter(tags=["client-cif"])
+    router = APIRouter(tags=["client-cif"], route_class=PrivateOfficeRoute)
+
+    @router.post(
+        "/api/v1/management/clients/{client_id}/cif/review-cycles", status_code=201
+    )
+    def begin_cif_review_cycle(
+        client_id: UUID,
+        body: CorrectCifDraftInformationRequest,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        cif: PostgresClientCifRepository = Depends(client_cif_repository_dependency),
+    ) -> dict[str, object]:
+        try:
+            actor = _office_cif_actor(
+                authorization=authorization,
+                x_device_id=x_device_id,
+                auth=auth,
+                accounts=accounts,
+            )
+            record = cif.begin_review_cycle(
+                actor_user_id=actor.user_id,
+                client_id=client_id,
+                cif_version_id=body.cif_version_id,
+                expected_information=body.expected_information.model_dump(mode="json"),
+                corrected_information=body.corrected_information.model_dump(
+                    mode="json"
+                ),
+                reason=body.reason,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail=str(error),
+                headers={"Cache-Control": "no-store"},
+            ) from error
+        except ClientCifAccessDenied as error:
+            raise HTTPException(
+                status_code=403,
+                detail=str(error),
+                headers={"Cache-Control": "no-store"},
+            ) from error
+        except ClientCifConflict as error:
+            raise HTTPException(
+                status_code=409,
+                detail=str(error),
+                headers={"Cache-Control": "no-store"},
+            ) from error
+        except HTTPException as error:
+            error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
+            raise
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            **_summary_payload(record),
+            "cif_version_id": str(record.id),
+            **_information_payload(record),
+            "review_scope": "cif_information_only",
+        }
 
     @router.get("/api/v1/management/clients/{client_id}/cif/review-summary")
     def get_cif_review_summary(
         client_id: UUID,
         response: Response,
         include_correction_availability: bool = False,
+        include_identity_information: bool = False,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
@@ -163,9 +249,16 @@ def create_client_cif_router() -> APIRouter:
             accounts=accounts,
         )
         try:
-            if include_correction_availability:
+            if include_identity_information:
                 record = cif.get_review_summary(
-                    client_id=client_id, include_correction_availability=True,
+                    client_id=client_id,
+                    include_correction_availability=include_correction_availability,
+                    include_identity_information=True,
+                )
+            elif include_correction_availability:
+                record = cif.get_review_summary(
+                    client_id=client_id,
+                    include_correction_availability=True,
                 )
             else:
                 record = cif.get_review_summary(client_id=client_id)
@@ -186,6 +279,10 @@ def create_client_cif_router() -> APIRouter:
         if include_correction_availability:
             payload["can_correct_information"] = (
                 getattr(record, "can_correct_information", False) is True
+            )
+        if include_identity_information:
+            payload["identity_information"] = getattr(
+                record, "identity_information", None
             )
         return payload
 
@@ -211,8 +308,10 @@ def create_client_cif_router() -> APIRouter:
                 actor_user_id=actor.user_id,
                 client_id=client_id,
                 cif_version_id=body.cif_version_id,
-                expected_information=body.expected_information.model_dump(),
-                corrected_information=body.corrected_information.model_dump(),
+                expected_information=body.expected_information.model_dump(mode="json"),
+                corrected_information=body.corrected_information.model_dump(
+                    mode="json"
+                ),
                 reason=body.reason,
             )
         except ValueError as error:
@@ -231,6 +330,7 @@ def create_client_cif_router() -> APIRouter:
                 "review_scope": "cif_information_only",
             }
         )
+        payload.update(_information_payload(record))
         return payload
 
     @router.post(
@@ -258,7 +358,7 @@ def create_client_cif_router() -> APIRouter:
                 actor_user_id=actor.user_id,
                 client_id=client_id,
                 cif_version_id=body.cif_version_id,
-                expected_information=body.expected_information.model_dump(),
+                expected_information=body.expected_information.model_dump(mode="json"),
                 applicant_confirmation_evidence_reference=(
                     body.applicant_confirmation_evidence_reference
                 ),
@@ -305,9 +405,7 @@ def create_client_cif_router() -> APIRouter:
             _raise_cif_conflict(error)
         return _summary_payload(record)
 
-    @router.patch(
-        "/api/v1/management/clients/{client_id}/cif/baseline-live-face"
-    )
+    @router.patch("/api/v1/management/clients/{client_id}/cif/baseline-live-face")
     def record_baseline_live_face(
         client_id: UUID,
         body: BaselineLiveFaceRequest,
@@ -328,6 +426,11 @@ def create_client_cif_router() -> APIRouter:
                 client_id=client_id,
                 evidence_reference=body.evidence_reference,
                 liveness_status=body.liveness_status,
+                **(
+                    {"cif_version_id": body.cif_version_id}
+                    if body.cif_version_id is not None
+                    else {}
+                ),
             )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
@@ -338,6 +441,7 @@ def create_client_cif_router() -> APIRouter:
     @router.post("/api/v1/management/clients/{client_id}/cif/activate")
     def activate_cif(
         client_id: UUID,
+        body: ActivateCifRequest | None = None,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
@@ -359,6 +463,7 @@ def create_client_cif_router() -> APIRouter:
             record = cif.activate_current(
                 actor_user_id=actor.user_id,
                 client_id=client_id,
+                **({"cif_version_id": body.cif_version_id} if body is not None else {}),
             )
         except ClientCifConflict as error:
             _raise_cif_conflict(error)

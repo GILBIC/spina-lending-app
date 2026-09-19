@@ -5,6 +5,8 @@ from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
+from psycopg.rows import dict_row
+
 from .database import open_connection
 
 
@@ -23,7 +25,90 @@ class ClientOnboardingRecord:
     promoted_client_id: UUID | None = None
 
 
+class ClientOnboardingAccessDenied(PermissionError):
+    pass
+
+
 class PostgresClientOnboardingRepository:
+    def get_case_by_reference(
+        self, *, actor_user_id: UUID, application_reference: str,
+        scope: Literal["office", "collector"],
+    ) -> dict[str, Any] | None:
+        """Read one exact intake case with the minimum role-specific projection."""
+        if not isinstance(application_reference, str) or not application_reference.strip():
+            raise ValueError("Office intake reference must be a nonblank string.")
+        if scope not in ("office", "collector"):
+            raise ValueError("Onboarding case scope is invalid.")
+        reference = application_reference.strip()
+        roles = ["employee", "management"] if scope == "office" else ["collector"]
+        permission = (
+            "client_onboarding.requirement.review" if scope == "office"
+            else "client_onboarding.visit.record"
+        )
+        common = """
+            id as applicant_id, application_reference, status, full_name,
+            phone_number, present_address, collector_visit_status,
+            collector_visit_note, collector_visit_evidence_reference
+        """
+        office = """,
+            email, promoted_client_id as client_id, national_id_status,
+            national_id_egov_evidence_reference, tin_id_status,
+            tin_id_egov_evidence_reference, meralco_bill_status,
+            meralco_bill_evidence_reference, privacy_consent,
+            accuracy_declaration, bypassed_requirements, bypass_reason
+        """ if scope == "office" else ""
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                allowed = cursor.execute(
+                    """
+                    select 1 from core.users actor
+                    where actor.id = %s and actor.status = 'active'
+                      and exists (
+                        select 1 from core.user_roles user_role
+                        join core.roles role on role.id = user_role.role_id
+                        join core.role_permissions permission on permission.role_id = role.id
+                        where user_role.user_id = actor.id and role.code = any(%s)
+                          and permission.permission_code = %s
+                      )
+                    """,
+                    (actor_user_id, roles, permission),
+                ).fetchone()
+                if allowed is None:
+                    raise ClientOnboardingAccessDenied(
+                        "An active authorized onboarding account is required."
+                    )
+                row = cursor.execute(
+                    f"""
+                    select {common}{office}
+                    from lending.client_onboarding_applicants
+                    where lower(application_reference) = lower(%s)
+                    """,
+                    (reference,),
+                ).fetchone()
+        if row is None:
+            return None
+        visit = {
+            "status": row.pop("collector_visit_status"),
+            "note": row.pop("collector_visit_note"),
+            "evidence_reference": row.pop("collector_visit_evidence_reference"),
+        }
+        if scope == "collector":
+            row["collector_visit"] = visit
+        else:
+            row["requirements"] = {
+                name: {
+                    "status": row.pop(f"{name}_status"),
+                    "evidence_reference": row.pop(evidence),
+                }
+                for name, evidence in (
+                    ("national_id", "national_id_egov_evidence_reference"),
+                    ("tin_id", "tin_id_egov_evidence_reference"),
+                    ("meralco_bill", "meralco_bill_evidence_reference"),
+                )
+            }
+            row["requirements"]["collector_visit"] = visit
+        return row
+
     def find_cif_client_by_reference(
         self, *, application_reference: str
     ) -> ClientOnboardingRecord | None:
