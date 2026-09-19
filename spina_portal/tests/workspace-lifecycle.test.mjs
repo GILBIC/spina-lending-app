@@ -91,7 +91,7 @@ async function harness(t, role) {
   return { elements, events, accounts, logoutResponse };
 }
 
-for (const role of ['employee', 'management']) {
+for (const role of ['employee', 'management', 'client']) {
   test(`${role}: starting logout immediately clears the workspace and ignores its pending response`, async (t) => {
     const h = await harness(t, role);
     const logout = h.elements.get('logout-button').emit('click');

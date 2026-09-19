@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
+import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/statements/client_statement.dart';
 import 'package:gilbic_mobile/src/core/statements/client_statement_repository.dart';
+import 'package:gilbic_mobile/src/features/client/client_document_download_button.dart';
 
 class ClientStatementPage extends StatefulWidget {
   const ClientStatementPage({
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.documentRepository,
+    this.documentSaver = saveClientDocument,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientStatementRepository? repository;
+  final ClientDocumentRepository? documentRepository;
+  final ClientDocumentSaver documentSaver;
 
   @override
   State<ClientStatementPage> createState() => _ClientStatementPageState();
@@ -49,7 +56,9 @@ class _ClientStatementPageState extends State<ClientStatementPage> {
     } on SpinaApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } on Object {
-      if (mounted) setState(() => _error = 'Statement of Account could not be loaded.');
+      if (mounted) {
+        setState(() => _error = 'Statement of Account could not be loaded.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -96,11 +105,29 @@ class _ClientStatementPageState extends State<ClientStatementPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(statement.clientName, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    statement.clientName,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   Text(statement.clientCode),
                   const SizedBox(height: 8),
                   const Text(
                     'Read-only statement using loan balances and official payment records returned by the protected SPINA server.',
+                  ),
+                  const SizedBox(height: 8),
+                  ClientDocumentDownloadButton(
+                    label: 'Download statement record copy',
+                    saver: widget.documentSaver,
+                    load: () async {
+                      final identity = await widget.deviceIdentityProvider
+                          .load();
+                      return (widget.documentRepository ??
+                              SpinaClientDocumentRepository())
+                          .downloadStatement(
+                            widget.session,
+                            deviceId: identity.installationId,
+                          );
+                    },
                   ),
                 ],
               ),
@@ -124,7 +151,10 @@ class _ClientStatementPageState extends State<ClientStatementPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(loan.loanTypeName, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        loan.loanTypeName,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       Text(loan.loanNumber),
                       const Divider(height: 20),
                       _line('Principal', _money(loan.principal)),
@@ -137,7 +167,10 @@ class _ClientStatementPageState extends State<ClientStatementPage> {
               const SizedBox(height: 8),
             ],
           const SizedBox(height: 16),
-          Text('Official payment history', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Official payment history',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           if (statement.payments.isEmpty)
             const Card(
@@ -154,17 +187,24 @@ class _ClientStatementPageState extends State<ClientStatementPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(_money(payment.amount), style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        _money(payment.amount),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       Text('Receipt: ${payment.receiptNumber}'),
                       Text('Loan: ${payment.loanNumber}'),
                       Text('Collection date: ${_date(payment.collectionDate)}'),
                       Text('Status: ${payment.status}'),
                       if (payment.officialBalance != null)
-                        Text('Balance after: ${_money(payment.officialBalance!)}'),
+                        Text(
+                          'Balance after: ${_money(payment.officialBalance!)}',
+                        ),
                       if (payment.isVoided)
                         const Padding(
                           padding: EdgeInsets.only(top: 6),
-                          child: Text('Voided — this receipt does not reduce the balance.'),
+                          child: Text(
+                            'Voided — this receipt does not reduce the balance.',
+                          ),
                         ),
                     ],
                   ),
@@ -196,8 +236,15 @@ String _money(String value) {
   final sign = match.group(1) ?? '';
   final whole = match.group(2) ?? '0';
   final fraction = match.group(3);
-  final grouped = whole.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
-  return '${sign == '-' ? '-' : sign == '+' ? '+' : ''}₱$grouped${fraction == null ? '' : '.$fraction'}';
+  final grouped = whole.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  return '${sign == '-'
+      ? '-'
+      : sign == '+'
+      ? '+'
+      : ''}₱$grouped${fraction == null ? '' : '.$fraction'}';
 }
 
 String _date(DateTime value) {

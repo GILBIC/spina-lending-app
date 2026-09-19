@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/client/client_schedule_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_loan_documents_page.dart';
 
 class ClientLoansPage extends StatefulWidget {
   const ClientLoansPage({
@@ -81,6 +82,19 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
     );
   }
 
+  void _openDocuments(ClientLoan loan) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ClientLoanDocumentsPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          loanId: loan.loanId,
+          loanNumber: loan.loanNumber,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,6 +153,7 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
               _LoanCard(
                 loan: loan,
                 onViewSchedule: () => _openSchedule(loan),
+                onViewDocuments: () => _openDocuments(loan),
               ),
               const SizedBox(height: 10),
             ],
@@ -153,6 +168,7 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
               _LoanCard(
                 loan: loan,
                 onViewSchedule: () => _openSchedule(loan),
+                onViewDocuments: () => _openDocuments(loan),
               ),
               const SizedBox(height: 10),
             ],
@@ -241,10 +257,15 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _LoanCard extends StatelessWidget {
-  const _LoanCard({required this.loan, required this.onViewSchedule});
+  const _LoanCard({
+    required this.loan,
+    required this.onViewSchedule,
+    required this.onViewDocuments,
+  });
 
   final ClientLoan loan;
   final VoidCallback onViewSchedule;
+  final VoidCallback onViewDocuments;
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +308,10 @@ class _LoanCard extends StatelessWidget {
             label: 'Paid toward balance',
             value: _money(loan.paidAmount),
           ),
-          _AmountRow(label: 'Required payment', value: _money(loan.dailyAmount)),
+          _AmountRow(
+            label: 'Required payment',
+            value: _money(loan.dailyAmount),
+          ),
           if (loan.interestRate != null)
             _AmountRow(
               label: 'Interest rate',
@@ -318,6 +342,15 @@ class _LoanCard extends StatelessWidget {
               onPressed: onViewSchedule,
               icon: const Icon(Icons.calendar_month_outlined),
               label: const Text('View authoritative schedule'),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: Key('client-loan-documents-${loan.loanId}'),
+              onPressed: onViewDocuments,
+              icon: const Icon(Icons.folder_outlined),
+              label: const Text('Loan documents'),
             ),
           ),
         ],

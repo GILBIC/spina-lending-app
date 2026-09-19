@@ -484,6 +484,7 @@ textarea:focus {
 }
 
 .role-content {
+  min-width: 0;
   width: min(1480px, 100%);
   padding: clamp(1rem, 2.6vw, 2.4rem);
   outline: none;
@@ -808,6 +809,7 @@ tr:last-child td {
 .list-stack,
 .timeline {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.7rem;
 }
 
@@ -945,7 +947,7 @@ details > :not(summary) {
   }
 
   .app-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {

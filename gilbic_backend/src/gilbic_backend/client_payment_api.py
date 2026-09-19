@@ -21,6 +21,7 @@ from .client_payment_repository import (
     PostgresClientPaymentRepository,
 )
 from .request_auth import authenticated_device_context
+from .client_payment_proof_repository import payment_proof_capability
 
 
 def client_payment_repository_dependency() -> PostgresClientPaymentRepository:
@@ -78,13 +79,7 @@ def _timeline_payload(timeline: ClientPaymentTimeline) -> dict[str, object]:
             "client_name": timeline.client_name,
         },
         "payments": [_payment_payload(record) for record in timeline.payments],
-        "payment_proof": {
-            "upload_available": False,
-            "message": (
-                "Collector-recorded payments use official SPINA receipts. "
-                "Client payment-proof upload is not connected to mobile yet."
-            ),
-        },
+        "payment_proof": payment_proof_capability(),
     }
 
 

@@ -147,6 +147,12 @@ A related backend robustness defect exists: `ClientLoanScheduleUnavailable` is r
 
 ## Current task
 
-P8-1 — authoritative Client schedule visibility.
+2026-09-19 continuation: complete the entire remaining P8-3/P8-4 batch, reconcile the existing Client branch once with merged Priority4, then verify the combined Web/Android/backend candidate. P8-1, P8-2, P8-5, P8-6 and the bounded P8-7 cleanup were previously accepted; their history remains on PR424.
+
+The merged main prerequisite is `faa885706243ad50a77c4d4d1b3172f2c9df2884`. Integration commit is `dfd732e1ea44151baa3f78b0175b871ec2af9dc8`. Current implementation and test evidence is tracked in `docs/operations/client-role-completion-verification.md`.
+
+Document behavior: original issued packet and release-linked signed contract/cash acknowledgment remain immutable stored bytes. Statement and payment exports are labelled current server record copies, including corrections and voids. They do not create original legal receipts or invoice numbers. Legacy/renewal records without issued private artifacts remain unavailable for original download; no historical documents are fabricated.
+
+Payment proofs: versioned private evidence and Management review only. Reviews can request correction or reject evidence, but never confirm provider settlement or post collections. API migration0127 and configured private storage are deployment prerequisites. No GCash notification reader or live-payment activation is part of this batch.
 
 No merge, deployment, production data/Auth mutation, or live payment enablement is authorized by this plan.

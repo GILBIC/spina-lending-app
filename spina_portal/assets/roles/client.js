@@ -24,6 +24,8 @@ import {
   formatAuthoritativeMoney,
 } from '../client-schedule.js';
 import { renderClientStatement } from '../client-statement.js';
+import { mountClientDocuments } from '../client-documents.js';
+import { mountPaymentProofs } from '../payment-proofs.js';
 
 function clientHomeObligationSummary(schedule) {
   const penaltyStatus = String(schedule?.penalty_status || '').trim().toLowerCase();
@@ -426,6 +428,9 @@ function renderWorkspace(root, model, raw, errors) {
     ${errors.statement ? errorCard(errors.statement) : renderClientStatement(raw.statement)}
   </section>
 
+  <section class="section-card" id="client-documents"><h2>Documents and record copies</h2><div data-client-documents></div></section>
+  <section class="section-card" id="client-payment-proofs"><h2>Payment proof</h2><div data-client-payment-proofs></div></section>
+
   <section class="section-card" id="client-renewals">
     <div class="section-heading"><div><h2>Renewal requests</h2><p>After you submit, your permanently assigned Collector must recommend the request before Management reviews and decides it. A request never creates or releases a new loan. If approved, complete only your own signer step; any other required signer must use their own SPINA account.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : clientRenewalRows(model.renewals)}
@@ -653,12 +658,19 @@ function bindClientRenewalWorkflowActions(context) {
 }
 
 export async function mountClientWorkspace(context) {
+  if (context.signal?.aborted) return;
+  context.clientDocumentCleanup?.();
+  context.clientProofCleanup?.();
+  const generation = (context.clientWorkspaceGeneration ?? 0) + 1;
+  context.clientWorkspaceGeneration = generation;
   const { root, api, setNavigation } = context;
   setNavigation([
     { id: 'client-overview', label: 'Overview' },
     { id: 'client-loans', label: 'My loans' },
     { id: 'client-payments', label: 'Payments' },
     { id: 'client-statement', label: 'Statement' },
+    { id: 'client-documents', label: 'Documents' },
+    { id: 'client-payment-proofs', label: 'Payment proof' },
     { id: 'client-renewals', label: 'Renewals' },
     { id: 'client-support', label: 'Support' },
     { id: 'client-payment-instructions', label: 'Payment instructions' },
@@ -681,6 +693,7 @@ export async function mountClientWorkspace(context) {
   const homeObligationSchedules = loans.error
     ? {}
     : await loadClientHomeObligationSchedules(api, loans.data);
+  if (context.signal?.aborted || context.clientWorkspaceGeneration !== generation) return;
   const raw = {
     account: account.data,
     loans: loans.data,
@@ -706,6 +719,14 @@ export async function mountClientWorkspace(context) {
     notifications: notifications.error,
   });
   bindForms(context, raw);
+  const documentRoot = root.querySelector('[data-client-documents]');
+  const proofRoot = root.querySelector('[data-client-payment-proofs]');
+  if (documentRoot) context.clientDocumentCleanup = mountClientDocuments({
+    root: documentRoot, api, loans: model.allLoans, payments: model.payments, signal: context.signal,
+  });
+  if (proofRoot) context.clientProofCleanup = mountPaymentProofs({
+    root: proofRoot, api, loans: model.allLoans, signal: context.signal,
+  });
   bindClientScheduleButtons(context);
   bindClientGcashPanel(context);
   bindClientAccountDeviceSecurity(context);
