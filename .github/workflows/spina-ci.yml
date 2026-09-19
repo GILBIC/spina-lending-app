@@ -436,16 +436,6 @@ jobs:
           python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
           python tools/run_mvp_private_schema_barrier_validation.py
 
-      - name: Verify complete office onboarding and first-loan release
-        shell: bash
-        env:
-          SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
-          PYTHONPATH: tools
-          ONBOARDING_ADMIN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        run: |
-          set -euo pipefail
-          python -c "import os; from run_client_onboarding_disposable_postgres_validation import validate; validate(os.environ['ONBOARDING_ADMIN_DATABASE_URL'])"
-
       - name: Require clean tracked files
         if: always()
         shell: bash

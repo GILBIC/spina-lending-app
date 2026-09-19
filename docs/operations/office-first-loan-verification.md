@@ -55,3 +55,9 @@ These are focused executions reported during this implementation, not an additiv
 - Two existing tax PDF proof cases require GitHub's real pull-request event metadata and therefore remain part of the actual Annex workflow, not a claimed local pass.
 
 Exact published commit, final workflow results and artifacts are recorded in [PR #420](https://github.com/GILBIC/spina-lending-app/pull/420) and the synchronized Notion/local handoff after publication. This checkpoint does not assert a CI outcome before that evidence exists. PR #420 remains Draft/open/unmerged; the external gates above remain in force.
+
+### CI compatibility correction
+
+The first complete batch (`4b58eb54`) passed the Annex A workflow, including real first-loan packet conversion, and the independent 7x7 PostgreSQL workflow. Its financial lane exposed three existing Client-account tests running against the initial-capital verifier's historical schema through 0080. The current account guard correctly needs actual onboarding membership from 0112. Applying the unchanged 0112 migration in that disposable verifier reproduced **3 failed / 11 passed** before the fix and **14 passed** afterward; the protected runtime, test assertions and rollback-isolated 0081 upgrade proof are unchanged.
+
+The private-schema verifier already invokes the complete onboarding runner. The redundant separate CI invocation added during integration was removed, so the full office database proof runs once through that existing path. Final exact-head workflow outcomes remain in the PR checkpoint.
