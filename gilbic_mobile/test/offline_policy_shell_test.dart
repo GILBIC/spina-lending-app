@@ -76,7 +76,26 @@ void main() {
               await tester.pumpAndSettle();
               expect(
                 find.byKey(const Key('collector-more-offline')),
-                findsNothing,
+                findsOneWidget,
+              );
+              await tester.tap(find.byKey(const Key('collector-more-offline')));
+              await tester.pumpAndSettle();
+              expect(
+                find.byKey(const Key('offline-policy-page')),
+                findsOneWidget,
+              );
+              expect(find.text('Collector offline policy'), findsOneWidget);
+              await tester.pageBack();
+              await tester.pumpAndSettle();
+              await tester.tap(find.byKey(const Key('collector-more-tab')));
+              await tester.pumpAndSettle();
+              await tester.tap(
+                find.byKey(const Key('collector-more-notifications')),
+              );
+              await tester.pumpAndSettle();
+              expect(
+                find.byKey(const Key('notification-center-page')),
+                findsOneWidget,
               );
               return;
             }

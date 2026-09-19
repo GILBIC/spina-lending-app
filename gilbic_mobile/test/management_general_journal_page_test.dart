@@ -7,8 +7,104 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_general_journal_page.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
 void main() {
+  testWidgets('Journal rejects fractional cents instead of rounding', (
+    tester,
+  ) async {
+    final repository = _FakeGeneralJournalRepository();
+    await _pumpCompactJournalPage(tester, repository);
+    await tester.tap(find.byKey(const Key('create-manual-journal')));
+    await tester.pumpAndSettle();
+    await _fillBalancedDraft(tester, description: 'Exact amounts only');
+    await tester.enterText(
+      find.byKey(const Key('journal-line-0-debit')),
+      '1.234',
+    );
+    await tester.enterText(
+      find.byKey(const Key('journal-line-1-credit')),
+      '1.234',
+    );
+    await tester.tap(find.byKey(const Key('save-manual-journal')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('management-review-general-journal')),
+      findsNothing,
+    );
+    expect(find.textContaining('two decimal places'), findsOneWidget);
+    expect(repository.createCalls, 0);
+  });
+
+  testWidgets(
+    'Uncertain journal creation needs refresh and explicit reconciliation',
+    (tester) async {
+      final repository = _FakeGeneralJournalRepository()
+        ..createError = const SpinaApiException(
+          'Connection lost',
+          code: 'network_unavailable',
+        );
+      await _pumpCompactJournalPage(tester, repository);
+      await tester.binding.setSurfaceSize(const Size(600, 1100));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('create-manual-journal')));
+      await tester.pumpAndSettle();
+      await _fillBalancedDraft(tester, description: 'Possible committed draft');
+      await tester.tap(find.byKey(const Key('save-manual-journal')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-general-journal')));
+      await tester.pumpAndSettle();
+      expect(repository.createCalls, 1);
+      expect(
+        tester
+            .widget<FloatingActionButton>(
+              find.byKey(const Key('create-manual-journal')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.byTooltip('Refresh General Journal'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FloatingActionButton>(
+              find.byKey(const Key('create-manual-journal')),
+            )
+            .onPressed,
+        isNull,
+      );
+      final acknowledged = find.byKey(
+        const Key('journal-reconciliation-reviewed'),
+      );
+      await tester.ensureVisible(acknowledged);
+      await tester.tap(acknowledged);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FloatingActionButton>(
+              find.byKey(const Key('create-manual-journal')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(repository.createCalls, 1);
+    },
+  );
+
+  for (final status in [401, 403, 426]) {
+    testWidgets(
+      'Denied journal refresh $status clears stale financial controls',
+      (tester) async {
+        final repository = _FakeGeneralJournalRepository();
+        await _pumpCompactJournalPage(tester, repository);
+        repository.loadError = SpinaApiException('Denied', statusCode: status);
+        await tester.tap(find.byTooltip('Refresh General Journal'));
+        await tester.pumpAndSettle();
+        expect(find.text('Test manual journal'), findsNothing);
+        expect(find.byKey(const Key('create-manual-journal')), findsNothing);
+      },
+    );
+  }
   testWidgets('Management sees protected journal and balanced trial balance', (
     tester,
   ) async {
@@ -87,11 +183,11 @@ void main() {
       expect(repository.createdDescription, 'Office cash capital');
       expect(repository.createdLines, hasLength(2));
       expect(repository.createdLines![0].accountCode, '1010');
-      expect(repository.createdLines![0].debit, 100);
-      expect(repository.createdLines![0].credit, 0);
+      expect(repository.createdLines![0].debit, '100.00');
+      expect(repository.createdLines![0].credit, '0.00');
       expect(repository.createdLines![1].accountCode, '3000');
-      expect(repository.createdLines![1].debit, 0);
-      expect(repository.createdLines![1].credit, 100);
+      expect(repository.createdLines![1].debit, '0.00');
+      expect(repository.createdLines![1].credit, '100.00');
       expect(repository.createdPostingDate, isNotNull);
     },
   );
@@ -122,9 +218,9 @@ void main() {
     expect(repository.updatedPostingDate, DateTime(2026, 8, 8));
     expect(repository.updatedLines, hasLength(2));
     expect(repository.updatedLines![0].accountCode, '1010');
-    expect(repository.updatedLines![0].debit, 100);
+    expect(repository.updatedLines![0].debit, '100.00');
     expect(repository.updatedLines![1].accountCode, '3000');
-    expect(repository.updatedLines![1].credit, 100);
+    expect(repository.updatedLines![1].credit, '100.00');
 
     final post = find.byKey(const Key('post-journal-entry-1'));
     await _scrollToEntryAction(tester, post);
@@ -332,6 +428,8 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
   _FakeGeneralJournalRepository({this.posted = false});
 
   final bool posted;
+  SpinaApiException? createError;
+  SpinaApiException? loadError;
   String? deviceId;
   int createCalls = 0;
   int updateCalls = 0;
@@ -366,24 +464,24 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     postedByName: posted ? 'Management' : null,
     createdAt: DateTime(2026, 8, 8),
     postedAt: posted ? DateTime(2026, 8, 8) : null,
-    totalDebit: 100,
-    totalCredit: 100,
+    totalDebit: '100.00',
+    totalCredit: '100.00',
     lines: const <AccountingJournalLine>[
       AccountingJournalLine(
         lineNumber: 1,
         accountCode: '1010',
         accountName: 'Cash - Office',
         description: '',
-        debit: 100,
-        credit: 0,
+        debit: '100.00',
+        credit: '0.00',
       ),
       AccountingJournalLine(
         lineNumber: 2,
         accountCode: '3000',
         accountName: 'Capital',
         description: '',
-        debit: 0,
-        credit: 100,
+        debit: '0.00',
+        credit: '100.00',
       ),
     ],
   );
@@ -394,6 +492,7 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     required String deviceId,
   }) async {
     this.deviceId = deviceId;
+    if (loadError != null) throw loadError!;
     return GeneralJournalSnapshot(
       entries: <AccountingJournalEntry>[_entry],
       canManage: true,
@@ -410,8 +509,8 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     return const AccountingTrialBalance(
       periodId: null,
       periodLabel: null,
-      totalDebits: 100,
-      totalCredits: 100,
+      totalDebits: '100.00',
+      totalCredits: '100.00',
       balanced: true,
       lines: <AccountingTrialBalanceLine>[
         AccountingTrialBalanceLine(
@@ -419,20 +518,20 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
           accountName: 'Cash - Office',
           accountType: 'asset',
           normalBalance: 'debit',
-          totalDebit: 100,
-          totalCredit: 0,
-          debitBalance: 100,
-          creditBalance: 0,
+          totalDebit: '100.00',
+          totalCredit: '0.00',
+          debitBalance: '100.00',
+          creditBalance: '0.00',
         ),
         AccountingTrialBalanceLine(
           accountCode: '3000',
           accountName: 'Capital',
           accountType: 'equity',
           normalBalance: 'credit',
-          totalDebit: 0,
-          totalCredit: 100,
-          debitBalance: 0,
-          creditBalance: 100,
+          totalDebit: '0.00',
+          totalCredit: '100.00',
+          debitBalance: '0.00',
+          creditBalance: '100.00',
         ),
       ],
     );
@@ -447,6 +546,7 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     required List<JournalLineDraft> lines,
   }) async {
     createCalls += 1;
+    if (createError != null) throw createError!;
     createdPostingDate = postingDate;
     createdDescription = description;
     createdLines = List<JournalLineDraft>.of(lines);

@@ -9,6 +9,58 @@ void main() {
     'catalog inventories every approved Management mutation surface once',
     () {
       const expected = <String, ({String owner, List<String> actions})>{
+        'area-management': (
+          owner: 'AreaManagementPage',
+          actions: <String>[
+            'create and rename',
+            'move and reorder',
+            'assign collector',
+            'transfer borrower',
+            'retire and reactivate',
+          ],
+        ),
+        'managed-client-account': (
+          owner: 'ManagedClientAccountPage',
+          actions: <String>['create managed account'],
+        ),
+        'client-password-reset': (
+          owner: 'ClientPasswordResetPage',
+          actions: <String>['reset password', 'reconcile uncertain result'],
+        ),
+        'office-intake': (
+          owner: 'OfficeIntakePage',
+          actions: <String>[
+            'create intake',
+            'review requirements',
+            'prepare CIF client',
+          ],
+        ),
+        'office-cif': (
+          owner: 'OfficeCifPage',
+          actions: <String>[
+            'save draft and correction',
+            'record privacy and provider baseline',
+            'confirm exact review',
+            'activate CIF',
+          ],
+        ),
+        'office-application': (
+          owner: 'OfficeApplicationPage',
+          actions: <String>[
+            'create draft and correction',
+            'confirm exact application review',
+          ],
+        ),
+        'office-first-loan': (
+          owner: 'OfficeFirstLoanPage',
+          actions: <String>[
+            'approve terms',
+            'authorize packet',
+            'record signed evidence',
+            'release loan',
+            'handoff credentials',
+          ],
+        ),
         'client-registration': (
           owner: 'ClientRegistrationApprovalsPage',
           actions: <String>['approve and link', 'reject'],
@@ -49,7 +101,15 @@ void main() {
         ),
         'client-support': (
           owner: 'ManagementSupportRequestsPage',
-          actions: <String>['answer', 'resolve', 'cancel'],
+          actions: <String>['answer', 'resolve'],
+        ),
+        'payment-proof': (
+          owner: 'ManagementPaymentProofsPage',
+          actions: <String>[
+            'review evidence',
+            'request correction',
+            'reject evidence',
+          ],
         ),
         'ecl-outcome-review': (
           owner: 'ManagementEclOutcomeReviewPage',
@@ -150,7 +210,7 @@ void main() {
         ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(23));
+      expect(managementMutationSurfaceCatalog, hasLength(31));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

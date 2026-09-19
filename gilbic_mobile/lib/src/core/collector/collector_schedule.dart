@@ -27,21 +27,21 @@ class CollectorScheduleRow {
   final String kind;
   final DateTime? date;
   final String status;
-  final double amount;
-  final double contractualAmount;
-  final double paidAmount;
-  final double prepaidAmount;
-  final double remainingAmount;
+  final String amount;
+  final String contractualAmount;
+  final String paidAmount;
+  final String prepaidAmount;
+  final String remainingAmount;
   final int? installmentId;
   final int? installmentNumber;
   final DateTime? contractualDueDate;
-  final double? principalComponent;
-  final double? interestComponent;
-  final double principalReductionAmount;
+  final String? principalComponent;
+  final String? interestComponent;
+  final String principalReductionAmount;
   final String? pastDueReasonCode;
   final String? pastDueReasonNote;
   final DateTime? promisedForDate;
-  final double promiseRemainingAmount;
+  final String promiseRemainingAmount;
   final String? promiseStatus;
   final String? noCollectionReason;
 
@@ -53,41 +53,34 @@ class CollectorScheduleRow {
       kind: firstNonEmptyString(<Object?>[data['kind']]) ?? 'installment',
       date: _date(data['date']),
       status: firstNonEmptyString(<Object?>[data['status']]) ?? 'Scheduled',
-      amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,
-      contractualAmount:
-          firstNumber(<Object?>[data['contractual_amount']])?.toDouble() ?? 0,
-      paidAmount:
-          firstNumber(<Object?>[data['paid_amount']])?.toDouble() ?? 0,
-      prepaidAmount:
-          firstNumber(<Object?>[data['prepaid_amount']])?.toDouble() ?? 0,
-      remainingAmount:
-          firstNumber(<Object?>[data['remaining_amount']])?.toDouble() ?? 0,
-      installmentId:
-          firstNumber(<Object?>[data['installment_id']])?.toInt(),
-      installmentNumber:
-          firstNumber(<Object?>[data['installment_number']])?.toInt(),
+      amount: _requiredMoney(data, 'amount'),
+      contractualAmount: _requiredMoney(data, 'contractual_amount'),
+      paidAmount: _requiredMoney(data, 'paid_amount'),
+      prepaidAmount: _requiredMoney(data, 'prepaid_amount'),
+      remainingAmount: _requiredMoney(data, 'remaining_amount'),
+      installmentId: firstNumber(<Object?>[data['installment_id']])?.toInt(),
+      installmentNumber: firstNumber(<Object?>[
+        data['installment_number'],
+      ])?.toInt(),
       contractualDueDate: _date(data['contractual_due_date']),
-      principalComponent:
-          firstNumber(<Object?>[data['principal_component']])?.toDouble(),
-      interestComponent:
-          firstNumber(<Object?>[data['interest_component']])?.toDouble(),
-      principalReductionAmount:
-          firstNumber(<Object?>[data['principal_reduction_amount']])
-                  ?.toDouble() ??
-              0,
-      pastDueReasonCode:
-          firstNonEmptyString(<Object?>[data['past_due_reason_code']]),
-      pastDueReasonNote:
-          firstNonEmptyString(<Object?>[data['past_due_reason_note']]),
+      principalComponent: _optionalMoney(data, 'principal_component'),
+      interestComponent: _optionalMoney(data, 'interest_component'),
+      principalReductionAmount: _requiredMoney(
+        data,
+        'principal_reduction_amount',
+      ),
+      pastDueReasonCode: firstNonEmptyString(<Object?>[
+        data['past_due_reason_code'],
+      ]),
+      pastDueReasonNote: firstNonEmptyString(<Object?>[
+        data['past_due_reason_note'],
+      ]),
       promisedForDate: _date(data['promised_for_date']),
-      promiseRemainingAmount:
-          firstNumber(<Object?>[data['promise_remaining_amount']])
-                  ?.toDouble() ??
-              0,
-      promiseStatus:
-          firstNonEmptyString(<Object?>[data['promise_status']]),
-      noCollectionReason:
-          firstNonEmptyString(<Object?>[data['no_collection_reason']]),
+      promiseRemainingAmount: _requiredMoney(data, 'promise_remaining_amount'),
+      promiseStatus: firstNonEmptyString(<Object?>[data['promise_status']]),
+      noCollectionReason: firstNonEmptyString(<Object?>[
+        data['no_collection_reason'],
+      ]),
     );
   }
 }
@@ -115,6 +108,13 @@ class CollectorSchedule {
     required this.updatedMaturity,
     required this.maturityProjectionStatus,
     required this.rows,
+    this.penaltyStatus = '',
+    this.projectedPenalty,
+    this.assessedPenaltyBalance,
+    this.penaltyBase,
+    this.remainingCostHeadroom,
+    this.exactPayoffTotal,
+    this.managementReviewRequiredReason = '',
   });
 
   final String loanId;
@@ -130,7 +130,7 @@ class CollectorSchedule {
   final String contractReference;
   final DateTime? asOfDate;
   final bool readOnly;
-  final double pastDueAmount;
+  final String pastDueAmount;
   final int pastDueCount;
   final int scheduleExtensionSlots;
   final bool maturityExtended;
@@ -138,15 +138,22 @@ class CollectorSchedule {
   final DateTime? updatedMaturity;
   final String maturityProjectionStatus;
   final List<CollectorScheduleRow> rows;
+  final String penaltyStatus;
+  final String? projectedPenalty;
+  final String? assessedPenaltyBalance;
+  final String? penaltyBase;
+  final String? remainingCostHeadroom;
+  final String? exactPayoffTotal;
+  final String managementReviewRequiredReason;
 
   static CollectorSchedule fromPayload(Object? value) {
     final data = stringMap(value);
     final rawRows = data['rows'];
     final rows = rawRows is Iterable
         ? rawRows
-            .map(CollectorScheduleRow.fromPayload)
-            .whereType<CollectorScheduleRow>()
-            .toList(growable: false)
+              .map(CollectorScheduleRow.fromPayload)
+              .whereType<CollectorScheduleRow>()
+              .toList(growable: false)
         : const <CollectorScheduleRow>[];
 
     return CollectorSchedule(
@@ -167,20 +174,55 @@ class CollectorSchedule {
           firstNonEmptyString(<Object?>[data['contract_reference']]) ?? '',
       asOfDate: _date(data['as_of_date']),
       readOnly: _boolValue(data['read_only']),
-      pastDueAmount:
-          firstNumber(<Object?>[data['past_due_amount']])?.toDouble() ?? 0,
+      pastDueAmount: _requiredMoney(data, 'past_due_amount'),
       pastDueCount:
           firstNumber(<Object?>[data['past_due_count']])?.toInt() ?? 0,
       scheduleExtensionSlots:
-          firstNumber(<Object?>[data['schedule_extension_slots']])?.toInt() ?? 0,
+          firstNumber(<Object?>[data['schedule_extension_slots']])?.toInt() ??
+          0,
       maturityExtended: _boolValue(data['maturity_extended']),
       baseMaturity: _date(data['base_maturity']),
       updatedMaturity: _date(data['updated_maturity']),
       maturityProjectionStatus:
-          firstNonEmptyString(<Object?>[data['maturity_projection_status']]) ?? '',
+          firstNonEmptyString(<Object?>[data['maturity_projection_status']]) ??
+          '',
       rows: rows,
+      penaltyStatus:
+          firstNonEmptyString(<Object?>[data['penalty_status']]) ?? '',
+      projectedPenalty: _optionalMoney(data, 'projected_penalty'),
+      assessedPenaltyBalance: _optionalMoney(data, 'assessed_penalty_balance'),
+      penaltyBase: _optionalMoney(data, 'penalty_base'),
+      remainingCostHeadroom: _optionalMoney(data, 'remaining_cost_headroom'),
+      exactPayoffTotal: _optionalMoney(data, 'exact_payoff_total'),
+      managementReviewRequiredReason:
+          firstNonEmptyString(<Object?>[
+            data['management_review_required_reason'],
+          ]) ??
+          '',
     );
   }
+}
+
+String _requiredMoney(Map<String, dynamic> payload, String key) {
+  final value = _optionalMoney(payload, key);
+  if (value == null) {
+    throw const SpinaApiException(
+      'The server returned incomplete schedule money. Refresh the schedule.',
+    );
+  }
+  return value;
+}
+
+String? _optionalMoney(Map<String, dynamic> payload, String key) {
+  final value = payload[key];
+  if (value == null) return null;
+  if (value is! String ||
+      !RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(value.trim())) {
+    throw const SpinaApiException(
+      'The server returned invalid schedule money. Refresh the schedule.',
+    );
+  }
+  return value.trim();
 }
 
 DateTime? _date(Object? value) {

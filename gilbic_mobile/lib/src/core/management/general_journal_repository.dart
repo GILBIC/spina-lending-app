@@ -58,7 +58,7 @@ abstract interface class GeneralJournalRepository {
 
 class SpinaGeneralJournalRepository implements GeneralJournalRepository {
   SpinaGeneralJournalRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -78,7 +78,9 @@ class SpinaGeneralJournalRepository implements GeneralJournalRepository {
   }) async {
     final response = await _send(
       () => _client.get(
-        ApiConfig.endpoint('/api/mobile/v1/management/financial-accounting/journals'),
+        ApiConfig.endpoint(
+          '/api/mobile/v1/management/financial-accounting/journals',
+        ),
         headers: _headers(session, deviceId),
       ),
     );
@@ -98,14 +100,14 @@ class SpinaGeneralJournalRepository implements GeneralJournalRepository {
     );
     final endpoint = periodId == null
         ? base
-        : base.replace(queryParameters: <String, String>{'period_id': periodId});
+        : base.replace(
+            queryParameters: <String, String>{'period_id': periodId},
+          );
     final response = await _send(
       () => _client.get(endpoint, headers: _headers(session, deviceId)),
     );
     final data = stringMap(unwrapSpinaData(response, statusCode: 200));
-    return AccountingTrialBalance.fromPayload(
-      stringMap(data['trial_balance']),
-    );
+    return AccountingTrialBalance.fromPayload(stringMap(data['trial_balance']));
   }
 
   @override
@@ -118,7 +120,9 @@ class SpinaGeneralJournalRepository implements GeneralJournalRepository {
   }) async {
     final response = await _send(
       () => _client.post(
-        ApiConfig.endpoint('/api/mobile/v1/management/financial-accounting/journals'),
+        ApiConfig.endpoint(
+          '/api/mobile/v1/management/financial-accounting/journals',
+        ),
         headers: _headers(session, deviceId),
         body: jsonEncode(_journalBody(postingDate, description, lines)),
       ),
@@ -210,12 +214,11 @@ class SpinaGeneralJournalRepository implements GeneralJournalRepository {
     DateTime postingDate,
     String description,
     List<JournalLineDraft> lines,
-  ) =>
-      <String, Object>{
-        'posting_date': _date(postingDate),
-        'description': description,
-        'lines': lines.map((line) => line.toPayload()).toList(growable: false),
-      };
+  ) => <String, Object>{
+    'posting_date': _date(postingDate),
+    'description': description,
+    'lines': lines.map((line) => line.toPayload()).toList(growable: false),
+  };
 
   AccountingJournalEntry _entryFromResponse(
     Map<String, dynamic> response, {
@@ -231,7 +234,7 @@ class SpinaGeneralJournalRepository implements GeneralJournalRepository {
   }) async {
     late final http.Response response;
     try {
-      response = await request();
+      response = await request().timeout(const Duration(seconds: 45));
     } on Exception {
       throw const SpinaApiException(
         'General Journal could not reach the SPINA server.',

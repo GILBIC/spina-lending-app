@@ -46,10 +46,7 @@ class _CollectorClientSchedulePageState
         final loanId = loan.loanId.trim();
         if (loanId.isEmpty) continue;
         schedules.add(
-          await _repository.fetchSchedule(
-            widget.session,
-            loanId: loanId,
-          ),
+          await _repository.fetchSchedule(widget.session, loanId: loanId),
         );
       }
       if (mounted) {
@@ -114,9 +111,9 @@ class _CollectorClientSchedulePageState
         children: [
           Text(
             widget.client.clientName,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
           const Row(
@@ -173,9 +170,9 @@ class _ScheduleSection extends StatelessWidget {
           children: [
             Text(
               _loanLabel(schedule),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
             if (schedule.loanNumber.trim().isNotEmpty) ...[
               const SizedBox(height: 2),
@@ -183,6 +180,14 @@ class _ScheduleSection extends StatelessWidget {
                 schedule.loanNumber,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            ],
+            if (schedule.asOfDate != null) ...[
+              const SizedBox(height: 5),
+              Text('As of ${_dateOrDash(schedule.asOfDate)}'),
+            ],
+            if (schedule.isSevenBySeven) ...[
+              const SizedBox(height: 8),
+              _SevenBySevenObligation(schedule: schedule),
             ],
             if (schedule.baseMaturity != null ||
                 schedule.updatedMaturity != null) ...[
@@ -220,6 +225,66 @@ class _ScheduleSection extends StatelessWidget {
   }
 }
 
+class _SevenBySevenObligation extends StatelessWidget {
+  const _SevenBySevenObligation({required this.schedule});
+
+  final CollectorSchedule schedule;
+
+  @override
+  Widget build(BuildContext context) {
+    final reviewRequired =
+        schedule.penaltyStatus == 'management_review_required' ||
+        schedule.managementReviewRequiredReason.trim().isNotEmpty;
+    final status = switch (schedule.penaltyStatus) {
+      'projected' => 'Penalty projected',
+      'penalty_outstanding' => 'Penalty outstanding',
+      'cap_exhausted' => 'Penalty cap reached',
+      'not_applicable' => 'No applicable penalty',
+      'before_maturity' => 'Before maturity',
+      'settled' => 'Settled',
+      _ => null,
+    };
+    return Column(
+      key: Key('schedule-obligation-${schedule.loanId}'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (reviewRequired) ...[
+          const Text(
+            'Management review required',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          if (schedule.managementReviewRequiredReason.trim().isNotEmpty)
+            Text(schedule.managementReviewRequiredReason),
+        ] else ...[
+          if (status != null) Text(status),
+          if (schedule.exactPayoffTotal != null &&
+              schedule.penaltyStatus.isNotEmpty)
+            Text(
+              'Current payoff: ${_money(schedule.exactPayoffTotal!)}',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            )
+          else
+            const Text(
+              'Current payoff unavailable. Refresh the schedule or contact Management.',
+            ),
+        ],
+        if (schedule.projectedPenalty != null)
+          Text('Projected penalty: ${_money(schedule.projectedPenalty!)}'),
+        if (schedule.assessedPenaltyBalance != null)
+          Text(
+            'Assessed penalty balance: ${_money(schedule.assessedPenaltyBalance!)}',
+          ),
+        if (schedule.penaltyBase != null)
+          Text('Penalty base: ${_money(schedule.penaltyBase!)}'),
+        if (schedule.remainingCostHeadroom != null)
+          Text(
+            'Remaining cost headroom: ${_money(schedule.remainingCostHeadroom!)}',
+          ),
+      ],
+    );
+  }
+}
+
 class _ScheduleRowTile extends StatelessWidget {
   const _ScheduleRowTile({
     required this.schedule,
@@ -253,10 +318,7 @@ class _ScheduleRowTile extends StatelessWidget {
   }
 }
 
-Future<void> _showRowDetails(
-  BuildContext context,
-  CollectorScheduleRow row,
-) {
+Future<void> _showRowDetails(BuildContext context, CollectorScheduleRow row) {
   final lines = <String>[
     'Date: ${_dateOrDash(row.date)}',
     'Status: ${row.status}',
@@ -277,7 +339,7 @@ Future<void> _showRowDetails(
       'Principal component: ${_money(row.principalComponent!)}',
     if (row.interestComponent != null)
       'Interest component: ${_money(row.interestComponent!)}',
-    if (row.principalReductionAmount > 0)
+    if (RegExp(r'[1-9]').hasMatch(row.principalReductionAmount))
       'Principal reduction: ${_money(row.principalReductionAmount)}',
   ];
 
@@ -292,9 +354,9 @@ Future<void> _showRowDetails(
         children: [
           Text(
             'Schedule row details',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           for (var index = 0; index < lines.length; index++) ...[
@@ -322,10 +384,10 @@ String _dateOrDash(DateTime? value) {
       '${value.day.toString().padLeft(2, '0')}';
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  return '₱${_groupDigits(parts.first)}.${parts.last}';
+String _money(String value) {
+  final parts = value.split('.');
+  final fraction = parts.length == 1 ? '00' : parts.last.padRight(2, '0');
+  return '₱${_groupDigits(parts.first)}.$fraction';
 }
 
 String _groupDigits(String digits) {

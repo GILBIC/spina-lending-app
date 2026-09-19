@@ -191,7 +191,7 @@ void main() {
     expect(schedule.calculationMode, 'fixed_total');
     expect(schedule.isSevenBySeven, isFalse);
     expect(schedule.readOnly, isTrue);
-    expect(schedule.pastDueAmount, 60);
+    expect(schedule.pastDueAmount, '60.00');
     expect(schedule.pastDueCount, 1);
     expect(schedule.scheduleExtensionSlots, 2);
     expect(schedule.maturityExtended, isTrue);
@@ -210,21 +210,21 @@ void main() {
     );
 
     final pastDue = schedule.rows[2];
-    expect(pastDue.remainingAmount, 60);
+    expect(pastDue.remainingAmount, '60.00');
     expect(pastDue.pastDueReasonCode, 'business_slow');
     expect(pastDue.pastDueReasonNote, 'Sales were low');
     expect(pastDue.promisedForDate, DateTime(2026, 9, 10));
-    expect(pastDue.promiseRemainingAmount, 60);
+    expect(pastDue.promiseRemainingAmount, '60.00');
     expect(pastDue.promiseStatus, 'active');
 
     final prepaid = schedule.rows[3];
-    expect(prepaid.prepaidAmount, 100);
-    expect(prepaid.remainingAmount, 0);
+    expect(prepaid.prepaidAmount, '100.00');
+    expect(prepaid.remainingAmount, '0.00');
 
     final paid = schedule.rows.first;
     expect(paid.kind, 'installment');
-    expect(paid.principalComponent, 80);
-    expect(paid.interestComponent, 20);
+    expect(paid.principalComponent, '80.00');
+    expect(paid.interestComponent, '20.00');
   });
 
   test('preserves the authoritative 7x7 loan type and schedule kind', () async {
@@ -305,7 +305,7 @@ void main() {
     expect(schedule.calculationMode, 'seven_by_seven');
     expect(schedule.isSevenBySeven, isTrue);
     expect(schedule.rows.single.kind, 'installment');
-    expect(schedule.rows.single.interestComponent, 7);
+    expect(schedule.rows.single.interestComponent, '7.00');
     expect(schedule.readOnly, isTrue);
   });
 }

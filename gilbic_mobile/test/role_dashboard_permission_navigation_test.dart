@@ -46,6 +46,14 @@ void main() {
     );
 
     // Missing exact permissions never surface privileged workflow launchers.
+    expect(find.byKey(const Key('management-office')), findsNothing);
+    expect(find.byKey(const Key('management-areas')), findsNothing);
+    expect(find.byKey(const Key('management-client-accounts')), findsNothing);
+    expect(find.byKey(const Key('management-payment-proofs')), findsNothing);
+    expect(
+      find.byKey(const Key('management-past-due-reasons')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('management-renewals')), findsNothing);
     expect(find.byKey(const Key('management-support')), findsNothing);
     expect(find.byKey(const Key('management-direct-payment')), findsNothing);

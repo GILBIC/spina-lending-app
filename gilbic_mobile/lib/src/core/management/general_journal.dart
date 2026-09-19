@@ -16,8 +16,8 @@ class AccountingJournalLine {
       accountCode: stringValue(payload['account_code']),
       accountName: stringValue(payload['account_name']),
       description: stringValue(payload['description']),
-      debit: doubleValue(payload['debit']),
-      credit: doubleValue(payload['credit']),
+      debit: journalMoney(payload['debit']),
+      credit: journalMoney(payload['credit']),
     );
   }
 
@@ -25,8 +25,8 @@ class AccountingJournalLine {
   final String accountCode;
   final String accountName;
   final String description;
-  final double debit;
-  final double credit;
+  final String debit;
+  final String credit;
 }
 
 class AccountingJournalEntry {
@@ -66,8 +66,8 @@ class AccountingJournalEntry {
       postedByName: nullableString(payload['posted_by_name']),
       createdAt: DateTime.parse(stringValue(payload['created_at'])),
       postedAt: nullableDateTime(payload['posted_at']),
-      totalDebit: doubleValue(payload['total_debit']),
-      totalCredit: doubleValue(payload['total_credit']),
+      totalDebit: journalMoney(payload['total_debit']),
+      totalCredit: journalMoney(payload['total_credit']),
       lines: listValue(payload['lines'])
           .map((item) => AccountingJournalLine.fromPayload(stringMap(item)))
           .toList(growable: false),
@@ -88,8 +88,8 @@ class AccountingJournalEntry {
   final String? postedByName;
   final DateTime createdAt;
   final DateTime? postedAt;
-  final double totalDebit;
-  final double totalCredit;
+  final String totalDebit;
+  final String totalCredit;
   final List<AccountingJournalLine> lines;
 
   bool get isDraft => status == 'draft';
@@ -115,10 +115,10 @@ class AccountingTrialBalanceLine {
       accountName: stringValue(payload['account_name']),
       accountType: stringValue(payload['account_type']),
       normalBalance: stringValue(payload['normal_balance']),
-      totalDebit: doubleValue(payload['total_debit']),
-      totalCredit: doubleValue(payload['total_credit']),
-      debitBalance: doubleValue(payload['debit_balance']),
-      creditBalance: doubleValue(payload['credit_balance']),
+      totalDebit: journalMoney(payload['total_debit']),
+      totalCredit: journalMoney(payload['total_credit']),
+      debitBalance: journalMoney(payload['debit_balance']),
+      creditBalance: journalMoney(payload['credit_balance']),
     );
   }
 
@@ -126,10 +126,10 @@ class AccountingTrialBalanceLine {
   final String accountName;
   final String accountType;
   final String normalBalance;
-  final double totalDebit;
-  final double totalCredit;
-  final double debitBalance;
-  final double creditBalance;
+  final String totalDebit;
+  final String totalCredit;
+  final String debitBalance;
+  final String creditBalance;
 }
 
 class AccountingTrialBalance {
@@ -146,19 +146,21 @@ class AccountingTrialBalance {
     return AccountingTrialBalance(
       periodId: nullableString(payload['period_id']),
       periodLabel: nullableString(payload['period_label']),
-      totalDebits: doubleValue(payload['total_debits']),
-      totalCredits: doubleValue(payload['total_credits']),
+      totalDebits: journalMoney(payload['total_debits']),
+      totalCredits: journalMoney(payload['total_credits']),
       balanced: boolValue(payload['balanced']),
       lines: listValue(payload['lines'])
-          .map((item) => AccountingTrialBalanceLine.fromPayload(stringMap(item)))
+          .map(
+            (item) => AccountingTrialBalanceLine.fromPayload(stringMap(item)),
+          )
           .toList(growable: false),
     );
   }
 
   final String? periodId;
   final String? periodLabel;
-  final double totalDebits;
-  final double totalCredits;
+  final String totalDebits;
+  final String totalCredits;
   final bool balanced;
   final List<AccountingTrialBalanceLine> lines;
 }
@@ -191,21 +193,21 @@ class JournalLineDraft {
   const JournalLineDraft({
     required this.accountCode,
     this.description = '',
-    this.debit = 0,
-    this.credit = 0,
+    this.debit = '0.00',
+    this.credit = '0.00',
   });
 
   final String accountCode;
   final String description;
-  final double debit;
-  final double credit;
+  final String debit;
+  final String credit;
 
   Map<String, Object> toPayload() => <String, Object>{
-        'account_code': accountCode,
-        'description': description,
-        'debit': debit.toStringAsFixed(2),
-        'credit': credit.toStringAsFixed(2),
-      };
+    'account_code': accountCode,
+    'description': description,
+    'debit': journalMoney(debit, forInput: true),
+    'credit': journalMoney(credit, forInput: true),
+  };
 }
 
 DateTime? nullableDateTime(Object? value) {
@@ -247,4 +249,31 @@ bool boolValue(Object? value) {
 
 List<dynamic> listValue(Object? value) {
   return value is List ? value : const <dynamic>[];
+}
+
+/// Exact decimal amounts; the 18-digit bound applies to entered journal lines,
+/// while server ledger aggregates may be larger. Never rounds or defaults.
+String journalMoney(Object? value, {bool forInput = false}) {
+  if (value is! String) {
+    throw const FormatException(
+      'Use decimal text with at most two decimal places.',
+    );
+  }
+  final text = value.trim();
+  if (!RegExp(r'^(0|[1-9][0-9]*)(\.[0-9]{1,2})?$').hasMatch(text) ||
+      (forInput && text.split('.').first.length > 16)) {
+    throw const FormatException(
+      'Use a nonnegative amount with at most two decimal places and 16 whole digits.',
+    );
+  }
+  final parts = text.split('.');
+  return '${parts.first}.${parts.length == 1 ? '00' : parts.last.padRight(2, '0')}';
+}
+
+BigInt journalCents(String value) =>
+    BigInt.parse(journalMoney(value).replaceAll('.', ''));
+
+String journalAmountFromCents(BigInt value) {
+  final text = value.toString().padLeft(3, '0');
+  return '${text.substring(0, text.length - 2)}.${text.substring(text.length - 2)}';
 }

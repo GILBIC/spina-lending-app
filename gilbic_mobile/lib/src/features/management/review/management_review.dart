@@ -5,6 +5,13 @@ enum ManagementReviewRisk { routine, privileged, protectedFinancial }
 enum ManagementReviewWarningSeverity { information, caution, blocker }
 
 enum ManagementMutationSurface {
+  areaManagement('area-management'),
+  managedClientAccount('managed-client-account'),
+  clientPasswordReset('client-password-reset'),
+  officeIntake('office-intake'),
+  officeCif('office-cif'),
+  officeApplication('office-application'),
+  officeFirstLoan('office-first-loan'),
   clientRegistration('client-registration'),
   renewalWorkflow('renewal-workflow'),
   staffInvitation('staff-invitation'),
@@ -13,6 +20,7 @@ enum ManagementMutationSurface {
   contractCollection('contract-collection'),
   noCollection('no-collection'),
   clientSupport('client-support'),
+  paymentProof('payment-proof'),
   eclOutcomeReview('ecl-outcome-review'),
   fiscalPeriod('fiscal-period'),
   generalJournal('general-journal'),
@@ -35,6 +43,72 @@ enum ManagementMutationSurface {
 }
 
 enum ManagementMutationBinding {
+  areaManagement(
+    surface: ManagementMutationSurface.areaManagement,
+    owner: 'AreaManagementPage',
+    actions: <String>[
+      'create and rename',
+      'move and reorder',
+      'assign collector',
+      'transfer borrower',
+      'retire and reactivate',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  managedClientAccount(
+    surface: ManagementMutationSurface.managedClientAccount,
+    owner: 'ManagedClientAccountPage',
+    actions: <String>['create managed account'],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  clientPasswordReset(
+    surface: ManagementMutationSurface.clientPasswordReset,
+    owner: 'ClientPasswordResetPage',
+    actions: <String>['reset password', 'reconcile uncertain result'],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  officeIntake(
+    surface: ManagementMutationSurface.officeIntake,
+    owner: 'OfficeIntakePage',
+    actions: <String>[
+      'create intake',
+      'review requirements',
+      'prepare CIF client',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  officeCif(
+    surface: ManagementMutationSurface.officeCif,
+    owner: 'OfficeCifPage',
+    actions: <String>[
+      'save draft and correction',
+      'record privacy and provider baseline',
+      'confirm exact review',
+      'activate CIF',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  officeApplication(
+    surface: ManagementMutationSurface.officeApplication,
+    owner: 'OfficeApplicationPage',
+    actions: <String>[
+      'create draft and correction',
+      'confirm exact application review',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  officeFirstLoan(
+    surface: ManagementMutationSurface.officeFirstLoan,
+    owner: 'OfficeFirstLoanPage',
+    actions: <String>[
+      'approve terms',
+      'authorize packet',
+      'record signed evidence',
+      'release loan',
+      'handoff credentials',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
   clientRegistration(
     surface: ManagementMutationSurface.clientRegistration,
     owner: 'ClientRegistrationApprovalsPage',
@@ -90,8 +164,18 @@ enum ManagementMutationBinding {
   clientSupport(
     surface: ManagementMutationSurface.clientSupport,
     owner: 'ManagementSupportRequestsPage',
-    actions: <String>['answer', 'resolve', 'cancel'],
+    actions: <String>['answer', 'resolve'],
     defaultRisk: ManagementReviewRisk.routine,
+  ),
+  paymentProof(
+    surface: ManagementMutationSurface.paymentProof,
+    owner: 'ManagementPaymentProofsPage',
+    actions: <String>[
+      'review evidence',
+      'request correction',
+      'reject evidence',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
   ),
   eclOutcomeReview(
     surface: ManagementMutationSurface.eclOutcomeReview,
