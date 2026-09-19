@@ -108,6 +108,53 @@ def create_loan_application_router() -> APIRouter:
     router = APIRouter(tags=["loan-applications"])
 
     @router.get(
+        "/api/v1/management/clients/{client_id}/loan-applications/entry-context"
+    )
+    def get_application_entry_context(
+        client_id: UUID,
+        response: Response,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        applications: PostgresLoanApplicationRepository = Depends(
+            loan_application_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        try:
+            actor = _office_application_actor(
+                authorization=authorization,
+                x_device_id=x_device_id,
+                auth=auth,
+                accounts=accounts,
+            )
+            context = applications.get_entry_context(
+                actor_user_id=actor.user_id, client_id=client_id
+            )
+        except LoanApplicationAccessDenied as error:
+            raise HTTPException(
+                status_code=403, detail=str(error), headers={"Cache-Control": "no-store"}
+            ) from error
+        except LoanApplicationConflict as error:
+            raise HTTPException(
+                status_code=409, detail=str(error), headers={"Cache-Control": "no-store"}
+            ) from error
+        except HTTPException as error:
+            error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
+            raise
+
+        response.headers["Cache-Control"] = "no-store"
+        return {
+            "client_id": str(context.client_id),
+            "cif_version_id": str(context.cif_version_id),
+            "cif_version_number": context.cif_version_number,
+            "loan_types": [
+                {"id": str(option.id), "code": option.code, "name": option.name}
+                for option in context.loan_types
+            ],
+        }
+
+    @router.get(
         "/api/v1/management/clients/{client_id}/loan-applications/"
         "by-reference/{application_reference:path}/review-summary"
     )

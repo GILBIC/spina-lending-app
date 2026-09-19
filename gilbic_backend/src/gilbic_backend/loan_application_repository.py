@@ -36,6 +36,21 @@ class LoanApplicationReferenceReview(LoanApplicationVersionRecord):
 
 
 @dataclass(frozen=True, slots=True)
+class LoanApplicationTypeOption:
+    id: UUID
+    code: str
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class LoanApplicationEntryContext:
+    client_id: UUID
+    cif_version_id: UUID
+    cif_version_number: int
+    loan_types: tuple[LoanApplicationTypeOption, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class LoanApplicationReviewConfirmationRecord:
     id: UUID
     application_version_id: UUID
@@ -130,6 +145,52 @@ def _row_matches_save(
 
 
 class PostgresLoanApplicationRepository:
+    def get_entry_context(
+        self, *, actor_user_id: UUID, client_id: UUID
+    ) -> LoanApplicationEntryContext:
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                self._require_actor(cursor, actor_user_id)
+                current = cursor.execute(
+                    """
+                    select id, version_number
+                    from lending.client_cif_versions
+                    where client_id = %s and is_current = true
+                    order by version_number desc, id
+                    limit 1
+                    """,
+                    (client_id,),
+                ).fetchone()
+                if current is None:
+                    raise LoanApplicationConflict(
+                        "No eligible current CIF is available for this application draft."
+                    )
+                cif_version_id = cast(UUID, current["id"])
+                self._require_eligible_source(
+                    cursor, client_id=client_id, cif_version_id=cif_version_id
+                )
+                loan_types = cursor.execute(
+                    """
+                    select id, code, name
+                    from lending.loan_types
+                    where is_active = true
+                    order by name, code, id
+                    """
+                ).fetchall()
+                return LoanApplicationEntryContext(
+                    client_id=client_id,
+                    cif_version_id=cif_version_id,
+                    cif_version_number=int(current["version_number"]),
+                    loan_types=tuple(
+                        LoanApplicationTypeOption(
+                            id=cast(UUID, row["id"]),
+                            code=str(row["code"]),
+                            name=str(row["name"]),
+                        )
+                        for row in loan_types
+                    ),
+                )
+
     def get_latest_by_reference(
         self,
         *,

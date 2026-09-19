@@ -46,6 +46,9 @@ APPLICATION_REPOSITORY_TEST = (
 APPLICATION_REFERENCE_REVIEW_TEST = (
     ROOT / "gilbic_backend" / "tests" / "test_loan_application_reference_review_postgres.py"
 )
+APPLICATION_ENTRY_CONTEXT_TEST = (
+    ROOT / "gilbic_backend" / "tests" / "test_loan_application_entry_context_postgres.py"
+)
 APPLICATION_CONFIRMATION_TEST = (
     ROOT
     / "gilbic_backend"
@@ -89,6 +92,7 @@ def validate(base_database_url: str) -> None:
         APPLICATION_HISTORY_TEST,
         APPLICATION_REPOSITORY_TEST,
         APPLICATION_REFERENCE_REVIEW_TEST,
+        APPLICATION_ENTRY_CONTEXT_TEST,
         APPLICATION_CONFIRMATION_TEST,
         *CIF_MIGRATIONS,
     ):
@@ -136,6 +140,7 @@ def validate(base_database_url: str) -> None:
                 str(APPLICATION_HISTORY_TEST),
                 str(APPLICATION_REPOSITORY_TEST),
                 str(APPLICATION_REFERENCE_REVIEW_TEST),
+                str(APPLICATION_ENTRY_CONTEXT_TEST),
                 str(APPLICATION_CONFIRMATION_TEST),
             ],
             cwd=ROOT,

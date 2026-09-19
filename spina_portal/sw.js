@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v7';
+const CACHE_NAME = 'spina-company-shell-v8';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -19,6 +19,7 @@ const SHELL_ASSETS = [
   '/assets/office-cif-review.js',
   '/assets/office-cif-correction.js',
   '/assets/office-application-review.js',
+  '/assets/office-application-entry.js',
   '/assets/management-financial-statements.js',
   '/assets/management-general-journal.js',
   '/assets/management-loan-operations.js',

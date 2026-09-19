@@ -1,4 +1,5 @@
 import { normalizeRole } from './roles.js';
+import { mountOfficeApplicationEntry } from './office-application-entry.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -137,9 +138,16 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   let clearButton;
   let statusRoot;
   let reviewRoot;
+  let entryRoot;
+  let entryCleanup;
+  let newButton;
+  let selectedReview;
 
   function invalidate() {
     currentRequest = {};
+    entryCleanup?.();
+    entryCleanup = null;
+    selectedReview = null;
     if (reviewRoot) reviewRoot.innerHTML = '';
     if (statusRoot) statusRoot.innerHTML = '';
   }
@@ -155,6 +163,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
       if (input) input.value = '';
     }
     clearButton?.removeEventListener('click', clear);
+    newButton?.removeEventListener('click', createApplication);
     signal?.removeEventListener('abort', dispose);
     if (mounts.get(root) === dispose) {
       mounts.delete(root);
@@ -171,7 +180,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   }
 
   async function openReview(event) {
-    event.preventDefault();
+    event?.preventDefault();
     if (disposed) return;
     invalidate();
     const token = currentRequest;
@@ -200,10 +209,55 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
         throw new Error('The application review response is invalid or does not match the selected Client and application.');
       }
       statusRoot.innerHTML = '';
-      reviewRoot.innerHTML = reviewMarkup(review);
+      selectedReview = review;
+      reviewRoot.innerHTML = `${reviewMarkup(review)}<button class="button button-outline" type="button" data-edit-application>Edit application information</button>`;
+      reviewRoot.querySelector('[data-edit-application]').addEventListener('click', () => {
+        if (selectedReview === review) openEntry(review.client_id, review);
+      });
     } catch (error) {
       if (disposed || currentRequest !== token) return;
       statusRoot.innerHTML = `<div role="alert">${errorCard(error, 'Application review is unavailable.')}</div>`;
+    }
+  }
+
+  function openEntry(clientId, review = null) {
+    if (disposed) return;
+    invalidate();
+    const token = currentRequest;
+    entryCleanup = mountOfficeApplicationEntry({
+      root: entryRoot, api, session, signal, clientId,
+      applicationReference: applicationInput.value.trim(), review,
+      onSaved() { if (!disposed && currentRequest === token) openReview(); },
+      onCancel({ reload = false } = {}) {
+        if (disposed || currentRequest !== token) return;
+        invalidate();
+        if (reload || review) openReview();
+      },
+    });
+  }
+
+  async function createApplication() {
+    if (disposed) return;
+    invalidate();
+    const token = currentRequest;
+    const intakeReference = intakeInput.value.trim();
+    if (!intakeReference || !applicationInput.value.trim()) {
+      statusRoot.innerHTML = `<div role="alert">${errorCard(new Error('Enter both the office intake reference and loan application reference.'))}</div>`;
+      return;
+    }
+    statusRoot.innerHTML = loadingPanel('Loading application entry…');
+    try {
+      const selection = await api.request(`/api/v1/management/onboarding/applicants/by-reference/${encodeURIComponent(intakeReference)}/cif-client`);
+      if (disposed || currentRequest !== token) return;
+      if (!isObject(selection) || !isUuid(selection.client_id)
+        || typeof selection.application_reference !== 'string'
+        || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()) {
+        throw new Error('The office intake response is invalid or does not match the entered reference.');
+      }
+      openEntry(selection.client_id);
+    } catch (error) {
+      if (disposed || currentRequest !== token) return;
+      statusRoot.innerHTML = `<div role="alert">${errorCard(error, 'Application entry is unavailable.')}</div>`;
     }
   }
 
@@ -222,21 +276,25 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   root.innerHTML = `<form class="entry-form">
     <label>Office intake reference<input name="intakeReference" type="text" autocomplete="off" required /></label>
     <label>Loan application reference<input name="applicationReference" type="text" autocomplete="off" required /></label>
-    <div class="action-row"><button class="button button-primary" type="submit">Open application review</button><button class="button button-outline" type="button">Clear</button></div>
+    <div class="action-row"><button class="button button-primary" type="submit">Open application review</button><button class="button button-outline" type="button">Clear</button><button class="button button-outline" type="button" data-new-application>New application</button></div>
   </form>
   <div data-application-review-status role="status" aria-live="polite"></div>
-  <div data-application-review-information aria-live="polite"></div>`;
+  <div data-application-review-information aria-live="polite"></div>
+  <div data-application-entry></div>`;
   form = root.querySelector('form');
   intakeInput = form.querySelector('[name="intakeReference"]');
   applicationInput = form.querySelector('[name="applicationReference"]');
   clearButton = form.querySelector('button[type="button"]');
   statusRoot = root.querySelector('[data-application-review-status]');
   reviewRoot = root.querySelector('[data-application-review-information]');
+  entryRoot = root.querySelector('[data-application-entry]');
+  newButton = form.querySelector('[data-new-application]');
   form.addEventListener('submit', openReview);
   for (const input of [intakeInput, applicationInput]) {
     input.addEventListener('input', invalidate);
     input.addEventListener('change', invalidate);
   }
   clearButton.addEventListener('click', clear);
+  newButton.addEventListener('click', createApplication);
   return dispose;
 }
