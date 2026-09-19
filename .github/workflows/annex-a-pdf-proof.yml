@@ -1,0 +1,188 @@
+name: Annex A PDF proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/annex-a-pdf-proof.yml'
+      - 'tools/annex_a_pdf_proof/**'
+      - 'tools/run_first_loan_document_proof.py'
+      - 'gilbic_backend/pyproject.toml'
+      - 'gilbic_backend/src/gilbic_backend/first_loan*.py'
+      - 'gilbic_backend/src/gilbic_backend/annex_a_template_binding.py'
+      - 'gilbic_backend/src/gilbic_backend/document_font_gate.py'
+      - 'gilbic_backend/tests/test_first_loan_documents.py'
+      - 'gilbic_backend/src/gilbic_backend/annex_a_schedule_projection.py'
+      - 'gilbic_backend/src/gilbic_backend/contract_schedule_engine.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_signed_schedule.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: annex-a-pdf-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-pdf:
+    name: Synthetic Annex A - exact template and Arial
+    runs-on: windows-2025
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Set isolated proof paths
+        run: |
+          $tools = Join-Path $env:GITHUB_WORKSPACE 'tools/annex_a_pdf_proof'
+          "PYTHONPATH=$tools;$(Join-Path $env:GITHUB_WORKSPACE 'gilbic_backend/src')" >> $env:GITHUB_ENV
+          "SPINA_ANNEX_TEMPLATE=$(Join-Path $tools 'assets/SPINA_Schedule_of_Payments_Annex_A_R2_Black_White_Draft.docx')" >> $env:GITHUB_ENV
+          "SPINA_PROOF_OUTPUT=$(Join-Path $env:RUNNER_TEMP 'spina-annex-proof')" >> $env:GITHUB_ENV
+
+      - name: Install isolated proof dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -e './gilbic_backend' 'pytest==9.0.2'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test Arial gate, including substitution rejection
+        run: |
+          python -m pytest -q tools/annex_a_pdf_proof/test_font_gate.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Require byte-exact original template
+        shell: python
+        run: |
+          import hashlib, os, pathlib, zipfile
+          path = pathlib.Path(os.environ['SPINA_ANNEX_TEMPLATE'])
+          if not path.is_file():
+              raise SystemExit('BLOCKED: original Annex A R2 DOCX is missing. Upload the unchanged source into tools/annex_a_pdf_proof/assets/ on this PR branch; do not replace it with a Markdown mirror.')
+          data = path.read_bytes()
+          expected = '80ef81aec3141f9c96a5d78f1edd1e7367c8a6be9ab7dca92e81b07756217ddb'
+          if len(data) != 73022 or hashlib.sha256(data).hexdigest() != expected:
+              raise SystemExit('BLOCKED: Annex A R2 bytes do not match the approved source.')
+          with zipfile.ZipFile(path) as archive:
+              if archive.testzip() is not None:
+                  raise SystemExit('BLOCKED: invalid DOCX archive.')
+          print('Exact Annex A R2 source verified:', expected)
+
+      - name: Require installed Arial faces - never download or publish fonts
+        run: |
+          foreach ($name in @('arial.ttf', 'arialbd.ttf', 'ariali.ttf', 'arialbi.ttf')) {
+            if (-not (Test-Path (Join-Path $env:WINDIR "Fonts/$name"))) {
+              throw "Required installed Arial face is missing: $name. Do not silently substitute a different font."
+            }
+          }
+
+      - name: Install hash-pinned LibreOffice on disposable runner
+        run: |
+          # Source: microsoft/winget-pkgs, LibreOffice 26.2.5.2 installer manifest
+          # Git blob: 63fdc92e77144fe63f8703dc8b2027ec0372db07 (x64 entry).
+          $url = 'https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.5.2/win/x86_64/LibreOffice_26.2.5.2_Win_x86-64.msi'
+          $installer = Join-Path $env:RUNNER_TEMP 'libreoffice-26.2.5.2.msi'
+          Invoke-WebRequest -Uri $url -OutFile $installer -TimeoutSec 300
+          $expected = 'F15BA07BFCB0186986CF3171063506F5D207C11F8CC051BA0D135209E9E915F9'
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) { throw 'LibreOffice installer hash mismatch' }
+          $process = Start-Process msiexec.exe -ArgumentList @('/i', "`"$installer`"", '/qn', '/norestart', 'REGISTER_ALL_MSO_TYPES=0') -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -notin @(0, 3010)) { throw "LibreOffice install failed: $($process.ExitCode)" }
+          $soffice = Join-Path $env:ProgramFiles 'LibreOffice/program/soffice.com'
+          if (-not (Test-Path $soffice)) { throw 'LibreOffice console binary is missing' }
+          "SPINA_SOFFICE=$soffice" >> $env:GITHUB_ENV
+
+      - name: Run template and calendar tests explicitly
+        run: |
+          python -m pytest -q tools/annex_a_pdf_proof/test_synthetic_annex_a.py tools/annex_a_pdf_proof/test_synthetic_tax_documents.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Generate and convert all ten synthetic fixtures
+        run: |
+          $docx = Join-Path $env:RUNNER_TEMP 'spina-annex-docx'
+          $raw = Join-Path $env:RUNNER_TEMP 'spina-annex-raw'
+          $pdf = Join-Path $env:SPINA_PROOF_OUTPUT 'PDFs'
+          $profile = Join-Path $env:RUNNER_TEMP 'spina-annex-lo-profile'
+          New-Item -ItemType Directory -Path $raw, $pdf, $profile -ErrorAction Stop | Out-Null
+          & $env:SPINA_SOFFICE --version | Set-Content (Join-Path $env:SPINA_PROOF_OUTPUT 'converter-version.txt')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/annex_a_pdf_proof/synthetic_annex_a.py --template "$env:SPINA_ANNEX_TEMPLATE" --output-dir "$docx"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $profileUri = ([System.Uri]$profile).AbsoluteUri
+          foreach ($source in (Get-ChildItem "$docx/*.docx" | Sort-Object Name)) {
+            & $env:SPINA_SOFFICE "-env:UserInstallation=$profileUri" --headless --norestore --convert-to 'pdf:writer_pdf_Export' --outdir "$raw" "$($source.FullName)"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $filename = "$($source.BaseName).pdf"
+            if (-not (Test-Path (Join-Path $raw $filename))) { throw "Conversion did not produce $filename" }
+            python tools/annex_a_pdf_proof/prepare_specimen_pdf.py (Join-Path $raw $filename) (Join-Path $pdf $filename)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          python tools/annex_a_pdf_proof/verify_synthetic_pdfs.py --pdf-dir "$pdf" --report (Join-Path $env:SPINA_PROOF_OUTPUT 'schedule-verification.json')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify embedded Arial and render every page for review
+        shell: python
+        run: |
+          import hashlib, json, os, pathlib, platform
+          import fitz
+          from font_gate import verify_arial_pdf
+          root = pathlib.Path(os.environ['SPINA_PROOF_OUTPUT'])
+          results = []
+          for path in sorted((root / 'PDFs').glob('*.pdf')):
+              fonts = verify_arial_pdf(path)
+              pages = root / 'Pages' / path.stem
+              pages.mkdir(parents=True, exist_ok=False)
+              with fitz.open(path) as doc:
+                  for number, page in enumerate(doc, 1):
+                      page.get_pixmap(dpi=144, alpha=False).save(pages / f'page-{number}.png')
+              results.append({'file': path.name, **fonts})
+          if len(results) != 10:
+              raise SystemExit('All ten synthetic PDFs are required')
+          evidence = {
+              'scope': 'SYNTHETIC_REPOSITORY_PDF_PROOF_ONLY',
+              'commit': os.environ['PROOF_COMMIT'],
+              'python': platform.python_version(), 'pymupdf': fitz.VersionBind,
+              'template_sha256': hashlib.sha256(pathlib.Path(os.environ['SPINA_ANNEX_TEMPLATE']).read_bytes()).hexdigest(),
+              'fonts': results, 'visual_review': 'PENDING_MANUAL_REVIEW',
+              'production_integration': 'NOT_IMPLEMENTED',
+              'regular_binding': 'FIXED_SYNTHETIC_REGULAR_CASES_ONLY',
+          }
+          (root / 'font-and-environment-verification.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(evidence, indent=2))
+        env:
+          PROOF_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify the first-loan packet adapter with real conversion and embedded Arial
+        run: |
+          $packets = Join-Path $env:SPINA_PROOF_OUTPUT 'first-loan-packets'
+          python -m pytest -q gilbic_backend/tests/test_first_loan_documents.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/run_first_loan_document_proof.py --output "$packets" --converter "$env:SPINA_SOFFICE" --arial (Join-Path $env:WINDIR 'Fonts/arial.ttf')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Require unchanged tracked files
+        if: always()
+        run: |
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff --cached --exit-code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload synthetic proof and review pages only
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: annex-a-synthetic-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/spina-annex-proof
+          if-no-files-found: warn
+          retention-days: 7

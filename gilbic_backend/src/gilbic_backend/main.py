@@ -5,10 +5,13 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
+from .area_management_api import create_area_management_router
 from .auth_api import create_auth_router
 from .client_account_api import create_client_account_router
+from .client_cif_api import create_client_cif_router
 from .client_gcash_api import create_client_gcash_router
 from .client_loan_api import create_client_loan_router
+from .client_onboarding_api import create_client_onboarding_router
 from .client_payment_api import create_client_payment_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
@@ -16,6 +19,7 @@ from .collection_void_api import create_collection_void_router
 from .collector_cash_accountability_api import (
     create_collector_cash_accountability_router,
 )
+from .collector_client_detail_api import create_collector_client_detail_router
 from .collector_route_api import create_collector_route_router
 from .collector_schedule_api import create_collector_schedule_router
 from .combined_collection_api import create_combined_collection_router
@@ -53,6 +57,12 @@ from .greenfield_regular_renewal_rollforward_api import (
     create_greenfield_regular_renewal_rollforward_router,
 )
 from .initial_capital_funding_api import create_initial_capital_funding_router
+from .loan_application_api import create_loan_application_router
+from .office_review_evidence_api import create_office_review_evidence_router
+from .first_loan_credential_api import create_first_loan_credential_router
+from .privacy_record_api import create_privacy_record_router
+from .first_loan_api import create_first_loan_router
+from .first_loan_document_api import create_first_loan_document_router
 from .loan_disbursement_cancellation_api import (
     create_loan_disbursement_cancellation_router,
 )
@@ -163,7 +173,16 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_area_management_router())
     app.include_router(create_client_account_router())
+    app.include_router(create_client_onboarding_router())
+    app.include_router(create_client_cif_router())
+    app.include_router(create_loan_application_router())
+    app.include_router(create_office_review_evidence_router())
+    app.include_router(create_first_loan_credential_router())
+    app.include_router(create_privacy_record_router())
+    app.include_router(create_first_loan_router())
+    app.include_router(create_first_loan_document_router())
     app.include_router(create_management_alerts_audit_router())
     app.include_router(create_management_dashboard_overview_router())
     app.include_router(create_management_employee_activity_router())
@@ -225,6 +244,7 @@ def create_app() -> FastAPI:
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_collector_schedule_router())
+    app.include_router(create_collector_client_detail_router())
     app.include_router(create_collector_cash_accountability_router())
     app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())

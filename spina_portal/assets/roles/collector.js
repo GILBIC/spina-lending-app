@@ -1,5 +1,6 @@
 import { buildCollectionSubmission, classifyLoanType } from '../collector-contract.js';
 import { buildCollectorRouteViewModel } from '../presenters.js';
+import { mountCollectorOnboardingVisit } from '../collector-onboarding-visit.js';
 import {
   asArray,
   badge,
@@ -243,15 +244,20 @@ function bindRemittance(context) {
 }
 
 export async function mountCollectorWorkspace(context) {
+  if (context.signal?.aborted) return;
+  context.collectorOnboardingCleanup?.();
+  context.collectorOnboardingCleanup = null;
   const { root, api, session, setNavigation } = context;
   const online = globalThis.navigator?.onLine !== false;
   const canViewRoute = hasPermission(session, 'route.view');
+  const canRecordVisit = hasPermission(session, 'client_onboarding.visit.record');
   const canCreate = hasPermission(session, 'collection.create');
   const canCreateRemittance = hasPermission(session, 'remittance.create');
   const canViewRemittance = hasPermission(session, 'remittance.view') || canCreateRemittance;
   setNavigation([
     { id: 'collector-overview', label: "Today's route" },
     { id: 'collector-master-review', label: 'Master Review' },
+    ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit' }] : []),
     ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance' }] : []),
     { id: 'collector-updates', label: 'Updates' },
   ]);
@@ -277,6 +283,7 @@ export async function mountCollectorWorkspace(context) {
       ])
     : [{ data: [], error: null }, { data: {}, error: null }];
   const model = buildCollectorRouteViewModel(route);
+  if (context.signal?.aborted) return;
   const entryMap = new Map(model.entries.map((entry) => [String(entry.route_entry_id), entry]));
   const profile = account.data?.profile ?? {};
 
@@ -300,8 +307,14 @@ export async function mountCollectorWorkspace(context) {
     ${unresolvedMarkup(model.unresolved)}
   </section>
   ${canViewRemittance ? remittanceSection(route.route_date, preview.data, recipients.data, history.data, { preview: preview.error, history: history.error }, canCreateRemittance) : ''}
+  ${canRecordVisit ? '<section class="section-card" id="collector-onboarding"><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
   <section class="section-card" id="collector-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>`;
 
   bindRouteActions(context, entryMap);
   bindRemittance(context);
+  if (canRecordVisit) {
+    context.collectorOnboardingCleanup = mountCollectorOnboardingVisit({
+      root: root.querySelector('[data-collector-onboarding]'), api, session, signal: context.signal,
+    });
+  }
 }

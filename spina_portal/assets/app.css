@@ -1046,3 +1046,149 @@ details > :not(summary) {
     transition-duration: 0.01ms !important;
   }
 }
+
+.area-management {
+  display: grid;
+  gap: 1rem;
+}
+
+.area-management > header h2 {
+  margin: 0;
+}
+
+.area-management-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.area-tree-panel,
+.area-details-panel {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.area-tree {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.8rem;
+}
+
+.area-tree-branch {
+  min-width: 0;
+}
+
+.area-tree-row {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-800);
+  background: transparent;
+  text-align: left;
+}
+
+.area-tree-row:hover,
+.area-tree-row.selected {
+  color: var(--pink-950);
+  border-color: var(--pink-200);
+  background: var(--pink-50);
+}
+
+.area-tree-row > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.area-tree-row small {
+  color: var(--ink-600);
+  font-size: 0.7rem;
+}
+
+.area-tree-toggle {
+  width: 1rem;
+  color: var(--pink-700);
+  text-align: center;
+}
+
+.area-tree-children {
+  display: grid;
+  gap: 0.2rem;
+  margin-left: 1rem;
+  padding-left: 0.7rem;
+  border-left: 1px solid var(--pink-200);
+}
+
+.area-details-panel h3 {
+  margin: 0;
+}
+
+.area-details-heading {
+  margin-bottom: 0.45rem;
+}
+
+.area-path {
+  margin: 0 0 1rem;
+  color: var(--ink-600);
+  overflow-wrap: anywhere;
+}
+
+.area-collector-summary {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.area-collector-summary p {
+  margin: 0;
+}
+
+.area-counts {
+  margin-top: 1rem;
+}
+
+.area-actions {
+  margin-top: 1rem;
+}
+
+.area-route-order-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  .area-management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .area-tree-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .area-tree-row > .meta {
+    grid-column: 2;
+  }
+
+  .area-tree-children {
+    margin-left: 0.45rem;
+    padding-left: 0.45rem;
+  }
+}

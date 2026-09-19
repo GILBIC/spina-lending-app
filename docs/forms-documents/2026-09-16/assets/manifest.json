@@ -1,0 +1,30 @@
+{
+  "status": "controlled-draft-unbound",
+  "baseline_commit": "3db5f5211db0f05a02bf533313dd4828ec8cb19f",
+  "source_binding_implemented": false,
+  "production_issuance_enabled": false,
+  "source_package_sha256": "2dabd9db073f42c8267ecc8af07a0dd07d4e69ad719df4245c63176f2643b69e",
+  "format": "Folio 8 x 13 inches; Arial specified; original SPINA logo retained",
+  "documents": {
+    "T02": {
+      "file": "T02_Cash_Loan_Agreement_R4_DST_GRT.docx",
+      "sha256": "22f91c15860a0ad436c4b2d80f75e7b9c257b1ecf6fc23cdc10bf8192814fe20",
+      "size_bytes": 80155,
+      "source_package": "SPINA_Current_Working_Templates_2026-09-12.zip",
+      "source_package_member": "Templates/SPINA_Cash_Loan_Agreement_R3_Black_White_Draft.docx",
+      "source_docx_sha256": "e51c95eaeeadf8a35372b121d58745955657321f05ee07a34c7f46ceb65a9407",
+      "review_mirror": "templates/T02-cash-loan-agreement-r4-tax-itemization.md",
+      "review_mirror_git_blob": "b10066a51acd05843d03a238077f62db70fc09a1"
+    },
+    "T03": {
+      "file": "T03_Loan_Disclosure_R3_DST_GRT.docx",
+      "sha256": "c82b47da19a2b8f3e1dbcc7f5eec3e31eed902768979d00476f6bada053af5f6",
+      "size_bytes": 75397,
+      "source_package": "SPINA_Current_Working_Templates_2026-09-12.zip",
+      "source_package_member": "Templates/SPINA_Loan_Disclosure_R2_Black_White_Draft.docx",
+      "source_docx_sha256": "6799c8d555ea8a677723144a049c665f14580240bcee8d4917bc93753d6bb585",
+      "review_mirror": "templates/T03-loan-disclosure-r3-tax-itemization.md",
+      "review_mirror_git_blob": "eaa60592fb2e11e938117c298fd2361f7d35c6ab"
+    }
+  }
+}

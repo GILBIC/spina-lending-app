@@ -84,6 +84,11 @@ def test_search_returns_latest_same_day_collection_status(monkeypatch) -> None:
         "open_connection",
         lambda: fake_open_connection(connection),
     )
+    monkeypatch.setattr(
+        module,
+        "apply_due_client_area_transfers",
+        lambda *args, **kwargs: 0,
+    )
 
     records = PostgresOtherAreaRepository().search(
         collector_user_id=COLLECTOR_USER_ID,
@@ -106,10 +111,7 @@ def test_search_returns_latest_same_day_collection_status(monkeypatch) -> None:
     query, parameters = connection.cursor_instance.executions[0]
     assert "left join lateral (" in query
     assert "from lending.collection_transactions transaction" in query
-    assert (
-        "(current_timestamp at time zone 'Asia/Manila')::date"
-        in query
-    )
+    assert "(current_timestamp at time zone 'Asia/Manila')::date" in query
     assert "and transaction.is_voided = false" in query
     assert "order by transaction.accepted_at desc, transaction.id desc" in query
     assert "today.entry_type is not null as processed_today" in query

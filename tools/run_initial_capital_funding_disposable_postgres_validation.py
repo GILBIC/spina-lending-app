@@ -16,6 +16,9 @@ import run_stage5d17_disposable_postgres_validation as disposable
 TEST_DATABASE_PREFIX = "spina_initial_capital_"
 BOOTSTRAP_THROUGH = 80
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+CLIENT_ACCOUNT_PREREQUISITE = (
+    TEST_ROOT.parent / "sql" / "0112_add_guest_loan_applications.sql"
+)
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_initial_capital_funding_migration.py",
     TEST_ROOT / "test_initial_capital_funding_api_contract.py",
@@ -55,7 +58,7 @@ def main() -> int:
             "SPINA schema through 0080, apply 0081 only inside rollback-isolated tests, "
             "prove protected evidence-backed initial-capital funding through the existing "
             "General Journal, and exercise Management-created Client account repository "
-            "behavior against the same disposable schema."
+            "behavior with the real 0112 onboarding membership prerequisite."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -105,6 +108,11 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
+        # Current account rules distinguish imported Clients from office-promoted
+        # Clients using real onboarding membership. Preserve the historical 0080
+        # financial schema: the upgrade tests must still install 0081 themselves.
+        with psycopg.connect(test_url, autocommit=True) as connection:
+            connection.execute(CLIENT_ACCOUNT_PREREQUISITE.read_text(encoding="utf-8"))
         result = _run_tests(test_url)
         if result != 0:
             raise SystemExit(
@@ -117,7 +125,8 @@ def main() -> int:
             "retained funding evidence, Management permissions, Dr selected Cash/Bank "
             "/ Cr Capital 3000, exact retry/different-retry rejection, protected General "
             "Journal reuse, manual bypass/reversal guards, forced-audit atomic rollback, "
-            "and Management-created Client borrower-link repository behavior were proven. "
+            "and Management-created Client borrower-link repository behavior with the "
+            "real 0112 onboarding membership prerequisite were proven. "
             "No opening-balance workbook or automatic source posting was used."
         )
         return 0

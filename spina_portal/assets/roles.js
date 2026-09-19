@@ -12,6 +12,20 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('client-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   employee: Object.freeze([
+    action('employee-first-loan', 'First-loan office workflow', '/api/v1/management/first-loans/by-application/{application_id}', {
+      section: 'Office functions', permission: 'client_onboarding.requirement.review',
+    }),
+    action('employee-onboarding', 'Office intake and requirements', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/case', {
+      section: 'Office functions', permission: 'client_onboarding.requirement.review',
+    }),
+    action('employee-application-review', 'Loan application review', '/api/v1/management/clients/{client_id}/loan-applications/by-reference/{application_reference}/review-summary', {
+      section: 'Office functions',
+      permission: 'client_onboarding.requirement.review',
+    }),
+    action('employee-cif-review', 'CIF information review', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/cif-client', {
+      section: 'Office functions',
+      permission: 'client_onboarding.requirement.review',
+    }),
     action('employee-account', 'My account & devices', '/api/v1/account', { section: 'Updates & account' }),
     action('employee-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates & account' }),
     action('employee-remittance', 'Remittance notifications', '/api/v1/notifications', {
@@ -24,6 +38,9 @@ export const ROLE_ENDPOINTS = Object.freeze({
     }),
   ]),
   collector: Object.freeze([
+    action('collector-onboarding', 'Residence visit', '/api/v1/collector/onboarding/applicants/by-reference/{application_reference}/visit-case', {
+      section: 'Onboarding', permission: 'client_onboarding.visit.record',
+    }),
     action('collector-account', 'My account & devices', '/api/v1/account', { section: 'Account' }),
     action('collector-route', "Today's route", '/api/v1/collector/routes/today', {
       section: 'Collection',
@@ -42,12 +59,51 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('collector-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   management: Object.freeze([
+    action('management-first-loan', 'First-loan office workflow', '/api/v1/management/first-loans/by-application/{application_id}', {
+      section: 'Office functions', permission: 'client_onboarding.requirement.review',
+    }),
+    action('management-onboarding', 'Office intake and requirements', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/case', {
+      section: 'Review', permission: 'client_onboarding.requirement.review',
+    }),
+    action('management-application-review', 'Loan application review', '/api/v1/management/clients/{client_id}/loan-applications/by-reference/{application_reference}/review-summary', {
+      section: 'Review',
+      permission: 'client_onboarding.requirement.review',
+    }),
+    action('management-cif-review', 'CIF information review', '/api/v1/management/onboarding/applicants/by-reference/{application_reference}/cif-client', {
+      section: 'Review',
+      permission: 'client_onboarding.requirement.review',
+    }),
     action('management-account', 'My account & devices', '/api/v1/account', { section: 'Administration' }),
     action('management-overview', 'Live overview', '/api/v1/management/dashboard-overview', {
       section: 'Overview',
       permission: 'management.dashboard.view',
     }),
     action('management-loans', 'Clients & loans', '/api/v1/management/loans', { section: 'Portfolio' }),
+    action('management-loan-operations', 'Loan operations', '/api/v1/management/loan-operations', {
+      section: 'Operations',
+    }),
+    action('management-past-due-report', 'Past-due reasons', '/api/v1/management/past-due/reasons', {
+      section: 'Reports',
+      permission: 'management.dashboard.view',
+    }),
+    action(
+      'management-financial-statements',
+      'Financial statements',
+      '/api/v1/management/financial-accounting/statements',
+      {
+        section: 'Reports',
+        permission: 'accounting.view',
+      },
+    ),
+    action(
+      'management-general-journal',
+      'General journal & trial balance',
+      '/api/v1/management/financial-accounting/journals',
+      {
+        section: 'Reports',
+        permission: 'accounting.view',
+      },
+    ),
     action('management-alerts', 'Alerts & audit', '/api/v1/management/alerts-audit', {
       section: 'Overview',
       permission: 'management.dashboard.view',

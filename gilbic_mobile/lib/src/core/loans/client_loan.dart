@@ -66,6 +66,7 @@ class ClientLoan {
     this.interestRate,
     this.dateReleased,
     this.dueDate,
+    this.firstPaymentDate,
     this.lastPaymentDate,
     this.advanceUntil,
   });
@@ -79,6 +80,7 @@ class ClientLoan {
   final String? interestRate;
   final DateTime? dateReleased;
   final DateTime? dueDate;
+  final DateTime? firstPaymentDate;
   final String status;
   final String remainingBalance;
   final String paidAmount;
@@ -105,6 +107,7 @@ class ClientLoan {
       interestRate: optionalDecimalText(payload['interest_rate']),
       dateReleased: optionalDate(payload['date_released']),
       dueDate: optionalDate(payload['due_date']),
+      firstPaymentDate: optionalDate(payload['first_payment_date']),
       status: requiredString(payload, 'status'),
       remainingBalance: requiredDecimalText(payload, 'remaining_balance'),
       paidAmount: requiredDecimalText(payload, 'paid_amount'),

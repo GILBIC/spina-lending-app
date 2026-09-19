@@ -62,9 +62,10 @@ export function loanCard(loan, obligationSchedule = null) {
     <div class="loan-meta">
       ${detailItem('Original principal', formatAuthoritativeMoney(loan.principal))}
       ${detailItem('Official balance', formatAuthoritativeMoney(loan.remaining_balance))}
-      ${detailItem('Daily amount', formatAuthoritativeMoney(loan.daily_amount))}
+      ${detailItem('Required payment', formatAuthoritativeMoney(loan.daily_amount))}
       ${detailItem('Paid amount', formatAuthoritativeMoney(loan.paid_amount))}
       ${detailItem('Released', formatDate(loan.date_released))}
+      ${detailItem('First contractual payment', formatDate(loan.first_payment_date))}
       ${detailItem('Due date', formatDate(loan.due_date))}
     </div>
     ${obligationSummary}

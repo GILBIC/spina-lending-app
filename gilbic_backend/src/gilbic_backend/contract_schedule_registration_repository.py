@@ -34,13 +34,14 @@ class ContractScheduleLoanContext:
     daily_interest_per_1000: Decimal
     principal: Decimal
     daily_amount: Decimal
-    date_released: date
-    due_date: date
+    date_released: date | None
+    due_date: date | None
     loan_status: str
     active_schedule_id: UUID | None
     active_schedule_version: int | None
     active_payment_frequency: str | None
     active_contract_reference: str | None
+    interest_rate: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,6 +239,7 @@ class PostgresContractScheduleRegistrationRepository:
                             as daily_interest_per_1000,
                         loan.principal,
                         loan.daily_amount,
+                        loan.interest_rate,
                         loan.date_released,
                         loan.due_date,
                         loan.status as loan_status,
