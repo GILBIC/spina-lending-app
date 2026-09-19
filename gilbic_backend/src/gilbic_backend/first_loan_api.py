@@ -6,6 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from psycopg.errors import CheckViolation
 from pydantic import Field, StrictBool, model_validator
 
 from .account_repository import PostgresAccountRepository
@@ -174,6 +175,15 @@ def create_first_loan_router():
                 registered_device_id=actor.registered_device_id,
                 **arguments,
             )
+        except CheckViolation as error:
+            if error.diag.constraint_name != "client_cif_new_credit_ready":
+                raise
+            raise _translate(
+                FirstLoanConflict(
+                    "Refresh the client record and complete any required CIF "
+                    "re-verification before approving or releasing new credit."
+                )
+            ) from error
         except (
             FirstLoanAccessDenied,
             FirstLoanConflict,

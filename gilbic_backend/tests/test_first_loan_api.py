@@ -78,6 +78,55 @@ def client(monkeypatch, role="management", permissions=None, device=True):
 HEADERS = {"Authorization": "Bearer synthetic", "X-Device-Id": "synthetic-office"}
 
 
+@pytest.mark.parametrize("method", ["approve", "release"])
+@pytest.mark.parametrize("constraint", ["client_cif_new_credit_ready", "unrelated_check"])
+def test_new_credit_guard_is_a_specific_conflict(monkeypatch, method, constraint):
+    from psycopg.errors import CheckViolation
+
+    app, repository, _, _ = client(monkeypatch)
+    failure = CheckViolation(
+        "private database detail",
+        info={ord("n"): constraint.encode()},
+    )
+
+    def fail(**kwargs):
+        repository.calls.append((method, kwargs))
+        raise failure
+
+    monkeypatch.setattr(repository, method, fail)
+    if method == "approve":
+        path = "/api/v1/management/first-loans/approve"
+        payload = {
+            "request_id": str(uuid4()),
+            "application_version_id": str(uuid4()),
+            "template_version": "SYNTHETIC",
+            "terms": values(),
+        }
+    else:
+        path = f"/api/v1/management/first-loans/{uuid4()}/release"
+        payload = {
+            "request_id": str(uuid4()),
+            "packet_hash": "a" * 64,
+            "authorization_id": str(uuid4()),
+            "contract_evidence_reference": "office-evidence:" + str(uuid4()),
+            "cash_evidence_reference": "office-evidence:" + str(uuid4()),
+            "cash_amount": "990.00",
+            "borrower_confirmed": True,
+        }
+    if constraint != "client_cif_new_credit_ready":
+        with pytest.raises(CheckViolation) as caught:
+            app.post(path, headers=HEADERS, json=payload)
+        assert caught.value is failure
+    else:
+        response = app.post(path, headers=HEADERS, json=payload)
+        assert response.status_code == 409
+        assert response.headers["cache-control"] == "no-store"
+        assert "Refresh" in response.json()["detail"]
+        assert "private database detail" not in response.text
+        assert "credentials" not in response.json()
+    assert len(repository.calls) == 1
+
+
 def test_management_approval_passes_exact_snapshot_identity_and_terms(monkeypatch):
     app, repository, actor, _ = client(monkeypatch)
     payload = {

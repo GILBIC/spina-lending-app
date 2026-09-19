@@ -275,6 +275,8 @@ class PostgresLoanDisbursementEvidenceRepository:
     @staticmethod
     def _map_error(error: psycopg.Error) -> LoanDisbursementEvidenceError:
         message = str(error).split("CONTEXT:", 1)[0].strip()
+        if error.diag.constraint_name == "client_cif_new_credit_ready":
+            return LoanDisbursementEvidenceConflict(message)
         lower = message.lower()
         if "not found" in lower:
             return LoanDisbursementEvidenceNotFound(message)

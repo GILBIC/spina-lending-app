@@ -1,6 +1,6 @@
 # Office first-loan configuration and recovery
 
-This implements the approved office-only onboarding design. It does not enable public applications, auto-approve legal forms, connect a biometric provider, or deploy a production service. Apply migrations through 0125 using the existing reviewed migration process before enabling these routes.
+This implements the approved office-only onboarding design. It does not enable public applications, auto-approve legal forms, connect a biometric provider, or deploy a production service. Apply migrations through 0126 using the existing reviewed migration process before enabling these routes.
 
 ## Staff workflow
 
@@ -70,8 +70,10 @@ Credential setup is intentionally outside the financial transaction. It reserves
 
 First-loan approvals cannot be activated through the older generic schedule/disbursement paths. A committed first-loan disbursement cannot be voided independently of its receipt and schedule; a reviewed reversal workflow is required.
 
+For Clients enrolled in CIF, shared new-loan and renewal approval, cash handoff and execution also require a current active, unexpired CIF without unresolved re-verification. A flag added after approval blocks subsequent release. A routine review-due reminder alone does not block borrowing. Existing-loan collections, payment corrections, receipt acknowledgments and recorded-event retries remain available; historical Clients without CIF retain the existing path. If a concurrent CIF edit returns a conflict, refresh the saved state before retrying the intended action.
+
 ## Verification
 
-The combined local database runner is `tools/run_client_onboarding_disposable_postgres_validation.py`. It requires `SPINA_ALLOW_DISPOSABLE_DATABASE=1`, accepts a loopback disposable PostgreSQL connection only, creates a fresh `spina_onboarding_*` database and drops it in `finally`. It replays schema through 0112 plus 0114–0125, then runs existing eligibility/CIF/application proofs together with evidence, privacy, approval, release and credential proofs. External Auth and mail are synthetic test doubles.
+The combined local database runner is `tools/run_client_onboarding_disposable_postgres_validation.py`. It requires `SPINA_ALLOW_DISPOSABLE_DATABASE=1`, accepts a loopback disposable PostgreSQL connection only, creates a fresh `spina_onboarding_*` database and drops it in `finally`. It replays schema through 0112 plus 0114–0126, then runs existing eligibility/CIF/application proofs together with evidence, privacy, approval, release, credential and shared new-credit CIF guard proofs. External Auth and mail are synthetic test doubles.
 
 Run the backend suite, `npm test`, relevant Flutter tests, the combined disposable database proof and the real converter/Arial/PDF proof before marking the workflow accepted. Keep PR420 Draft/open/unmerged until Management's explicit integration approval; deployment and production activation are separate actions.
