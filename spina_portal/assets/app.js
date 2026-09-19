@@ -36,6 +36,7 @@ const loginForm = document.getElementById('login-form');
 
 let currentMount = null;
 let currentContext = null;
+let workspaceController = null;
 
 function updateConnectionStatus() {
   const online = navigator.onLine !== false;
@@ -52,26 +53,39 @@ function setNavigation(items) {
   roleNavigation.innerHTML = navigationMarkup(items);
 }
 
-function showAuthentication() {
+function clearWorkspace() {
+  workspaceController?.abort();
+  workspaceController = null;
   currentMount = null;
   currentContext = null;
-  authenticatedApp.hidden = true;
-  authView.hidden = false;
   roleNavigation.innerHTML = '';
   roleContent.innerHTML = '';
+  signedInName.textContent = '';
+}
+
+function showAuthentication() {
+  clearWorkspace();
+  authenticatedApp.hidden = true;
+  authView.hidden = false;
   loginForm.querySelector('input[name="username"]')?.focus();
 }
 
 async function mountCurrentWorkspace() {
   if (!currentMount || !currentContext) return;
+  workspaceController?.abort();
+  const controller = new AbortController();
+  workspaceController = controller;
+  const mount = currentMount;
+  const context = { ...currentContext, signal: controller.signal };
   refreshButton.disabled = true;
   try {
-    await currentMount(currentContext);
+    await mount(context);
   } catch (error) {
-    roleContent.innerHTML = `<div class="error-card"><strong>The ${escapeHtml(currentContext.role)} workspace could not start.</strong><br>${escapeHtml(error.message || 'Unexpected error')}</div>`;
+    if (controller.signal.aborted) return;
+    roleContent.innerHTML = `<div class="error-card"><strong>The ${escapeHtml(context.role)} workspace could not start.</strong><br>${escapeHtml(error.message || 'Unexpected error')}</div>`;
     showToast(error.message || 'Workspace failed to load.', 'error');
   } finally {
-    refreshButton.disabled = false;
+    if (workspaceController === controller) refreshButton.disabled = false;
   }
 }
 
@@ -109,7 +123,7 @@ async function showAuthenticated(session) {
     uncertainCollection: null,
   };
   await mountCurrentWorkspace();
-  roleContent.focus({ preventScroll: true });
+  if (currentContext?.session === session) roleContent.focus({ preventScroll: true });
 }
 
 loginForm.addEventListener('submit', async (event) => {
@@ -135,6 +149,7 @@ loginForm.addEventListener('submit', async (event) => {
 refreshButton.addEventListener('click', () => mountCurrentWorkspace());
 logoutButton.addEventListener('click', async () => {
   setButtonBusy(logoutButton, true, 'Signing out…');
+  clearWorkspace();
   try {
     await api.logout();
   } catch (error) {

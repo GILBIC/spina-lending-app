@@ -1,5 +1,9 @@
 import { mountAreaManagement } from '../area-management.js';
 import { buildManagementViewModel } from '../presenters.js';
+import { mountOfficeCifSelection } from '../office-cif-selection.js';
+import { mountOfficeApplicationReview } from '../office-application-review.js';
+import { mountOfficeFirstLoan } from '../office-first-loan.js';
+import { mountOfficeOnboarding } from '../office-onboarding.js';
 import {
   bindClientAccountAdmin,
   clientAccountAdminMarkup,
@@ -287,7 +291,17 @@ function bindLoanSearch(context) {
 }
 
 export async function mountManagementWorkspace(context) {
+  if (context.signal?.aborted) return;
+  context.officeCifCleanup?.();
+  context.officeCifCleanup = null;
+  context.officeApplicationCleanup?.();
+  context.officeApplicationCleanup = null;
+  context.officeFirstLoanCleanup?.();
+  context.officeFirstLoanCleanup = null;
+  context.officeOnboardingCleanup?.();
+  context.officeOnboardingCleanup = null;
   const { root, api, session, setNavigation } = context;
+  const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canDashboard = hasPermission(session, 'management.dashboard.view');
   const canViewFinancialStatements = hasPermission(session, 'accounting.view');
   const canViewGeneralJournal = canViewFinancialStatements;
@@ -304,6 +318,9 @@ export async function mountManagementWorkspace(context) {
   ].some((permission) => hasPermission(session, permission));
   setNavigation([
     { id: 'management-overview', label: 'Overview' },
+    ...(canReviewCif ? [{ id: 'management-onboarding', label: 'Office intake' }] : []),
+    ...(canReviewCif ? [{ id: 'management-cif-review', label: 'CIF review' }] : []),
+    ...(canReviewCif ? [{ id: 'management-application-review', label: 'Application review' }, { id: 'management-first-loan', label: 'First loan' }] : []),
     { id: 'management-loans', label: 'Clients & loans' },
     ...(canUseAreaManagement ? [{ id: 'management-area-management', label: 'Area Management' }] : []),
     { id: 'management-loan-operations', label: 'Loan operations' },
@@ -351,11 +368,16 @@ export async function mountManagementWorkspace(context) {
     canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
     canViewStaff ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
   ]);
+  if (context.signal?.aborted) return;
   const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data });
   const staffAccounts = asArray(staff.data.accounts);
 
   root.innerHTML = `<header class="workspace-header" id="management-overview"><div><p class="eyebrow">Management workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review live priorities and protected queues. Every official value and decision remains server-authoritative.</p></div>${model.generatedAt ? `<span class="meta">Generated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
+  ${canReviewCif ? '<section class="section-card" id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
+  ${canReviewCif ? `<section class="section-card" id="management-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
+  ${canReviewCif ? '<section class="section-card" id="management-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
+  ${canReviewCif ? '<section class="section-card" id="management-first-loan"><h2>First-loan approval and office release</h2><div data-office-first-loan></div></section>' : ''}
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" placeholder="Client, code, area, or loan number" /><select name="status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
   ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
   <section class="section-card" id="management-loan-operations"><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" placeholder="Client, receipt, loan, or collector" /><select name="status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
@@ -369,6 +391,20 @@ export async function mountManagementWorkspace(context) {
   ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff, inspect registered phones, and apply only server-authorized device changes.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" style="margin-top:1rem">${emptyState('Select a staff account to review registered phones.')}</div></section>` : ''}
   <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
 
+  if (canReviewCif) {
+    context.officeFirstLoanCleanup = mountOfficeFirstLoan({
+      root: root.querySelector('[data-office-first-loan]'), api, session, signal: context.signal,
+    });
+    context.officeOnboardingCleanup = mountOfficeOnboarding({
+      root: root.querySelector('[data-office-onboarding]'), api, session, signal: context.signal,
+    });
+    context.officeCifCleanup = mountOfficeCifSelection({
+      root: root.querySelector('[data-office-cif-selection]'), api, session, signal: context.signal,
+    });
+    context.officeApplicationCleanup = mountOfficeApplicationReview({
+      root: root.querySelector('[data-office-application-review]'), api, session, signal: context.signal,
+    });
+  }
   bindLoanSearch(context);
   bindManagementLoanOperations(context);
   bindManagementPastDueReport(context);

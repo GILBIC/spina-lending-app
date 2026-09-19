@@ -6,6 +6,8 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi.routing import APIRoute
+from psycopg.errors import CheckViolation
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -19,6 +21,35 @@ from .request_auth import authenticated_device_context
 MAX_PROOF_BYTES = 8 * 1024 * 1024
 ALLOWED_PROOF_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ZERO = Decimal("0.00")
+CIF_NEW_CREDIT_MESSAGE = (
+    "Refresh the client record and complete any required CIF re-verification before approving or releasing new credit."
+)
+
+
+def _is_cif_new_credit_conflict(error: CheckViolation) -> bool:
+    return error.diag.constraint_name == "client_cif_new_credit_ready"
+
+
+class _RenewalWorkflowRoute(APIRoute):
+    def get_route_handler(self):
+        original = super().get_route_handler()
+
+        async def handler(request: Request):
+            try:
+                return await original(request)
+            except CheckViolation as error:
+                if not _is_cif_new_credit_conflict(error):
+                    raise
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "client_cif_new_credit_not_ready",
+                        "message": CIF_NEW_CREDIT_MESSAGE,
+                    },
+                    headers={"Cache-Control": "no-store"},
+                ) from error
+
+        return handler
 
 
 class StrictWorkflowModel(BaseModel):
@@ -522,7 +553,7 @@ def _try_activate(cursor, *, row, actor_user_id: UUID) -> tuple[bool, str]:
 
 
 def create_renewal_workflow_router() -> APIRouter:
-    router = APIRouter(tags=["renewal workflow"])
+    router = APIRouter(tags=["renewal workflow"], route_class=_RenewalWorkflowRoute)
 
     @router.get("/api/v1/collector/renewals")
     @router.get("/api/mobile/v1/collector/renewals", include_in_schema=False)
@@ -1497,10 +1528,27 @@ def create_renewal_workflow_router() -> APIRouter:
                     details=body.note,
                 )
                 updated = _renewal_row(cursor, request_id=request_id)
+                activation_message = None
                 if mapped == "approved":
-                    _try_activate(cursor, row=updated, actor_user_id=actor.user_id)
+                    try:
+                        # Preserve the review of an actual handover if a later
+                        # CIF change prevents the separate activation transition.
+                        with connection.transaction():
+                            _try_activate(
+                                cursor, row=updated, actor_user_id=actor.user_id
+                            )
+                    except CheckViolation as error:
+                        if not _is_cif_new_credit_conflict(error):
+                            raise
+                        activation_message = CIF_NEW_CREDIT_MESSAGE
                     updated = _renewal_row(cursor, request_id=request_id)
                 data = _payload(cursor, updated)
+                if activation_message is not None:
+                    data["ready_for_activation"] = False
+                    return {
+                        "success": True,
+                        "data": {"request": data, "message": activation_message},
+                    }
         return {"success": True, "data": {"request": data}}
 
     @router.post("/api/v1/management/renewals/{request_id}/activate")

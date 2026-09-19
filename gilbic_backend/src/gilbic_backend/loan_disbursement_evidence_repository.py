@@ -66,7 +66,7 @@ class LoanDisbursementReadinessRecord:
     loan_type_name: str
     calculation_mode: str
     principal: Decimal
-    date_released: date
+    date_released: date | None
     loan_status: str
     disbursement_event_id: UUID | None
     event_kind: str | None
@@ -129,6 +129,9 @@ class PostgresLoanDisbursementEvidenceRepository:
         try:
             with open_connection() as connection:
                 with connection.cursor(row_factory=dict_row) as cursor:
+                    loan = cursor.execute('select date_released from lending.loans where id=%s for share',(loan_id,)).fetchone()
+                    if loan is not None and loan['date_released'] is None:
+                        raise LoanDisbursementEvidenceConflict('Unreleased first loans require the protected office cash-release workflow.')
                     event_id = cursor.execute(
                         """
                         select accounting.record_loan_disbursement_evidence(
@@ -272,6 +275,8 @@ class PostgresLoanDisbursementEvidenceRepository:
     @staticmethod
     def _map_error(error: psycopg.Error) -> LoanDisbursementEvidenceError:
         message = str(error).split("CONTEXT:", 1)[0].strip()
+        if error.diag.constraint_name == "client_cif_new_credit_ready":
+            return LoanDisbursementEvidenceConflict(message)
         lower = message.lower()
         if "not found" in lower:
             return LoanDisbursementEvidenceNotFound(message)
@@ -280,6 +285,7 @@ class PostgresLoanDisbursementEvidenceRepository:
             or "different active" in lower
             or "journal history" in lower
             or "cannot" in lower
+            or "first-loan" in lower
         ):
             return LoanDisbursementEvidenceConflict(message)
         return LoanDisbursementEvidenceInvalid(message or "Loan disbursement evidence failed validation.")

@@ -14,8 +14,61 @@ from .management_repository import AccountAdminRecord, PostgresManagementReposit
 class PostgresClientAccountRepository(PostgresManagementRepository):
     """Management repository extension for SPINA-controlled Client credentials."""
 
-    def next_client_username(self, *, client_id: UUID) -> str:
+    @staticmethod
+    def _require_release(
+        connection,
+        *,
+        client_id: UUID,
+        provisioning_intent_id: UUID | None,
+        auth_user_id: UUID | None = None,
+        email: str | None = None,
+    ) -> None:
+        # Existing imported Clients keep their established credential lifecycle.
+        # Office-onboarded Clients must use the unique committed-release intent.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "select 1 from lending.client_onboarding_applicants "
+                "where promoted_client_id = %s",
+                (client_id,),
+            )
+            if cursor.fetchone() is None:
+                return
+            if provisioning_intent_id is None:
+                raise AccountConflict(
+                    "Use the committed first-loan release credential workflow for this Client."
+                )
+            cursor.execute(
+                """select 1 from lending.first_loan_credential_intents intent
+                join lending.loans loan on loan.id = intent.loan_id
+                where intent.id = %s and intent.client_id = %s
+                  and loan.client_id = intent.client_id and loan.date_released is not null
+                  and loan.status in ('active', 'paid', 'closed', 'defaulted')
+                  and intent.status = 'processing'
+                  and (%s::uuid is null or intent.auth_user_id = %s)
+                  and (%s::text is null or lower(intent.email) = lower(%s))""",
+                (
+                    provisioning_intent_id,
+                    client_id,
+                    auth_user_id,
+                    auth_user_id,
+                    email,
+                    email,
+                ),
+            )
+            if cursor.fetchone() is None:
+                raise AccountConflict(
+                    "A committed first-loan release is required for credentials."
+                )
+
+    def next_client_username(
+        self, *, client_id: UUID, provisioning_intent_id: UUID | None = None
+    ) -> str:
         with open_connection() as connection:
+            self._require_release(
+                connection,
+                client_id=client_id,
+                provisioning_intent_id=provisioning_intent_id,
+            )
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     """
@@ -58,6 +111,7 @@ class PostgresClientAccountRepository(PostgresManagementRepository):
         username: str,
         email: str,
         client_id: UUID,
+        provisioning_intent_id: UUID | None = None,
     ) -> AccountAdminRecord:
         try:
             with open_connection() as connection:
@@ -83,6 +137,14 @@ class PostgresClientAccountRepository(PostgresManagementRepository):
                         raise AccountConflict(
                             "That borrower record is already linked to an account."
                         )
+
+                    self._require_release(
+                        connection,
+                        client_id=client_id,
+                        provisioning_intent_id=provisioning_intent_id,
+                        auth_user_id=auth_user_id,
+                        email=email,
+                    )
 
                     role_id = self._role_id(connection, "client")
                     with connection.cursor() as cursor:

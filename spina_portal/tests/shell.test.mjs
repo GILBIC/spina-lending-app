@@ -62,10 +62,23 @@ test('service worker explicitly bypasses authenticated API and health traffic', 
   assert.match(serviceWorker, /event\.respondWith/);
 });
 
-test('service worker refreshes the shell when Management device administration is added', async () => {
+test('service worker refreshes the shell and includes the office CIF review modules', async () => {
   const serviceWorker = await text('../sw.js');
 
-  assert.match(serviceWorker, /spina-company-shell-v3/);
+  assert.match(serviceWorker, /spina-company-shell-v9/);
+  assert.match(serviceWorker, /'\/assets\/office-evidence-capture\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-first-loan\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-privacy\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-cif-selection\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-cif-review\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-cif-correction\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-application-review\.js'/);
+  assert.match(serviceWorker, /'\/assets\/office-application-entry\.js'/);
+  assert.match(serviceWorker, /'\/assets\/area-management\.js'/);
+  assert.match(serviceWorker, /'\/assets\/management-financial-statements\.js'/);
+  assert.match(serviceWorker, /'\/assets\/management-general-journal\.js'/);
+  assert.match(serviceWorker, /'\/assets\/management-loan-operations\.js'/);
+  assert.match(serviceWorker, /'\/assets\/management-past-due-report\.js'/);
   assert.match(serviceWorker, /'\/assets\/management-devices\.js'/);
   assert.match(serviceWorker, /'\/assets\/roles\/management\.js'/);
 });

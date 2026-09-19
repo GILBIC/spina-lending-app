@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import psycopg
+import run_client_onboarding_disposable_postgres_validation as onboarding_validation
 from psycopg import sql
 
 
@@ -277,7 +278,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--database-url")
     args = parser.parse_args(argv)
-    validate(_database_url(args.database_url))
+    database_url = _database_url(args.database_url)
+    validate(database_url)
+    onboarding_validation.validate(database_url)
     return 0
 
 

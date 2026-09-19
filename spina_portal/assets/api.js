@@ -70,6 +70,8 @@ export class SpinaApi {
     {
       method = 'GET',
       body,
+      rawBody,
+      responseType = 'json',
       headers = {},
       authenticated = true,
       financial = false,
@@ -77,6 +79,7 @@ export class SpinaApi {
     } = {},
   ) {
     const normalizedMethod = String(method).toUpperCase();
+    if (body !== undefined && rawBody !== undefined) throw new TypeError('Choose JSON or raw request content.');
     const requestHeaders = {
       'X-App-Platform': 'web',
       'X-App-Version': this.appVersion,
@@ -98,11 +101,13 @@ export class SpinaApi {
       method: normalizedMethod,
       headers: requestHeaders,
       signal,
+      cache: 'no-store',
     };
     if (body !== undefined) {
       requestHeaders['Content-Type'] = 'application/json';
       init.body = JSON.stringify(body);
     }
+    if (rawBody !== undefined) init.body = rawBody;
 
     let response;
     try {
@@ -121,6 +126,7 @@ export class SpinaApi {
       );
     }
 
+    if (response.ok && responseType === 'blob') return response.blob();
     let payload = null;
     const contentType = response.headers?.get?.('content-type') ?? '';
     if (response.status !== 204) {

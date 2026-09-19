@@ -290,6 +290,8 @@ class PostgresLoanRenewalExecutionEvidenceRepository:
     @staticmethod
     def _map_error(error: psycopg.Error) -> LoanRenewalExecutionEvidenceError:
         message = str(error).split("CONTEXT:", 1)[0].strip()
+        if error.diag.constraint_name == "client_cif_new_credit_ready":
+            return LoanRenewalExecutionEvidenceConflict(message)
         lower = message.lower()
         if "not found" in lower:
             return LoanRenewalExecutionEvidenceNotFound(message)

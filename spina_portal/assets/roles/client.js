@@ -31,9 +31,10 @@ function loanCard(loan) {
     <div class="loan-meta">
       ${detailItem('Original principal', formatMoney(loan.principal))}
       ${detailItem('Official balance', formatMoney(loan.remaining_balance))}
-      ${detailItem('Daily amount', formatMoney(loan.daily_amount))}
+      ${detailItem('Required payment', formatMoney(loan.daily_amount))}
       ${detailItem('Paid amount', formatMoney(loan.paid_amount))}
       ${detailItem('Released', formatDate(loan.date_released))}
+      ${detailItem('First contractual payment', formatDate(loan.first_payment_date))}
       ${detailItem('Due date', formatDate(loan.due_date))}
     </div>
     <div class="inline-actions">
