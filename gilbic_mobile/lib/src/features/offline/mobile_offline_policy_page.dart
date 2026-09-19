@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/offline/mobile_offline_policy.dart';
 
@@ -80,8 +81,10 @@ class MobileOfflinePolicyPage extends StatelessWidget {
                     ),
                     _SafetyRow(
                       label: 'Persistent offline business data',
-                      value: policy.hasPersistentOfflineData
-                          ? 'Collector route snapshot only'
+                      value: policy.role == AppRole.collector
+                          ? 'Encrypted route and attendance outbox'
+                          : policy.role == AppRole.employee
+                          ? 'Encrypted attendance outbox'
                           : 'None',
                     ),
                     _SafetyRow(

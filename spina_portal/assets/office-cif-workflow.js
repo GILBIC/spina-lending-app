@@ -1,6 +1,6 @@
 import { mountOfficeEvidenceCapture } from './office-evidence-capture.js';
 import { mountOfficePrivacy } from './office-privacy.js';
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -12,7 +12,6 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
   let disposed = false; let busy = false; let review; let captured; let captureCleanup; let privacyCleanup;
   const controller = new AbortController(); let removers = [];
   const base = `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif`;
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
   const listen = (element, type, callback) => { element.addEventListener(type, callback); removers.push(() => element.removeEventListener(type, callback)); };
   function clear() {
     captureCleanup?.(); privacyCleanup?.(); captureCleanup = null; privacyCleanup = null;
@@ -103,7 +102,7 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
         ${review.status === 'draft' ? `<h3>Controlled baseline verification</h3><p>Use the result from the approved face and liveness verification process. This form records its result; it does not perform a face scan.</p>
           <form data-baseline-cif class="entry-form"><label>Verification provider evidence reference<input name="providerReference" type="text" maxlength="500" autocomplete="off" required /></label>
           <label><input name="providerPassed" type="checkbox" required /> Baseline face and liveness verification passed.</label><button type="submit">Record verified baseline</button></form>
-          ${role === 'management' ? '<button type="button" data-activate-cif>Activate verified CIF</button>' : '<p>Management activates the CIF after the required review and verification.</p>'}` : '<p>This CIF is already active.</p>'}
+          ${sessionHasRole(session, 'management') ? '<button type="button" data-activate-cif>Activate verified CIF</button>' : '<p>Management activates the CIF after the required review and verification.</p>'}` : '<p>This CIF is already active.</p>'}
         <div data-cif-workflow-status role="status" aria-live="polite"></div>`;
       captureCleanup = mountOfficeEvidenceCapture({ root: root.querySelector('[data-signed-cif]'), api, session, clientId,
         cifVersionId: review.cif_version_id, purpose: 'cif_review', signal: controller.signal,
@@ -113,13 +112,13 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
       listen(root.querySelector('[data-confirm-cif]'), 'click', confirm);
       if (review.status === 'draft') {
         listen(root.querySelector('[data-baseline-cif]'), 'submit', baseline);
-        if (role === 'management') listen(root.querySelector('[data-activate-cif]'), 'click', activate);
+        if (sessionHasRole(session, 'management')) listen(root.querySelector('[data-activate-cif]'), 'click', activate);
       }
     } catch (error) { fail(error); } finally { busy = false; }
   }
   mounts.set(root, dispose); signal?.addEventListener('abort', dispose, { once: true });
   if (signal?.aborted) { dispose(); return dispose; }
-  if (!['employee', 'management'].includes(role) || !hasPermission(session, 'client_onboarding.requirement.review') || !UUID.test(clientId)) {
+  if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session, 'client_onboarding.requirement.review') || !UUID.test(clientId)) {
     root.innerHTML = emptyState('Office access, onboarding review permission and a valid Client selection are required.');
     return dispose;
   }

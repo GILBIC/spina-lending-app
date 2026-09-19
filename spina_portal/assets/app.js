@@ -1,6 +1,6 @@
 import { SpinaApi } from './api.js';
 import { PORTAL_CONFIG } from './config.js';
-import { normalizeRole } from './roles.js';
+import { normalizeRole, sessionWorkspaceRoles } from './roles.js';
 import { SessionStore } from './session.js';
 import {
   bindNavigation,
@@ -33,6 +33,8 @@ const environmentLabel = document.getElementById('environment-label');
 const refreshButton = document.getElementById('refresh-workspace');
 const logoutButton = document.getElementById('logout-button');
 const loginForm = document.getElementById('login-form');
+const workspaceChoice = document.getElementById('workspace-choice');
+const workspaceChoiceLabel = document.getElementById('workspace-choice-label');
 
 let currentMount = null;
 let currentContext = null;
@@ -61,6 +63,8 @@ function clearWorkspace() {
   roleNavigation.innerHTML = '';
   roleContent.innerHTML = '';
   signedInName.textContent = '';
+  if (workspaceChoice) workspaceChoice.innerHTML = '';
+  if (workspaceChoiceLabel) workspaceChoiceLabel.hidden = true;
 }
 
 function showAuthentication() {
@@ -89,8 +93,9 @@ async function mountCurrentWorkspace() {
   }
 }
 
-async function showAuthenticated(session) {
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
+async function showAuthenticated(session, requestedRole) {
+  const roles = sessionWorkspaceRoles(session);
+  const role = roles.includes(normalizeRole(requestedRole)) ? normalizeRole(requestedRole) : roles[0] || 'unknown';
   if (role === 'unknown') {
     sessionStore.clear();
     showAuthentication();
@@ -104,6 +109,11 @@ async function showAuthenticated(session) {
   signedInRole.textContent = roleDisplayName(role);
   signedInName.textContent = session.user.full_name || session.user.username || 'Signed in';
   workspaceTitle.textContent = `${roleDisplayName(role)} workspace`;
+  if (workspaceChoice) {
+    workspaceChoice.innerHTML = roles.map((value) => `<option value="${value}">${roleDisplayName(value)}</option>`).join('');
+    workspaceChoice.value = role;
+  }
+  if (workspaceChoiceLabel) workspaceChoiceLabel.hidden = roles.length < 2;
   updateConnectionStatus();
 
   const mounts = {
@@ -147,6 +157,12 @@ loginForm.addEventListener('submit', async (event) => {
 });
 
 refreshButton.addEventListener('click', () => mountCurrentWorkspace());
+workspaceChoice?.addEventListener('change', () => {
+  const session = currentContext?.session;
+  if (session && sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
+    void showAuthenticated(session, workspaceChoice.value);
+  }
+});
 logoutButton.addEventListener('click', async () => {
   setButtonBusy(logoutButton, true, 'Signing out…');
   clearWorkspace();

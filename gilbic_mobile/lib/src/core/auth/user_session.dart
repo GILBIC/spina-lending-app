@@ -10,6 +10,7 @@ class UserSession {
     required String accessToken,
     String? refreshToken,
     this.permissions = const <String>[],
+    this.roles = const <String>[],
     DateTime? expiresAt,
   })  : _accessToken = accessToken,
         _refreshToken = refreshToken,
@@ -24,6 +25,16 @@ class UserSession {
   final String? _refreshToken;
   final DateTime? _expiresAt;
   final List<String> permissions;
+  /// Verified server memberships. A workspace choice never changes authority.
+  final List<String> roles;
+
+  bool hasRole(AppRole candidate) => role == candidate ||
+      roles.any((value) => AppRole.fromValue(value) == candidate);
+
+  List<AppRole> get workspaceRoles => <AppRole>{
+    role,
+    ...roles.map(AppRole.fromValue).whereType<AppRole>(),
+  }.toList(growable: false);
 
   static final Map<String, _SessionTokenOverride> _tokenOverrides =
       <String, _SessionTokenOverride>{};
@@ -87,6 +98,7 @@ class UserSession {
       'access_token': accessToken,
       'refresh_token': refreshToken,
       'permissions': permissions,
+      'roles': roles,
       'expires_at': expiresAt?.toUtc().toIso8601String(),
     };
   }
@@ -124,6 +136,9 @@ class UserSession {
       accessToken: accessToken,
       refreshToken: json['refresh_token']?.toString(),
       permissions: permissions,
+      roles: json['roles'] is List
+          ? (json['roles'] as List).whereType<String>().toList(growable: false)
+          : const <String>[],
       expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? ''),
     );
   }

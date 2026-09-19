@@ -20,7 +20,7 @@ void main() {
     }
   });
 
-  test('collector is the only role with persistent offline business data', () {
+  test('collector cache and employee attendance use protected persistent data', () {
     expect(
       MobileOfflinePolicy.forRole(AppRole.collector).hasPersistentOfflineData,
       isTrue,
@@ -33,7 +33,6 @@ void main() {
 
     for (final role in <AppRole>[
       AppRole.management,
-      AppRole.employee,
       AppRole.client,
     ]) {
       final policy = MobileOfflinePolicy.forRole(role);
@@ -65,10 +64,12 @@ void main() {
       expect(find.text('Not allowed'), findsNWidgets(2));
 
       if (role == AppRole.collector) {
-        expect(find.text('Collector route snapshot only'), findsOneWidget);
+        expect(find.text('Encrypted route and attendance outbox'), findsOneWidget);
         expect(find.byKey(const Key('collector-retry-safety')), findsOneWidget);
         expect(find.textContaining('Offline copy'), findsWidgets);
         expect(find.textContaining('Retry same entry'), findsOneWidget);
+      } else if (role == AppRole.employee) {
+        expect(find.text('Encrypted attendance outbox'), findsOneWidget);
       } else {
         expect(find.text('None'), findsOneWidget);
         expect(find.byKey(const Key('collector-retry-safety')), findsNothing);

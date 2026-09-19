@@ -31,3 +31,10 @@ test('forbidden office role performs no context lookup',async()=>{
  mountOfficeEvidenceCapture({root,api:{request(){assert.fail('forbidden request');}},session:{...session,user:{role:'collector'}},clientId,cifVersionId,purpose:'cif_review'});
  assert.match(root.textContent,/Office access/);
 });
+
+test('Collector-primary combined Employee membership can capture office evidence with exact permission',async()=>{
+ const {mountOfficeEvidenceCapture}=await import('../assets/office-evidence-capture.js');const root=new Element();let lookups=0;
+ const combined={...session,user:{role:'collector',roles:['collector','employee','employee_manager']}};
+ mountOfficeEvidenceCapture({root,api:{request:async()=>{lookups++;return {client_id:clientId,cif_version_id:cifVersionId,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)};}},session:combined,clientId,cifVersionId,purpose:'cif_review'});
+ await setImmediate();assert.equal(lookups,1);assert.ok(root.querySelector('[name="signedScan"]'));
+});

@@ -79,7 +79,7 @@ void requireStaffPermission(
 }) {
   final roleAllowed =
       session.role == AppRole.management ||
-      (!managementOnly && session.role == AppRole.employee);
+      (!managementOnly && session.hasRole(AppRole.employee));
   if (!roleAllowed || !session.hasAnyPermission(permissions)) {
     throw const SpinaApiException(
       'Your current access does not allow this staff action.',

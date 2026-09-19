@@ -12,6 +12,7 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('client-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   employee: Object.freeze([
+    action('employee-operations', 'Attendance, tasks & pay', '/api/v1/employee-operations/workspace', {section:'Employee work'}),
     action('employee-first-loan', 'First-loan office workflow', '/api/v1/management/first-loans/by-application/{application_id}', {
       section: 'Office functions', permission: 'client_onboarding.requirement.review',
     }),
@@ -38,6 +39,7 @@ export const ROLE_ENDPOINTS = Object.freeze({
     }),
   ]),
   collector: Object.freeze([
+    action('collector-employee-operations', 'My attendance, tasks & pay', '/api/v1/employee-operations/workspace', {section:'Employee work'}),
     action('collector-onboarding', 'Residence visit', '/api/v1/collector/onboarding/applicants/by-reference/{application_reference}/visit-case', {
       section: 'Onboarding', permission: 'client_onboarding.visit.record',
     }),
@@ -59,6 +61,7 @@ export const ROLE_ENDPOINTS = Object.freeze({
     action('collector-activity', 'Updates', '/api/v1/activity-notifications', { section: 'Updates' }),
   ]),
   management: Object.freeze([
+    action('management-employee-operations', 'Employee work & payroll', '/api/v1/employee-operations/workspace', {section:'Employee work'}),
     action('management-first-loan', 'First-loan office workflow', '/api/v1/management/first-loans/by-application/{application_id}', {
       section: 'Office functions', permission: 'client_onboarding.requirement.review',
     }),
@@ -136,6 +139,17 @@ export const ROLE_ENDPOINTS = Object.freeze({
 export function normalizeRole(value) {
   const normalized = String(value ?? '').trim().toLowerCase();
   return Object.hasOwn(ROLE_ENDPOINTS, normalized) ? normalized : 'unknown';
+}
+
+// Workspace switching presents existing memberships; it never grants authority.
+export function sessionWorkspaceRoles(session) {
+  const user = session?.user ?? {};
+  return [...new Set([user.role, ...(Array.isArray(user.roles) ? user.roles : [])]
+    .map(normalizeRole).filter((role) => role !== 'unknown'))];
+}
+
+export function sessionHasRole(session, ...roles) {
+  return sessionWorkspaceRoles(session).some((role) => roles.includes(role));
 }
 
 export function availableRoleActions(role, permissions = []) {

@@ -9,6 +9,7 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_cache_factory.d
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_service.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
@@ -28,6 +29,7 @@ class GilbicApp extends StatefulWidget {
     this.deviceIdentityProvider,
     this.collectionDeviceSequence,
     this.clientLoanRepository,
+    this.employeeOperationsService,
     super.key,
   });
 
@@ -40,6 +42,7 @@ class GilbicApp extends StatefulWidget {
   final DeviceIdentityProvider? deviceIdentityProvider;
   final CollectionDeviceSequence? collectionDeviceSequence;
   final ClientLoanRepository? clientLoanRepository;
+  final EmployeeOperationsService? employeeOperationsService;
 
   @override
   State<GilbicApp> createState() => _GilbicAppState();
@@ -60,6 +63,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   late final PaymentSubmissionRepository _paymentSubmissionRepository;
   late final DeviceIdentityProvider _deviceIdentityProvider;
   late final CollectionDeviceSequence _collectionDeviceSequence;
+  late final EmployeeOperationsService _employeeOperations;
   CollectorRouteCache? _collectorRouteCache;
   UserSession? _session;
   Timer? _sessionRefreshTimer;
@@ -80,6 +84,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         widget.deviceIdentityProvider ?? DeviceIdentityProvider();
     _collectionDeviceSequence = widget.collectionDeviceSequence ??
         SecureCollectionDeviceSequence();
+    _employeeOperations = widget.employeeOperationsService ??
+        EmployeeOperationsService(deviceIdentityProvider: _deviceIdentityProvider);
 
     final suppliedLoader = widget.collectorRouteLoader;
     if (suppliedLoader != null) {
@@ -102,11 +108,14 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sessionRefreshTimer?.cancel();
+    _employeeOperations.attach(null);
+    if (widget.employeeOperationsService == null) _employeeOperations.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _employeeOperations.foreground(state == AppLifecycleState.resumed);
     if (state == AppLifecycleState.resumed) {
       unawaited(_revalidateSessionOnResume());
     }
@@ -236,6 +245,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<void> _signOut() async {
+    _employeeOperations.attach(null);
     _sessionRefreshTimer?.cancel();
     final session = _session;
     if (session != null) {
@@ -250,6 +260,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     UserSession session, {
     String? notice,
   }) async {
+    _employeeOperations.attach(null);
     _sessionRefreshTimer?.cancel();
     try {
       await _collectorRouteCache?.clearForUser(session.userId);
@@ -271,6 +282,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     UserSession? session,
     String message,
   ) async {
+    _employeeOperations.attach(null);
     _sessionRefreshTimer?.cancel();
     if (session != null) {
       try {
@@ -310,6 +322,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   void _scheduleSessionRefresh(UserSession? session) {
+    _employeeOperations.attach(session);
     _sessionRefreshTimer?.cancel();
     final refresher = _authRepository;
     final refreshToken = session?.refreshToken?.trim() ?? '';
@@ -467,7 +480,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       return 'signed-out';
     }
     final permissions = List<String>.of(session.permissions)..sort();
-    return '${session.userId}|${session.rawRole.toLowerCase()}|${permissions.join('|')}';
+    final roles = List<String>.of(session.roles)..sort();
+    return '${session.userId}|${session.rawRole.toLowerCase()}|${roles.join('|')}|${permissions.join('|')}';
   }
 
   @override
@@ -477,6 +491,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       title: 'SPINA',
       debugShowCheckedModeBanner: false,
       theme: SpinaTheme.light,
+      builder: (context, child) => EmployeeOperationsScope(service: _employeeOperations, child: child!),
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : _updateRequiredMessage != null

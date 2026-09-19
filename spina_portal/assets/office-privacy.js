@@ -1,4 +1,4 @@
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { errorCard, escapeHtml, hasPermission } from './ui.js';
 
 const mounts = new WeakMap();
@@ -53,8 +53,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   mounts.set(root, dispose);
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, {once:true});
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  if (!['employee','management'].includes(role) || !hasPermission(session,'client_onboarding.requirement.review') || !UUID.test(clientId || '') || !UUID.test(cifVersionId || '')) {
+  if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session,'client_onboarding.requirement.review') || !UUID.test(clientId || '') || !UUID.test(cifVersionId || '')) {
     root.innerHTML = '<p>Open an authorized current CIF to view its privacy record.</p>'; return dispose;
   }
   root.innerHTML = `<h3>Privacy notice and consent</h3><p>Record this separately from application confirmation and final loan signing.</p>

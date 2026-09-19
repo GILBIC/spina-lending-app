@@ -97,6 +97,7 @@ void main() {
               'username': 'collector.one',
               'full_name': 'Collector One',
               'role': 'Collector',
+              'roles': <String>['Collector', 'Employee', 'employee_manager'],
               'permissions': <String>['route.view'],
             },
           },
@@ -120,6 +121,8 @@ void main() {
     expect(session.userId, '42');
     expect(session.displayName, 'Collector One');
     expect(session.role, AppRole.collector);
+    expect(session.hasRole(AppRole.employee), isTrue);
+    expect(session.hasRole(AppRole.management), isFalse);
     expect(session.accessToken, 'token-123');
     expect(session.permissions, <String>['route.view']);
   });
@@ -149,6 +152,7 @@ void main() {
               'username': 'collector.one',
               'full_name': 'Collector One',
               'role': 'Collector',
+              'roles': <String>['Collector', 'Employee'],
               'permissions': <String>['route.view', 'collection.create'],
             },
           },
@@ -178,6 +182,7 @@ void main() {
     final refreshed = await repository.refresh(current);
 
     expect(refreshed.userId, 'collector-1');
+    expect(refreshed.workspaceRoles, [AppRole.collector, AppRole.employee]);
     expect(refreshed.accessToken, 'access-new');
     expect(refreshed.refreshToken, 'refresh-new');
     expect(refreshed.expiresAt, expiry);
@@ -202,6 +207,7 @@ void main() {
               'username': 'staff.one',
               'full_name': 'Staff One',
               'role': 'employee',
+              'roles': <String>['Employee'],
               'permissions': <String>['payroll.view', 'attendance.view'],
             },
           },
@@ -224,6 +230,7 @@ void main() {
       accessToken: 'access-current',
       refreshToken: 'refresh-current',
       permissions: const <String>['route.view'],
+      roles: const <String>['Employee', 'Collector'],
       expiresAt: expiry,
     );
 
@@ -231,6 +238,7 @@ void main() {
 
     expect(validated.userId, 'user-1');
     expect(validated.role, AppRole.employee);
+    expect(validated.hasRole(AppRole.collector), isFalse);
     expect(validated.rawRole, 'employee');
     expect(
       validated.permissions,

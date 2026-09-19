@@ -42,19 +42,20 @@ function json(payload) {
   });
 }
 
-async function harness(t, role) {
+async function harness(t, role, roles = [role]) {
   const elements = new Map();
   for (const id of [
     'auth-view', 'authenticated-app', 'role-content', 'role-navigation',
     'workspace-title', 'signed-in-role', 'signed-in-name', 'connection-status',
     'environment-label', 'refresh-workspace', 'logout-button', 'login-form',
+    'workspace-choice', 'workspace-choice-label',
   ]) elements.set(id, new Element());
   const events = new EventTarget();
   const sessionStorage = new MemoryStorage();
   const localStorage = new MemoryStorage();
   const session = {
     access_token: 'synthetic-session', refresh_token: 'synthetic-refresh',
-    user: { id: 'synthetic-user', role, roles: [role], permissions: [], full_name: 'Office user' },
+    user: { id: 'synthetic-user', role, roles, permissions: [], full_name: 'Office user' },
   };
   sessionStorage.setItem(SessionStore.SESSION_KEY, JSON.stringify(session));
   const accounts = [];
@@ -90,6 +91,24 @@ async function harness(t, role) {
   assert.equal(accounts.length, 1, 'boot must reach the real office workspace');
   return { elements, events, accounts, logoutResponse };
 }
+
+test('combined employee can switch workspace while old private response remains pending', async (t) => {
+  const h = await harness(t, 'employee', ['employee', 'collector', 'employee_manager']);
+  const picker = h.elements.get('workspace-choice');
+  assert.equal(h.elements.get('workspace-choice-label').hidden, false);
+  assert.match(picker.innerHTML, /value="collector"/);
+  assert.doesNotMatch(picker.innerHTML, /management|employee_manager/);
+  picker.value = 'collector';
+  picker.emit('change');
+  await tick();
+  h.accounts[0].resolve(json({profile:{full_name:'Obsolete employee record'}}));
+  await tick();
+  assert.equal(h.elements.get('workspace-title').textContent, 'Collector workspace');
+  assert.doesNotMatch(h.elements.get('role-content').innerHTML, /Obsolete employee record/);
+  picker.value = 'management';
+  picker.emit('change');
+  assert.equal(h.elements.get('workspace-title').textContent, 'Collector workspace');
+});
 
 for (const role of ['employee', 'management', 'client']) {
   test(`${role}: starting logout immediately clears the workspace and ignores its pending response`, async (t) => {

@@ -1,4 +1,5 @@
 import { mountAreaManagement } from '../area-management.js';
+import { mountEmployeeOperations } from '../employee-operations.js';
 import { buildEmployeeViewModel } from '../presenters.js';
 import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import { mountOfficeApplicationReview } from '../office-application-review.js';
@@ -145,6 +146,8 @@ function bindActions(context) {
 
 export async function mountEmployeeWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.employeeOperationsCleanup?.();
+  context.employeeOperationsCleanup = null;
   context.officeCifCleanup?.();
   context.officeCifCleanup = null;
   context.officeApplicationCleanup?.();
@@ -166,6 +169,7 @@ export async function mountEmployeeWorkspace(context) {
   ].some((permission) => hasPermission(session, permission));
   setNavigation([
     { id: 'employee-overview', label: 'My workday' },
+    { id: 'employee-operations', label: 'Attendance, tasks & pay' },
     ...(canReviewCif ? [{ id: 'employee-onboarding', label: 'Office intake' }] : []),
     ...(canReviewCif ? [{ id: 'employee-cif-review', label: 'CIF review' }] : []),
     ...(canReviewCif ? [{ id: 'employee-application-review', label: 'Application review' }, { id: 'employee-first-loan', label: 'First loan' }] : []),
@@ -209,10 +213,7 @@ export async function mountEmployeeWorkspace(context) {
     <div class="section-heading"><div><h2>Available today</h2><p>Only implemented functions allowed by your server session are active.</p></div></div>
     <div class="card-grid">${model.connectedActions.map((action) => `<article class="data-card"><h3>${escapeHtml(action.label)}</h3><p class="meta">${escapeHtml(action.section || 'Employee')}</p>${badge('available', 'success')}</article>`).join('')}</div>
   </section>
-  <section class="section-card">
-    <div class="section-heading"><div><h2>Not connected yet</h2><p>These items are visible for clarity but cannot create or change an official record.</p></div></div>
-    <div class="card-grid">${model.unavailable.map((item) => `<article class="data-card"><h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.message)}</p>${badge('unavailable', 'warning')}</article>`).join('')}</div>
-  </section>
+  <section class="section-card" id="employee-operations"><div data-employee-operations></div></section>
   ${canReviewCif ? '<section class="section-card" id="employee-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
   ${canReviewCif ? `<section class="section-card" id="employee-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
   ${canReviewCif ? '<section class="section-card" id="employee-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
@@ -223,6 +224,9 @@ export async function mountEmployeeWorkspace(context) {
   <section class="section-card" id="employee-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
   <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}</section>`;
 
+  context.employeeOperationsCleanup = mountEmployeeOperations({
+    root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
+  });
   if (canReviewCif) {
     context.officeFirstLoanCleanup = mountOfficeFirstLoan({
       root: root.querySelector('[data-office-first-loan]'), api, session, signal: context.signal,

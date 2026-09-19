@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart'
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
+import 'package:gilbic_mobile/src/features/employee/employee_operations_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_status_card.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_to_client_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_to_receive_page.dart';
@@ -232,6 +233,16 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     style: Theme.of(sheetContext).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 14),
+                  _CollectorToolTile(
+                    key: const Key('collector-more-employee-operations'),
+                    icon: Icons.badge_outlined,
+                    title: 'My attendance, pay & requests',
+                    subtitle: 'Private employee records, breaks, tasks and salary advances',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _open(EmployeeOperationsPage(session: widget.session, deviceIdentityProvider: widget.deviceIdentityProvider));
+                    },
+                  ),
                   _CollectorToolTile(
                     key: const Key('collector-more-renewals'),
                     icon: Icons.autorenew_rounded,

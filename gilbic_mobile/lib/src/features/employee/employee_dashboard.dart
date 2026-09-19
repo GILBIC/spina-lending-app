@@ -9,6 +9,7 @@ import 'package:gilbic_mobile/src/features/management/management_support_request
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
+import 'package:gilbic_mobile/src/features/employee/employee_operations_page.dart';
 
 class EmployeeDashboard extends StatelessWidget {
   const EmployeeDashboard({
@@ -90,9 +91,18 @@ class EmployeeDashboard extends StatelessWidget {
       _EmployeeAction.payroll ||
       _EmployeeAction.tasks ||
       _EmployeeAction.leaveRequests ||
-      _EmployeeAction.accounting => null,
+      _EmployeeAction.accounting => EmployeeOperationsPage(
+        session: session, deviceIdentityProvider: deviceIdentityProvider,
+        initialSection: switch (module.action) {
+          _EmployeeAction.payroll => EmployeeSection.payroll,
+          _EmployeeAction.tasks => EmployeeSection.tasks,
+          _EmployeeAction.leaveRequests => EmployeeSection.requests,
+          _EmployeeAction.accounting => EmployeeSection.accounting,
+          _ => EmployeeSection.attendance,
+        },
+      ),
     };
-    if (page != null) _push(context, page);
+    _push(context, page);
   }
 
   @override
@@ -371,14 +381,14 @@ const _employeeSections = <_EmployeeSection>[
         'Time records and attendance history',
         Icons.schedule_outlined,
         action: _EmployeeAction.attendance,
-        availability: _EmployeeModuleAvailability.notAvailableYet,
+        availability: _EmployeeModuleAvailability.available,
       ),
       _EmployeeModule(
         'Tasks & work items',
         'Assigned work, priorities, and completion status',
         Icons.task_alt_outlined,
         action: _EmployeeAction.tasks,
-        availability: _EmployeeModuleAvailability.notAvailableYet,
+        availability: _EmployeeModuleAvailability.available,
       ),
     ],
   ),
@@ -392,14 +402,14 @@ const _employeeSections = <_EmployeeSection>[
         'Your payroll summaries and payslip history',
         Icons.price_check_outlined,
         action: _EmployeeAction.payroll,
-        availability: _EmployeeModuleAvailability.notAvailableYet,
+        availability: _EmployeeModuleAvailability.available,
       ),
       _EmployeeModule(
         'Leave & requests',
         'Submit and review your own Employee requests',
         Icons.event_available_outlined,
         action: _EmployeeAction.leaveRequests,
-        availability: _EmployeeModuleAvailability.notAvailableYet,
+        availability: _EmployeeModuleAvailability.available,
       ),
     ],
   ),
@@ -453,9 +463,8 @@ const _employeeSections = <_EmployeeSection>[
         'Prepare authorized records without gaining posting authority',
         Icons.menu_book_outlined,
         action: _EmployeeAction.accounting,
-        availability:
-            _EmployeeModuleAvailability.permissionAssignedNotConnected,
-        requiredPermission: 'accounting.view',
+        availability: _EmployeeModuleAvailability.available,
+        anyPermissions: ['accounting.view', 'accounting.journal.prepare', 'employee_operations.manage'],
       ),
     ],
   ),
