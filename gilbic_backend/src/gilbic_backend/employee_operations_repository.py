@@ -11,8 +11,10 @@ import json
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
+from typing import Literal, NotRequired, TypeVar, TypedDict, cast, overload
 
-from psycopg.rows import dict_row
+from psycopg import Cursor, sql
+from psycopg.rows import DictRow, dict_row
 from psycopg.types.json import Jsonb
 
 from .account_repository import AccountContext
@@ -25,12 +27,14 @@ from .employee_authorization import (
     configure_employee_responsibility,
 )
 from .employee_operations import (
+    AttendanceEvent,
     EmployeeConflict,
     MANILA,
     attendance_day,
     leave_accrual_minutes,
     money_text,
 )
+from . import employee_operations_models as commands
 from .employee_operations_models import EmployeeAction
 
 TABLES = {
@@ -73,7 +77,37 @@ SOURCE_DOMAINS = (
 )
 
 
-def plain(value):
+# The envelope is shared across the private tables. Payloads retain their domain's
+# validated JSON fields; dict_row is the single dynamic database boundary.
+class EmployeeRecord(TypedDict):
+    id: str
+    employee_id: str | None
+    version: int
+    status: str
+    payload: DictRow
+    created_by: str
+    created_at: str
+    updated_at: str
+    allowed_actions: NotRequired[list[str]]
+
+
+CommandType = TypeVar("CommandType", bound=commands.Command)
+RecordIdentity = UUID | str
+
+
+@overload
+def plain(value: DictRow) -> DictRow: ...
+
+
+@overload
+def plain(value: list[DictRow]) -> list[DictRow]: ...
+
+
+@overload
+def plain(value: object) -> object: ...
+
+
+def plain(value: object) -> object:
     if isinstance(value, dict):
         return {str(k): plain(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -90,30 +124,71 @@ def _day(value: str) -> date:
 
 
 class EmployeeTransaction:
-    def __init__(self, cursor, actor: AccountContext, command=None):
-        self.cursor, self.actor, self.command = cursor, actor, command
+    def __init__(
+        self,
+        cursor: Cursor[DictRow],
+        actor: AccountContext,
+        command: EmployeeAction | None = None,
+    ):
+        self.cursor, self.actor, self._command = cursor, actor, command
         self.today = datetime.now(MANILA).date()
 
-    def all(self, domain: str, employee_id=None):
-        query = f"select * from core.{TABLES[domain]}"
-        params = ()
+    @property
+    def command(self) -> EmployeeAction:
+        if self._command is None:
+            raise EmployeeConflict("A command is required for an employee action")
+        return self._command
+
+    def command_as(self, model: type[CommandType]) -> CommandType:
+        command = self.command
+        if not isinstance(command, model):
+            raise EmployeeConflict("The employee action does not match its handler")
+        return command
+
+    def all(
+        self, domain: str, employee_id: RecordIdentity | None = None
+    ) -> list[EmployeeRecord]:
+        query = sql.SQL("select * from {}").format(
+            sql.Identifier("core", TABLES[domain])
+        )
+        params: tuple[RecordIdentity, ...] = ()
         if employee_id is not None:
-            query += " where employee_id=%s"
+            query += sql.SQL(" where employee_id=%s")
             params = (employee_id,)
         return [
-            plain(row)
+            cast(EmployeeRecord, plain(row))
             for row in self.cursor.execute(
-                query + " order by created_at,id", params
+                query + sql.SQL(" order by created_at,id"), params
             ).fetchall()
         ]
 
-    def get(self, domain: str, identity, *, required=True):
+    @overload
+    def get(
+        self, domain: str, identity: RecordIdentity, *, required: Literal[True] = True
+    ) -> EmployeeRecord: ...
+
+    @overload
+    def get(
+        self, domain: str, identity: RecordIdentity, *, required: Literal[False]
+    ) -> EmployeeRecord | None: ...
+
+    @overload
+    def get(
+        self, domain: str, identity: RecordIdentity, *, required: bool
+    ) -> EmployeeRecord | None: ...
+
+    def get(
+        self, domain: str, identity: RecordIdentity, *, required: bool = True
+    ) -> EmployeeRecord | None:
         row = self.cursor.execute(
-            f"select * from core.{TABLES[domain]} where id=%s for update", (identity,)
+            sql.SQL("select * from {} where id=%s for update").format(
+                sql.Identifier("core", TABLES[domain])
+            ),
+            (identity,),
         ).fetchone()
         if row is None and required:
             raise EmployeeConflict("The requested employee record does not exist")
-        return plain(row) if row else None
+        return cast(EmployeeRecord, plain(row)) if row else None
 
     def owner(self):
         if not is_employee_owner(self.actor):
@@ -121,9 +196,21 @@ class EmployeeTransaction:
                 "Only the explicitly configured owner may perform this action"
             )
 
-    def profile(self, employee_id, *, required=True):
+    @overload
+    def profile(
+        self, employee_id: RecordIdentity, *, required: Literal[True] = True
+    ) -> EmployeeRecord: ...
+
+    @overload
+    def profile(
+        self, employee_id: RecordIdentity, *, required: Literal[False]
+    ) -> EmployeeRecord | None: ...
+
+    def profile(
+        self, employee_id: RecordIdentity, *, required: bool = True
+    ) -> EmployeeRecord | None:
         row = self.get("profiles", employee_id, required=required)
-        if required and not row["payload"]["active"]:
+        if required and row is not None and not row["payload"]["active"]:
             raise EmployeeConflict("The employee profile is inactive")
         return row
 
@@ -173,7 +260,7 @@ class EmployeeTransaction:
     def version(self, row):
         if (
             row["employee_id"] is not None
-            and hasattr(self.command, "employee_id")
+            and isinstance(self.command, commands.EmployeeCommand)
             and row["employee_id"] != str(self.command.employee_id)
         ):
             raise EmployeeAccessDenied("The record does not belong to that employee")
@@ -182,7 +269,16 @@ class EmployeeTransaction:
                 "The record changed; refresh and review the current version"
             )
 
-    def save(self, domain, identity, employee_id, payload, status, *, expected=None):
+    def save(
+        self,
+        domain: str,
+        identity: RecordIdentity,
+        employee_id: RecordIdentity | None,
+        payload: DictRow,
+        status: str,
+        *,
+        expected: int | None = None,
+    ) -> EmployeeRecord:
         before = self.get(domain, identity, required=False)
         current = 0 if before is None else before["version"]
         expected = self.command.expected_version if expected is None else expected
@@ -198,14 +294,18 @@ class EmployeeTransaction:
             )
         if before:
             self.cursor.execute(
-                f"""update core.{TABLES[domain]} set version=version+1,status=%s,payload=%s,
-                                 updated_at=clock_timestamp() where id=%s""",
+                sql.SQL("""update {} set version=version+1,status=%s,payload=%s,
+                                 updated_at=clock_timestamp() where id=%s""").format(
+                    sql.Identifier("core", TABLES[domain])
+                ),
                 (status, Jsonb(plain(payload)), identity),
             )
         else:
             self.cursor.execute(
-                f"""insert into core.{TABLES[domain]}(id,employee_id,version,status,payload,created_by)
-                                 values(%s,%s,1,%s,%s,%s)""",
+                sql.SQL("""insert into {}(id,employee_id,version,status,payload,created_by)
+                                 values(%s,%s,1,%s,%s,%s)""").format(
+                    sql.Identifier("core", TABLES[domain])
+                ),
                 (
                     identity,
                     employee_id,
@@ -419,6 +519,8 @@ class EmployeeTransaction:
             "attendance_record",
             "advance_request",
         ):
+            if not isinstance(c, commands.EmployeeCommand):
+                raise EmployeeConflict("This action requires an employee identity")
             self.own(c.employee_id)
         create_domains = {
             **{name: "requests" for name in REQUEST_ACTIONS},
@@ -448,7 +550,7 @@ class EmployeeTransaction:
         return method()
 
     def do_profile_save(self):
-        c = self.command
+        c = self.command_as(commands.ProfileSave)
         self.owner()
         if c.id != c.employee_id or c.daily_rate <= 0 or c.hire_date > self.today:
             raise EmployeeConflict(
@@ -494,7 +596,7 @@ class EmployeeTransaction:
             )
 
     def do_schedule_save(self):
-        c = self.command
+        c = self.command_as(commands.ScheduleSave)
         self.owner()
         self.profile(c.employee_id)
         p = self.command_payload()
@@ -508,7 +610,7 @@ class EmployeeTransaction:
         return row
 
     def do_backup_save(self):
-        c = self.command
+        c = self.command_as(commands.BackupSave)
         self.owner()
         if c.ends_on < c.starts_on or c.user_id == self.actor.user_id:
             raise EmployeeConflict(
@@ -522,14 +624,14 @@ class EmployeeTransaction:
         return self.save("backups", c.id, None, self.command_payload(), "active")
 
     def do_calendar_save(self):
-        c = self.command
+        c = self.command_as(commands.CalendarSave)
         self.owner()
         row = self.save("calendar", c.id, None, self.command_payload(), "reviewed")
         self.invalidate()
         return row
 
     def do_statutory_month_save(self):
-        c = self.command
+        c = self.command_as(commands.StatutoryMonthSave)
         self.owner()
         self.profile(c.employee_id)
         if c.month.day != 1:
@@ -541,7 +643,7 @@ class EmployeeTransaction:
         return row
 
     def do_statutory_remittance(self):
-        c = self.command
+        c = self.command_as(commands.StatutoryRemittance)
         self.owner()
         if c.month.day != 1 or c.amount <= 0:
             raise EmployeeConflict(
@@ -562,7 +664,7 @@ class EmployeeTransaction:
         )
 
     def do_attendance_record(self):
-        c = self.command
+        c = self.command_as(commands.AttendanceRecord)
         self.own(c.employee_id)
         if c.device_id != self.actor.registered_device_id:
             raise EmployeeAccessDenied(
@@ -583,7 +685,8 @@ class EmployeeTransaction:
             .date()
             == work_date
         ]
-        preview = attendance_day(rows + [{"id": str(c.id), "payload": p}], work_date)
+        preview_events: list[AttendanceEvent] = [*rows, {"id": str(c.id), "payload": p}]
+        preview = attendance_day(preview_events, work_date)
         event_issues = [
             issue
             for issue in preview["issues"]
@@ -601,6 +704,17 @@ class EmployeeTransaction:
 
     def submit_request(self):
         c = self.command
+        if not isinstance(
+            c,
+            (
+                commands.CorrectionRequest,
+                commands.LeaveRequest,
+                commands.ShiftRequest,
+                commands.OvertimeRequest,
+                commands.LeaveConversionRequest,
+            ),
+        ):
+            raise EmployeeConflict("This action requires an employee request")
         self.own(c.employee_id)
         p = self.command_payload()
         p["request_kind"] = REQUEST_ACTIONS[c.action]
@@ -624,8 +738,14 @@ class EmployeeTransaction:
                     "A shift change must be approved before it takes effect"
                 )
         if (
-            c.action
-            in ("leave_request", "overtime_request", "leave_conversion_request")
+            isinstance(
+                c,
+                (
+                    commands.LeaveRequest,
+                    commands.OvertimeRequest,
+                    commands.LeaveConversionRequest,
+                ),
+            )
             and c.minutes <= 0
         ):
             raise EmployeeConflict("Requested minutes must be positive")
@@ -644,7 +764,7 @@ class EmployeeTransaction:
         return row
 
     def do_request_decide(self):
-        c = self.command
+        c = self.command_as(commands.RequestDecide)
         row = self.get("requests", c.id)
         self.version(row)
         p = row["payload"]
@@ -777,7 +897,7 @@ class EmployeeTransaction:
         return result
 
     def do_leave_balance_adjust(self):
-        c = self.command
+        c = self.command_as(commands.LeaveBalanceAdjust)
         self.owner()
         self.profile(c.employee_id)
         if c.kind == "opening" and any(
@@ -796,7 +916,7 @@ class EmployeeTransaction:
         return row
 
     def do_task_save(self):
-        c = self.command
+        c = self.command_as(commands.TaskSave)
         self.staff("assign_tasks")
         self.profile(c.employee_id)
         existing = self.get("tasks", c.id, required=False)
@@ -819,7 +939,7 @@ class EmployeeTransaction:
         )
 
     def do_task_progress(self):
-        c = self.command
+        c = self.command_as(commands.TaskProgress)
         row = self.get("tasks", c.id)
         self.version(row)
         own = row["employee_id"] == str(self.actor.user_id)
@@ -854,7 +974,7 @@ class EmployeeTransaction:
             )
 
     def do_advance_request(self):
-        c = self.command
+        c = self.command_as(commands.AdvanceRequest)
         self.own(c.employee_id)
         p = self.command_payload()
         self.validate_installments(p["installments"], c.amount)
@@ -873,7 +993,7 @@ class EmployeeTransaction:
         return self.save("advances", c.id, c.employee_id, p, "requested")
 
     def do_advance_terms(self):
-        c = self.command
+        c = self.command_as(commands.AdvanceTerms)
         self.own(c.employee_id)
         row = self.get("advances", c.id)
         self.version(row)
@@ -907,7 +1027,7 @@ class EmployeeTransaction:
         return result
 
     def do_advance_decide(self):
-        c = self.command
+        c = self.command_as(commands.AdvanceDecide)
         self.staff("approve_advances", c.employee_id)
         row = self.get("advances", c.id)
         self.version(row)
@@ -929,7 +1049,7 @@ class EmployeeTransaction:
         return result
 
     def do_advance_disburse(self):
-        c = self.command
+        c = self.command_as(commands.AdvanceDisburse)
         self.owner()
         row = self.get("advances", c.id)
         self.version(row)
@@ -959,7 +1079,7 @@ class EmployeeTransaction:
         return result
 
     def do_advance_repay(self):
-        c = self.command
+        c = self.command_as(commands.AdvanceRepay)
         self.owner()
         row = self.get("advances", c.id)
         self.version(row)
@@ -1029,7 +1149,7 @@ class EmployeeTransaction:
         return result
 
     def do_shortage_report(self):
-        c = self.command
+        c = self.command_as(commands.ShortageReport)
         self.profile(c.employee_id)
         if str(c.employee_id) != str(self.actor.user_id) and not (
             is_employee_owner(self.actor) or self.manager()
@@ -1048,7 +1168,7 @@ class EmployeeTransaction:
         return result
 
     def do_shortage_respond(self):
-        c = self.command
+        c = self.command_as(commands.ShortageRespond)
         self.own(c.employee_id)
         row = self.get("shortages", c.id)
         self.version(row)
@@ -1059,7 +1179,7 @@ class EmployeeTransaction:
         return self.save("shortages", c.id, c.employee_id, p, "responded")
 
     def do_shortage_decide(self):
-        c = self.command
+        c = self.command_as(commands.ShortageDecide)
         self.owner()
         row = self.get("shortages", c.id)
         self.version(row)
@@ -1082,7 +1202,7 @@ class EmployeeTransaction:
         return result
 
     def do_accounting_prepare(self):
-        c = self.command
+        c = self.command_as(commands.AccountingPrepare)
         if not (is_employee_owner(self.actor) or self.manager()):
             raise EmployeeAccessDenied(
                 "Accounting preparation requires the owner or active staff manager"

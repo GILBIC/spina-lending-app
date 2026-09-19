@@ -5,6 +5,8 @@ from __future__ import annotations
 import calendar
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
+from collections.abc import Sequence
+from typing import Any, TypedDict
 from zoneinfo import ZoneInfo
 
 MANILA = ZoneInfo("Asia/Manila")
@@ -165,8 +167,14 @@ def month_saturdays(month: date) -> list[date]:
     ]
 
 
+class AttendanceEvent(TypedDict):
+    id: str
+    # Raw events and reviewed corrections share the same serialized JSON payload.
+    payload: dict[str, Any]
+
+
 def attendance_day(
-    events: list[dict], work_date: date, *, now: datetime | None = None
+    events: Sequence[AttendanceEvent], work_date: date, *, now: datetime | None = None
 ) -> dict:
     now = now or datetime.now(timezone.utc)
     result = {
@@ -201,10 +209,10 @@ def attendance_day(
         event = payload["event_type"]
         if event == "clock_in" and state == "off":
             state, started = "working", stamp
-        elif event == "break_start" and state == "working":
+        elif event == "break_start" and state == "working" and started is not None:
             work_seconds += Decimal(str((stamp - started).total_seconds()))
             state, break_started = "break", stamp
-        elif event == "break_end" and state == "break":
+        elif event == "break_end" and state == "break" and break_started is not None:
             duration = Decimal(str((stamp - break_started).total_seconds()))
             # Short rests remain paid; interrupted longer meal breaks use correction.
             if duration <= 1200:
@@ -212,7 +220,7 @@ def attendance_day(
             else:
                 break_seconds += duration
             state, started = "working", stamp
-        elif event == "clock_out" and state == "working":
+        elif event == "clock_out" and state == "working" and started is not None:
             work_seconds += Decimal(str((stamp - started).total_seconds()))
             state = "finished"
         else:
