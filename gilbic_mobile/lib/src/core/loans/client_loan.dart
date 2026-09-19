@@ -1,5 +1,7 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+final RegExp _decimalTextPattern = RegExp(r'^[+-]?\d+(?:\.\d+)?$');
+
 class ClientLoanPortfolio {
   const ClientLoanPortfolio({
     required this.clientId,
@@ -73,15 +75,15 @@ class ClientLoan {
   final String loanNumber;
   final String? loanTypeCode;
   final String loanTypeName;
-  final double principal;
-  final double dailyAmount;
-  final double? interestRate;
+  final String principal;
+  final String dailyAmount;
+  final String? interestRate;
   final DateTime? dateReleased;
   final DateTime? dueDate;
   final DateTime? firstPaymentDate;
   final String status;
-  final double remainingBalance;
-  final double paidAmount;
+  final String remainingBalance;
+  final String paidAmount;
   final int passCount;
   final DateTime? lastPaymentDate;
   final DateTime? advanceUntil;
@@ -100,28 +102,21 @@ class ClientLoan {
       loanNumber: requiredString(payload, 'loan_number'),
       loanTypeCode: optionalString(payload['loan_type_code']),
       loanTypeName: requiredString(payload, 'loan_type_name'),
-      principal: requiredDouble(payload, 'principal'),
-      dailyAmount: requiredDouble(payload, 'daily_amount'),
-      interestRate: optionalDouble(payload['interest_rate']),
+      principal: requiredDecimalText(payload, 'principal'),
+      dailyAmount: requiredDecimalText(payload, 'daily_amount'),
+      interestRate: optionalDecimalText(payload['interest_rate']),
       dateReleased: optionalDate(payload['date_released']),
       dueDate: optionalDate(payload['due_date']),
       firstPaymentDate: optionalDate(payload['first_payment_date']),
       status: requiredString(payload, 'status'),
-      remainingBalance: requiredDouble(payload, 'remaining_balance'),
-      paidAmount: requiredDouble(payload, 'paid_amount'),
+      remainingBalance: requiredDecimalText(payload, 'remaining_balance'),
+      paidAmount: requiredDecimalText(payload, 'paid_amount'),
       passCount: requiredInt(payload, 'pass_count'),
       lastPaymentDate: optionalDate(payload['last_payment_date']),
       advanceUntil: optionalDate(payload['advance_until']),
       stateVersion: requiredInt(payload, 'state_version'),
       paymentCount: requiredInt(payload, 'payment_count'),
     );
-  }
-
-  double get progress {
-    if (principal <= 0) {
-      return 0;
-    }
-    return (paidAmount / principal).clamp(0, 1).toDouble();
   }
 
   bool get isSevenBySeven {
@@ -146,22 +141,75 @@ String? optionalString(Object? value) {
   return text.isEmpty ? null : text;
 }
 
-double requiredDouble(Map<String, dynamic> payload, String key) {
-  final value = optionalDouble(payload[key]);
-  if (value == null) {
+String requiredDecimalText(Map<String, dynamic> payload, String key) {
+  final value = payload[key];
+  if (value is! String) {
     throw SpinaApiException(
-      'The SPINA server omitted $key.',
+      'The SPINA server returned invalid $key.',
       code: 'invalid_client_loan_payload',
     );
   }
-  return value;
+  final text = value.trim();
+  if (!_decimalTextPattern.hasMatch(text)) {
+    throw SpinaApiException(
+      'The SPINA server returned invalid $key.',
+      code: 'invalid_client_loan_payload',
+    );
+  }
+  return text;
 }
 
-double? optionalDouble(Object? value) {
-  if (value is num) {
-    return value.toDouble();
+String? optionalDecimalText(Object? value) {
+  if (value == null) {
+    return null;
   }
-  return double.tryParse(value?.toString() ?? '');
+  if (value is! String) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid decimal data.',
+      code: 'invalid_client_loan_payload',
+    );
+  }
+  final text = value.trim();
+  if (!_decimalTextPattern.hasMatch(text)) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid decimal data.',
+      code: 'invalid_client_loan_payload',
+    );
+  }
+  return text;
+}
+
+String formatClientLoanMoney(String value) {
+  final text = value.trim();
+  final match = RegExp(r'^([+-]?)(\d+)(?:\.(\d+))?$').firstMatch(text);
+  if (match == null) {
+    return text;
+  }
+  final sign = match.group(1) ?? '';
+  final whole = match.group(2) ?? '0';
+  final rawFraction = match.group(3);
+  final fraction = rawFraction == null
+      ? '00'
+      : rawFraction.length == 1
+          ? '${rawFraction}0'
+          : rawFraction;
+  final grouped = whole.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  return '${sign == '-' ? '-' : sign == '+' ? '+' : ''}₱$grouped.$fraction';
+}
+
+String formatClientLoanRate(String value) {
+  final text = value.trim();
+  if (!_decimalTextPattern.hasMatch(text)) {
+    return text;
+  }
+  if (!text.contains('.')) {
+    return text;
+  }
+  final trimmed = text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  return trimmed;
 }
 
 int requiredInt(Map<String, dynamic> payload, String key) {

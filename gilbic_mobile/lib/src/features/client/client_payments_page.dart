@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
+import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
+import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_statement_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_document_download_button.dart';
+import 'package:gilbic_mobile/src/features/client/client_payment_proofs_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
@@ -11,12 +17,16 @@ class ClientPaymentsPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.documentRepository,
+    this.documentSaver = saveClientDocument,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientPaymentRepository? repository;
+  final ClientDocumentRepository? documentRepository;
+  final ClientDocumentSaver documentSaver;
 
   @override
   State<ClientPaymentsPage> createState() => _ClientPaymentsPageState();
@@ -112,8 +122,9 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
       return const SizedBox.shrink();
     }
 
-    final voidedCount =
-        timeline.payments.where((payment) => payment.isVoided).length;
+    final voidedCount = timeline.payments
+        .where((payment) => payment.isVoided)
+        .length;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -158,8 +169,54 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
             ),
           ),
           const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.description_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Statement of Account',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'View your read-only loan balances and official payment history from the protected SPINA server.',
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          key: const Key('open-client-statement'),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ClientStatementPage(
+                                  session: widget.session,
+                                  deviceIdentityProvider:
+                                      widget.deviceIdentityProvider,
+                                  documentRepository: widget.documentRepository,
+                                  documentSaver: widget.documentSaver,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.description_outlined),
+                          label: const Text('View statement'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Container(
-            key: const Key('client-gcash-placeholder'),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -193,10 +250,25 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
-                      const Text('Coming soon through Xendit'),
-                      const SizedBox(height: 5),
                       const Text(
-                        'This is a placeholder only. It cannot accept or post a payment yet.',
+                        'Availability and payment limits are checked by SPINA when you open the payment screen.',
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('open-client-gcash-payment'),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ClientGcashPaymentPage(
+                                session: widget.session,
+                                deviceIdentityProvider:
+                                    widget.deviceIdentityProvider,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.account_balance_wallet_outlined),
+                        label: const Text('Pay with GCash'),
                       ),
                     ],
                   ),
@@ -231,6 +303,20 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                         const Text(
                           'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
                         ),
+                        OutlinedButton.icon(
+                          key: const Key('open-client-payment-proofs'),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ClientPaymentProofsPage(
+                                session: widget.session,
+                                deviceIdentityProvider:
+                                    widget.deviceIdentityProvider,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.history),
+                          label: const Text('Proof status and history'),
+                        ),
                       ],
                     ),
                   ),
@@ -262,7 +348,23 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
             )
           else
             for (final payment in timeline.payments) ...[
-              _PaymentCard(payment: payment),
+              _PaymentCard(
+                payment: payment,
+                download: ClientDocumentDownloadButton(
+                  label: 'Download payment record copy',
+                  saver: widget.documentSaver,
+                  load: () async {
+                    final identity = await widget.deviceIdentityProvider.load();
+                    return (widget.documentRepository ??
+                            SpinaClientDocumentRepository())
+                        .downloadPaymentRecord(
+                          widget.session,
+                          deviceId: identity.installationId,
+                          transactionId: payment.transactionId,
+                        );
+                  },
+                ),
+              ),
               const SizedBox(height: 10),
             ],
         ],
@@ -272,9 +374,10 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
 }
 
 class _PaymentCard extends StatelessWidget {
-  const _PaymentCard({required this.payment});
+  const _PaymentCard({required this.payment, required this.download});
 
   final ClientPayment payment;
+  final Widget download;
 
   @override
   Widget build(BuildContext context) {
@@ -310,8 +413,10 @@ class _PaymentCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor,
                     borderRadius: BorderRadius.circular(10),
@@ -330,6 +435,10 @@ class _PaymentCard extends StatelessWidget {
             Text('Collection date: ${_date(payment.collectionDate)}'),
             Text('Recorded by: ${payment.collectorName}'),
             Text('Recorded at: ${_dateTime(payment.recordedAt)}'),
+            download,
+            const Text(
+              'A current payment record copy; not an original issued or tax receipt.',
+            ),
             if (payment.coveredDates.isNotEmpty)
               Text(
                 'Covered dates: '
@@ -392,29 +501,14 @@ class _SummaryRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(label)),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  final digits = parts.first;
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[index]);
-  }
-  return '₱$buffer.${parts.last}';
-}
+String _money(String value) => formatClientPaymentMoney(value);
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'

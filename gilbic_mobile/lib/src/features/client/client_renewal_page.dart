@@ -110,7 +110,9 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Renewal request submitted for Management review.'),
+          content: Text(
+            'Renewal request submitted. Your assigned Collector must recommend it before Management review.',
+          ),
         ),
       );
       await _load();
@@ -287,7 +289,7 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Continue here to review Management-approved terms, accept or decline, complete your own signer steps, and confirm cash only after you receive it.',
+                      'Continue here to review Management-approved terms, accept or decline, complete only your own signer step, and confirm cash only after you receive it. Any other required signer must use their own SPINA account.',
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -498,14 +500,21 @@ class _RenewalRequestCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(10),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      request.statusLabel,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  child: Text(request.statusLabel),
                 ),
               ],
             ),
@@ -585,10 +594,8 @@ class _RenewalRequestDialogState extends State<_RenewalRequestDialog> {
   }
 
   void _submit() {
-    final amount = double.tryParse(
-      _amountController.text.trim().replaceAll(',', ''),
-    );
-    if (amount == null || amount <= 0) {
+    final amount = _normalizeRequestedAmount(_amountController.text);
+    if (amount == null) {
       setState(() => _error = 'Enter a valid requested amount.');
       return;
     }
@@ -656,7 +663,7 @@ class _RenewalRequestDialogState extends State<_RenewalRequestDialog> {
 class _RenewalDraft {
   const _RenewalDraft({required this.amount, required this.message});
 
-  final double amount;
+  final String amount;
   final String message;
 }
 
@@ -680,6 +687,17 @@ class _LabelValue extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _normalizeRequestedAmount(String input) {
+  final normalized = input.trim().replaceAll(',', '');
+  final match = RegExp(r'^(\d+)(?:\.(\d{0,2}))?$').firstMatch(normalized);
+  if (match == null || !RegExp(r'[1-9]').hasMatch(normalized)) {
+    return null;
+  }
+  final whole = match.group(1)!;
+  final fraction = (match.group(2) ?? '').padRight(2, '0');
+  return '$whole.$fraction';
 }
 
 String _money(double value) {

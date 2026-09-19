@@ -5,6 +5,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/client/client_dashboard.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
@@ -23,6 +25,7 @@ void main() {
             onSignOut: () async {},
             deviceIdentityProvider: _deviceIdentityProvider(),
             loanRepository: repository,
+            scheduleRepository: _FakeClientScheduleRepository(),
           ),
         ),
       );
@@ -47,6 +50,8 @@ void main() {
       expect(find.text('₱50.00'), findsOneWidget);
       expect(find.text('₱21.00'), findsOneWidget);
       expect(find.textContaining('amount due today'), findsNothing);
+      expect(find.text('Exact payoff'), findsNothing);
+      expect(find.text('Management review required'), findsNothing);
 
       expect(find.byKey(const Key('open-account-settings')), findsOneWidget);
       expect(find.byKey(const Key('open-notification-center')), findsOneWidget);
@@ -86,6 +91,7 @@ void main() {
             onSignOut: () async {},
             deviceIdentityProvider: _deviceIdentityProvider(),
             loanRepository: repository,
+            scheduleRepository: _FakeClientScheduleRepository(),
           ),
         ),
       );
@@ -109,7 +115,9 @@ void main() {
       clientCode: 'CLIENT-001',
       clientName: 'Ana Client',
       clientStatus: 'active',
-      loans: <ClientLoan>[_regularLoan(status: 'paid', remainingBalance: 0)],
+      loans: <ClientLoan>[
+        _regularLoan(status: 'paid', remainingBalance: '0.00'),
+      ],
     );
 
     await tester.pumpWidget(
@@ -119,6 +127,7 @@ void main() {
           onSignOut: () async {},
           deviceIdentityProvider: _deviceIdentityProvider(),
           loanRepository: _FakeClientLoanRepository(emptyPortfolio),
+          scheduleRepository: _FakeClientScheduleRepository(),
         ),
       ),
     );
@@ -153,6 +162,7 @@ void main() {
           onSignOut: () async {},
           deviceIdentityProvider: _deviceIdentityProvider(),
           loanRepository: repository,
+          scheduleRepository: _FakeClientScheduleRepository(),
         ),
       ),
     );
@@ -183,6 +193,7 @@ void main() {
             onSignOut: () async {},
             deviceIdentityProvider: _deviceIdentityProvider(),
             loanRepository: _FakeClientLoanRepository(_portfolio()),
+            scheduleRepository: _FakeClientScheduleRepository(),
           ),
         ),
       ),
@@ -221,16 +232,16 @@ ClientLoanPortfolio _portfolio() => ClientLoanPortfolio(
   clientStatus: 'active',
   loans: <ClientLoan>[
     _regularLoan(),
-    ClientLoan(
+    const ClientLoan(
       loanId: 'seven-by-seven-loan',
       loanNumber: '7X7-001',
       loanTypeCode: 'seven_by_seven',
       loanTypeName: '7x7',
-      principal: 3000,
-      dailyAmount: 21,
+      principal: '3000.00',
+      dailyAmount: '21.00',
       status: 'active',
-      remainingBalance: 3000,
-      paidAmount: 0,
+      remainingBalance: '3000.00',
+      paidAmount: '0.00',
       passCount: 0,
       stateVersion: 0,
       paymentCount: 0,
@@ -240,20 +251,20 @@ ClientLoanPortfolio _portfolio() => ClientLoanPortfolio(
 
 ClientLoan _regularLoan({
   String status = 'active',
-  double remainingBalance = 4950,
+  String remainingBalance = '4950.00',
 }) {
   return ClientLoan(
     loanId: 'regular-loan',
     loanNumber: 'REG-001',
     loanTypeCode: 'regular',
     loanTypeName: 'Regular',
-    principal: 5000,
-    dailyAmount: 50,
+    principal: '5000.00',
+    dailyAmount: '50.00',
     dateReleased: DateTime(2026, 8, 1),
     dueDate: DateTime(2026, 11, 29),
     status: status,
     remainingBalance: remainingBalance,
-    paidAmount: 50,
+    paidAmount: '50.00',
     passCount: 0,
     lastPaymentDate: DateTime(2026, 8, 2),
     stateVersion: 3,
@@ -280,6 +291,37 @@ class _FakeClientLoanRepository implements ClientLoanRepository {
     userId = session.userId;
     if (failure != null) throw failure!;
     return portfolio!;
+  }
+}
+
+class _FakeClientScheduleRepository implements ClientScheduleRepository {
+  @override
+  Future<ClientLoanSchedule> loadSchedule(
+    UserSession session, {
+    required String deviceId,
+    required String loanId,
+  }) async {
+    return ClientLoanSchedule(
+      loanId: loanId,
+      loanNumber: '7X7-001',
+      loanType: '7x7',
+      calculationMode: 'seven_by_seven',
+      isSevenBySeven: true,
+      paymentFrequency: 'daily',
+      readOnly: true,
+      pastDueAmount: '0.00',
+      pastDueCount: 0,
+      scheduleExtensionSlots: 0,
+      maturityStatus: 'scheduled',
+      penaltyStatus: 'not_applicable',
+      projectedPenalty: '0.00',
+      assessedPenaltyBalance: '0.00',
+      penaltyBase: '0.00',
+      remainingCostHeadroom: '0.00',
+      exactPayoffTotal: '0.00',
+      managementReviewRequiredReason: '',
+      rows: const <ClientScheduleRow>[],
+    );
   }
 }
 

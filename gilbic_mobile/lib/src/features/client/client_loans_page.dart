@@ -3,19 +3,24 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/client/client_schedule_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_loan_documents_page.dart';
 
 class ClientLoansPage extends StatefulWidget {
   const ClientLoansPage({
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.scheduleRepository,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientLoanRepository? repository;
+  final ClientScheduleRepository? scheduleRepository;
 
   @override
   State<ClientLoansPage> createState() => _ClientLoansPageState();
@@ -61,6 +66,33 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  void _openSchedule(ClientLoan loan) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ClientSchedulePage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          loanId: loan.loanId,
+          loanNumber: loan.loanNumber,
+          repository: widget.scheduleRepository,
+        ),
+      ),
+    );
+  }
+
+  void _openDocuments(ClientLoan loan) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ClientLoanDocumentsPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          loanId: loan.loanId,
+          loanNumber: loan.loanNumber,
+        ),
+      ),
+    );
   }
 
   @override
@@ -118,7 +150,11 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
             const _EmptyCard(message: 'No active loans were found.')
           else
             for (final loan in portfolio.activeLoans) ...[
-              _LoanCard(loan: loan),
+              _LoanCard(
+                loan: loan,
+                onViewSchedule: () => _openSchedule(loan),
+                onViewDocuments: () => _openDocuments(loan),
+              ),
               const SizedBox(height: 10),
             ],
           if (portfolio.previousLoans.isNotEmpty) ...[
@@ -129,7 +165,11 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
             ),
             const SizedBox(height: 8),
             for (final loan in portfolio.previousLoans) ...[
-              _LoanCard(loan: loan),
+              _LoanCard(
+                loan: loan,
+                onViewSchedule: () => _openSchedule(loan),
+                onViewDocuments: () => _openDocuments(loan),
+              ),
               const SizedBox(height: 10),
             ],
           ],
@@ -217,9 +257,15 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _LoanCard extends StatelessWidget {
-  const _LoanCard({required this.loan});
+  const _LoanCard({
+    required this.loan,
+    required this.onViewSchedule,
+    required this.onViewDocuments,
+  });
 
   final ClientLoan loan;
+  final VoidCallback onViewSchedule;
+  final VoidCallback onViewDocuments;
 
   @override
   Widget build(BuildContext context) {
@@ -262,19 +308,15 @@ class _LoanCard extends StatelessWidget {
             label: 'Paid toward balance',
             value: _money(loan.paidAmount),
           ),
-          _AmountRow(label: 'Required payment', value: _money(loan.dailyAmount)),
+          _AmountRow(
+            label: 'Required payment',
+            value: _money(loan.dailyAmount),
+          ),
           if (loan.interestRate != null)
             _AmountRow(
               label: 'Interest rate',
               value: '${_trimNumber(loan.interestRate!)}%',
             ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(value: loan.progress),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('${(loan.progress * 100).toStringAsFixed(1)}% paid'),
-          ),
           const Divider(height: 24),
           _DetailRow(label: 'Released', value: _date(loan.dateReleased)),
           _DetailRow(
@@ -292,6 +334,25 @@ class _LoanCard extends StatelessWidget {
           ),
           _DetailRow(label: 'Recorded payments', value: '${loan.paymentCount}'),
           _DetailRow(label: 'PASS count', value: '${loan.passCount}'),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: Key('client-loan-schedule-${loan.loanId}'),
+              onPressed: onViewSchedule,
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: const Text('View authoritative schedule'),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: Key('client-loan-documents-${loan.loanId}'),
+              onPressed: onViewDocuments,
+              icon: const Icon(Icons.folder_outlined),
+              label: const Text('Loan documents'),
+            ),
+          ),
         ],
       ),
     );
@@ -413,19 +474,9 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
-  final whole = parts.first.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  return '₱$whole.${parts.last}';
-}
+String _money(String value) => formatClientLoanMoney(value);
 
-String _trimNumber(double value) {
-  final text = value.toStringAsFixed(4);
-  return text.replaceFirst(RegExp(r'\.?0+$'), '');
-}
+String _trimNumber(String value) => formatClientLoanRate(value);
 
 String _date(DateTime? value, {String empty = 'Not available'}) {
   if (value == null) {

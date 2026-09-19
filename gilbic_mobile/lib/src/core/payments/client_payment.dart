@@ -1,5 +1,7 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+final RegExp _moneyTextPattern = RegExp(r'^[+-]?\d+(?:\.\d{1,2})?$');
+
 class ClientPaymentTimeline {
   const ClientPaymentTimeline({
     required this.clientId,
@@ -44,10 +46,13 @@ class ClientPaymentTimeline {
       .where((payment) => !payment.isVoided)
       .toList(growable: false);
 
-  double get validTotal => validPayments.fold<double>(
-        0,
-        (total, payment) => total + payment.amount,
-      );
+  String get validTotal {
+    final cents = validPayments.fold<BigInt>(
+      BigInt.zero,
+      (total, payment) => total + _moneyToCents(payment.amount),
+    );
+    return _centsToText(cents);
+  }
 }
 
 class ClientPayment {
@@ -87,10 +92,10 @@ class ClientPayment {
   final DateTime collectionDate;
   final DateTime recordedAt;
   final String entryType;
-  final double amount;
+  final String amount;
   final List<DateTime> coveredDates;
-  final double? previousBalance;
-  final double? officialBalance;
+  final String? previousBalance;
+  final String? officialBalance;
   final String? note;
   final String? collectionOrigin;
   final String status;
@@ -121,13 +126,13 @@ class ClientPayment {
       collectionDate: _requiredDate(payload, 'collection_date'),
       recordedAt: _requiredDate(payload, 'recorded_at'),
       entryType: _requiredString(payload, 'entry_type'),
-      amount: _requiredDouble(payload, 'amount'),
+      amount: _requiredMoneyText(payload, 'amount'),
       coveredDates: rawCoveredDates
           .map(_optionalDate)
           .whereType<DateTime>()
           .toList(growable: false),
-      previousBalance: _optionalDouble(payload['previous_balance']),
-      officialBalance: _optionalDouble(payload['official_balance']),
+      previousBalance: _optionalMoneyText(payload['previous_balance']),
+      officialBalance: _optionalMoneyText(payload['official_balance']),
       note: _optionalString(payload['note']),
       collectionOrigin: _optionalString(payload['collection_origin']),
       status: _requiredString(payload, 'status'),
@@ -154,6 +159,19 @@ class ClientPayment {
   }
 }
 
+String formatClientPaymentMoney(String value) {
+  final cents = _moneyToCents(value);
+  final negative = cents.isNegative;
+  final absolute = cents.abs();
+  final whole = (absolute ~/ BigInt.from(100)).toString();
+  final fraction = (absolute % BigInt.from(100)).toString().padLeft(2, '0');
+  final grouped = whole.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  return '${negative ? '-' : ''}₱$grouped.$fraction';
+}
+
 String _requiredString(Map<String, dynamic> payload, String key) {
   final value = _optionalString(payload[key]);
   if (value == null) {
@@ -170,22 +188,65 @@ String? _optionalString(Object? value) {
   return text.isEmpty ? null : text;
 }
 
-double _requiredDouble(Map<String, dynamic> payload, String key) {
-  final value = _optionalDouble(payload[key]);
-  if (value == null) {
+String _requiredMoneyText(Map<String, dynamic> payload, String key) {
+  final value = payload[key];
+  if (value is! String) {
     throw SpinaApiException(
-      'The SPINA server omitted $key.',
+      'The SPINA server returned invalid $key.',
       code: 'invalid_client_payment_payload',
     );
   }
-  return value;
+  final text = value.trim();
+  if (!_moneyTextPattern.hasMatch(text)) {
+    throw SpinaApiException(
+      'The SPINA server returned invalid $key.',
+      code: 'invalid_client_payment_payload',
+    );
+  }
+  return text;
 }
 
-double? _optionalDouble(Object? value) {
-  if (value is num) {
-    return value.toDouble();
+String? _optionalMoneyText(Object? value) {
+  if (value == null) {
+    return null;
   }
-  return double.tryParse(value?.toString() ?? '');
+  if (value is! String) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid payment money data.',
+      code: 'invalid_client_payment_payload',
+    );
+  }
+  final text = value.trim();
+  if (!_moneyTextPattern.hasMatch(text)) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid payment money data.',
+      code: 'invalid_client_payment_payload',
+    );
+  }
+  return text;
+}
+
+BigInt _moneyToCents(String value) {
+  final match = RegExp(r'^([+-]?)(\d+)(?:\.(\d{1,2}))?$').firstMatch(value.trim());
+  if (match == null) {
+    throw const SpinaApiException(
+      'The SPINA server returned invalid payment money data.',
+      code: 'invalid_client_payment_payload',
+    );
+  }
+  final negative = match.group(1) == '-';
+  final whole = BigInt.parse(match.group(2)!);
+  final fraction = (match.group(3) ?? '').padRight(2, '0');
+  final cents = whole * BigInt.from(100) + BigInt.parse(fraction);
+  return negative ? -cents : cents;
+}
+
+String _centsToText(BigInt cents) {
+  final negative = cents.isNegative;
+  final absolute = cents.abs();
+  final whole = absolute ~/ BigInt.from(100);
+  final fraction = (absolute % BigInt.from(100)).toString().padLeft(2, '0');
+  return '${negative ? '-' : ''}$whole.$fraction';
 }
 
 int _requiredInt(Map<String, dynamic> payload, String key) {

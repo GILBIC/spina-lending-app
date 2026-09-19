@@ -3,6 +3,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
+import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
@@ -19,6 +21,7 @@ class ClientDashboard extends StatefulWidget {
     required this.onSignOut,
     required this.deviceIdentityProvider,
     this.loanRepository,
+    this.scheduleRepository,
     super.key,
   });
 
@@ -26,6 +29,7 @@ class ClientDashboard extends StatefulWidget {
   final Future<void> Function() onSignOut;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientLoanRepository? loanRepository;
+  final ClientScheduleRepository? scheduleRepository;
 
   @override
   State<ClientDashboard> createState() => _ClientDashboardState();
@@ -33,7 +37,9 @@ class ClientDashboard extends StatefulWidget {
 
 class _ClientDashboardState extends State<ClientDashboard> {
   late final ClientLoanRepository _loanRepository;
+  late final ClientScheduleRepository _scheduleRepository;
   ClientLoanPortfolio? _portfolio;
+  Map<String, ClientLoanSchedule> _homeObligationSchedules = const {};
   String? _errorMessage;
   bool _loading = true;
 
@@ -41,6 +47,8 @@ class _ClientDashboardState extends State<ClientDashboard> {
   void initState() {
     super.initState();
     _loanRepository = widget.loanRepository ?? SpinaClientLoanRepository();
+    _scheduleRepository =
+        widget.scheduleRepository ?? SpinaClientScheduleRepository();
     _loadPortfolio();
   }
 
@@ -55,17 +63,37 @@ class _ClientDashboardState extends State<ClientDashboard> {
         widget.session,
         deviceId: identity.installationId,
       );
+      final schedules = <String, ClientLoanSchedule>{};
+      for (final loan in portfolio.activeLoans) {
+        if (!loan.isSevenBySeven) continue;
+        try {
+          schedules[loan.loanId] = await _scheduleRepository.loadSchedule(
+            widget.session,
+            deviceId: identity.installationId,
+            loanId: loan.loanId,
+          );
+        } on SpinaApiException {
+          continue;
+        }
+      }
       if (!mounted) return;
-      setState(() => _portfolio = portfolio);
+      setState(() {
+        _portfolio = portfolio;
+        _homeObligationSchedules = schedules;
+      });
     } on SpinaApiException catch (error) {
       if (!mounted) return;
-      setState(() => _errorMessage = _clientHomeFailureMessage(error));
+      setState(() {
+        _homeObligationSchedules = const {};
+        _errorMessage = _clientHomeFailureMessage(error);
+      });
     } on Object {
       if (!mounted) return;
-      setState(
-        () => _errorMessage =
-            'Your latest loan information could not be loaded. Try again in a moment.',
-      );
+      setState(() {
+        _homeObligationSchedules = const {};
+        _errorMessage =
+            'Your latest loan information could not be loaded. Try again in a moment.';
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -214,6 +242,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
               const SizedBox(height: 20),
               _CurrentLoansSection(
                 portfolio: _portfolio,
+                homeObligationSchedules: _homeObligationSchedules,
                 loading: _loading,
                 errorMessage: _errorMessage,
                 onRetry: _loadPortfolio,
@@ -279,6 +308,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
 class _CurrentLoansSection extends StatelessWidget {
   const _CurrentLoansSection({
     required this.portfolio,
+    required this.homeObligationSchedules,
     required this.loading,
     required this.errorMessage,
     required this.onRetry,
@@ -286,6 +316,7 @@ class _CurrentLoansSection extends StatelessWidget {
   });
 
   final ClientLoanPortfolio? portfolio;
+  final Map<String, ClientLoanSchedule> homeObligationSchedules;
   final bool loading;
   final String? errorMessage;
   final VoidCallback onRetry;
@@ -346,7 +377,11 @@ class _CurrentLoansSection extends StatelessWidget {
           for (final loan in activeLoans)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _ClientLoanSummaryRow(loan: loan, onTap: onOpenLoans),
+              child: _ClientLoanSummaryRow(
+                loan: loan,
+                obligationSchedule: homeObligationSchedules[loan.loanId],
+                onTap: onOpenLoans,
+              ),
             ),
         if (errorMessage != null && portfolio != null) ...[
           const SizedBox(height: 4),
@@ -358,14 +393,29 @@ class _CurrentLoansSection extends StatelessWidget {
 }
 
 class _ClientLoanSummaryRow extends StatelessWidget {
-  const _ClientLoanSummaryRow({required this.loan, required this.onTap});
+  const _ClientLoanSummaryRow({
+    required this.loan,
+    required this.obligationSchedule,
+    required this.onTap,
+  });
 
   final ClientLoan loan;
+  final ClientLoanSchedule? obligationSchedule;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final schedule = loan.isSevenBySeven ? obligationSchedule : null;
+    final reviewReason = schedule?.managementReviewRequiredReason.trim() ?? '';
+    final penaltyStatus = schedule?.penaltyStatus.trim().toLowerCase() ?? '';
+    final managementReviewRequired = schedule != null &&
+        (penaltyStatus == 'management_review_required' || reviewReason.isNotEmpty);
+    final showExactPayoff = schedule != null &&
+        !managementReviewRequired &&
+        const <String>{'projected', 'penalty_outstanding', 'cap_exhausted'}
+            .contains(penaltyStatus);
+
     return Card(
       key: Key('client-home-loan-${loan.loanId}'),
       margin: EdgeInsets.zero,
@@ -418,6 +468,24 @@ class _ClientLoanSummaryRow extends StatelessWidget {
               if (loan.dueDate != null) ...[
                 const SizedBox(height: 5),
                 _LoanAmountLine(label: 'Due date', value: _date(loan.dueDate!)),
+              ],
+              if (managementReviewRequired) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Management review required',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                if (reviewReason.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(reviewReason),
+                ],
+              ] else if (showExactPayoff) ...[
+                const SizedBox(height: 8),
+                _LoanAmountLine(
+                  label: 'Exact payoff',
+                  value: _money(schedule.exactPayoffTotal),
+                  emphasized: true,
+                ),
               ],
               const SizedBox(height: 8),
               Text(
@@ -575,14 +643,7 @@ String _clientHomeFailureMessage(SpinaApiException error) {
   return 'Your latest loan information could not be loaded. Try again in a moment.';
 }
 
-String _money(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
-  final whole = parts.first.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  return '₱$whole.${parts.last}';
-}
+String _money(String value) => formatClientLoanMoney(value);
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
