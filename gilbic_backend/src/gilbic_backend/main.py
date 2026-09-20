@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from . import __version__
 from .account_api import create_account_router
+from .accounting_export_api import create_accounting_export_router
 from .activity_notification_api import create_activity_notification_router
 from .area_management_api import create_area_management_router
 from .auth_api import create_auth_router
@@ -254,6 +255,7 @@ def create_app() -> FastAPI:
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
+    app.include_router(create_accounting_export_router())
     app.include_router(create_client_loan_router())
     app.include_router(create_client_payment_router())
     app.include_router(create_client_gcash_router())

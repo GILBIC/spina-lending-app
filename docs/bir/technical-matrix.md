@@ -1,0 +1,25 @@
+# Technical evidence matrix — draft
+
+Every row begins **pending** because source code or a local sample alone does not prove this taxpayer's complete requirement. For an actual review, record `pass`, `fail`, `pending` or `not_applicable`, a reason, evidence path/hash, reviewer and review date. Not-applicable needs a supported applicability decision. This is an engineering matrix, not the signed official checklist.
+
+The historical [RMC 5-2021 Annex B](https://bir-cdn.bir.gov.ph/local/pdf/RMC%20No.%205-2021%20Annex%20B.pdf) supplies useful control topics, but the current applicable RMO 9 forms still need retrieval and full reconciliation. Use [official-requirements.md](official-requirements.md) for later retention, invoice and registration changes.
+
+| Control/topic | Status | Current engineering evidence | Evidence still required |
+| --- | --- | --- | --- |
+| Exact system/version identity | pending | Clean SHA/tree, source-file inventory and comparison in the offline package; [version record](version-control.md). | Reviewed candidate/installed build mapping; actual registered baseline if any. |
+| Taxpayer, branch and report identity | pending | [Profile contract](profile.example.json); missing values are explicit. | Actual registered facts and confirmation that reports carry the required applicable identity. |
+| Journal/ledger/book scope | pending | [Export implementation](../../gilbic_backend/src/gilbic_backend/accounting_export.py) and [snapshot reader](../../gilbic_backend/src/gilbic_backend/accounting_export_repository.py). | Exact-candidate export proof, approved period, book mapping, sample review and completeness beyond UI caps. |
+| Balance and arithmetic checks | pending | Protected ledger and exact decimal report calculations; [foundation](../../gilbic_backend/sql/0021_add_accounting_foundation.sql). | Per-entry and cross-report reconciliation, opening/closing evidence, no truncation and size-limit proof. |
+| Posted-record protection and corrections | pending | Posting/reversal guards and [immutable cancelled-draft audit](../../gilbic_backend/sql/0024_add_manual_general_journal_and_trial_balance.sql). | Current database proof, documented authorized correction practice and applicable adjustment-document evidence. |
+| Audit activity and creator attribution | pending | Exported journal events and cancelled-draft snapshots include their defined actor/history scope. | Supply the required printable audit sample and review broader system/security activity requirements separately; a scoped accounting log is not a complete audit-trail claim. |
+| Document numbering and invoice samples | pending | Operational collection numbers and clearly labelled record copies exist. | Actual invoice applicability, authorized document type/series, void/reprint/adjustment rules and approved samples. |
+| SAF/data format | pending | Machine-readable CSV and hash manifest for review. | Applicable authoritative SAF specification, mapping and assessment; generic CSV is not SAF acceptance. |
+| User authorization/revocation | pending | [Server account/device checks](../../gilbic_backend/src/gilbic_backend/request_auth.py) and protected accounting permissions. | Actual roles, approval ownership, revoked-user/device exercise and production access review. |
+| Authentication and administrator controls | pending | Supabase Auth integration and server-derived permission boundaries. | Actual password/failed-login policy, administrator segregation, concurrent-terminal rules and applicability to current official rows. |
+| Database/remote infrastructure | pending | [Runtime preflight](../release/runtime-preflight.md) and [deployment recovery](../release/deployment-recovery.md). | Actual grants, encrypted access, change administration, hosting/physical controls and accountable operators. |
+| Retention and legal holds | pending | [Privacy manifest prerequisites](../../gilbic_backend/src/gilbic_backend/privacy_record_repository.py); no five-year deletion authority is generated. | Approved accounting/source-document retention and hold schedule, retrieval and disposal authorization. |
+| Backup, restore and continuity | pending | [Synthetic recovery proof design](../release/backup-restore-drill.md) includes database and private-file evidence. | Actual production backup destinations/access, tested restore, retention and recovery objectives. |
+| Electronic invoices and sales reporting | pending | Separate profile decisions; no BIR transmission or electronic-invoice capability claimed. | Independent coverage decisions, applicable structured output/transmission evidence and approved implementation if required. |
+| Forms and accountable acceptance | pending | Unsigned preparation notes and hashed supplied files. | Current official forms, required signatures/notarization/authority, taxpayer/accountant review and actual BIR records. |
+
+Attach evidence for the exact reviewed source and environment. Keep synthetic test evidence labelled synthetic, supplied-file statuses labelled declarations, and live operational evidence private. This matrix does not turn existing controls into a legal compliance score.
