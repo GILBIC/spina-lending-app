@@ -1,4 +1,4 @@
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { mountOfficeApplicationEntry } from './office-application-entry.js';
 import { mountOfficeEvidenceCapture } from './office-evidence-capture.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
@@ -440,8 +440,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
     return dispose;
   }
   signal?.addEventListener('abort', dispose, { once: true });
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  if (!['employee', 'management'].includes(role)
+  if (!sessionHasRole(session, 'employee', 'management')
     || !hasPermission(session, 'client_onboarding.requirement.review')) {
     root.innerHTML = emptyState('Office access and onboarding review permission are required.');
     return dispose;

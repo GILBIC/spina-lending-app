@@ -1,4 +1,4 @@
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -391,8 +391,7 @@ export function mountOfficeApplicationEntry({
   mounts.set(root, dispose);
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, { once: true });
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  if (!['employee', 'management'].includes(role) || !hasPermission(session, 'client_onboarding.requirement.review')) {
+  if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session, 'client_onboarding.requirement.review')) {
     state = 'denied';
     replaceContent(emptyState('Office access and onboarding review permission are required.'));
   } else if (!uuid(clientId) || !reference || (review !== null && !validApplication(review, clientId, reference, true))) {

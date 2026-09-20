@@ -1,4 +1,4 @@
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -68,8 +68,7 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
   let statusRoot;
   let referenceInput;
   let newButton;
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  const canBypass = !collector && role === 'management' && hasPermission(session, 'client_onboarding.bypass');
+  const canBypass = !collector && sessionHasRole(session, 'management') && hasPermission(session, 'client_onboarding.bypass');
   const base = collector ? COLLECTOR : OFFICE;
 
   function listen(element, event, handler, content = true) {
@@ -275,7 +274,7 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, { once: true });
   const permission = collector ? 'client_onboarding.visit.record' : 'client_onboarding.requirement.review';
-  if (!(collector ? role === 'collector' : ['employee', 'management'].includes(role)) || !hasPermission(session, permission)) {
+  if (!(collector ? sessionHasRole(session, 'collector') : sessionHasRole(session, 'employee', 'management')) || !hasPermission(session, permission)) {
     root.innerHTML = emptyState('The required role and onboarding permission are needed.'); return dispose;
   }
   root.innerHTML = `<form class="entry-form" data-case-lookup><label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>

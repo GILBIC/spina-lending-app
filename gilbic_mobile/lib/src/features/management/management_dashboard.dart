@@ -25,6 +25,7 @@ import 'package:gilbic_mobile/src/features/management/management_collection_void
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_employee_activity_page.dart';
+import 'package:gilbic_mobile/src/features/employee/employee_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
@@ -239,6 +240,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     }
 
     final page = switch (module.action) {
+      _ManagementAction.employeeOperations => EmployeeOperationsPage(session: session, deviceIdentityProvider: deviceIdentityProvider, initialSection: EmployeeSection.payroll),
       _ManagementAction.office => OfficeWorkspacePage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -1244,6 +1246,7 @@ enum _ManagementAction {
   voidPayment('management-void-payment'),
   staffDevices('management-staff-devices'),
   employeeActivity('management-employee-activity'),
+  employeeOperations('management-employee-operations'),
   renewals('management-renewals'),
   support('management-support'),
   clientRegistrationApprovals('client-registration-approvals'),
@@ -1466,6 +1469,12 @@ const _managementSections = <_ManagementSection>[
         Icons.manage_search_outlined,
         action: _ManagementAction.employeeActivity,
         requiredPermissions: <String>['employee.activity.review'],
+      ),
+      _ManagementModule(
+        'Employee operations',
+        'Authorized staff setup, attendance reviews, payroll and requests',
+        Icons.badge_outlined,
+        action: _ManagementAction.employeeOperations,
       ),
       _ManagementModule(
         'Renewal requests',

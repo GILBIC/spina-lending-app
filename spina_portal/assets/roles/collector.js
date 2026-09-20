@@ -1,6 +1,7 @@
 import { buildCollectionSubmission, classifyLoanType } from '../collector-contract.js';
 import { buildCollectorRouteViewModel } from '../presenters.js';
 import { mountCollectorOnboardingVisit } from '../collector-onboarding-visit.js';
+import { mountEmployeeOperations } from '../employee-operations.js';
 import {
   asArray,
   badge,
@@ -245,6 +246,8 @@ function bindRemittance(context) {
 
 export async function mountCollectorWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.employeeOperationsCleanup?.();
+  context.employeeOperationsCleanup = null;
   context.collectorOnboardingCleanup?.();
   context.collectorOnboardingCleanup = null;
   const { root, api, session, setNavigation } = context;
@@ -256,6 +259,7 @@ export async function mountCollectorWorkspace(context) {
   const canViewRemittance = hasPermission(session, 'remittance.view') || canCreateRemittance;
   setNavigation([
     { id: 'collector-overview', label: "Today's route" },
+    { id: 'collector-employee-operations', label: 'My attendance, tasks & pay' },
     { id: 'collector-master-review', label: 'Master Review' },
     ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit' }] : []),
     ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance' }] : []),
@@ -306,10 +310,14 @@ export async function mountCollectorWorkspace(context) {
     <div class="section-heading"><div><h2>Master Review</h2><p>Every assigned-area row still requiring action before route completion.</p></div></div>
     ${unresolvedMarkup(model.unresolved)}
   </section>
+  <section class="section-card" id="collector-employee-operations"><div data-employee-operations></div></section>
   ${canViewRemittance ? remittanceSection(route.route_date, preview.data, recipients.data, history.data, { preview: preview.error, history: history.error }, canCreateRemittance) : ''}
   ${canRecordVisit ? '<section class="section-card" id="collector-onboarding"><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
   <section class="section-card" id="collector-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>`;
 
+  context.employeeOperationsCleanup = mountEmployeeOperations({
+    root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
+  });
   bindRouteActions(context, entryMap);
   bindRemittance(context);
   if (canRecordVisit) {

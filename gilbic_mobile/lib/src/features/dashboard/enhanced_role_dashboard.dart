@@ -14,6 +14,7 @@ import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.d
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
+import 'package:gilbic_mobile/src/features/employee/employee_dashboard.dart';
 
 class EnhancedRoleDashboard extends StatelessWidget {
   const EnhancedRoleDashboard({
@@ -45,6 +46,19 @@ class EnhancedRoleDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (session.hasRole(AppRole.collector) && session.hasRole(AppRole.employee)) {
+      final collectorAllowed = session.hasAllPermissions(['route.view', 'collection.create']);
+      final officeAllowed = session.hasPermission('employee.portal.view');
+      final collector = CollectorFieldHomePage(session: session, onSignOut: onSignOut,
+        collectorRouteLoader: collectorRouteLoader, paymentSubmissionRepository: paymentSubmissionRepository,
+        deviceIdentityProvider: deviceIdentityProvider, collectionDeviceSequence: collectionDeviceSequence);
+      final office = EmployeeDashboard(session: session, onSignOut: onSignOut, deviceIdentityProvider: deviceIdentityProvider);
+      if (collectorAllowed && officeAllowed) {
+        return _CombinedWorkerWorkspace(collector: collector, office: office, startInOffice: session.role == AppRole.employee);
+      }
+      if (collectorAllowed) return collector;
+      if (officeAllowed) return office;
+    }
     if (!_hasDashboardAccess(session)) {
       return _DashboardPermissionDenied(
         session: session,
@@ -87,6 +101,24 @@ class EnhancedRoleDashboard extends StatelessWidget {
     // destinations live inside those hierarchies without duplicate overlays.
     return dashboard;
   }
+}
+
+class _CombinedWorkerWorkspace extends StatefulWidget {
+  const _CombinedWorkerWorkspace({required this.collector, required this.office, required this.startInOffice});
+  final Widget collector, office;
+  final bool startInOffice;
+  @override
+  State<_CombinedWorkerWorkspace> createState() => _CombinedWorkerWorkspaceState();
+}
+class _CombinedWorkerWorkspaceState extends State<_CombinedWorkerWorkspace> {
+  late bool _office = widget.startInOffice;
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    Material(child: SafeArea(bottom: false, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), child:
+      SegmentedButton<bool>(key: const Key('employee-collector-workspace-switch'), segments: const [ButtonSegment(value: false, label: Text('Collector'), icon: Icon(Icons.route_outlined)), ButtonSegment(value: true, label: Text('Office & staff'), icon: Icon(Icons.badge_outlined))],
+        selected: {_office}, onSelectionChanged: (selection) => setState(() => _office = selection.single))))),
+    Expanded(child: _office ? widget.office : widget.collector),
+  ]);
 }
 
 bool _hasDashboardAccess(UserSession session) {

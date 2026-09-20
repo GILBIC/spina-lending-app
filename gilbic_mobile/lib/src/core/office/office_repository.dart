@@ -28,7 +28,7 @@ class OfficeIdentity {
   bool accessDenied = false;
   bool get allowed =>
       !accessDenied &&
-      [AppRole.employee, AppRole.management].contains(session.role) &&
+      (session.hasRole(AppRole.employee) || session.hasRole(AppRole.management)) &&
       session.hasPermission(officeReviewPermission);
   bool can(String permission, {bool management = false}) =>
       allowed &&

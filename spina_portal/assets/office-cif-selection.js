@@ -1,7 +1,7 @@
 import { mountOfficeCifReview } from './office-cif-review.js';
 import { mountOfficeCifCorrection } from './office-cif-correction.js';
 import { mountOfficeCifWorkflow } from './office-cif-workflow.js';
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, hasPermission, loadingPanel } from './ui.js';
 
 const mountedSelections = new WeakMap();
@@ -165,8 +165,7 @@ export function mountOfficeCifSelection({ root, api, session, signal }) {
   }
   signal?.addEventListener('abort', dispose, { once: true });
 
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  if (!['employee', 'management'].includes(role)
+  if (!sessionHasRole(session, 'employee', 'management')
     || !hasPermission(session, 'client_onboarding.requirement.review')) {
     root.innerHTML = emptyState('Office access and onboarding review permission are required.');
     return dispose;

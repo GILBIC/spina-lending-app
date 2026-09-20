@@ -1,4 +1,4 @@
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -115,8 +115,7 @@ export function mountOfficeEvidenceCapture({
   mounts.set(root, dispose);
   signal?.addEventListener('abort', dispose, { once: true });
   if (signal?.aborted) { dispose(); return dispose; }
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  if (!['employee', 'management'].includes(role) || !hasPermission(session, 'client_onboarding.requirement.review')) {
+  if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session, 'client_onboarding.requirement.review')) {
     root.innerHTML = emptyState('Office access and onboarding review permission are required.');
   } else if (!UUID.test(clientId) || !UUID.test(cifVersionId) || !['cif_review', 'application_review'].includes(purpose)
     || (purpose === 'application_review' && (!UUID.test(applicationId) || !UUID.test(applicationVersionId)))) {

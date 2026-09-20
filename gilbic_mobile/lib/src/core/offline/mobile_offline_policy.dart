@@ -57,8 +57,8 @@ class MobileOfflinePolicy {
   static const _employee = MobileOfflinePolicy(
     role: AppRole.employee,
     summary:
-        'Employee mobile workflows require a live SPINA server connection. '
-        'Attendance, payroll, tasks, requests, remittance receipt, encoding, printing status, and support actions are not queued offline.',
+        'Configured employees can record attendance and breaks in a protected, account-and-device-bound outbox. '
+        'These events sync when the app reconnects or resumes. Payroll, reviews, tasks, requests and office financial actions require the live server.',
     availableOffline: <String>[
       'A still-valid secure session may remain open during a temporary network outage.',
       'Already-rendered screens may remain visible, but their values must be treated as stale until refreshed.',
@@ -67,9 +67,9 @@ class MobileOfflinePolicy {
     blockedOffline: <String>[
       'Attendance/time, payroll, task, leave/request, notification, and support refreshes.',
       'Remittance receipt/acceptance and other permissioned office operations.',
-      'Any operation that changes authoritative employee, custody, client-support, or operational state.',
+      'All reviews, requests and financial changes. Only attendance capture is saved offline; server review remains authoritative.',
     ],
-    hasPersistentOfflineData: false,
+    hasPersistentOfflineData: true,
     financialWritesOfflineAllowed: false,
     financialWritesSilentlyQueued: false,
     financialWritesAutomaticallyRetried: false,
@@ -79,11 +79,12 @@ class MobileOfflinePolicy {
   static const _collector = MobileOfflinePolicy(
     role: AppRole.collector,
     summary:
-        'Collectors may view only the last encrypted assigned-route snapshot while offline. '
+        'Collectors may view the last encrypted assigned-route snapshot and capture their configured employee attendance offline. '
         'The cached route is explicitly read-only; collection, correction, remittance, custody, and other financial writes require the live server.',
     availableOffline: <String>[
       'The last successfully downloaded assigned route may be shown as an encrypted Offline copy for the signed-in collector.',
       'Cached route values are presentation-only and may be stale; Gilbic does not recalculate balances or eligibility offline.',
+      'Attendance and break events are encrypted for this account and device, keep their original capture time, and sync automatically when the app resumes or reconnects.',
       'A still-valid secure session may remain open during a temporary network outage.',
     ],
     blockedOffline: <String>[

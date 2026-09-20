@@ -53,7 +53,7 @@ test('Collector route preserves server area order and identifies every unresolve
   assert.equal(model.expectedTotal, '250.00');
 });
 
-test('Employee view exposes permitted connected work and labels unconnected work honestly', () => {
+test('Employee view exposes permitted work and the capability-driven employee module', () => {
   const model = buildEmployeeViewModel({
     session: { user: { full_name: 'Office Employee', permissions: ['support.manage'] } },
     account: { profile: { full_name: 'Office Employee' } },
@@ -64,7 +64,8 @@ test('Employee view exposes permitted connected work and labels unconnected work
   assert.equal(model.displayName, 'Office Employee');
   assert.ok(model.connectedActions.some((action) => action.key === 'employee-support'));
   assert.equal(model.connectedActions.some((action) => action.key === 'employee-remittance'), false);
-  assert.deepEqual(model.unavailable.map((item) => item.key), ['attendance', 'payroll', 'leave']);
+  assert.deepEqual(model.unavailable, []);
+  assert.ok(model.connectedActions.some((action) => action.key === 'employee-operations'));
   assert.equal(model.openSupportCount, 1);
 });
 

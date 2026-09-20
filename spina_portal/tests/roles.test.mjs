@@ -98,6 +98,7 @@ test('permission-gated Employee actions disappear when permission is absent', ()
   assert.deepEqual(paths.sort(), [
     '/api/v1/account',
     '/api/v1/activity-notifications',
+    '/api/v1/employee-operations/workspace',
   ]);
 });
 

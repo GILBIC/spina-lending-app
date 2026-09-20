@@ -1,4 +1,4 @@
-import { normalizeRole } from './roles.js';
+import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml as esc, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -41,10 +41,9 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   let listeners = [];
   let actionListeners = [];
   const urls = [];
-  const role = normalizeRole(session?.user?.role || session?.user?.roles?.[0]);
-  const manager = role === 'management' && hasPermission(session, 'lending.first_loan.approve');
-  const staff = ['management', 'employee'].includes(role) && hasPermission(session, 'lending.first_loan.release');
-  const canManageCredentials = ['management', 'employee'].includes(role) && hasPermission(session, 'client.credential.manage');
+  const manager = sessionHasRole(session, 'management') && hasPermission(session, 'lending.first_loan.approve');
+  const staff = sessionHasRole(session, 'employee', 'management') && hasPermission(session, 'lending.first_loan.release');
+  const canManageCredentials = sessionHasRole(session, 'employee', 'management') && hasPermission(session, 'client.credential.manage');
   let form, intake, reference, clearButton, workspace, status;
 
   function on(element, event, callback, action = false) {
@@ -318,7 +317,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   mounts.set(root, dispose);
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, { once: true });
-  if (!['management', 'employee'].includes(role) || !hasPermission(session, 'client_onboarding.requirement.review')) {
+  if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session, 'client_onboarding.requirement.review')) {
     root.innerHTML = emptyState('Authorized office access is required.'); return dispose;
   }
   root.innerHTML = `<form class="entry-form">${input('intakeReference', 'Office intake reference')}${input('applicationReference', 'Loan application reference')}<div class="action-row"><button class="button button-primary" type="submit">Open first-loan workflow</button><button class="button button-outline" type="button">Clear</button></div></form><div data-first-loan-workspace></div><div data-first-loan-status role="status" aria-live="polite"></div>`;

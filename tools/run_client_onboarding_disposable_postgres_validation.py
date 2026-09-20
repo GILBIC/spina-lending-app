@@ -68,6 +68,7 @@ APPLICATION_CONFIRMATION_TEST = (
     / "test_loan_application_review_confirmation_postgres.py"
 )
 CIF_MIGRATIONS = (
+    ROOT / "gilbic_backend" / "sql" / "0113_add_authoritative_area_management.sql",
     ROOT / "gilbic_backend" / "sql" / "0114_add_client_cif_first_loan_foundation.sql",
     ROOT
     / "gilbic_backend"
@@ -91,6 +92,7 @@ CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0125_add_versioned_privacy_acknowledgments.sql",
     ROOT / "gilbic_backend" / "sql" / "0126_guard_new_credit_with_current_cif.sql",
     ROOT / "gilbic_backend" / "sql" / "0127_add_client_payment_proof_evidence.sql",
+    ROOT / "gilbic_backend" / "sql" / "0128_add_employee_operations.sql",
 )
 FULL_FLOW_TESTS = tuple(
     ROOT / "gilbic_backend" / "tests" / name
@@ -104,6 +106,9 @@ FULL_FLOW_TESTS = tuple(
         "test_client_cif_lending_guard_postgres.py",
         "test_client_document_postgres.py",
         "test_client_payment_proof_postgres.py",
+        "test_employee_authorization_postgres.py",
+        "test_employee_operations_postgres.py",
+        "test_employee_operations_concurrency_postgres.py",
     )
 )
 BOOTSTRAP_THROUGH = 112
@@ -211,7 +216,7 @@ def validate(base_database_url: str) -> None:
 
     print(
         "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
-        "plus CIF/application/release/Client evidence migrations 0114 through 0127 was replayed in a fresh loopback database; "
+        "plus Area/CIF/application/release/Client/employee migrations 0113 through 0128 was replayed in a fresh loopback database; "
         "confirmation/application-history integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."

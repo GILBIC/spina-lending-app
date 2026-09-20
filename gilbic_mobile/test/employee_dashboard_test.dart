@@ -52,7 +52,7 @@ void main() {
     expect(find.text('Tasks & work items'), findsOneWidget);
     expect(find.text('Payroll & payslips'), findsOneWidget);
     expect(find.text('Leave & requests'), findsOneWidget);
-    expect(find.text('Not available yet'), findsNWidgets(4));
+    expect(find.text('Not available yet'), findsNothing);
 
     await _scrollTo(tester, find.byKey(const Key('employee-section-office')));
     expect(find.byKey(const Key('employee-section-office')), findsOneWidget);
@@ -104,7 +104,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Employee workflow not connected yet'), findsOneWidget);
+    expect(find.text('Employee workflow not connected yet'), findsNothing);
 
     await _pumpDashboard(
       tester,

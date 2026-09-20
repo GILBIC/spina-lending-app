@@ -37,6 +37,14 @@ for(const role of ['collector','client'])test(`${role} gets no first-loan action
  const h=harness(role);(await mount())(h);assert.equal(h.calls.length,0);assert.equal(h.root.querySelector('form'),null);
 });
 
+test('combined Collector and Employee memberships allow office work without Management approval',async()=>{
+ const h=harness('collector');h.session.user.roles=['collector','employee','employee_manager'];
+ (await mount())(h);await open(h);
+ assert.equal(h.calls.length,4);assert.equal(button(h,'Approve exact terms'),undefined);
+ assert.equal(button(h,'Authorize exact office release'),undefined);
+ assert.match(h.root.textContent,/Loan-Mixed/);
+});
+
 test('mismatched response fails closed before financial actions',async()=>{
  const h=harness();h.review.client_id=LOAN;(await mount())(h);await open(h);
  assert.equal(button(h,'Approve exact terms'),undefined);assert.match(h.root.textContent,/match|invalid/i);

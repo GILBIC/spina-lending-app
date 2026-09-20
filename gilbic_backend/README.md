@@ -2,6 +2,11 @@
 
 This is the GitHub-first FastAPI backend for Gilbic.
 
+Employee attendance, leave, advances and payroll use the private employee operations
+API. See [employee setup](../docs/employee-operations-setup.md) for the explicit
+owner-account configuration and [the command contract](../docs/superpowers/specs/2026-09-20-employee-api-contract.md)
+for request versions, idempotency and permissions.
+
 ## Current foundation
 
 - FastAPI application factory

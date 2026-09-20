@@ -1194,3 +1194,49 @@ details > :not(summary) {
     padding-left: 0.45rem;
   }
 }
+
+.employee-command-groups,
+.employee-record-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+.employee-command-groups .inline-actions,
+.employee-time .inline-actions,
+.employee-record .inline-actions {
+  flex-wrap: wrap;
+}
+
+.employee-record,
+.employee-editor,
+.employee-record-section {
+  min-width: 0;
+  margin-block: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.employee-record-section > summary {
+  padding: 0.65rem 0;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.employee-details {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.employee-details dt { color: var(--ink-600); font-size: 0.875rem; }
+.employee-details dd { margin: 0.2rem 0 0; }
+.employee-editor .entry-form { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
+.employee-editor fieldset,
+.employee-editor .inline-actions { grid-column: 1 / -1; min-width: 0; }
+.employee-editor fieldset { border: 1px solid var(--pink-200); border-radius: 0.6rem; padding: 0.75rem; }
+.employee-editor legend { font-weight: 700; }
+.employee-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 0.75rem; margin-bottom: 0.75rem; }
+.employee-checkbox { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.3rem 0.9rem 0.3rem 0; }
+.employee-checkbox input { width: auto; min-height: auto; }
+#workspace-choice-label { min-width: 140px; }
+#workspace-choice-label[hidden] { display: none; }
