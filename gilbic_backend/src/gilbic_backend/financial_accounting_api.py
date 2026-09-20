@@ -266,12 +266,13 @@ def _overview_payload(
         "journal_status": "manual_ready",
         "trial_balance_status": "available",
         "notice": (
-            "Financial Accounting now includes Stage 5B cutover-readiness controls: "
-            "the 7x7 base contractual cash-flow schedule is validated and an opening-"
-            "balance source worksheet is available for review. The worksheet is not "
-            "a journal and cannot post. Automatic loan posting, opening-balance "
-            "conversion, final EIR carrying amounts, ECL posting, and tax posting "
-            "remain disabled until later controlled stages."
+            "Protected financial accounting workflows include EIR, ECL, tax "
+            "accounting, and period close. Posting requires Management permission, "
+            "explicit confirmation, and current supporting evidence. Automatic "
+            "source posting remains disabled. The cutover worksheet supports "
+            "reviewed legacy opening balances and does not post by itself. Tax "
+            "and legal-book activation still require approved company facts and "
+            "applicable registration."
         ),
     }
 

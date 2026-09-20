@@ -22,6 +22,7 @@ import {
   loadManagementFinancialStatements,
 } from '../management-financial-statements.js';
 import {
+  bindManagementAccountingExport,
   loadManagementGeneralJournal,
   loadManagementTrialBalance,
   managementGeneralJournalMarkup,
@@ -294,6 +295,8 @@ function bindLoanSearch(context) {
 
 export async function mountManagementWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.accountingExportCleanup?.();
+  context.accountingExportCleanup = null;
   context.employeeOperationsCleanup?.();
   context.employeeOperationsCleanup = null;
   context.paymentProofCleanup?.();
@@ -427,6 +430,9 @@ export async function mountManagementWorkspace(context) {
   bindLoanSearch(context);
   bindManagementLoanOperations(context);
   bindManagementPastDueReport(context);
+  if (canViewGeneralJournal) {
+    context.accountingExportCleanup = bindManagementAccountingExport(context);
+  }
   bindRenewals(context);
   bindSupport(context);
   bindClientAccountAdmin(context);

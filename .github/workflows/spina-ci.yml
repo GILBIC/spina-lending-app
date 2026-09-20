@@ -478,6 +478,28 @@ jobs:
             --admin-dsn-file "$dsn_file" --allow-disposable \
             --pg-bin /usr/lib/postgresql/17/bin \
             --output ci-artifacts/financial/recovery.json
+          python tools/run_accounting_export_disposable_validation.py \
+            --admin-dsn-file "$dsn_file" --allow-disposable \
+            --sample-output "$GITHUB_WORKSPACE/ci-artifacts/financial/accounting-export-synthetic.zip" \
+            --proof-output "$GITHUB_WORKSPACE/ci-artifacts/financial/accounting-export-proof.json"
+
+      - name: Build unsigned BIR preparation package from exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/build_bir_registration_package.py \
+            --repository "$GITHUB_WORKSPACE" \
+            --expected-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --output-dir "$RUNNER_TEMP/spina-bir-review" \
+            --accounting-export "$GITHUB_WORKSPACE/ci-artifacts/financial/accounting-export-synthetic.zip"
+
+      - name: Upload unsigned synthetic BIR preparation package
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: spina-bir-review-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/spina-bir-review/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload synthetic recovery evidence
         if: always()
