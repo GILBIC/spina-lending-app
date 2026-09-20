@@ -4,7 +4,8 @@
 .pub/
 build/
 coverage/
-pubspec.lock
+# This application ships locked dependencies with every release candidate.
+!pubspec.lock
 
 # IDE
 .idea/

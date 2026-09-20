@@ -15,7 +15,7 @@ HOST_PATTERN = re.compile(r"spina\.(?:\d{1,3}-){3}\d{1,3}\.sslip\.io")
 def load_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError(f"{path} must contain a JSON object")
+        raise TypeError(f"{path} must contain a JSON object")
     return payload
 
 
@@ -51,7 +51,9 @@ def load_target(path: Path, *, expected_run_id: int | None = None) -> dict[str, 
 
 
 def env_quote(value: str) -> str:
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+    return (
+        '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+    )
 
 
 def validate_session_pooler_url(value: str) -> str:
@@ -111,12 +113,16 @@ def write_evidence(
     target_path: Path,
     output_path: Path,
     git_sha: str,
+    verified_active_sha: str,
 ) -> None:
     if not re.fullmatch(r"[0-9a-f]{40}", git_sha):
         raise ValueError("git_sha must be a full lowercase commit SHA")
+    if verified_active_sha != git_sha:
+        raise ValueError("verified active revision must match the requested Git SHA")
     target = load_target(target_path)
     payload = {
         "git_sha": git_sha,
+        "active_revision_verified": True,
         "droplet_id": target["droplet_id"],
         "host": target["host"],
         "hostname": target["hostname"],
@@ -174,6 +180,7 @@ def parser() -> argparse.ArgumentParser:
     evidence.add_argument("--target", required=True, type=Path)
     evidence.add_argument("--output", required=True, type=Path)
     evidence.add_argument("--git-sha", required=True)
+    evidence.add_argument("--verified-active-sha", required=True)
 
     comment = commands.add_parser("write-comment")
     comment.add_argument("--target", required=True, type=Path)
@@ -197,6 +204,7 @@ def main() -> None:
             target_path=arguments.target,
             output_path=arguments.output,
             git_sha=arguments.git_sha,
+            verified_active_sha=arguments.verified_active_sha,
         )
     elif arguments.command == "write-comment":
         write_comment(

@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "spina-delivery.yml"
-PRODUCTION_API_URL = "https://spina.157-230-250-111.sslip.io"
 
 
 def test_delivery_workflow_packages_active_platforms() -> None:
@@ -37,10 +35,14 @@ def test_android_delivery_is_not_a_debug_build() -> None:
     assert "flutter build apk --debug" not in source
 
 
-def test_android_delivery_targets_production_api() -> None:
+def test_delivery_requires_explicit_manual_candidate_endpoints() -> None:
     source = WORKFLOW.read_text(encoding="utf-8")
 
-    assert f"SPINA_API_URL: {PRODUCTION_API_URL}" in source
+    assert "SPINA_API_URL: ${{ inputs.api_url }}" in source
+    assert "SPINA_PORTAL_URL: ${{ inputs.portal_url }}" in source
+    assert "mvp/cross-platform-four-role" not in source
+    assert "\n  push:" not in source
+    assert source.count("ref: ${{ github.sha }}") == 3
     assert '--dart-define=GILBIC_API_URL="$SPINA_API_URL"' in source
     assert "--dart-define=GILBIC_API_BASE_URL" not in source
     assert "--dart-define=SPINA_API_BASE_URL" not in source
@@ -51,18 +53,18 @@ def test_android_delivery_uses_an_isolated_generated_host() -> None:
 
     assert 'HOST="$RUNNER_TEMP/spina-android-host"' in source
     assert (
-        'flutter create --platforms=android --org ph.spina '
-        '--project-name gilbic_mobile "$HOST"'
+        "flutter create --platforms=android --org com.spinalending "
+        '--project-name gilbic_mobile --no-pub "$HOST"'
     ) in source
     assert (
-        "flutter create --platforms=android --org ph.spina "
+        "flutter create --platforms=android --org com.spinalending "
         "--project-name gilbic_mobile ."
     ) not in source
-    assert 'cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"' in source
-    assert (
-        'cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" '
-        '"$HOST/pubspec.yaml"'
-    ) in source
+    assert 'python tools/prepare_android_host.py prepare --host "$HOST"' in source
+    assert "flutter pub get --enforce-lockfile" in source
+    assert "python tools/verify_android_artifact.py" in source
+    assert "SPINA_ANDROID_CERT_SHA256" in source
+    assert "Remove temporary signing material\n        if: always()" in source
     assert source.index("Validate Spina Flutter source") < source.index(
         "Generate isolated Android host"
     )

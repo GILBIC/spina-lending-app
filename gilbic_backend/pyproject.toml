@@ -24,7 +24,7 @@ gilbic-bootstrap-management = "gilbic_backend.bootstrap_management:main"
 
 [project.optional-dependencies]
 test = [
-  "pytest>=8.3,<9",
+  "pytest==9.0.3",
 ]
 
 [tool.setuptools.packages.find]

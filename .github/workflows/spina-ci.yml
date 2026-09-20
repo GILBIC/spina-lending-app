@@ -52,10 +52,10 @@ jobs:
           python -m pip install --disable-pip-version-check \
             -e './spina_backend_mobile[test]' \
             -e './gilbic_backend[test]' \
-            'ruff>=0.11,<1' \
-            'pyright>=1.1,<2' \
+            'ruff==0.16.8' \
+            'pyright==1.1.414' \
             'pytest-cov>=6,<8' \
-            'bandit>=1.8,<2' \
+            'bandit==1.9.4' \
             'pip-audit>=2.8,<3'
           mkdir -p ci-artifacts/backend
 
@@ -178,6 +178,22 @@ jobs:
           print(f"Gitleaks reported {len(findings)} fully redacted baseline finding(s).")
           PY
 
+      - name: Reject scanner regressions against retained evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/check_release_scanner_regressions.py \
+            --reports-dir ci-artifacts/backend \
+            --baseline docs/release/scanner-baseline.json \
+            --output ci-artifacts/backend/scanner-regressions.json
+
+      - name: Validate deployment script and contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n ops/digitalocean/bootstrap.sh
+          python tools/test_digitalocean_deployment_contract.py
+
       - name: Run Python test suite once with coverage and timings
         shell: bash
         env:
@@ -207,7 +223,7 @@ jobs:
           {
             echo "## Backend, quality, and security"
             echo
-            echo "Existing lint, type, and scanner findings remain baseline-only; tool failures and tests are blocking."
+            echo "New lint, type, format, and scanner findings, incomplete scans, and test failures block CI. Existing retained findings still require security review; CI success is not security clearance."
             echo
             echo "- Ruff lint exit: ${RUFF_LINT_EXIT:-not-run}"
             echo "- Ruff format exit: ${RUFF_FORMAT_EXIT:-not-run}"
@@ -290,7 +306,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          flutter pub get
+          flutter pub get --enforce-lockfile
           flutter analyze --fatal-infos
           flutter test
 
@@ -300,34 +316,26 @@ jobs:
           set -euo pipefail
           host="$RUNNER_TEMP/spina-android-host"
           output="$GITHUB_WORKSPACE/gilbic_mobile/build/app/outputs/flutter-apk"
-          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile "$host"
-          rm -rf "$host/lib"
-          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$host/lib"
-          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$host/pubspec.yaml"
-          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$host/android/gradle.properties"
+          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile --no-pub "$host"
+          python tools/prepare_android_host.py prepare --host "$host" \
+            --source-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --mode debug --api-url https://spina.157-230-250-111.sslip.io
           cd "$host"
-          flutter pub get
-          flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub
+          flutter pub get --enforce-lockfile
+          flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub \
+            --dart-define=GILBIC_API_URL=https://spina.157-230-250-111.sslip.io
           mkdir -p "$output"
           cp build/app/outputs/flutter-apk/app-debug.apk "$output/Spina-Android-internal.apk"
 
       - name: Verify Android package
         shell: bash
         run: |
-          python - <<'PY'
-          import hashlib
-          import pathlib
-          import zipfile
-
-          path = pathlib.Path("gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk")
-          assert path.is_file() and path.stat().st_size > 0
-          with zipfile.ZipFile(path) as archive:
-              names = set(archive.namelist())
-          assert "lib/arm64-v8a/libflutter.so" in names
-          assert "lib/x86_64/libflutter.so" in names
-          print(f"APK bytes: {path.stat().st_size}")
-          print(f"SHA-256: {hashlib.sha256(path.read_bytes()).hexdigest()}")
-          PY
+          set -euo pipefail
+          python tools/verify_android_artifact.py \
+            --apk gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk \
+            --source-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --mode debug --api-url https://spina.157-230-250-111.sslip.io \
+            --output gilbic_mobile/build/app/outputs/flutter-apk/android-verification.json
 
       - name: Require clean tracked files
         if: always()
@@ -341,7 +349,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.0
         with:
           name: Spina-Android-internal-${{ github.event.pull_request.head.sha || github.sha }}
-          path: gilbic_mobile/build/app/outputs/flutter-apk/Spina-Android-internal.apk
+          path: gilbic_mobile/build/app/outputs/flutter-apk/
           if-no-files-found: error
           retention-days: 7
 
@@ -387,6 +395,25 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install --disable-pip-version-check -e ./spina_backend_mobile -e './gilbic_backend[test]'
+
+      - name: Install matching PostgreSQL backup tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          # https://www.postgresql.org/download/linux/ubuntu/
+          if [ ! -x /usr/lib/postgresql/17/bin/pg_dump ]; then
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl --fail --silent --show-error \
+              https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+              -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+            . /etc/os-release
+            printf 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt %s-pgdg main\n' "$VERSION_CODENAME" \
+              | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+            sudo apt-get update -qq
+            sudo apt-get install --yes --no-install-recommends postgresql-client-17
+          fi
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          /usr/lib/postgresql/17/bin/pg_restore --version
 
       - name: Compile disposable validators
         shell: bash
@@ -435,6 +462,31 @@ jobs:
           python tools/run_0102_remittance_review_disposable_postgres_validation.py
           python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
           python tools/run_mvp_private_schema_barrier_validation.py
+
+      - name: Restore synthetic database and private evidence from backup
+        shell: bash
+        env:
+          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:tools:.
+        run: |
+          set -euo pipefail
+          mkdir -p ci-artifacts/financial
+          dsn_file="$RUNNER_TEMP/spina-recovery-admin.dsn"
+          trap 'rm -f "$dsn_file"' EXIT
+          umask 077
+          printf '%s\n' 'host=127.0.0.1 port=5432 dbname=postgres user=postgres password=postgres sslmode=disable' > "$dsn_file"
+          python tools/run_release_recovery_drill.py \
+            --admin-dsn-file "$dsn_file" --allow-disposable \
+            --pg-bin /usr/lib/postgresql/17/bin \
+            --output ci-artifacts/financial/recovery.json
+
+      - name: Upload synthetic recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: spina-ci-financial-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ci-artifacts/financial/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Require clean tracked files
         if: always()
