@@ -56,6 +56,9 @@ def candidate(tmp_path):
         (repo / "docs/bir" / name).write_bytes((ROOT / "docs/bir" / name).read_bytes())
     (repo / "gilbic_backend/sql").mkdir(parents=True)
     (repo / "gilbic_backend/sql/0001_example.sql").write_bytes(b"SELECT 1;\n")
+    module = repo / "spina_backend_mobile/src/spina_mobile_collections"
+    module.mkdir(parents=True)
+    (module / "__init__.py").write_bytes(b"# Synthetic module\n")
     git(repo, "init", "--initial-branch=main")
     git(repo, "config", "core.autocrlf", "false")
     sha = commit(repo)
@@ -129,6 +132,7 @@ def test_minimal_packet_retains_exact_source_and_missing_inputs(candidate):
         encoding="utf-8"
     )
     assert f"/blob/{sha}/gilbic_backend/src/" in description
+    assert f"/tree/{sha}/spina_backend_mobile/src/spina_mobile_collections" in description
     assert "](../../gilbic_backend/" not in description
 
 

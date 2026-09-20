@@ -299,15 +299,18 @@ def relevant(path: str) -> bool:
 def source_manifest(
     repository: Path, expected_sha: str
 ) -> tuple[dict, dict[str, bytes]]:
-    entries = []
-    for record in git(repository, "ls-tree", "-r", "-z", "-l", expected_sha).split(
-        b"\0"
-    ):
+    entries, directories = [], []
+    for record in git(
+        repository, "ls-tree", "-r", "-t", "-z", "-l", expected_sha
+    ).split(b"\0"):
         if not record:
             continue
         fields, raw_path = record.split(b"\t", 1)
         mode, kind, oid, size = fields.split()
         path = raw_path.decode("utf-8")
+        if kind == b"tree":
+            directories.append(path)
+            continue
         if relevant(path):
             require(
                 kind == b"blob" and mode in (b"100644", b"100755"),
@@ -375,6 +378,7 @@ def source_manifest(
         ],
         "registration_verified": False,
         "component_versions": versions,
+        "source_directories": directories,
     }, docs
 
 
@@ -664,7 +668,7 @@ def readiness(profile: dict, evidence: list[dict], has_export: bool) -> list[dic
     return rows
 
 
-def linked_draft(content: bytes, source_sha: str) -> bytes:
+def linked_draft(content: bytes, source_sha: str, directories: set[str]) -> bytes:
     """Keep packet-local links; bind repository references to retained source."""
 
     def replace(match: re.Match[str]) -> str:
@@ -679,7 +683,8 @@ def linked_draft(content: bytes, source_sha: str) -> bytes:
             not path.startswith("../") and not path.startswith("/"),
             "Unsafe source documentation link.",
         )
-        permalink = f"https://github.com/GILBIC/spina-lending-app/blob/{source_sha}/{quote(path, safe='/')}"
+        route = "tree" if path in directories else "blob"
+        permalink = f"https://github.com/GILBIC/spina-lending-app/{route}/{source_sha}/{quote(path, safe='/')}"
         if url.fragment:
             permalink += "#" + url.fragment
         return f"{match.group(1)}({permalink})"
@@ -718,7 +723,9 @@ def build_package(
     files, declarations = load_evidence(evidence_path)
     for name, content in docs.items():
         files["docs/bir/" + name] = (
-            linked_draft(content, expected_sha) if name.endswith(".md") else content
+            linked_draft(content, expected_sha, set(version["source_directories"]))
+            if name.endswith(".md")
+            else content
         )
     files["profile.json"] = json_bytes(profile)
     files["version-manifest.json"] = json_bytes(version)
