@@ -6,6 +6,8 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
+import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_status_card.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_to_client_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_to_receive_page.dart';
@@ -51,17 +53,15 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   int _cashStatusEpoch = 0;
 
   Future<void> _open(Widget page) async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => page),
-    );
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (_) => page));
   }
 
   void _permissionMessage(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Your current Gilbic access does not allow $feature.',
-        ),
+        content: Text('Your current Gilbic access does not allow $feature.'),
       ),
     );
   }
@@ -188,8 +188,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
     );
 
     Future<void>.delayed(const Duration(seconds: 6), () {
-      if (!mounted ||
-          _lastCashReleaseAlertRequestId != request.requestId) {
+      if (!mounted || _lastCashReleaseAlertRequestId != request.requestId) {
         return;
       }
       ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
@@ -218,117 +217,148 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Collector tools',
-                  style: Theme.of(sheetContext).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Daily Collection and Master Review stay your main field screens.',
-                  style: Theme.of(sheetContext).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 14),
-                _CollectorToolTile(
-                  key: const Key('collector-more-renewals'),
-                  icon: Icons.autorenew_rounded,
-                  title: 'Renewal requests',
-                  subtitle:
-                      'Recommend assigned clients and track terms, signers, cash and proof',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _openRenewals();
-                  },
-                ),
-                _CollectorToolTile(
-                  key: const Key('collector-more-other-area'),
-                  icon: Icons.person_search_outlined,
-                  title: 'Other area payment',
-                  subtitle: 'Record an allowed payment outside your assigned route',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _openOtherArea();
-                  },
-                ),
-                _CollectorToolTile(
-                  key: const Key('collector-more-payment-updates'),
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Payment updates',
-                  subtitle: 'Other-collector posts and custody updates',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _open(
-                      ActivityNotificationsPage(
-                        session: widget.session,
-                        deviceIdentityProvider: widget.deviceIdentityProvider,
-                      ),
-                    );
-                  },
-                ),
-                if (widget.session.hasPermission('remittance.view'))
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Collector tools',
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Daily Collection and Master Review stay your main field screens.',
+                    style: Theme.of(sheetContext).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 14),
                   _CollectorToolTile(
-                    key: const Key('collector-more-remittance-requests'),
-                    icon: Icons.notifications_active_outlined,
-                    title: 'Remittance requests',
-                    subtitle: 'Review remittances sent to your route',
+                    key: const Key('collector-more-renewals'),
+                    icon: Icons.autorenew_rounded,
+                    title: 'Renewal requests',
+                    subtitle:
+                        'Recommend assigned clients and track terms, signers, cash and proof',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openRenewals();
+                    },
+                  ),
+                  _CollectorToolTile(
+                    key: const Key('collector-more-other-area'),
+                    icon: Icons.person_search_outlined,
+                    title: 'Other area payment',
+                    subtitle:
+                        'Record an allowed payment outside your assigned route',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openOtherArea();
+                    },
+                  ),
+                  _CollectorToolTile(
+                    key: const Key('collector-more-payment-updates'),
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Payment updates',
+                    subtitle: 'Other-collector posts and custody updates',
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _open(
-                        RemittanceNotificationsPage(
+                        ActivityNotificationsPage(
                           session: widget.session,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                         ),
                       );
                     },
                   ),
-                if (widget.session.hasPermission('remittance.create'))
+                  if (widget.session.hasPermission('remittance.view'))
+                    _CollectorToolTile(
+                      key: const Key('collector-more-remittance-requests'),
+                      icon: Icons.notifications_active_outlined,
+                      title: 'Remittance requests',
+                      subtitle: 'Review remittances sent to your route',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _open(
+                          RemittanceNotificationsPage(
+                            session: widget.session,
+                            deviceIdentityProvider:
+                                widget.deviceIdentityProvider,
+                          ),
+                        );
+                      },
+                    ),
+                  if (widget.session.hasPermission('remittance.create'))
+                    _CollectorToolTile(
+                      key: const Key('collector-more-assigned-remittance'),
+                      icon: Icons.compare_arrows_rounded,
+                      title: 'Other-area remittance',
+                      subtitle:
+                          'Send other-area cash to the route owner or Management',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _open(
+                          CrossCollectorRemittancePage(
+                            session: widget.session,
+                            deviceIdentityProvider:
+                                widget.deviceIdentityProvider,
+                          ),
+                        );
+                      },
+                    ),
+                  const Divider(height: 20),
                   _CollectorToolTile(
-                    key: const Key('collector-more-assigned-remittance'),
-                    icon: Icons.compare_arrows_rounded,
-                    title: 'Other-area remittance',
-                    subtitle: 'Send other-area cash to the route owner or Management',
+                    key: const Key('collector-more-notifications'),
+                    icon: Icons.notifications_outlined,
+                    title: 'Notifications',
+                    subtitle: 'Account activity and remittance requests',
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _open(
-                        CrossCollectorRemittancePage(
+                        NotificationCenterPage(
                           session: widget.session,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                         ),
                       );
                     },
                   ),
-                const Divider(height: 20),
-                _CollectorToolTile(
-                  key: const Key('collector-more-profile'),
-                  icon: Icons.person_outline_rounded,
-                  title: 'Profile & security',
-                  subtitle: 'Account, session and registered devices',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _open(
-                      AccountSettingsPage(
-                        session: widget.session,
-                        onSignOut: widget.onSignOut,
-                        deviceIdentityProvider: widget.deviceIdentityProvider,
-                      ),
-                    );
-                  },
-                ),
-                _CollectorToolTile(
-                  key: const Key('collector-more-sign-out'),
-                  icon: Icons.logout_rounded,
-                  title: 'Sign out',
-                  subtitle: 'End this Gilbic session on the device',
-                  destructive: true,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    widget.onSignOut();
-                  },
-                ),
-              ],
+                  _CollectorToolTile(
+                    key: const Key('collector-more-offline'),
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Connectivity & offline',
+                    subtitle: 'Saved routes, connection and retry rules',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _open(MobileOfflinePolicyPage(session: widget.session));
+                    },
+                  ),
+                  _CollectorToolTile(
+                    key: const Key('collector-more-profile'),
+                    icon: Icons.person_outline_rounded,
+                    title: 'Profile & security',
+                    subtitle: 'Account, session and registered devices',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _open(
+                        AccountSettingsPage(
+                          session: widget.session,
+                          onSignOut: widget.onSignOut,
+                          deviceIdentityProvider: widget.deviceIdentityProvider,
+                        ),
+                      );
+                    },
+                  ),
+                  _CollectorToolTile(
+                    key: const Key('collector-more-sign-out'),
+                    icon: Icons.logout_rounded,
+                    title: 'Sign out',
+                    subtitle: 'End this Gilbic session on the device',
+                    destructive: true,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      widget.onSignOut();
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );

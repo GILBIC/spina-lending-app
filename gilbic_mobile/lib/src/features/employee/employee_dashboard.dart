@@ -3,6 +3,9 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/areas/area_management_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_workspace_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
@@ -54,6 +57,18 @@ class EmployeeDashboard extends StatelessWidget {
     }
 
     final page = switch (module.action) {
+      _EmployeeAction.office => OfficeWorkspacePage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _EmployeeAction.areas => AreaManagementPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _EmployeeAction.clientSupport => ManagementSupportRequestsPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
       _EmployeeAction.notifications => NotificationCenterPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -75,7 +90,6 @@ class EmployeeDashboard extends StatelessWidget {
       _EmployeeAction.payroll ||
       _EmployeeAction.tasks ||
       _EmployeeAction.leaveRequests ||
-      _EmployeeAction.clientSupport ||
       _EmployeeAction.accounting => null,
     };
     if (page != null) _push(context, page);
@@ -263,6 +277,8 @@ class _EmployeeModuleRow extends StatelessWidget {
 }
 
 enum _EmployeeAction {
+  office('employee-office'),
+  areas('employee-areas'),
   attendance('employee-attendance'),
   payroll('employee-payroll'),
   tasks('employee-tasks'),
@@ -293,6 +309,7 @@ class _EmployeeModule {
     required this.action,
     required this.availability,
     this.requiredPermission,
+    this.anyPermissions = const <String>[],
   });
 
   final String title;
@@ -301,6 +318,7 @@ class _EmployeeModule {
   final _EmployeeAction action;
   final _EmployeeModuleAvailability availability;
   final String? requiredPermission;
+  final List<String> anyPermissions;
 
   String get statusLabel => switch (availability) {
     _EmployeeModuleAvailability.available => 'Available now',
@@ -311,7 +329,8 @@ class _EmployeeModule {
 
   bool isVisibleFor(UserSession session) {
     final permission = requiredPermission;
-    return permission == null || session.hasPermission(permission);
+    return (permission == null || session.hasPermission(permission)) &&
+        (anyPermissions.isEmpty || session.hasAnyPermission(anyPermissions));
   }
 }
 
@@ -393,6 +412,27 @@ const _employeeSections = <_EmployeeSection>[
         'No office functions are assigned by your current server permissions.',
     modules: <_EmployeeModule>[
       _EmployeeModule(
+        'Office onboarding & release',
+        'Intake, protected borrower reviews, signing, and authorized release',
+        Icons.assignment_outlined,
+        action: _EmployeeAction.office,
+        availability: _EmployeeModuleAvailability.available,
+        requiredPermission: 'client_onboarding.requirement.review',
+      ),
+      _EmployeeModule(
+        'Area management',
+        'Maintain authorized areas and review collector or borrower assignments',
+        Icons.map_outlined,
+        action: _EmployeeAction.areas,
+        availability: _EmployeeModuleAvailability.available,
+        anyPermissions: <String>[
+          'area.manage',
+          'area.collector.assign',
+          'area.client.assign',
+          'area.retire',
+        ],
+      ),
+      _EmployeeModule(
         'Remittance requests',
         'Review authorized cash handovers and custody updates',
         Icons.move_to_inbox_outlined,
@@ -405,8 +445,7 @@ const _employeeSections = <_EmployeeSection>[
         'Handle assigned borrower inquiries and follow-ups',
         Icons.support_agent_outlined,
         action: _EmployeeAction.clientSupport,
-        availability:
-            _EmployeeModuleAvailability.permissionAssignedNotConnected,
+        availability: _EmployeeModuleAvailability.available,
         requiredPermission: 'support.manage',
       ),
       _EmployeeModule(

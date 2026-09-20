@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/support/support_repository.dart';
 import 'package:gilbic_mobile/src/core/support/support_request.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
@@ -92,31 +95,175 @@ void main() {
     );
   });
 
-  testWidgets('Management reviews a cancellation before closing support', (
+  testWidgets('Management exposes only supported support decisions', (
     tester,
   ) async {
     final repository = _FakeManagementSupportRepository();
     await _pumpPage(tester, repository);
 
+    expect(find.byKey(const Key('cancel-support-support-1')), findsNothing);
+    expect(find.byKey(const Key('answer-support-support-1')), findsOneWidget);
+    expect(find.byKey(const Key('resolve-support-support-1')), findsOneWidget);
+    expect(repository.reviewedAction, isNull);
+  });
+
+  testWidgets('failed refresh disables stale support decisions until reload', (
+    tester,
+  ) async {
+    final repository = _FakeManagementSupportRepository();
+    await _pumpPage(tester, repository);
+    repository.loadError = const SpinaApiException(
+      'Support unavailable',
+      statusCode: 500,
+    );
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pumpAndSettle();
+    expect(find.text('Support unavailable'), findsOneWidget);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('answer-support-support-1')),
+          )
+          .onPressed,
+      isNull,
+    );
+    repository.loadError = null;
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('answer-support-support-1')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  for (final status in [401, 403, 426]) {
+    testWidgets('terminal support denial $status clears private requests', (
+      tester,
+    ) async {
+      final repository = _FakeManagementSupportRepository();
+      await _pumpPage(tester, repository);
+      repository.loadError = SpinaApiException(
+        'Access unavailable',
+        statusCode: status,
+      );
+      await tester.tap(find.byTooltip('Refresh'));
+      await tester.pumpAndSettle();
+      expect(find.text('TEST CLIENT REGULAR'), findsNothing);
+      expect(find.text('Please check my latest receipt.'), findsNothing);
+      expect(
+        tester
+            .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh))
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('Try again'), findsNothing);
+    });
+  }
+
+  testWidgets(
+    'support refreshes are serialized and stale controls stay disabled',
+    (tester) async {
+      final repository = _FakeManagementSupportRepository();
+      await _pumpPage(tester, repository);
+      final pending = Completer<List<SupportRequestItem>>();
+      repository.nextLoad = pending.future;
+      final refresh = tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh;
+      final first = refresh();
+      await tester.pump();
+      final second = refresh();
+      await tester.pump();
+      expect(repository.loads, 2);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('answer-support-support-1')),
+            )
+            .onPressed,
+        isNull,
+      );
+      pending.complete([_request(status: 'open')]);
+      await first;
+      await second;
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('uncertain support write requires refresh before fresh intent', (
+    tester,
+  ) async {
+    final repository = _FakeManagementSupportRepository();
+    await _pumpPage(tester, repository);
+    repository.reviewError = StateError('lost response');
     await _submitResponse(
       tester,
-      buttonKey: const Key('cancel-support-support-1'),
-      response: 'Duplicate support request confirmed.',
+      buttonKey: const Key('answer-support-support-1'),
+      response: 'Response for the client.',
     );
-
-    expect(
-      find.text(
-        'The request will be closed as cancelled. Official financial records '
-        'will not be edited.',
-      ),
-      findsOneWidget,
-    );
-    expect(repository.reviewedAction, isNull);
     await tester.tap(find.byKey(const Key('confirm-client-support')));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(repository.reviews, 1);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('answer-support-support-1')),
+          )
+          .onPressed,
+      isNull,
+    );
+    repository.reviewError = null;
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pumpAndSettle();
+    expect(repository.reviews, 1);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('answer-support-support-1')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await _submitResponse(
+      tester,
+      buttonKey: const Key('answer-support-support-1'),
+      response: 'Response for the client.',
+    );
+    expect(repository.reviews, 1);
+    await tester.tap(find.byKey(const Key('confirm-client-support')));
+    await tester.pumpAndSettle();
+    expect(repository.reviews, 2);
+  });
 
-    expect(repository.reviewedAction, 'cancelled');
-    expect(repository.reviewedResponse, 'Duplicate support request confirmed.');
+  testWidgets('denied support write clears the selected private request', (
+    tester,
+  ) async {
+    final repository = _FakeManagementSupportRepository();
+    await _pumpPage(tester, repository);
+    repository.reviewError = const SpinaApiException(
+      'Device revoked',
+      statusCode: 403,
+    );
+    await _submitResponse(
+      tester,
+      buttonKey: const Key('answer-support-support-1'),
+      response: 'Response for the client.',
+    );
+    await tester.tap(find.byKey(const Key('confirm-client-support')));
+    await tester.pumpAndSettle();
+    expect(find.text('TEST CLIENT REGULAR'), findsNothing);
+    expect(find.text('Device revoked'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh))
+          .onPressed,
+      isNull,
+    );
   });
 }
 
@@ -171,6 +318,11 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 }
 
 class _FakeManagementSupportRepository implements ManagementSupportRepository {
+  Object? loadError;
+  Object? reviewError;
+  Future<List<SupportRequestItem>>? nextLoad;
+  int loads = 0;
+  int reviews = 0;
   String? deviceId;
   String? reviewedAction;
   String? reviewedResponse;
@@ -182,6 +334,9 @@ class _FakeManagementSupportRepository implements ManagementSupportRepository {
     required String deviceId,
     required String status,
   }) async {
+    loads++;
+    if (loadError != null) throw loadError!;
+    if (nextLoad != null) return nextLoad!;
     this.deviceId = deviceId;
     if (status == 'open' && !answered) {
       return <SupportRequestItem>[_request(status: 'open')];
@@ -197,6 +352,8 @@ class _FakeManagementSupportRepository implements ManagementSupportRepository {
     required String action,
     required String response,
   }) async {
+    reviews++;
+    if (reviewError != null) throw reviewError!;
     this.deviceId = deviceId;
     reviewedAction = action;
     reviewedResponse = response;

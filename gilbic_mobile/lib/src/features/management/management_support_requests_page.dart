@@ -32,6 +32,12 @@ class _ManagementSupportRequestsPageState
   String? _errorMessage;
   bool _loading = true;
   bool _submitting = false;
+  bool _reviewing = false;
+  bool _loadInFlight = false;
+  bool _fresh = false;
+  bool _denied = false;
+
+  bool get _canReview => _fresh && !_loading && !_submitting && !_denied;
 
   @override
   void initState() {
@@ -40,13 +46,27 @@ class _ManagementSupportRequestsPageState
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool afterReview = false}) async {
+    if (_loadInFlight ||
+        _denied ||
+        ((_submitting || _reviewing) && !afterReview)) {
+      return;
+    }
+    _loadInFlight = true;
     setState(() {
       _loading = true;
+      _fresh = false;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      if (!widget.session.hasPermission('support.manage') ||
+          identity.installationId.trim().isEmpty) {
+        throw const SpinaApiException(
+          'Support access is unavailable.',
+          statusCode: 403,
+        );
+      }
       final requests = await _repository.loadRequests(
         widget.session,
         deviceId: identity.installationId,
@@ -58,19 +78,31 @@ class _ManagementSupportRequestsPageState
       setState(() {
         _deviceId = identity.installationId;
         _requests = requests;
+        _fresh = true;
       });
     } on SpinaApiException catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = error.message);
+        setState(() => _failed(error));
       }
     } on Object {
       if (mounted) {
         setState(() => _errorMessage = 'Support requests could not be loaded.');
       }
     } finally {
+      _loadInFlight = false;
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  void _failed(SpinaApiException error) {
+    _fresh = false;
+    _errorMessage = error.message;
+    if ([401, 403, 426].contains(error.statusCode)) {
+      _denied = true;
+      _requests = const [];
+      _deviceId = null;
     }
   }
 
@@ -78,98 +110,110 @@ class _ManagementSupportRequestsPageState
     SupportRequestItem request, {
     required String action,
   }) async {
-    final response = await showDialog<String>(
-      context: context,
-      builder: (context) => _SupportResponseDialog(
-        action: action,
-        initialResponse: request.managementResponse,
-      ),
-    );
-    if (response == null || _deviceId == null || !mounted) {
-      return;
-    }
-    final (nextActionLabel, consequence) = switch (action) {
-      'resolved' => (
-        'Resolve support request',
-        'The request will be closed as resolved with this response in '
-            'communication history. Official financial records will not be edited.',
-      ),
-      'cancelled' => (
-        'Cancel support request',
-        'The request will be closed as cancelled. Official financial records '
-            'will not be edited.',
-      ),
-      _ => (
-        'Send support response',
-        'The response will be saved to the client communication history. '
-            'Official financial records will not be edited.',
-      ),
-    };
-    final confirmed = await showManagementReviewConfirmation(
-      context,
-      ManagementReviewPresentation.validated(
-        binding: ManagementMutationBinding.clientSupport,
-        recordLabel: 'Client support request',
-        recordValue: '${request.clientName} • ${request.clientCode}',
-        statusLabel:
-            plainManagementStatus(request.status, const <String, String>{
-              'open': 'Open and awaiting Management',
-              'answered': 'Answered and still open',
-              'resolved': 'Resolved and closed',
-              'cancelled': 'Cancelled and closed',
-            }),
-        facts: <ManagementReviewFact>[
-          ManagementReviewFact(label: 'Category', value: request.categoryLabel),
-          ManagementReviewFact(label: 'Subject', value: request.subject),
-          ManagementReviewFact(label: 'Response', value: response),
-          if (request.referenceText.trim().isNotEmpty)
-            ManagementReviewFact(
-              label: 'Client reference',
-              value: request.referenceText,
-            ),
-        ],
-        nextActionLabel: nextActionLabel,
-        consequence: consequence,
-        secondaryReferences: <ManagementReviewFact>[
-          ManagementReviewFact(label: 'Request ID', value: request.requestId),
-        ],
-      ),
-    );
-    if (!confirmed || !mounted) {
-      return;
-    }
-    setState(() => _submitting = true);
+    if (!_canReview || _reviewing) return;
+    setState(() => _reviewing = true);
     try {
-      await _repository.review(
-        widget.session,
-        deviceId: _deviceId!,
-        requestId: request.requestId,
-        action: action,
-        response: response,
-      );
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(switch (action) {
-            'resolved' => 'Support request resolved.',
-            'cancelled' => 'Support request cancelled.',
-            _ => 'Response sent to the client.',
-          }),
+      final response = await showDialog<String>(
+        context: context,
+        builder: (context) => _SupportResponseDialog(
+          action: action,
+          initialResponse: request.managementResponse,
         ),
       );
-      await _load();
-    } on SpinaApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+      if (response == null || _deviceId == null || !mounted || !_canReview) {
+        return;
+      }
+      final (nextActionLabel, consequence) = switch (action) {
+        'resolved' => (
+          'Resolve support request',
+          'The request will be closed as resolved with this response in '
+              'communication history. Official financial records will not be edited.',
+        ),
+        _ => (
+          'Send support response',
+          'The response will be saved to the client communication history. '
+              'Official financial records will not be edited.',
+        ),
+      };
+      final confirmed = await showManagementReviewConfirmation(
+        context,
+        ManagementReviewPresentation.validated(
+          binding: ManagementMutationBinding.clientSupport,
+          recordLabel: 'Client support request',
+          recordValue: '${request.clientName} • ${request.clientCode}',
+          statusLabel:
+              plainManagementStatus(request.status, const <String, String>{
+                'open': 'Open and awaiting Management',
+                'answered': 'Answered and still open',
+                'resolved': 'Resolved and closed',
+                'cancelled': 'Cancelled and closed',
+              }),
+          facts: <ManagementReviewFact>[
+            ManagementReviewFact(
+              label: 'Category',
+              value: request.categoryLabel,
+            ),
+            ManagementReviewFact(label: 'Subject', value: request.subject),
+            ManagementReviewFact(label: 'Response', value: response),
+            if (request.referenceText.trim().isNotEmpty)
+              ManagementReviewFact(
+                label: 'Client reference',
+                value: request.referenceText,
+              ),
+          ],
+          nextActionLabel: nextActionLabel,
+          consequence: consequence,
+          secondaryReferences: <ManagementReviewFact>[
+            ManagementReviewFact(label: 'Request ID', value: request.requestId),
+          ],
+        ),
+      );
+      if (!confirmed || !mounted || !_canReview) {
+        return;
+      }
+      setState(() {
+        _submitting = true;
+        _fresh = false;
+      });
+      try {
+        await _repository.review(
+          widget.session,
+          deviceId: _deviceId!,
+          requestId: request.requestId,
+          action: action,
+          response: response,
+        );
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(switch (action) {
+              'resolved' => 'Support request resolved.',
+              _ => 'Response sent to the client.',
+            }),
+          ),
+        );
+        await _load(afterReview: true);
+      } on SpinaApiException catch (error) {
+        if (mounted) {
+          setState(() => _failed(error));
+        }
+      } on Object {
+        if (mounted) {
+          setState(() {
+            _fresh = false;
+            _errorMessage =
+                'The response could not be confirmed. Refresh saved requests before choosing another action.';
+          });
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _submitting = false);
+        }
       }
     } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
+      if (mounted) setState(() => _reviewing = false);
     }
   }
 
@@ -181,7 +225,9 @@ class _ManagementSupportRequestsPageState
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            onPressed: _loading || _submitting ? null : _load,
+            onPressed: _loading || _submitting || _reviewing || _denied
+                ? null
+                : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -224,7 +270,7 @@ class _ManagementSupportRequestsPageState
                     child: Text('Cancelled'),
                   ),
                 ],
-                onChanged: _loading || _submitting
+                onChanged: _loading || _submitting || _reviewing || _denied
                     ? null
                     : (value) {
                         if (value != null && value != _status) {
@@ -239,24 +285,26 @@ class _ManagementSupportRequestsPageState
                   padding: EdgeInsets.all(40),
                   child: Center(child: CircularProgressIndicator()),
                 )
-              else if (_errorMessage != null && _requests.isEmpty)
+              else if (_errorMessage != null)
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
                         Text(_errorMessage!, textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        FilledButton.icon(
-                          onPressed: _load,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Try again'),
-                        ),
+                        if (!_denied) ...[
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: _load,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Try again'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                )
-              else if (_requests.isEmpty)
+                ),
+              if (!_loading && _errorMessage == null && _requests.isEmpty)
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -270,10 +318,9 @@ class _ManagementSupportRequestsPageState
                 for (final request in _requests) ...[
                   _ManagementSupportCard(
                     request: request,
-                    busy: _submitting,
+                    busy: !_canReview || _reviewing,
                     onAnswer: () => _review(request, action: 'answered'),
                     onResolve: () => _review(request, action: 'resolved'),
-                    onCancel: () => _review(request, action: 'cancelled'),
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -291,14 +338,12 @@ class _ManagementSupportCard extends StatelessWidget {
     required this.busy,
     required this.onAnswer,
     required this.onResolve,
-    required this.onCancel,
   });
 
   final SupportRequestItem request;
   final bool busy;
   final VoidCallback onAnswer;
   final VoidCallback onResolve;
-  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -375,16 +420,6 @@ class _ManagementSupportCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  key: Key('cancel-support-${request.requestId}'),
-                  onPressed: busy ? null : onCancel,
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: const Text('Cancel request'),
-                ),
-              ),
             ],
           ],
         ),
@@ -434,26 +469,15 @@ class _SupportResponseDialogState extends State<_SupportResponseDialog> {
   @override
   Widget build(BuildContext context) {
     final resolving = widget.action == 'resolved';
-    final cancelling = widget.action == 'cancelled';
     return AlertDialog(
-      title: Text(
-        resolving
-            ? 'Resolve support request'
-            : cancelling
-            ? 'Cancel support request'
-            : 'Answer client',
-      ),
+      title: Text(resolving ? 'Resolve support request' : 'Answer client'),
       content: TextField(
         key: const Key('management-support-response'),
         controller: _controller,
         maxLength: 2000,
         maxLines: 6,
         decoration: InputDecoration(
-          labelText: resolving
-              ? 'Resolution'
-              : cancelling
-              ? 'Cancellation note'
-              : 'Response to client',
+          labelText: resolving ? 'Resolution' : 'Response to client',
           alignLabelWithHint: true,
           errorText: _error,
         ),
@@ -466,13 +490,7 @@ class _SupportResponseDialogState extends State<_SupportResponseDialog> {
         FilledButton(
           key: const Key('submit-management-support-response'),
           onPressed: _submit,
-          child: Text(
-            resolving
-                ? 'Resolve'
-                : cancelling
-                ? 'Cancel request'
-                : 'Send response',
-          ),
+          child: Text(resolving ? 'Resolve' : 'Send response'),
         ),
       ],
     );

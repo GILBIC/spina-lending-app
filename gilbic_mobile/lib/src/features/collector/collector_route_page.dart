@@ -52,7 +52,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   late final PaymentSubmissionRepository _paymentRepository;
   late final CombinedPaymentSubmissionRepository _combinedPaymentRepository;
   late final CollectionCorrectionRepository _correctionRepository;
-  late final CollectorCollectionLocationRepository _collectionLocationRepository;
+  late final CollectorCollectionLocationRepository
+  _collectionLocationRepository;
   late final DeviceIdentityProvider _deviceIdentityProvider;
   late final CollectionDeviceSequence _deviceSequence;
 
@@ -98,7 +99,16 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       }
     } on Object catch (error) {
       if (mounted) {
-        setState(() => _error = error);
+        setState(() {
+          _error = error;
+          if (isCollectorRouteAccessRejected(error)) {
+            _result = null;
+            _pendingDirectDrafts.clear();
+            _pendingCombinedDrafts.clear();
+            _expandedClients.clear();
+            _expandedAreaUids.clear();
+          }
+        });
       }
     } finally {
       if (mounted) {
@@ -111,6 +121,13 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
   ) {
+    final error = _error;
+    if (error != null && isCollectorRouteAccessRejected(error)) {
+      return collectorFailureMessage(
+        error,
+        task: CollectorFailureTask.loadRoute,
+      );
+    }
     if (loaded.isFromCache) {
       return 'Offline route copies are read-only. Reconnect and refresh before recording a collection.';
     }

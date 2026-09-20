@@ -37,6 +37,17 @@ class _ManagementGeneralJournalPageState
   String? _errorMessage;
   bool _loading = true;
   bool _actionBusy = false;
+  bool _fresh = false;
+  bool _uncertain = false;
+  bool _reconciliationLoaded = false;
+  int _loadGeneration = 0;
+
+  bool get _canMutate =>
+      _fresh &&
+      !_loading &&
+      !_actionBusy &&
+      !_uncertain &&
+      _snapshot?.canManage == true;
 
   @override
   void initState() {
@@ -46,8 +57,12 @@ class _ManagementGeneralJournalPageState
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
+      _fresh = false;
+      _reconciliationLoaded = false;
       _errorMessage = null;
     });
     try {
@@ -61,22 +76,30 @@ class _ManagementGeneralJournalPageState
         deviceId: identity.installationId,
         periodId: _selectedPeriodId,
       );
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() {
           _snapshot = snapshot;
           _trialBalance = trial;
+          _fresh = true;
+          _reconciliationLoaded = _uncertain;
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
+      if (mounted && generation == _loadGeneration) {
+        setState(() {
+          _errorMessage = error.message;
+          if ([401, 403, 426].contains(error.statusCode)) {
+            _snapshot = null;
+            _trialBalance = null;
+          }
+        });
       }
     } on Object {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() => _errorMessage = 'General Journal could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() => _loading = false);
       }
     }
@@ -275,13 +298,13 @@ class _ManagementGeneralJournalPageState
     required _JournalDraft draft,
     AccountingJournalEntry? entry,
   }) {
-    final totalDebit = draft.lines.fold<double>(
-      0,
-      (total, line) => total + line.debit,
+    final totalDebit = draft.lines.fold<BigInt>(
+      BigInt.zero,
+      (total, line) => total + journalCents(line.debit),
     );
-    final totalCredit = draft.lines.fold<double>(
-      0,
-      (total, line) => total + line.credit,
+    final totalCredit = draft.lines.fold<BigInt>(
+      BigInt.zero,
+      (total, line) => total + journalCents(line.credit),
     );
     return ManagementReviewPresentation.validated(
       binding: ManagementMutationBinding.generalJournal,
@@ -298,11 +321,11 @@ class _ManagementGeneralJournalPageState
         ),
         ManagementReviewFact(
           label: 'Entered debit total',
-          value: _money(totalDebit),
+          value: _money(journalAmountFromCents(totalDebit)),
         ),
         ManagementReviewFact(
           label: 'Entered credit total',
-          value: _money(totalCredit),
+          value: _money(journalAmountFromCents(totalCredit)),
         ),
         ManagementReviewFact(
           label: 'Journal lines',
@@ -343,7 +366,7 @@ class _ManagementGeneralJournalPageState
   ];
 
   Future<void> _runAction(Future<void> Function() action) async {
-    if (_actionBusy) {
+    if (!_canMutate) {
       return;
     }
     setState(() => _actionBusy = true);
@@ -351,9 +374,33 @@ class _ManagementGeneralJournalPageState
       await action();
       await _load();
     } on SpinaApiException catch (error) {
+      if (mounted) {
+        setState(() {
+          _fresh = false;
+          _reconciliationLoaded = false;
+          _uncertain =
+              error.statusCode == null ||
+              error.statusCode! >= 500 ||
+              error.code == 'invalid_server_response';
+          _errorMessage = error.message;
+          if ([401, 403, 426].contains(error.statusCode)) {
+            _snapshot = null;
+            _trialBalance = null;
+          }
+        });
+      }
       _snack(error.message);
     } on Object {
-      _snack('General Journal action failed.');
+      if (mounted) {
+        setState(() {
+          _fresh = false;
+          _uncertain = true;
+          _reconciliationLoaded = false;
+        });
+      }
+      _snack(
+        'The journal result is uncertain. Refresh and review the server records before starting another action.',
+      );
     } finally {
       if (mounted) {
         setState(() => _actionBusy = false);
@@ -377,7 +424,7 @@ class _ManagementGeneralJournalPageState
         actions: [
           IconButton(
             tooltip: 'Refresh General Journal',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _actionBusy ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -385,7 +432,7 @@ class _ManagementGeneralJournalPageState
       floatingActionButton: _snapshot?.canManage == true
           ? FloatingActionButton.extended(
               key: const Key('create-manual-journal'),
-              onPressed: _actionBusy ? null : _createDraft,
+              onPressed: _canMutate ? _createDraft : null,
               icon: const Icon(Icons.add),
               label: const Text('Journal'),
             )
@@ -415,6 +462,29 @@ class _ManagementGeneralJournalPageState
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
+          if (_uncertain)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'The previous journal action may already have been recorded. Refresh the journals and inspect the resulting drafts or posted entries before starting another action. Nothing will be resubmitted automatically.',
+                    ),
+                    if (_reconciliationLoaded)
+                      TextButton(
+                        key: const Key('journal-reconciliation-reviewed'),
+                        onPressed: () => setState(() {
+                          _uncertain = false;
+                          _reconciliationLoaded = false;
+                        }),
+                        child: const Text('I reviewed the refreshed records'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -499,7 +569,7 @@ class _ManagementGeneralJournalPageState
               _JournalCard(
                 entry: entry,
                 canManage: snapshot.canManage,
-                busy: _actionBusy,
+                busy: !_canMutate,
                 onEdit: () => _editDraft(entry),
                 onPost: () => _post(entry),
                 onCancel: () => _cancel(entry),
@@ -531,7 +601,11 @@ class _TrialBalanceCard extends StatelessWidget {
     final trial = trialBalance;
     final activeLines =
         trial?.lines
-            .where((line) => line.debitBalance != 0 || line.creditBalance != 0)
+            .where(
+              (line) =>
+                  journalCents(line.debitBalance) != BigInt.zero ||
+                  journalCents(line.creditBalance) != BigInt.zero,
+            )
             .toList() ??
         const <AccountingTrialBalanceLine>[];
     return Card(
@@ -598,7 +672,7 @@ class _TrialBalanceCard extends StatelessWidget {
                       Expanded(child: Text(line.accountName)),
                       const SizedBox(width: 8),
                       Text(
-                        line.debitBalance > 0
+                        journalCents(line.debitBalance) > BigInt.zero
                             ? 'Dr ${_money(line.debitBalance)}'
                             : 'Cr ${_money(line.creditBalance)}',
                       ),
@@ -667,7 +741,7 @@ class _JournalCard extends StatelessWidget {
                   Expanded(child: Text(line.accountName)),
                   const SizedBox(width: 6),
                   Text(
-                    line.debit > 0
+                    journalCents(line.debit) > BigInt.zero
                         ? 'Dr ${_money(line.debit)}'
                         : 'Cr ${_money(line.credit)}',
                   ),
@@ -784,21 +858,42 @@ class _JournalDialogState extends State<_JournalDialog> {
   void _save() {
     final description = _descriptionController.text.trim();
     final drafts = <JournalLineDraft>[];
-    var debit = 0.0;
-    var credit = 0.0;
+    var debit = BigInt.zero;
+    var credit = BigInt.zero;
     for (final line in _lines) {
       final accountCode = line.accountCode;
-      final lineDebit = double.tryParse(line.debitController.text.trim()) ?? 0;
-      final lineCredit =
-          double.tryParse(line.creditController.text.trim()) ?? 0;
+      late final String debitText;
+      late final String creditText;
+      try {
+        debitText = journalMoney(
+          line.debitController.text.trim().isEmpty
+              ? '0'
+              : line.debitController.text,
+          forInput: true,
+        );
+        creditText = journalMoney(
+          line.creditController.text.trim().isEmpty
+              ? '0'
+              : line.creditController.text,
+          forInput: true,
+        );
+      } on FormatException {
+        setState(
+          () => _validation =
+              'Use nonnegative amounts with at most two decimal places and 16 whole digits.',
+        );
+        return;
+      }
+      final lineDebit = journalCents(debitText);
+      final lineCredit = journalCents(creditText);
       if (accountCode == null || accountCode.isEmpty) {
         setState(
           () => _validation = 'Choose an account for every journal line.',
         );
         return;
       }
-      if (!((lineDebit > 0 && lineCredit == 0) ||
-          (lineCredit > 0 && lineDebit == 0))) {
+      if (!((lineDebit > BigInt.zero && lineCredit == BigInt.zero) ||
+          (lineCredit > BigInt.zero && lineDebit == BigInt.zero))) {
         setState(
           () => _validation =
               'Each line needs exactly one positive debit or credit.',
@@ -811,8 +906,8 @@ class _JournalDialogState extends State<_JournalDialog> {
         JournalLineDraft(
           accountCode: accountCode,
           description: line.descriptionController.text.trim(),
-          debit: lineDebit,
-          credit: lineCredit,
+          debit: debitText,
+          credit: creditText,
         ),
       );
     }
@@ -820,7 +915,7 @@ class _JournalDialogState extends State<_JournalDialog> {
       setState(() => _validation = 'Enter a journal description.');
       return;
     }
-    if ((debit - credit).abs() > 0.005 || debit <= 0) {
+    if (debit != credit || debit <= BigInt.zero) {
       setState(
         () => _validation = 'The journal must balance before it can be saved.',
       );
@@ -1004,14 +1099,14 @@ class _LineControllers {
   _LineControllers({
     this.accountCode,
     String description = '',
-    double debit = 0,
-    double credit = 0,
+    String debit = '0.00',
+    String credit = '0.00',
   }) : descriptionController = TextEditingController(text: description),
        debitController = TextEditingController(
-         text: debit == 0 ? '' : debit.toStringAsFixed(2),
+         text: journalCents(debit) == BigInt.zero ? '' : debit,
        ),
        creditController = TextEditingController(
-         text: credit == 0 ? '' : credit.toStringAsFixed(2),
+         text: journalCents(credit) == BigInt.zero ? '' : credit,
        );
 
   String? accountCode;
@@ -1213,8 +1308,8 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
+String _money(String value) {
+  final parts = value.split('.');
   final whole = parts.first.replaceAllMapped(
     RegExp(r'\B(?=(\d{3})+(?!\d))'),
     (_) => ',',

@@ -6,8 +6,37 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification_repository.dart';
 import 'package:gilbic_mobile/src/features/employee/employee_dashboard.dart';
+import 'package:gilbic_mobile/src/features/areas/area_management_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_workspace_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 
 void main() {
+  for (final entry in <(String, String, Type)>[
+    (
+      'employee-office',
+      'client_onboarding.requirement.review',
+      OfficeWorkspacePage,
+    ),
+    ('employee-areas', 'area.client.assign', AreaManagementPage),
+    (
+      'employee-client-support',
+      'support.manage',
+      ManagementSupportRequestsPage,
+    ),
+  ]) {
+    testWidgets('Employee exact permission opens ${entry.$1}', (tester) async {
+      await _pumpDashboard(
+        tester,
+        _session(permissions: ['employee.portal.view', entry.$2]),
+      );
+      await _scrollTo(tester, find.byKey(Key(entry.$1)));
+      await tester.tap(find.byKey(Key(entry.$1)));
+      await tester.pumpAndSettle();
+      expect(find.byType(entry.$3), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('Employee dashboard separates personal and office work', (
     tester,
   ) async {
@@ -75,7 +104,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Employee workflow not connected yet'), findsNWidgets(2));
+    expect(find.text('Employee workflow not connected yet'), findsOneWidget);
 
     await _pumpDashboard(
       tester,
