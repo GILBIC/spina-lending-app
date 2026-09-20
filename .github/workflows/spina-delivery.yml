@@ -2,18 +2,15 @@ name: Spina Delivery
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - mvp/cross-platform-four-role
-    paths:
-      - "spina_portal/**"
-      - "spina_pc/**"
-      - "gilbic_mobile/**"
-      - "tools/build_portal.mjs"
-      - "tools/check_portal_modules.mjs"
-      - "package.json"
-      - ".github/workflows/spina-delivery.yml"
-      - "tests/test_delivery_workflow_contract.py"
+    inputs:
+      portal_url:
+        description: HTTPS portal address for this exact candidate
+        required: true
+        type: string
+      api_url:
+        description: HTTPS API address for this exact candidate
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -23,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SPINA_PORTAL_URL: https://spina-lending-app-git-mvp-cross-platform-four-role-gilbic1.vercel.app
-  SPINA_API_URL: https://spina.157-230-250-111.sslip.io
+  SPINA_PORTAL_URL: ${{ inputs.portal_url }}
+  SPINA_API_URL: ${{ inputs.api_url }}
   FLUTTER_VERSION: 3.44.7
 
 jobs:
@@ -36,6 +33,7 @@ jobs:
       - name: Check out exact revision
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -43,14 +41,14 @@ jobs:
           node-version: "22"
       - name: Test and build Web
         run: |
-          npm test
+          python -c "import os; from tools.prepare_android_host import validate_api_url; validate_api_url(os.environ['SPINA_PORTAL_URL']); validate_api_url(os.environ['SPINA_API_URL'])"
           npm run build
       - name: Record Web address
         run: printf '%s\n' "$SPINA_PORTAL_URL" > dist/SPINA-WEB-ADDRESS.txt
       - name: Upload Web package
         uses: actions/upload-artifact@v4
         with:
-          name: Spina-Web
+          name: Spina-Web-${{ github.sha }}
           path: dist/
           if-no-files-found: error
           retention-days: 14
@@ -63,10 +61,13 @@ jobs:
       - name: Check out exact revision
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Create Windows installer package
         shell: pwsh
         run: |
+          python -c "import os; from tools.prepare_android_host import validate_api_url; validate_api_url(os.environ['SPINA_PORTAL_URL'])"
+          if ($LASTEXITCODE -ne 0) { throw "Invalid candidate portal URL" }
           $Output = Join-Path $PWD "delivery/Spina-Windows"
           New-Item -ItemType Directory -Path $Output -Force | Out-Null
           Copy-Item "spina_pc/install_spina_pc.ps1" $Output
@@ -82,20 +83,34 @@ jobs:
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: Spina-Windows
+          name: Spina-Windows-${{ github.sha }}
           path: delivery/Spina-Windows.zip
           if-no-files-found: error
           retention-days: 14
 
   android-package:
-    name: Android package
+    name: Android signed candidate
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    environment: android-release
+    env:
+      SPINA_ANDROID_KEYSTORE_BASE64: ${{ secrets.SPINA_ANDROID_KEYSTORE_BASE64 }}
+      SPINA_ANDROID_KEY_ALIAS: ${{ secrets.SPINA_ANDROID_KEY_ALIAS }}
+      SPINA_ANDROID_STORE_PASSWORD: ${{ secrets.SPINA_ANDROID_STORE_PASSWORD }}
+      SPINA_ANDROID_KEY_PASSWORD: ${{ secrets.SPINA_ANDROID_KEY_PASSWORD }}
+      SPINA_ANDROID_CERT_SHA256: ${{ vars.SPINA_ANDROID_CERT_SHA256 }}
     steps:
       - name: Check out exact revision
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Require and privately stage owner signing inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/prepare_android_host.py stage-signing \
+            --directory "$RUNNER_TEMP/spina-android-signing"
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -115,7 +130,7 @@ jobs:
         run: |
           set -euo pipefail
           flutter config --no-analytics
-          flutter pub get
+          flutter pub get --enforce-lockfile
           flutter analyze --fatal-infos
           flutter test
       - name: Generate isolated Android host
@@ -123,22 +138,15 @@ jobs:
         run: |
           set -euo pipefail
           HOST="$RUNNER_TEMP/spina-android-host"
-          rm -rf "$HOST"
-          flutter create --platforms=android --org ph.spina --project-name gilbic_mobile "$HOST"
-          rm -rf "$HOST/lib"
-          cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"
-          cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" "$HOST/pubspec.yaml"
-          if [ -f "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.lock" ]; then
-            cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.lock" "$HOST/pubspec.lock"
-          fi
-          sed -i 's/android:label="gilbic_mobile"/android:label="Spina"/' "$HOST/android/app/src/main/AndroidManifest.xml"
-          printf '\nkotlin.incremental=false\nkotlin.compiler.execution.strategy=in-process\norg.gradle.daemon=false\n' >> "$HOST/android/gradle.properties"
+          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile --no-pub "$HOST"
+          python tools/prepare_android_host.py prepare --host "$HOST" \
+            --source-sha "$GITHUB_SHA" --mode release --api-url "$SPINA_API_URL"
       - name: Build Android release APK
         shell: bash
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/spina-android-host"
-          flutter pub get
+          flutter pub get --enforce-lockfile
           flutter build apk --release --target-platform android-arm64,android-x64 --no-pub \
             --dart-define=GILBIC_API_URL="$SPINA_API_URL"
       - name: Prepare and verify Android delivery
@@ -147,24 +155,20 @@ jobs:
           set -euo pipefail
           mkdir -p delivery/Spina-Android
           cp "$RUNNER_TEMP/spina-android-host/build/app/outputs/flutter-apk/app-release.apk" delivery/Spina-Android/Spina.apk
-          sha256sum delivery/Spina-Android/Spina.apk > delivery/Spina-Android/SHA256.txt
-          printf '%s\n' "$SPINA_API_URL" > delivery/Spina-Android/SERVER.txt
-          python - <<'PY'
-          import pathlib
-          import zipfile
-
-          path = pathlib.Path("delivery/Spina-Android/Spina.apk")
-          assert path.is_file() and path.stat().st_size > 0
-          with zipfile.ZipFile(path) as archive:
-              names = set(archive.namelist())
-          assert "lib/arm64-v8a/libflutter.so" in names
-          assert "lib/x86_64/libflutter.so" in names
-          print(f"Verified Spina APK: {path.stat().st_size} bytes")
-          PY
+          python tools/verify_android_artifact.py \
+            --apk delivery/Spina-Android/Spina.apk --source-sha "$GITHUB_SHA" \
+            --mode release --api-url "$SPINA_API_URL" \
+            --output delivery/Spina-Android/android-verification.json
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf -- "$RUNNER_TEMP/spina-android-signing"
       - name: Upload Android package
         uses: actions/upload-artifact@v4
         with:
-          name: Spina-Android
+          name: Spina-Android-signed-${{ github.sha }}
           path: delivery/Spina-Android/
           if-no-files-found: error
           retention-days: 14

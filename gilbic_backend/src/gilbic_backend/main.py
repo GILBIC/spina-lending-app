@@ -1,20 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from . import __version__
 from .account_api import create_account_router
-from .employee_operations_api import create_employee_operations_router
 from .activity_notification_api import create_activity_notification_router
 from .area_management_api import create_area_management_router
 from .auth_api import create_auth_router
 from .client_account_api import create_client_account_router
 from .client_cif_api import create_client_cif_router
+from .client_document_api import create_client_document_router
 from .client_gcash_api import create_client_gcash_router
 from .client_loan_api import create_client_loan_router
 from .client_onboarding_api import create_client_onboarding_router
 from .client_payment_api import create_client_payment_router
-from .client_document_api import create_client_document_router
 from .client_payment_proof_api import create_client_payment_proof_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
@@ -47,8 +46,12 @@ from .ecl_outcome_review_api import create_ecl_outcome_review_router
 from .ecl_quantitative_measurement_api import create_ecl_quantitative_measurement_router
 from .eir_cash_allocation_api import create_eir_cash_allocation_router
 from .eir_period_journal_api import create_eir_period_journal_router
+from .employee_operations_api import create_employee_operations_router
 from .financial_accounting_api import create_financial_accounting_router
 from .financial_statements_api import create_financial_statements_router
+from .first_loan_api import create_first_loan_router
+from .first_loan_credential_api import create_first_loan_credential_router
+from .first_loan_document_api import create_first_loan_document_router
 from .general_journal_api import create_general_journal_router
 from .greenfield_regular_eir_anchor_api import (
     create_greenfield_regular_eir_anchor_router,
@@ -61,11 +64,6 @@ from .greenfield_regular_renewal_rollforward_api import (
 )
 from .initial_capital_funding_api import create_initial_capital_funding_router
 from .loan_application_api import create_loan_application_router
-from .office_review_evidence_api import create_office_review_evidence_router
-from .first_loan_credential_api import create_first_loan_credential_router
-from .privacy_record_api import create_privacy_record_router
-from .first_loan_api import create_first_loan_router
-from .first_loan_document_api import create_first_loan_document_router
 from .loan_disbursement_cancellation_api import (
     create_loan_disbursement_cancellation_router,
 )
@@ -89,6 +87,7 @@ from .management_loan_api import create_management_loan_router
 from .management_no_collection_api import create_management_no_collection_router
 from .management_operations_api import create_management_operations_router
 from .notification_api import create_notification_router
+from .office_review_evidence_api import create_office_review_evidence_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
 from .other_area_api import create_other_area_router
@@ -97,6 +96,7 @@ from .period_close_api import create_period_close_router
 from .posting_ready_evidence_review_api import (
     create_posting_ready_evidence_review_router,
 )
+from .privacy_record_api import create_privacy_record_router
 from .refund_due_api import create_refund_due_router
 from .regular_journal_draft_api import create_regular_journal_draft_router
 from .regular_journal_posting_api import create_regular_journal_posting_router
@@ -115,6 +115,7 @@ from .renewal_treatment_decision_api import create_renewal_treatment_decision_ro
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
 from .renewal_workflow_api import create_renewal_workflow_router
 from .renewal_workflow_query_api import create_renewal_workflow_query_router
+from .request_observability import RequestObservabilityMiddleware
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .seven_by_seven_journal_posting_api import (
     create_seven_by_seven_journal_posting_router,
@@ -128,7 +129,6 @@ from .v1_tax_liability_api import create_v1_tax_liability_router
 from .v1_tax_recoverable_credit_api import create_v1_tax_recoverable_credit_router
 from .v1_tax_recoverable_refund_api import create_v1_tax_recoverable_refund_router
 from .v1_tax_settlement_api import create_v1_tax_settlement_router
-
 
 _PORTAL_ALLOWED_HEADERS = [
     "Authorization",
@@ -152,7 +152,19 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=_PORTAL_ALLOWED_HEADERS,
+        expose_headers=["X-Request-ID"],
     )
+    app.add_middleware(RequestObservabilityMiddleware)
+
+    @app.exception_handler(Exception)
+    async def internal_error(request: Request, _exc: Exception) -> PlainTextResponse:
+        # ServerErrorMiddleware is outside user middleware, so its response must
+        # copy the correlation ID already recorded by request observability.
+        return PlainTextResponse(
+            "Internal Server Error",
+            status_code=500,
+            headers={"X-Request-ID": request.state.request_id},
+        )
 
     @app.get("/health/live")
     def liveness() -> dict[str, str]:

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "synthetic_workload": {
+    "synthetic": true,
+    "label": "replace-with-confirmed-fixture",
+    "clients": 0,
+    "active_loans": 0,
+    "route_entries": 0,
+    "collectors": 0,
+    "employees": 0
+  },
+  "scenarios": [
+    {
+      "name": "health_live",
+      "path": "/health/live",
+      "credential": "none",
+      "expected_status": 200
+    },
+    {
+      "name": "health_ready",
+      "path": "/health/ready",
+      "credential": "none",
+      "expected_status": 200
+    },
+    {
+      "name": "management_identity",
+      "path": "/api/v1/auth/me",
+      "credential": "management",
+      "expected_status": 200
+    },
+    {
+      "name": "management_overview",
+      "path": "/api/v1/management/dashboard-overview",
+      "credential": "management",
+      "expected_status": 200
+    },
+    {
+      "name": "employee_workspace",
+      "path": "/api/v1/employee-operations/workspace",
+      "credential": "employee",
+      "expected_status": 200
+    },
+    {
+      "name": "collector_cash_accountability",
+      "path": "/api/v1/collector/cash-accountability",
+      "credential": "collector",
+      "expected_status": 200
+    },
+    {
+      "name": "client_loans",
+      "path": "/api/v1/client/loans",
+      "credential": "client",
+      "expected_status": 200
+    },
+    {
+      "name": "employee_management_denied",
+      "path": "/api/v1/management/dashboard-overview",
+      "credential": "employee",
+      "expected_status": 403
+    }
+  ]
+}
