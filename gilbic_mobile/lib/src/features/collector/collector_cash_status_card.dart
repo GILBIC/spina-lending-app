@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -49,6 +51,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
   CollectorCashAccountability? _accountability;
   bool _loading = true;
+  bool _renewalAlertLoading = false;
 
   @override
   void initState() {
@@ -80,10 +83,11 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     });
 
     CollectorCashAccountability? accountability;
-    CollectorRenewalRequest? cashReleaseAlert;
+    String? deviceId;
 
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      deviceId = identity.installationId;
 
       if (canLoadCash) {
         try {
@@ -95,23 +99,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
           // Cash status must not block Daily Collection if the summary is unavailable.
         }
       }
-
-      if (canLoadRenewals) {
-        try {
-          final requests = await _renewals.list(
-            widget.session,
-            deviceId: identity.installationId,
-          );
-          for (final request in requests) {
-            if (request.canConfirmCashReceived) {
-              cashReleaseAlert = request;
-              break;
-            }
-          }
-        } on Object {
-          // A renewal endpoint failure must not block Daily Collection.
-        }
-      }
     } on Object {
       // Device/network status is secondary to keeping Daily Collection available.
     }
@@ -121,8 +108,32 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       _accountability = accountability;
       _loading = false;
     });
-    if (cashReleaseAlert != null) {
-      widget.onCashReleaseAlert?.call(cashReleaseAlert);
+    if (canLoadRenewals && deviceId != null) {
+      unawaited(_loadCashReleaseAlert(deviceId));
+    }
+  }
+
+  Future<void> _loadCashReleaseAlert(String deviceId) async {
+    // Cash can refresh while this optional check is pending. Keep one pending
+    // renewal request per card so responses cannot race to show older alerts.
+    if (!mounted || _renewalAlertLoading) return;
+    _renewalAlertLoading = true;
+    try {
+      final requests = await _renewals.list(
+        widget.session,
+        deviceId: deviceId,
+      );
+      if (!mounted) return;
+      for (final request in requests) {
+        if (request.canConfirmCashReceived) {
+          widget.onCashReleaseAlert?.call(request);
+          break;
+        }
+      }
+    } on Object {
+      // Optional renewal alerts must not block cash status or its refresh.
+    } finally {
+      _renewalAlertLoading = false;
     }
   }
 
