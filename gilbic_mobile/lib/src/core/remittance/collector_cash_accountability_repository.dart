@@ -59,12 +59,10 @@ class CollectorCashAccountability {
             .toList(growable: false)
         : const <CollectorCashByAssignedCollector>[];
     return CollectorCashAccountability(
-      totalCashHeld:
-          firstNumber(<Object?>[data['total_cash_held']])?.toDouble() ?? 0,
+      totalCashHeld: _requiredCashAmount(data['total_cash_held']),
       assignedAreaCashHeld:
-          firstNumber(<Object?>[data['assigned_area_cash_held']])?.toDouble() ?? 0,
-      otherAreaCashHeld:
-          firstNumber(<Object?>[data['other_area_cash_held']])?.toDouble() ?? 0,
+          _requiredCashAmount(data['assigned_area_cash_held']),
+      otherAreaCashHeld: _requiredCashAmount(data['other_area_cash_held']),
       otherAreaByCollector: breakdown,
       readyToRemitAmount:
           firstNumber(<Object?>[data['ready_to_remit_amount']])?.toDouble() ?? 0,
@@ -80,6 +78,21 @@ class CollectorCashAccountability {
           0,
     );
   }
+}
+
+double _requiredCashAmount(Object? value) {
+  final amount = switch (value) {
+    num() => value.toDouble(),
+    String() => double.tryParse(value.trim()),
+    _ => null,
+  };
+  if (amount == null || !amount.isFinite) {
+    throw const SpinaApiException(
+      'The Gilbic server returned incomplete cash accountability data.',
+      code: 'invalid_server_response',
+    );
+  }
+  return amount;
 }
 
 abstract interface class CollectorCashAccountabilityRepository {
