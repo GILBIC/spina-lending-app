@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -47,12 +49,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
   final CollectorRenewalWorkflowRepository _renewals =
       SpinaCollectorRenewalWorkflowRepository();
 
-  double _totalCollectionCashHeld = 0;
-  double _assignedAreaCashHeld = 0;
-  double _otherAreaCashHeld = 0;
-  List<CollectorCashByAssignedCollector> _otherAreaByCollector =
-      const <CollectorCashByAssignedCollector>[];
+  CollectorCashAccountability? _accountability;
   bool _loading = true;
+  bool _renewalAlertLoading = false;
 
   @override
   void initState() {
@@ -72,55 +71,32 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     // also prevents optional cash status from delaying the primary field screen.
     if (!canLoadCash && !canLoadRenewals) {
       setState(() {
-        _totalCollectionCashHeld = 0;
-        _assignedAreaCashHeld = 0;
-        _otherAreaCashHeld = 0;
-        _otherAreaByCollector = const <CollectorCashByAssignedCollector>[];
+        _accountability = null;
         _loading = false;
       });
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _accountability = null;
+    });
 
-    var totalCollectionCashHeld = 0.0;
-    var assignedAreaCashHeld = 0.0;
-    var otherAreaCashHeld = 0.0;
-    var otherAreaByCollector = const <CollectorCashByAssignedCollector>[];
-    CollectorRenewalRequest? cashReleaseAlert;
+    CollectorCashAccountability? accountability;
+    String? deviceId;
 
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      deviceId = identity.installationId;
 
       if (canLoadCash) {
         try {
-          final accountability = await _cashAccountability.load(
+          accountability = await _cashAccountability.load(
             widget.session,
             deviceId: identity.installationId,
           );
-          totalCollectionCashHeld = accountability.totalCashHeld;
-          assignedAreaCashHeld = accountability.assignedAreaCashHeld;
-          otherAreaCashHeld = accountability.otherAreaCashHeld;
-          otherAreaByCollector = accountability.otherAreaByCollector;
         } on Object {
           // Cash status must not block Daily Collection if the summary is unavailable.
-        }
-      }
-
-      if (canLoadRenewals) {
-        try {
-          final requests = await _renewals.list(
-            widget.session,
-            deviceId: identity.installationId,
-          );
-          for (final request in requests) {
-            if (request.canConfirmCashReceived) {
-              cashReleaseAlert = request;
-              break;
-            }
-          }
-        } on Object {
-          // A renewal endpoint failure must not block Daily Collection.
         }
       }
     } on Object {
@@ -129,19 +105,44 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
     if (!mounted) return;
     setState(() {
-      _totalCollectionCashHeld = totalCollectionCashHeld;
-      _assignedAreaCashHeld = assignedAreaCashHeld;
-      _otherAreaCashHeld = otherAreaCashHeld;
-      _otherAreaByCollector = otherAreaByCollector;
+      _accountability = accountability;
       _loading = false;
     });
-    if (cashReleaseAlert != null) {
-      widget.onCashReleaseAlert?.call(cashReleaseAlert);
+    if (canLoadRenewals && deviceId != null) {
+      unawaited(_loadCashReleaseAlert(deviceId));
+    }
+  }
+
+  Future<void> _loadCashReleaseAlert(String deviceId) async {
+    // Cash can refresh while this optional check is pending. Keep one pending
+    // renewal request per card so responses cannot race to show older alerts.
+    if (!mounted || _renewalAlertLoading) return;
+    _renewalAlertLoading = true;
+    try {
+      final requests = await _renewals.list(
+        widget.session,
+        deviceId: deviceId,
+      );
+      if (!mounted) return;
+      for (final request in requests) {
+        if (request.canConfirmCashReceived) {
+          widget.onCashReleaseAlert?.call(request);
+          break;
+        }
+      }
+    } on Object {
+      // Optional renewal alerts must not block cash status or its refresh.
+    } finally {
+      _renewalAlertLoading = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.session.hasPermission('remittance.view')) {
+      return const SizedBox.shrink();
+    }
+    final accountability = _accountability;
     return Container(
       key: const Key('collector-cash-status-card'),
       margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
@@ -185,12 +186,17 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               ),
             ],
           ),
-          _PrimaryCashHeldTile(
-            amount: _totalCollectionCashHeld,
-            assignedAreaAmount: _assignedAreaCashHeld,
-            otherAreaAmount: _otherAreaCashHeld,
-            otherAreaByCollector: _otherAreaByCollector,
-          ),
+          if (_loading)
+            const Text('Loading cash status…')
+          else if (accountability != null)
+            _PrimaryCashHeldTile(
+              amount: accountability.totalCashHeld,
+              assignedAreaAmount: accountability.assignedAreaCashHeld,
+              otherAreaAmount: accountability.otherAreaCashHeld,
+              otherAreaByCollector: accountability.otherAreaByCollector,
+            )
+          else
+            const Text('Cash status unavailable. Connect and refresh.'),
         ],
       ),
     );
