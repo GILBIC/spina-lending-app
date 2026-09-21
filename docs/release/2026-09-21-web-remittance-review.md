@@ -1,5 +1,7 @@
 # Web collection and remittance review
 
+Web collection requests now send the server-supported `gilbic-collection-v1` protocol header. The previous `1` value was rejected before payment recording.
+
 Employee remittance notifications open a fresh, recipient-scoped itemized review. The screen shows each payment, receipt, collection date, covered dates and any Refund Due cash outflows. Acceptance requires separate acknowledgments for reviewing the list and physically receiving and counting the cash. The existing receipt API remains the authority for transferring custody.
 
 Collector payment and remittance submissions share one in-flight guard. Disconnecting locks both controls immediately; reconnecting requires Refresh to reload authoritative state. A lost response can mean the request was already saved. Refresh and inspect the receipt, balance and remittance history before another attempt. The portal does not queue offline payments or automatically replay an uncertain request.
