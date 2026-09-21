@@ -1,3 +1,4 @@
+import { mountAccountCredentials } from '../account-credentials.js';
 import { buildCollectionSubmission, classifyLoanType } from '../collector-contract.js';
 import { buildCollectorRouteViewModel } from '../presenters.js';
 import { mountCollectorOnboardingVisit } from '../collector-onboarding-visit.js';
@@ -246,6 +247,8 @@ function bindRemittance(context) {
 
 export async function mountCollectorWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.accountCredentialsCleanup?.();
+  context.accountCredentialsCleanup = null;
   context.employeeOperationsCleanup?.();
   context.employeeOperationsCleanup = null;
   context.collectorOnboardingCleanup?.();
@@ -264,6 +267,7 @@ export async function mountCollectorWorkspace(context) {
     ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit' }] : []),
     ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance' }] : []),
     { id: 'collector-updates', label: 'Updates' },
+    { id: 'collector-account', label: 'Account' },
   ]);
   root.innerHTML = loadingPanel('Loading the authoritative Collector route…');
   root.dataset.financialLocked = 'false';
@@ -313,8 +317,12 @@ export async function mountCollectorWorkspace(context) {
   <section class="section-card" id="collector-employee-operations"><div data-employee-operations></div></section>
   ${canViewRemittance ? remittanceSection(route.route_date, preview.data, recipients.data, history.data, { preview: preview.error, history: history.error }, canCreateRemittance) : ''}
   ${canRecordVisit ? '<section class="section-card" id="collector-onboarding"><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
-  <section class="section-card" id="collector-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>`;
+  <section class="section-card" id="collector-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>
+  <section class="section-card" id="collector-account"><div class="section-heading"><div><h2>My account</h2></div></div><div data-account-credentials></div></section>`;
 
+  context.accountCredentialsCleanup = mountAccountCredentials({
+    root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
+  });
   context.employeeOperationsCleanup = mountEmployeeOperations({
     root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
   });

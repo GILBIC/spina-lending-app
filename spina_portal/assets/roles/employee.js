@@ -1,3 +1,4 @@
+import { mountAccountCredentials } from '../account-credentials.js';
 import { mountAreaManagement } from '../area-management.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
 import { buildEmployeeViewModel } from '../presenters.js';
@@ -146,6 +147,8 @@ function bindActions(context) {
 
 export async function mountEmployeeWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.accountCredentialsCleanup?.();
+  context.accountCredentialsCleanup = null;
   context.employeeOperationsCleanup?.();
   context.employeeOperationsCleanup = null;
   context.officeCifCleanup?.();
@@ -222,8 +225,11 @@ export async function mountEmployeeWorkspace(context) {
   ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : remittanceRows(model.remittances, canReceiveRemittance)}</section>` : ''}
   ${canManageSupport ? `<section class="section-card" id="employee-support"><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
   <section class="section-card" id="employee-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
-  <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}</section>`;
+  <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}<div data-account-credentials></div></section>`;
 
+  context.accountCredentialsCleanup = mountAccountCredentials({
+    root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
+  });
   context.employeeOperationsCleanup = mountEmployeeOperations({
     root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
   });
