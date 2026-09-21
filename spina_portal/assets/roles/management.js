@@ -1,3 +1,4 @@
+import { mountAccountCredentials } from '../account-credentials.js';
 import { mountAreaManagement } from '../area-management.js';
 import { buildManagementViewModel } from '../presenters.js';
 import { mountOfficeCifSelection } from '../office-cif-selection.js';
@@ -295,6 +296,8 @@ function bindLoanSearch(context) {
 
 export async function mountManagementWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.accountCredentialsCleanup?.();
+  context.accountCredentialsCleanup = null;
   context.accountingExportCleanup?.();
   context.accountingExportCleanup = null;
   context.employeeOperationsCleanup?.();
@@ -403,8 +406,11 @@ export async function mountManagementWorkspace(context) {
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
   ${canManageAccounts ? `<section class="section-card" id="management-client-accounts"><div class="section-heading"><div><h2>Client accounts</h2><p>Select an existing borrower record, enter the borrower's email, and let SPINA generate the credentials.</p></div></div>${clientAccountAdminMarkup()}</section>` : ''}
   ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff, inspect registered phones, and apply only server-authorized device changes.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" style="margin-top:1rem">${emptyState('Select a staff account to review registered phones.')}</div></section>` : ''}
-  <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}</section>`;
+  <section class="section-card" id="management-account"><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}<div data-account-credentials></div></section>`;
 
+  context.accountCredentialsCleanup = mountAccountCredentials({
+    root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
+  });
   if (canReviewCif) {
     context.officeFirstLoanCleanup = mountOfficeFirstLoan({
       root: root.querySelector('[data-office-first-loan]'), api, session, signal: context.signal,
