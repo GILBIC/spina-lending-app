@@ -23,7 +23,7 @@ const base = {
   recordedAt: '2026-09-02T23:45:00.000Z',
 };
 
-test('payment submission keeps body and headers on the same idempotency identity', () => {
+test('payment uses the supported collection protocol and matching idempotency identity', () => {
   const submission = buildCollectionSubmission({
     ...base,
     entryType: 'payment',
@@ -35,7 +35,7 @@ test('payment submission keeps body and headers on the same idempotency identity
     'Idempotency-Key': base.clientTransactionId,
     'X-Client-Transaction-Id': base.clientTransactionId,
     'X-Device-Id': base.deviceId,
-    'X-Gilbic-Contract-Version': '1',
+    'X-Gilbic-Contract-Version': 'gilbic-collection-v1',
   });
   assert.deepEqual(submission.body, {
     client_transaction_id: base.clientTransactionId,

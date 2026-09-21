@@ -151,7 +151,7 @@ export function buildCollectionSubmission({
       'Idempotency-Key': transactionId,
       'X-Client-Transaction-Id': transactionId,
       'X-Device-Id': installationId,
-      'X-Gilbic-Contract-Version': '1',
+      'X-Gilbic-Contract-Version': 'gilbic-collection-v1',
     },
     body,
   };

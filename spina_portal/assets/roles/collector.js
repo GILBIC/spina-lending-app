@@ -1,4 +1,5 @@
 import { mountAccountCredentials } from '../account-credentials.js';
+import { createCollectorWriteGuard } from '../collector-write-guard.js';
 import { buildCollectionSubmission, classifyLoanType } from '../collector-contract.js';
 import { buildCollectorRouteViewModel } from '../presenters.js';
 import { mountCollectorOnboardingVisit } from '../collector-onboarding-visit.js';
@@ -141,6 +142,7 @@ function lockFinancialEntry(root, message) {
 }
 
 function bindRouteActions(context, entryMap) {
+  const guard = context.collectorWriteGuard;
   for (const button of context.root.querySelectorAll('.collection-action')) {
     button.addEventListener('click', () => {
       const row = context.root.querySelector(`[data-entry-row="${CSS.escape(button.dataset.entryId)}"]`);
@@ -163,63 +165,66 @@ function bindRouteActions(context, entryMap) {
     });
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (context.root.dataset.financialLocked === 'true') return;
-      const entry = entryMap.get(form.dataset.routeEntryId);
-      if (!entry) {
-        showToast('The route entry is stale. Refresh the route.', 'error');
-        return;
-      }
-      const data = new FormData(form);
-      const entryType = String(data.get('entryType') || 'payment');
-      const note = String(data.get('note') || '').trim();
-      const clientTransactionId = globalThis.crypto.randomUUID();
-      const submission = buildCollectionSubmission({
-        entry,
-        routeDate: context.routeDate,
-        entryType,
-        amount: data.get('amount'),
-        note,
-        pastDueFollowup: entryType === 'pass' ? {
-          reason_code: data.get('reasonCode'),
-          note,
-          promised_payment_date: null,
-          promised_amount: null,
-        } : null,
-        deviceId: context.sessionStore.deviceId(),
-        deviceSequence: context.sessionStore.nextDeviceSequence(),
-        clientTransactionId,
-        recordedAt: new Date().toISOString(),
-      });
+      if (context.root.dataset.financialLocked === 'true' || !guard.begin()) return;
       const submitButton = form.querySelector('button[type="submit"]');
-      setButtonBusy(submitButton, true, 'Saving…');
+      let submission;
       try {
+        const entry = entryMap.get(form.dataset.routeEntryId);
+        if (!entry) throw new Error('The route entry is stale. Refresh the route.');
+        const data = new FormData(form);
+        const entryType = String(data.get('entryType') || 'payment');
+        const note = String(data.get('note') || '').trim();
+        const clientTransactionId = globalThis.crypto.randomUUID();
+        submission = buildCollectionSubmission({
+          entry,
+          routeDate: context.routeDate,
+          entryType,
+          amount: data.get('amount'),
+          note,
+          pastDueFollowup: entryType === 'pass' ? {
+            reason_code: data.get('reasonCode'),
+            note,
+            promised_payment_date: null,
+            promised_amount: null,
+          } : null,
+          deviceId: context.sessionStore.deviceId(),
+          deviceSequence: context.sessionStore.nextDeviceSequence(),
+          clientTransactionId,
+          recordedAt: new Date().toISOString(),
+        });
+        setButtonBusy(submitButton, true, 'Saving…');
         const result = await context.api.request('/api/v1/collector/collections', {
           method: 'POST',
           headers: submission.headers,
           body: submission.body,
           financial: true,
         });
+        if (!guard.current) return;
         const receipt = result?.receipt_number ? ` Receipt ${result.receipt_number}.` : '';
         const balance = result?.official_balance != null ? ` Official balance ${formatMoney(result.official_balance)}.` : '';
         showToast(`${result?.message || 'Official entry saved.'}${receipt}${balance}`, 'success', 7600);
         await mountCollectorWorkspace(context);
       } catch (error) {
+        if (!guard.current) return;
         if (error.code === 'network_uncertain') {
           context.uncertainCollection = submission;
-          lockFinancialEntry(context.root, error.message);
+          guard.lock(error.message);
         }
         showToast(error.message, 'error', 7600);
-        setButtonBusy(submitButton, false);
+      } finally {
+        if (guard.current) setButtonBusy(submitButton, false);
+        guard.finish();
       }
     });
   }
 }
 
 function bindRemittance(context) {
+  const guard = context.collectorWriteGuard;
   const form = context.root.querySelector('#collector-remittance-form');
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (context.root.dataset.financialLocked === 'true') return;
+    if (context.root.dataset.financialLocked === 'true' || !guard.begin()) return;
     const data = new FormData(form);
     const button = form.querySelector('button[type="submit"]');
     setButtonBusy(button, true, 'Submitting…');
@@ -233,20 +238,25 @@ function bindRemittance(context) {
           note: String(data.get('note') || '').trim(),
         },
       });
+      if (!guard.current) return;
       showToast(`Remittance ${result.remittance_number || ''} submitted for recipient review.`, 'success');
       await mountCollectorWorkspace(context);
     } catch (error) {
+      if (!guard.current) return;
       if (error.code === 'network_uncertain') {
-        lockFinancialEntry(context.root, error.message);
+        guard.lock(error.message);
       }
       showToast(error.message, 'error');
-      setButtonBusy(button, false);
+    } finally {
+      if (guard.current) setButtonBusy(button, false);
+      guard.finish();
     }
   });
 }
 
 export async function mountCollectorWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.collectorWriteGuard?.dispose();
   context.accountCredentialsCleanup?.();
   context.accountCredentialsCleanup = null;
   context.employeeOperationsCleanup?.();
@@ -271,6 +281,11 @@ export async function mountCollectorWorkspace(context) {
   ]);
   root.innerHTML = loadingPanel('Loading the authoritative Collector route…');
   root.dataset.financialLocked = 'false';
+  const writeGuard = createCollectorWriteGuard({
+    signal: context.signal,
+    onLock: message => lockFinancialEntry(root, message),
+  });
+  context.collectorWriteGuard = writeGuard;
 
   const [routeResult, account, activity, history] = await Promise.all([
     canViewRoute
@@ -291,7 +306,7 @@ export async function mountCollectorWorkspace(context) {
       ])
     : [{ data: [], error: null }, { data: {}, error: null }];
   const model = buildCollectorRouteViewModel(route);
-  if (context.signal?.aborted) return;
+  if (context.signal?.aborted || !writeGuard.current) return;
   const entryMap = new Map(model.entries.map((entry) => [String(entry.route_entry_id), entry]));
   const profile = account.data?.profile ?? {};
 
@@ -328,6 +343,7 @@ export async function mountCollectorWorkspace(context) {
   });
   bindRouteActions(context, entryMap);
   bindRemittance(context);
+  writeGuard.sync();
   if (canRecordVisit) {
     context.collectorOnboardingCleanup = mountCollectorOnboardingVisit({
       root: root.querySelector('[data-collector-onboarding]'), api, session, signal: context.signal,

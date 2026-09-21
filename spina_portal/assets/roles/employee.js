@@ -1,4 +1,5 @@
 import { mountAccountCredentials } from '../account-credentials.js';
+import { mountRemittanceReview } from '../remittance-review.js';
 import { mountAreaManagement } from '../area-management.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
 import { buildEmployeeViewModel } from '../presenters.js';
@@ -13,7 +14,6 @@ import {
   errorCard,
   escapeHtml,
   formatDateTime,
-  formatMoney,
   hasPermission,
   loadingPanel,
   metricCard,
@@ -61,30 +61,6 @@ function supportQueue(items) {
     .join('')}</div>`;
 }
 
-function remittanceRows(items, canReceive) {
-  if (!items.length) return emptyState('No remittance notification is waiting for this Employee.');
-  return `<div class="list-stack">${items
-    .map(
-      (item) => `<article class="list-item">
-        <div class="section-heading">
-          <div>
-            <strong>${escapeHtml(item.remittance_number || item.title || 'Remittance')}</strong>
-            <div class="meta">From ${escapeHtml(item.collector_name || 'Collector')} · ${formatMoney(item.total_amount)}</div>
-          </div>
-          ${badge(item.status || (item.is_pending ? 'pending' : 'received'))}
-        </div>
-        <p>${escapeHtml(item.custody_message || item.message || '')}</p>
-        <div class="detail-grid">
-          <div class="detail-item"><span>Clients</span><strong>${escapeHtml(item.client_count ?? '—')}</strong></div>
-          <div class="detail-item"><span>Transactions</span><strong>${escapeHtml(item.transaction_count ?? '—')}</strong></div>
-          <div class="detail-item"><span>Collection date</span><strong>${escapeHtml(item.collection_date || '—')}</strong></div>
-        </div>
-        ${item.is_pending && canReceive ? `<button class="button button-secondary accept-remittance" type="button" data-notification-id="${escapeHtml(item.notification_id)}">Review complete — accept cash custody</button>` : ''}
-      </article>`,
-    )
-    .join('')}</div>`;
-}
-
 function accountSection(account) {
   const profile = account.profile ?? {};
   const devices = asArray(account.devices);
@@ -122,31 +98,12 @@ function bindActions(context) {
       }
     });
   }
-
-  for (const button of context.root.querySelectorAll('.accept-remittance')) {
-    button.addEventListener('click', async () => {
-      const confirmed = globalThis.confirm?.(
-        'Confirm only after reviewing every included payment and physically receiving the cash. Continue?',
-      );
-      if (!confirmed) return;
-      setButtonBusy(button, true, 'Accepting…');
-      try {
-        await context.api.request(
-          `/api/v1/notifications/${encodeURIComponent(button.dataset.notificationId)}/accept-remittance`,
-          { method: 'POST', body: { review_acknowledged: true }, financial: true },
-        );
-        showToast('Remittance accepted. Cash custody is now recorded under your account.', 'success');
-        await mountEmployeeWorkspace(context);
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
-      }
-    });
-  }
 }
 
 export async function mountEmployeeWorkspace(context) {
   if (context.signal?.aborted) return;
+  context.remittanceReviewCleanup?.();
+  context.remittanceReviewCleanup = null;
   context.accountCredentialsCleanup?.();
   context.accountCredentialsCleanup = null;
   context.employeeOperationsCleanup?.();
@@ -162,7 +119,6 @@ export async function mountEmployeeWorkspace(context) {
   const { root, api, session, setNavigation } = context;
   const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canViewRemittance = hasPermission(session, 'remittance.view');
-  const canReceiveRemittance = hasPermission(session, 'remittance.receive');
   const canManageSupport = hasPermission(session, 'support.manage');
   const canUseAreaManagement = [
     'area.manage',
@@ -222,11 +178,14 @@ export async function mountEmployeeWorkspace(context) {
   ${canReviewCif ? '<section class="section-card" id="employee-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
   ${canReviewCif ? '<section class="section-card" id="employee-first-loan"><h2>First-loan approval and office release</h2><div data-office-first-loan></div></section>' : ''}
   ${canUseAreaManagement ? '<section class="section-card" id="employee-area-management"></section>' : ''}
-  ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : remittanceRows(model.remittances, canReceiveRemittance)}</section>` : ''}
+  ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : '<div data-remittance-review></div>'}</section>` : ''}
   ${canManageSupport ? `<section class="section-card" id="employee-support"><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
   <section class="section-card" id="employee-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
   <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}<div data-account-credentials></div></section>`;
 
+  context.remittanceReviewCleanup = mountRemittanceReview({
+    root: root.querySelector('[data-remittance-review]'), api, session, notifications: model.remittances, signal: context.signal,
+  });
   context.accountCredentialsCleanup = mountAccountCredentials({
     root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
   });
