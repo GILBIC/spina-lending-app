@@ -10,9 +10,11 @@ import base64
 import hashlib
 from contextlib import contextmanager
 from copy import deepcopy
+from datetime import date, timedelta
 from importlib import import_module
 from uuid import uuid4
 
+import psycopg
 import pytest
 import test_first_loan_disclosure_register_postgres as register_proof
 from first_loan_disclosure_fixtures import SUPPORT
@@ -25,6 +27,7 @@ from gilbic_backend.first_loan_repository import (
     FirstLoanConflict,
 )
 from gilbic_backend.office_review_evidence_storage import PrivateEvidenceStore
+from psycopg import sql
 
 runtime_url = register_proof.runtime_url
 connection = register_proof.connection
@@ -108,6 +111,37 @@ def _state(connection):
     return rows, register_proof._counts(connection), files
 
 
+def _business_rows(connection):
+    """Preserve complete rows, including zero-sum financial updates."""
+    tables = connection.execute(
+        "select schemaname, tablename from pg_tables "
+        "where schemaname in ('core', 'lending', 'accounting', 'mobile', 'auth') "
+        "and not (schemaname = 'lending' "
+        "and tablename = 'first_loan_disclosure_calculations') "
+        "and not (schemaname = 'core' and tablename = 'audit_logs') "
+        "order by schemaname, tablename"
+    ).fetchall()
+    return {
+        (row["schemaname"], row["tablename"]): connection.execute(
+            sql.SQL(
+                "select to_jsonb(t) as value from {}.{} t "
+                "order by to_jsonb(t)::text"
+            ).format(
+                sql.Identifier(row["schemaname"]), sql.Identifier(row["tablename"])
+            )
+        ).fetchall()
+        for row in tables
+    }
+
+
+def _immutable_result(record):
+    return {
+        key: value
+        for key, value in record.items()
+        if key not in {"approval_ready", "blockers"}
+    }
+
+
 def _employee(connection, case):
     connection.execute(
         "delete from core.user_roles where user_id = %s", (case["actor"],)
@@ -147,6 +181,10 @@ def test_record_retains_exact_support_without_financial_or_generic_evidence_writ
     repository, case = _setup(connection, monkeypatch)
     payload = _payload(connection, repository, case)
     before = _state(connection)
+    business_before = _business_rows(connection)
+    audits_before = connection.execute(
+        "select * from core.audit_logs order by id"
+    ).fetchall()
     record = _record(repository, case, payload)
     saved = _row(connection, record["id"])
     request = DisclosureReviewRequest.model_validate(payload)
@@ -180,7 +218,20 @@ def test_record_retains_exact_support_without_financial_or_generic_evidence_writ
     assert "storage_key" not in metadata and "path" not in metadata
     after = _state(connection)
     assert len(after[0]) == len(before[0]) + 1
-    assert after[1] == before[1]
+    expected_counts = dict(before[1])
+    expected_counts[("core", "audit_logs")] += 1
+    assert after[1] == expected_counts
+    assert _business_rows(connection) == business_before
+    audit = connection.execute(
+        "select * from core.audit_logs where target_id = %s "
+        "and action = 'lending.first_loan.disclosure_reviewed'",
+        (record["id"],),
+    ).fetchall()
+    assert len(audit) == 1 and audit[0]["actor_user_id"] == case["actor"]
+    assert audit[0]["details"]["review_digest"] == record["review_digest"]
+    assert connection.execute(
+        "select * from core.audit_logs where id <> %s order by id", (audit[0]["id"],)
+    ).fetchall() == audits_before
     assert len(after[2]) == len(before[2]) + 1
 
 
@@ -195,7 +246,10 @@ def test_identical_retry_returns_original_after_successor_without_writes(
     second = _record(repository, case, successor)
     assert second["id"] != first["id"] and second["version_number"] == 2
     before = _state(connection)
-    assert _record(repository, case, payload) == first
+    replay = _record(repository, case, payload)
+    assert _immutable_result(replay) == _immutable_result(first)
+    assert replay["approval_ready"] is False
+    assert "calculation_superseded" in replay["blockers"]
     assert _state(connection) == before
 
 
@@ -313,3 +367,167 @@ def test_invalid_file_bytes_cannot_become_a_retained_review(connection, monkeypa
     with pytest.raises(FirstLoanConflict):
         _record(repository, case, payload)
     assert _state(connection) == before
+
+
+def test_stale_source_remains_readable_but_cannot_record_a_new_review(
+    connection, monkeypatch
+):
+    repository, case = _setup(connection, monkeypatch)
+    payload = _payload(connection, repository, case)
+    first = _record(repository, case, payload)
+    connection.execute(
+        "update lending.clients set status = 'inactive' where id = %s",
+        (case["client"],),
+    )
+    before = _state(connection)
+    replay = _record(repository, case, payload)
+    assert _immutable_result(replay) == _immutable_result(first)
+    assert replay["approval_ready"] is False
+    assert "source_context_changed" in replay["blockers"]
+    assert repository.get(**_actor(case), calculation_id=first["id"]) == replay
+    recovered = repository.by_request(
+        **_actor(case), request_id=payload["request_id"]
+    )
+    assert recovered == replay
+    payload["request_id"] = str(uuid4())
+    with pytest.raises(FirstLoanConflict):
+        _record(repository, case, payload)
+    assert _state(connection) == before
+
+
+@pytest.mark.parametrize("operation", ["get", "support"])
+def test_explicit_application_binding_cannot_be_crossed(
+    connection, monkeypatch, operation
+):
+    repository, case = _setup(connection, monkeypatch)
+    record = _record(repository, case, _payload(connection, repository, case))
+    before = _state(connection)
+    with pytest.raises(FirstLoanConflict):
+        getattr(repository, operation)(
+            **_actor(case),
+            calculation_id=record["id"],
+            application_version_id=uuid4(),
+        )
+    assert _state(connection) == before
+
+
+def test_different_management_actor_cannot_reuse_request_identity(
+    connection, monkeypatch
+):
+    repository, case = _setup(connection, monkeypatch)
+    payload = _payload(connection, repository, case)
+    _record(repository, case, payload)
+    _, other = _setup(connection, monkeypatch)
+    before = _state(connection)
+    with pytest.raises(FirstLoanConflict):
+        _record(repository, other, payload)
+    with pytest.raises(FirstLoanConflict):
+        repository.by_request(**_actor(other), request_id=payload["request_id"])
+    assert _state(connection) == before
+
+
+def test_missing_values_and_unsupported_grt_never_become_ready(
+    connection, monkeypatch
+):
+    repository, case = _setup(connection, monkeypatch)
+    payload = _payload(connection, repository, case)
+    payload["components"].update(
+        contractual_interest="195.00", grt_in_repayments="5.00"
+    )
+    payload["charge_items"] = [
+        {
+            "item_id": "grt",
+            "kind": "grt_recovery",
+            "timing": "repayments",
+            "amount": "5.00",
+            "support_section_reference": "SYNTHETIC blocked split",
+        }
+    ]
+    payload["borrower_charge_basis"]["grt_zero_reason"] = None
+    business_before = _business_rows(connection)
+    record = _record(repository, case, payload)
+    assert record["approval_ready"] is False
+    assert "component_integration_required" in record["blockers"]
+    assert "missing_amount_financed" in record["blockers"]
+    assert "missing_effective_interest_rate" in record["blockers"]
+    assert _business_rows(connection) == business_before
+    assert _row(connection, record["id"])["input_snapshot"]["terms"] == payload["terms"]
+
+
+@pytest.mark.parametrize("change", ["wrong_type", "future", "maturity", "superseded"])
+def test_rule_applicability_is_rechecked_before_private_file_write(
+    connection, monkeypatch, change
+):
+    repository, case = _setup(connection, monkeypatch)
+    payload = _payload(connection, repository, case)
+    if change == "wrong_type":
+        payload["dst_rule_id"] = payload["grt_rule_id"]
+    else:
+        current = connection.execute(
+            "select * from accounting.v1_tax_rule_evidence where id = %s",
+            (case["dst_rule"],),
+        ).fetchone()
+        effective = current["effective_from"]
+        if change == "future":
+            planned = date.fromisoformat(payload["terms"]["schedule_basis_date"])
+            effective = planned + timedelta(days=1)
+        key = current["rule_key"] if change == "superseded" else f"SYN-R1-{uuid4().hex}"
+        replacement = connection.execute(
+            "select accounting.record_v1_tax_rule_evidence("
+            "%s, %s, 'documentary_stamp_tax', %s, %s, null, 'exempt', 0, %s, "
+            "'SYNTHETIC ONLY', 'SYNTHETIC ONLY', 'SYNTHETIC ONLY', %s, "
+            "'Synthetic applicability proof; no live tax authority.', %s) as id",
+            (
+                case["actor"],
+                uuid4(),
+                key,
+                effective,
+                1 if change == "maturity" else None,
+                "b" * 64,
+                current["id"] if change == "superseded" else None,
+            ),
+        ).fetchone()["id"]
+        if change != "superseded":
+            payload["dst_rule_id"] = str(replacement)
+    before = _state(connection)
+    with pytest.raises(FirstLoanConflict):
+        _context(repository, case, payload)
+    with pytest.raises(FirstLoanConflict):
+        _record(repository, case, payload)
+    assert _state(connection) == before
+
+
+def test_failed_audit_rolls_back_review_and_exact_retry_reuses_staged_file(
+    connection, monkeypatch
+):
+    repository, case = _setup(connection, monkeypatch)
+    payload = _payload(connection, repository, case)
+    before = _state(connection)
+    business_before = _business_rows(connection)
+    name = f"r1_audit_failure_{uuid4().hex}"
+    connection.execute(
+        sql.SQL(
+            "create function pg_temp.{}() returns trigger language plpgsql "
+            "as $$ begin if NEW.action = 'lending.first_loan.disclosure_reviewed' "
+            "then raise exception 'SYNTHETIC R1 audit failure'; "
+            "end if; return NEW; end; $$"
+        ).format(sql.Identifier(name))
+    )
+    connection.execute(
+        sql.SQL(
+            "create trigger {} before insert on core.audit_logs "
+            "for each row execute function pg_temp.{}()"
+        ).format(sql.Identifier(name), sql.Identifier(name))
+    )
+    with pytest.raises(psycopg.Error, match="SYNTHETIC R1 audit failure"):
+        _record(repository, case, payload)
+    after = _state(connection)
+    assert after[:2] == before[:2]
+    assert _business_rows(connection) == business_before
+    assert len(after[2]) == len(before[2]) + 1
+    connection.execute(
+        sql.SQL("drop trigger {} on core.audit_logs").format(sql.Identifier(name))
+    )
+    record = _record(repository, case, payload)
+    assert _state(connection)[2] == after[2]
+    assert _record(repository, case, payload) == record
