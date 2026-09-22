@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/app.dart';
 import 'package:gilbic_mobile/src/core/auth/session_store.dart';
 
+import 'support/app_platform_dependencies.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -12,7 +14,11 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
       try {
         await tester.pumpWidget(
-          GilbicApp(sessionStore: MemorySessionStore()),
+          GilbicApp(
+            deviceIdentityProvider: testAppDeviceIdentity(),
+            imageRecoveryController: testAppImageRecovery(),
+            sessionStore: MemorySessionStore(),
+          ),
         );
         await tester.pumpAndSettle();
 

@@ -8,6 +8,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+import 'support/app_platform_dependencies.dart';
+
 const UserSession _session = UserSession(
   userId: 'collector-1',
   username: 'collector.one',
@@ -49,6 +51,8 @@ void main() {
 
     await tester.pumpWidget(
       GilbicApp(
+        deviceIdentityProvider: testAppDeviceIdentity(),
+        imageRecoveryController: testAppImageRecovery(),
         sessionStore: store,
         authRepository: _UpdateBlockingAuthRepository(),
         collectorRouteCache: MemoryCollectorRouteCache(),

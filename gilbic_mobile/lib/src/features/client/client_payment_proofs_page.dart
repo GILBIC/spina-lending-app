@@ -1,7 +1,10 @@
 import 'dart:math';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
@@ -433,14 +436,32 @@ class _ClientPaymentProofUploadPageState
 
   Future<void> _pick(ImageSource source) async {
     if (_busy || _uncertain || _conflict) return;
+    final loanId = _loanId;
+    if (loanId == null) {
+      setState(() => _error = 'Choose the loan before selecting a photo.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final file = await (widget.imagePicker ?? ImagePicker()).pickImage(
-        source: source,
-        requestFullMetadata: false,
+      final proof = widget.proof;
+      final file = await pickRecoverableImage(
+        context,
+        recoveryContext: ImagePickContext(
+          purpose: 'client_payment_proof',
+          target: jsonEncode({
+            'loan_id': loanId,
+            'proof_id': proof?.proofId,
+            'version': proof?.currentVersion.versionNumber,
+          }),
+          label: proof == null ? 'Payment proof' : 'Correct payment proof',
+        ),
+        pick: () => (widget.imagePicker ?? ImagePicker()).pickImage(
+          source: source,
+          requestFullMetadata: false,
+        ),
       );
       if (file == null || !mounted) return;
       if (await file.length() > widget.capability.maxBytes) {

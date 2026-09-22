@@ -9,6 +9,8 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+import 'support/app_platform_dependencies.dart';
+
 void main() {
   const platforms = <TargetPlatform>[
     TargetPlatform.android,
@@ -295,6 +297,8 @@ Future<void> _pumpApp(
 }) async {
   await tester.pumpWidget(
     GilbicApp(
+      deviceIdentityProvider: testAppDeviceIdentity(),
+      imageRecoveryController: testAppImageRecovery(),
       sessionStore: store,
       authRepository: repository,
       collectorRouteCache: MemoryCollectorRouteCache(),

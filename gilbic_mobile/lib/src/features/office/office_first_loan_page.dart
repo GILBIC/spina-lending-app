@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
@@ -281,6 +284,25 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
       ),
     );
   }
+
+  ImagePickContext _imageRecoveryContext(OfficeRecord current, bool contract) =>
+      ImagePickContext(
+        purpose: contract
+            ? 'borrower_contract_signed'
+            : 'borrower_cash_received',
+        target: jsonEncode({
+          'client_id': widget.clientId,
+          'application_reference': widget.applicationReference,
+          'loan_id': current['loan_id'],
+          'packet_id': current['packet_id'],
+          'packet_hash': current['packet_hash'],
+          if (!contract)
+            'authorization_id': stringMap(current['authorization'])['id'],
+        }),
+        label: contract
+            ? 'Borrower contract signature'
+            : 'Borrower cash acknowledgment',
+      );
 
   Future<void> _release() async {
     final selected = loan;
@@ -637,6 +659,7 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
             OfficeEvidencePicker(
               key: ValueKey('contract-$captureGeneration'),
               enabled: operation.canWrite,
+              recoveryContext: _imageRecoveryContext(current, true),
               onChanged: (value) => setState(() {
                 contractPhoto = value;
                 contractRequest = officeRequestId();
@@ -668,6 +691,7 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
               OfficeEvidencePicker(
                 key: ValueKey('cash-$captureGeneration'),
                 enabled: operation.canWrite,
+                recoveryContext: _imageRecoveryContext(current, false),
                 onChanged: (value) => setState(() {
                   cashPhoto = value;
                   cashRequest = officeRequestId();

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
 import 'package:gilbic_mobile/src/core/auth/session_store.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache_factory.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
@@ -30,6 +32,7 @@ class GilbicApp extends StatefulWidget {
     this.collectionDeviceSequence,
     this.clientLoanRepository,
     this.employeeOperationsService,
+    this.imageRecoveryController,
     super.key,
   });
 
@@ -43,6 +46,7 @@ class GilbicApp extends StatefulWidget {
   final CollectionDeviceSequence? collectionDeviceSequence;
   final ClientLoanRepository? clientLoanRepository;
   final EmployeeOperationsService? employeeOperationsService;
+  final ImageRecoveryController? imageRecoveryController;
 
   @override
   State<GilbicApp> createState() => _GilbicAppState();
@@ -64,6 +68,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   late final DeviceIdentityProvider _deviceIdentityProvider;
   late final CollectionDeviceSequence _collectionDeviceSequence;
   late final EmployeeOperationsService _employeeOperations;
+  late final ImageRecoveryController _imageRecovery;
   CollectorRouteCache? _collectorRouteCache;
   UserSession? _session;
   Timer? _sessionRefreshTimer;
@@ -77,15 +82,21 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _sessionStore = widget.sessionStore ?? SecureSessionStore();
+    _imageRecovery =
+        widget.imageRecoveryController ?? ImageRecoveryController();
     _authRepository = widget.authRepository ?? SpinaAuthRepository();
-    _paymentSubmissionRepository = widget.paymentSubmissionRepository ??
+    _paymentSubmissionRepository =
+        widget.paymentSubmissionRepository ??
         SpinaPaymentSubmissionRepository();
     _deviceIdentityProvider =
         widget.deviceIdentityProvider ?? DeviceIdentityProvider();
-    _collectionDeviceSequence = widget.collectionDeviceSequence ??
-        SecureCollectionDeviceSequence();
-    _employeeOperations = widget.employeeOperationsService ??
-        EmployeeOperationsService(deviceIdentityProvider: _deviceIdentityProvider);
+    _collectionDeviceSequence =
+        widget.collectionDeviceSequence ?? SecureCollectionDeviceSequence();
+    _employeeOperations =
+        widget.employeeOperationsService ??
+        EmployeeOperationsService(
+          deviceIdentityProvider: _deviceIdentityProvider,
+        );
 
     final suppliedLoader = widget.collectorRouteLoader;
     if (suppliedLoader != null) {
@@ -96,8 +107,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           widget.collectorRouteCache ?? createDefaultCollectorRouteCache();
       _collectorRouteCache = cache;
       _collectorRouteLoader = CachedCollectorRouteLoader(
-        remote: widget.collectorRouteRepository ??
-            SpinaCollectorRouteRepository(),
+        remote:
+            widget.collectorRouteRepository ?? SpinaCollectorRouteRepository(),
         cache: cache,
       );
     }
@@ -110,6 +121,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     _sessionRefreshTimer?.cancel();
     _employeeOperations.attach(null);
     if (widget.employeeOperationsService == null) _employeeOperations.dispose();
+    if (widget.imageRecoveryController == null) _imageRecovery.dispose();
     super.dispose();
   }
 
@@ -179,13 +191,11 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   Future<UserSession> _refreshStoredSession(UserSession current) async {
     final refresher = _authRepository;
     if (refresher is! SessionRefreshRepository) {
-      throw const SpinaApiException(
-        _expiredSessionNotice,
-        statusCode: 401,
-      );
+      throw const SpinaApiException(_expiredSessionNotice, statusCode: 401);
     }
-    final refreshed =
-        await (refresher as SessionRefreshRepository).refresh(current);
+    final refreshed = await (refresher as SessionRefreshRepository).refresh(
+      current,
+    );
     current.applyRefresh(refreshed);
     await _sessionStore.write(refreshed);
     return refreshed;
@@ -197,8 +207,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       return current;
     }
     try {
-      final validated =
-          await (validator as SessionValidationRepository).validate(current);
+      final validated = await (validator as SessionValidationRepository)
+          .validate(current);
       current.applyRefresh(validated);
       await _sessionStore.write(validated);
       return validated;
@@ -278,10 +288,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _showUpdateRequired(
-    UserSession? session,
-    String message,
-  ) async {
+  Future<void> _showUpdateRequired(UserSession? session, String message) async {
     _employeeOperations.attach(null);
     _sessionRefreshTimer?.cancel();
     if (session != null) {
@@ -349,7 +356,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     }
 
     final expiry = current.expiresAt;
-    final needsRefresh = expiry == null ||
+    final needsRefresh =
+        expiry == null ||
         !expiry.isAfter(DateTime.now().toUtc().add(_refreshLeadTime));
     final refreshToken = current.refreshToken?.trim() ?? '';
     if (needsRefresh &&
@@ -359,10 +367,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       return;
     }
     if (current.isExpired) {
-      await _invalidateLocalSession(
-        current,
-        notice: _expiredSessionNotice,
-      );
+      await _invalidateLocalSession(current, notice: _expiredSessionNotice);
       return;
     }
     await _validateCurrentSession();
@@ -380,8 +385,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
     _refreshingSession = true;
     try {
-      final validated =
-          await (validator as SessionValidationRepository).validate(current);
+      final validated = await (validator as SessionValidationRepository)
+          .validate(current);
       current.applyRefresh(validated);
       await _sessionStore.write(validated);
       if (!mounted) {
@@ -419,7 +424,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     }
 
     final expiry = current.expiresAt;
-    final needsRefresh = expiry == null ||
+    final needsRefresh =
+        expiry == null ||
         !expiry.isAfter(DateTime.now().toUtc().add(_refreshLeadTime));
     if (!force && !needsRefresh) {
       _scheduleSessionRefresh(current);
@@ -428,8 +434,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
     _refreshingSession = true;
     try {
-      final refreshed =
-          await (refresher as SessionRefreshRepository).refresh(current);
+      final refreshed = await (refresher as SessionRefreshRepository).refresh(
+        current,
+      );
       current.applyRefresh(refreshed);
       await _sessionStore.write(refreshed);
       if (!mounted) {
@@ -446,19 +453,13 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           notice: _sessionNoticeForError(error),
         );
       } else if (current.isExpired) {
-        await _invalidateLocalSession(
-          current,
-          notice: _expiredSessionNotice,
-        );
+        await _invalidateLocalSession(current, notice: _expiredSessionNotice);
       } else {
         _scheduleRefreshRetry();
       }
     } on Exception {
       if (current.isExpired) {
-        await _invalidateLocalSession(
-          current,
-          notice: _expiredSessionNotice,
-        );
+        await _invalidateLocalSession(current, notice: _expiredSessionNotice);
       } else {
         _scheduleRefreshRetry();
       }
@@ -491,26 +492,31 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       title: 'SPINA',
       debugShowCheckedModeBanner: false,
       theme: SpinaTheme.light,
-      builder: (context, child) => EmployeeOperationsScope(service: _employeeOperations, child: child!),
+      builder: (context, child) => ImageRecoveryHost(
+        controller: _imageRecovery,
+        session: _session,
+        sessionRestored: !_loading,
+        deviceIdentityProvider: _deviceIdentityProvider,
+        child: EmployeeOperationsScope(
+          service: _employeeOperations,
+          child: child!,
+        ),
+      ),
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : _updateRequiredMessage != null
-              ? _UpdateRequiredPage(message: _updateRequiredMessage!)
-              : _session == null
-                  ? LoginPage(
-                      onSignIn: _signIn,
-                      noticeMessage: _sessionNotice,
-                    )
-                  : EnhancedRoleDashboard(
-                      session: _session!,
-                      onSignOut: _signOut,
-                      collectorRouteLoader: _collectorRouteLoader,
-                      paymentSubmissionRepository:
-                          _paymentSubmissionRepository,
-                      deviceIdentityProvider: _deviceIdentityProvider,
-                      collectionDeviceSequence: _collectionDeviceSequence,
-                      clientLoanRepository: widget.clientLoanRepository,
-                    ),
+          ? _UpdateRequiredPage(message: _updateRequiredMessage!)
+          : _session == null
+          ? LoginPage(onSignIn: _signIn, noticeMessage: _sessionNotice)
+          : EnhancedRoleDashboard(
+              session: _session!,
+              onSignOut: _signOut,
+              collectorRouteLoader: _collectorRouteLoader,
+              paymentSubmissionRepository: _paymentSubmissionRepository,
+              deviceIdentityProvider: _deviceIdentityProvider,
+              collectionDeviceSequence: _collectionDeviceSequence,
+              clientLoanRepository: widget.clientLoanRepository,
+            ),
     );
   }
 }

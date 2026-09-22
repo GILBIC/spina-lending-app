@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_application_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_first_loan_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_intake_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -122,6 +123,61 @@ Future<void> reveal(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets(
+    'contract and cash recovery bind the exact packet and cash authorization',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OfficeFirstLoanPage(
+            actor: identity(),
+            clientId: clientId,
+            applicationReference: 'APP-1',
+            repository: OfficeRepository(
+              client: MockClient((request) async {
+                if (request.url.path.endsWith('/review-summary')) {
+                  return json(application());
+                }
+                if (request.url.path.endsWith('/context')) {
+                  return json({'products': [], 'templates': []});
+                }
+                return json({
+                  'loans': [loan()],
+                  'decisions': [],
+                });
+              }),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (final cash in [false, true]) {
+        final target = find.byWidgetPredicate(
+          (widget) =>
+              widget is OfficeEvidencePicker &&
+              widget.recoveryContext.purpose ==
+                  (cash
+                      ? 'borrower_cash_received'
+                      : 'borrower_contract_signed'),
+        );
+        await reveal(tester, target);
+        final picker = tester.widget<OfficeEvidencePicker>(target);
+        expect(
+          picker.recoveryContext.purpose,
+          cash ? 'borrower_cash_received' : 'borrower_contract_signed',
+        );
+        expect(jsonDecode(picker.recoveryContext.target), {
+          'client_id': clientId,
+          'application_reference': 'APP-1',
+          'loan_id': loanId,
+          'packet_id': packetId,
+          'packet_hash': hash,
+          if (cash) 'authorization_id': authorizationId,
+        });
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'Management exact approval remains usable on a phone with large text',
     (tester) async {
