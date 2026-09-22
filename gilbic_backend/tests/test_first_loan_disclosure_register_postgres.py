@@ -191,9 +191,8 @@ def test_individually_valid_foreign_sources_cannot_be_mixed(
     _, other = _case(connection, monkeypatch)
     foreign = _values(connection, other)
     values = _values(connection, case, **{field: foreign[field]})
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _insert(connection, values)
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _insert(connection, values)
 
 
 @pytest.mark.parametrize("field", ["dst_rule_id", "grt_rule_id"])
@@ -206,9 +205,8 @@ def test_rule_type_and_existing_identity_are_required(
     values = _values(
         connection, case, **{field: uuid4() if kind == "missing" else other}
     )
-    with pytest.raises(psycopg.IntegrityError):
-        with connection.transaction():
-            _insert(connection, values)
+    with pytest.raises(psycopg.IntegrityError), connection.transaction():
+        _insert(connection, values)
 
 
 @pytest.mark.parametrize("change", ["foreign_device", "role", "permission"])
@@ -229,9 +227,8 @@ def test_reviewer_device_role_and_permission_are_checked(
             "delete from core.role_permissions "
             "where permission_code = 'lending.first_loan.approve'"
         )
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _insert(connection, values)
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _insert(connection, values)
 
 
 @pytest.mark.parametrize(
@@ -254,13 +251,15 @@ def test_invalid_metadata_never_creates_a_partial_record(
 ):
     _, case = _case(connection, monkeypatch)
     values = _values(connection, case, **{field: value})
-    with pytest.raises(psycopg.IntegrityError):
-        with connection.transaction():
-            _insert(connection, values)
-    assert connection.execute(
-        "select 1 from lending.first_loan_disclosure_calculations where id = %s",
-        (values["id"],),
-    ).fetchone() is None
+    with pytest.raises(psycopg.IntegrityError), connection.transaction():
+        _insert(connection, values)
+    assert (
+        connection.execute(
+            "select 1 from lending.first_loan_disclosure_calculations where id = %s",
+            (values["id"],),
+        ).fetchone()
+        is None
+    )
 
 
 @pytest.mark.parametrize("field", ["request_id", "support_storage_key"])
@@ -276,9 +275,8 @@ def test_duplicate_request_or_file_identity_does_not_create_a_successor(
         supersedes_calculation_id=first["id"],
         **{field: first[field]},
     )
-    with pytest.raises(psycopg.errors.UniqueViolation):
-        with connection.transaction():
-            _insert(connection, values)
+    with pytest.raises(psycopg.errors.UniqueViolation), connection.transaction():
+        _insert(connection, values)
 
 
 def test_versions_continue_across_corrected_application_versions(
@@ -323,9 +321,8 @@ def test_chain_cannot_restart_skip_branch_or_cross_applications(
         values = _values(
             connection, case, version_number=3, supersedes_calculation_id=first["id"]
         )
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _insert(connection, values)
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _insert(connection, values)
 
 
 @pytest.mark.parametrize("operation", ["update", "delete"])
@@ -339,13 +336,15 @@ def test_saved_register_rows_cannot_be_changed(connection, monkeypatch, operatio
         else "delete from lending.first_loan_disclosure_calculations where id = %s"
     )
     params = ("b" * 64, record["id"]) if operation == "update" else (record["id"],)
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            connection.execute(command, params)
-    assert connection.execute(
-        "select * from lending.first_loan_disclosure_calculations where id = %s",
-        (record["id"],),
-    ).fetchone() == record
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        connection.execute(command, params)
+    assert (
+        connection.execute(
+            "select * from lending.first_loan_disclosure_calculations where id = %s",
+            (record["id"],),
+        ).fetchone()
+        == record
+    )
 
 
 def _schema_two_approval(connection, case, calculation, **changes):
@@ -424,9 +423,8 @@ def test_schema_two_approval_rejects_wrong_binding_atomically(
             "review_digest": digest,
         }
     before = _counts(connection)
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _schema_two_approval(connection, case, record, **changes)
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _schema_two_approval(connection, case, record, **changes)
     assert _counts(connection) == before
 
 
@@ -440,10 +438,13 @@ def test_schema_two_relationship_accepts_exact_source_not_issuance(
     assert binding["review_digest"] == record["review_digest"]
     # This is a direct database relationship proof, not the future API's
     # freshness/document readiness or permission to issue a real loan.
-    assert connection.execute(
-        "select 1 from lending.first_loan_releases where loan_id = %s",
-        (approval["loan_id"],),
-    ).fetchone() is None
+    assert (
+        connection.execute(
+            "select 1 from lending.first_loan_releases where loan_id = %s",
+            (approval["loan_id"],),
+        ).fetchone()
+        is None
+    )
 
 
 def test_migration_rerun_preserves_committed_review_and_schema_one_packet(
@@ -463,14 +464,20 @@ def test_migration_rerun_preserves_committed_review_and_schema_one_packet(
         database.commit()
         database.autocommit = True
         database.execute(MIGRATION.read_text(encoding="utf-8"))
-        assert database.execute(
-            "select * from lending.first_loan_disclosure_calculations where id = %s",
-            (record["id"],),
-        ).fetchone() == record
-        assert database.execute(
-            "select * from lending.first_loan_approvals where id = %s",
-            (legacy["id"],),
-        ).fetchone() == legacy
+        assert (
+            database.execute(
+                "select * from lending.first_loan_disclosure_calculations where id = %s",
+                (record["id"],),
+            ).fetchone()
+            == record
+        )
+        assert (
+            database.execute(
+                "select * from lending.first_loan_approvals where id = %s",
+                (legacy["id"],),
+            ).fetchone()
+            == legacy
+        )
         with pytest.raises(psycopg.errors.CheckViolation):
             database.execute(
                 "delete from lending.first_loan_disclosure_calculations where id = %s",
@@ -484,17 +491,16 @@ def test_schema_two_invalid_identity_has_a_controlled_conflict(
 ):
     _, case = _case(connection, monkeypatch)
     record = _insert(connection, _values(connection, case))
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _schema_two_approval(
-                connection,
-                case,
-                record,
-                tax_disclosure={
-                    "calculation_id": value,
-                    "review_digest": record["review_digest"],
-                },
-            )
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _schema_two_approval(
+            connection,
+            case,
+            record,
+            tax_disclosure={
+                "calculation_id": value,
+                "review_digest": record["review_digest"],
+            },
+        )
 
 
 def test_superseded_review_cannot_be_consumed_by_a_new_schema_two_approval(
@@ -508,9 +514,8 @@ def test_superseded_review_cannot_be_consumed_by_a_new_schema_two_approval(
             connection, case, version_number=2, supersedes_calculation_id=first["id"]
         ),
     )
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _schema_two_approval(connection, case, first)
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _schema_two_approval(connection, case, first)
 
 
 def test_source_snapshot_cannot_contradict_valid_record_columns(
@@ -529,6 +534,5 @@ def test_source_snapshot_cannot_contradict_valid_record_columns(
             }
         ),
     )
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with connection.transaction():
-            _insert(connection, values)
+    with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+        _insert(connection, values)
