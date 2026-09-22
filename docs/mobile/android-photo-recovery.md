@@ -1,8 +1,14 @@
 # Android photo recovery
 
 Android can stop Spina while the system photo picker or camera is open. On the
-next launch, Spina checks the image-picker plugin once after restoring the login
-session. A recovered photo appears in a notice. Return to the original form and
+next launch, Spina checks the image-picker plugin after restoring the login
+session. A pending selection is checked again when Spina resumes and before a
+form opens its photo picker, because Android can deliver the result after the
+app has restarted. One coordinator serializes these reads. An empty early result
+keeps the pending context until explicit discard, logout or expiry. An interrupted
+selection must be kept for another check or explicitly discarded before choosing
+a new photo, including when the user visits a different form.
+A recovered photo appears in a notice. Return to the original form and
 tap its photo button to review the image, keep it for later, or discard it.
 
 Recovery uses one encrypted metadata record written before opening the picker.
@@ -39,15 +45,20 @@ does not promise erasure of the plugin cache or user-saved gallery files.
 
 The controller tests exercise destructive lost-data retrieval, persistence across
 a second restart, destination and authorization separation, cancellation,
-storage failures, expiry, concurrent selection and logout races. Widget tests
+storage failures, expiry, concurrent selection, late native results and logout
+races. Widget tests
 exercise recovery review and explicit submission, office witness reset, account
 startup gating and stale device-identity completions.
 
 Physical acceptance uses an isolated application ID and disposable backend.
-Open the native camera/picker, run `adb shell am kill <test-package>` while that
+Open the native camera, run `adb shell am kill <test-package>` while that
 external activity is foreground, verify the old process is gone, and complete
-the selection. This differs from force-stopping the app or only destroying an
-activity. Verify a new process, the recovery notice, the matching form's preview,
+the capture. For a gallery picker that keeps its caller visible, press Home,
+wait for the task to become backgrounded, then kill the test process. Resume the
+test task through Recents and finish selecting the synthetic gallery photo.
+This also tests Spina restarting before the picker delivers its result.
+These checks differ from force-stopping the app or only destroying an activity.
+Verify a new process, the recovery notice, the matching form's preview,
 and zero backend writes until the explicit submit action. Repeat with gallery,
 a second restart, cancellation and logout/account changes. Do not kill or clear
 an app containing unsynchronized business records for this test.

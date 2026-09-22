@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -32,14 +33,24 @@ Future<XFile?> pickRecoverableImage(
   if (!recovery.ready || recovery.busy) {
     throw StateError('Please wait for photo recovery to finish.');
   }
+  // The native gallery copies results asynchronously; it may finish after the
+  // resume check. Drain the original context before offering a new selection.
+  await recovery.recoverPending();
+  if (!context.mounted) return null;
   final recovered = recovery.recovered;
-  if (recovered != null) {
-    final matches = recovery.recoveredFor(recoveryContext) != null;
+  final pending = recovery.pending;
+  if (recovered != null || pending != null) {
+    final matches =
+        recovered != null && recovery.recoveredFor(recoveryContext) != null;
     final action = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          matches ? 'Recover photo?' : 'A different form has a recovered photo',
+          pending != null
+              ? 'Photo selection interrupted'
+              : matches
+              ? 'Recover photo?'
+              : 'A different form has a recovered photo',
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -47,9 +58,11 @@ Future<XFile?> pickRecoverableImage(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                matches
+                pending != null
+                    ? 'The previous selection for ${pending.label} has not finished restoring. Keep it to check again later, or discard it before choosing another photo.'
+                    : matches
                     ? 'Spina restarted while choosing this photo for ${recoveryContext.label}. Review it before continuing. Nothing has been submitted.'
-                    : 'The recovered photo belongs to ${recovered.context.label}. Return to that form to use it, or discard it before choosing another.',
+                    : 'The recovered photo belongs to ${recovered!.context.label}. Return to that form to use it, or discard it before choosing another.',
               ),
               if (matches) ...[
                 const SizedBox(height: 12),
@@ -142,7 +155,8 @@ class ImageRecoveryHost extends StatefulWidget {
   State<ImageRecoveryHost> createState() => _ImageRecoveryHostState();
 }
 
-class _ImageRecoveryHostState extends State<ImageRecoveryHost> {
+class _ImageRecoveryHostState extends State<ImageRecoveryHost>
+    with WidgetsBindingObserver {
   int _binding = 0;
   bool _bound = false;
   String _scope(UserSession? session) {
@@ -160,7 +174,15 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bind();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _bound) {
+      unawaited(widget.controller.recoverPending());
+    }
   }
 
   @override
@@ -198,12 +220,18 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost> {
       // Device identity failures cannot attach an old photo to an unknown user.
       if (mounted && revision == _binding) await controller.initialize(null);
     }
-    if (mounted && revision == _binding) setState(() => _bound = true);
+    if (mounted && revision == _binding) {
+      setState(() => _bound = true);
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        await controller.recoverPending();
+      }
+    }
   }
 
   @override
   void dispose() {
     _binding++;
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -222,9 +250,12 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost> {
             ? null
             : widget.controller.recovered;
         final error = widget.session == null ? null : widget.controller.error;
+        final pending = widget.session == null
+            ? null
+            : widget.controller.pending;
         return Column(
           children: [
-            if (recovered != null || error != null)
+            if (recovered != null || error != null || pending != null)
               Material(
                 color: Theme.of(context).colorScheme.secondaryContainer,
                 child: SafeArea(
@@ -239,7 +270,8 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost> {
                           child: Text(
                             recovered != null
                                 ? 'Photo recovered for ${recovered.context.label}. Open that form and choose a photo to review it.'
-                                : error!,
+                                : error ??
+                                      'Photo selection was interrupted. Return to the original form and choose a photo to continue.',
                           ),
                         ),
                       ],

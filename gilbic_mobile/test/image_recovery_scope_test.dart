@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +60,21 @@ class FakeRecovery extends ImageRecoveryController {
     ImagePickContext value,
     Future<XFile?> Function() launch,
   ) => launch();
+}
+
+class _RecoveryStore implements ImageRecoveryStore {
+  String? value;
+  @override
+  Future<String?> read() async => value;
+  @override
+  Future<void> write(String value) async {
+    this.value = value;
+  }
+
+  @override
+  Future<void> delete() async {
+    value = null;
+  }
 }
 
 void main() {
@@ -146,6 +163,148 @@ void main() {
     );
   });
   tearDown(() => temp.delete(recursive: true));
+
+  testWidgets(
+    'another form cannot replace an empty pending selection without discard',
+    (tester) async {
+      final store = _RecoveryStore()
+        ..value = jsonEncode({
+          'version': 1,
+          'owner': 'actor-a',
+          'purpose': 'proof',
+          'target': 'loan-a',
+          'label': 'Loan A payment proof',
+          'createdAt': DateTime.now().toUtc().toIso8601String(),
+          'path': null,
+        });
+      final controller = ImageRecoveryController(
+        store: store,
+        enabled: true,
+        retrieveLostData: () async => LostDataResponse.empty(),
+      );
+      await controller.initialize('actor-a');
+      var launches = 0;
+      Object? failure;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ImageRecoveryScope(
+            controller: controller,
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () async {
+                    try {
+                      await pickRecoverableImage(
+                        context,
+                        recoveryContext: other,
+                        pick: () async {
+                          launches++;
+                          return null;
+                        },
+                      );
+                    } catch (error) {
+                      failure = error;
+                    }
+                  },
+                  child: const Text('Choose image'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Choose image'));
+      await tester.pumpAndSettle();
+      expect(find.text('Photo selection interrupted'), findsOneWidget);
+      expect(find.textContaining('Loan A payment proof'), findsOneWidget);
+      expect(launches, 0);
+      await tester.tap(find.text('Keep for later'));
+      await tester.pumpAndSettle();
+      expect(controller.pending?.target, 'loan-a');
+      expect(launches, 0);
+      await tester.tap(find.text('Choose image'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Discard and choose another'));
+      await tester.pumpAndSettle();
+      expect(launches, 1);
+      expect(failure, isNull);
+      expect(controller.pending, isNull);
+    },
+  );
+
+  testWidgets(
+    'form action recovers a photo that arrived after an empty resume check',
+    (tester) async {
+      final store = _RecoveryStore()
+        ..value = jsonEncode({
+          'version': 1,
+          'owner': 'actor-a',
+          'purpose': 'proof',
+          'target': 'loan-a',
+          'label': 'Loan A payment proof',
+          'createdAt': DateTime.now().toUtc().toIso8601String(),
+          'path': null,
+        });
+      var response = LostDataResponse.empty();
+      final controller = ImageRecoveryController(
+        store: store,
+        enabled: true,
+        retrieveLostData: () async => response,
+      );
+      await controller.initialize('actor-a');
+      await controller.recoverPending();
+      expect(controller.recovered, isNull);
+      response = LostDataResponse(type: RetrieveType.image, files: [file]);
+      final recovered = Completer<void>();
+      controller.addListener(() {
+        if (controller.recovered != null && !recovered.isCompleted) {
+          recovered.complete();
+        }
+      });
+      var launches = 0;
+      Object? failure;
+      XFile? accepted;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ImageRecoveryScope(
+            controller: controller,
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () async {
+                    try {
+                      accepted = await pickRecoverableImage(
+                        context,
+                        recoveryContext: target,
+                        pick: () async {
+                          launches++;
+                          return null;
+                        },
+                      );
+                    } catch (error) {
+                      failure = error;
+                    }
+                  },
+                  child: const Text('Choose image'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Choose image'));
+      await tester.runAsync(() => recovered.future);
+      await tester.pumpAndSettle();
+      expect(find.text('Recover photo?'), findsOneWidget);
+      expect(failure, isNull);
+      expect(launches, 0);
+      expect(accepted, isNull);
+      await tester.tap(find.text('Use photo'));
+      await tester.pumpAndSettle();
+      expect(accepted?.path, file.path);
+      expect(store.value, isNull);
+    },
+  );
 
   testWidgets(
     'recovered photo waits for review and does not launch the picker',

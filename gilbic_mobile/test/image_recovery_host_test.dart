@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -74,7 +75,89 @@ Widget _host({
   ),
 );
 
+String _pendingJournal() => jsonEncode({
+  'version': 1,
+  'owner': jsonEncode([
+    ApiConfig.baseUrl,
+    'installation-42',
+    jsonEncode([
+      'actor-a',
+      'management',
+      ['collector', 'management'],
+      ['a.permission', 'z.permission'],
+    ]),
+  ]),
+  'purpose': 'proof',
+  'target': 'loan-42',
+  'label': 'Loan 42 payment proof',
+  'createdAt': DateTime.now().toUtc().toIso8601String(),
+  'path': null,
+});
+
 void main() {
+  testWidgets('already resumed host rechecks pending result after binding', (
+    tester,
+  ) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final store = _Store()..value = _pendingJournal();
+    var reads = 0;
+    final file = XFile.fromData(
+      Uint8List.fromList([0xff, 0xd8, 0xff]),
+      path: '/test/late.jpg',
+    );
+    final controller = ImageRecoveryController(
+      store: store,
+      enabled: true,
+      retrieveLostData: () async => ++reads == 1
+          ? LostDataResponse.empty()
+          : LostDataResponse(type: RetrieveType.image, files: [file]),
+    );
+    final identity = _IdentityProvider([Future.value(_identity)]);
+    await tester.pumpWidget(
+      _host(controller: controller, identity: identity, session: _session()),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.recoveredFor(_photoContext)?.path, '/test/late.jpg');
+    expect(controller.pending, isNull);
+    expect(reads, 2);
+  });
+
+  testWidgets(
+    'resume rechecks pending photo and shows interrupted selection while empty',
+    (tester) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      final store = _Store()..value = _pendingJournal();
+      var response = LostDataResponse.empty();
+      final controller = ImageRecoveryController(
+        store: store,
+        enabled: true,
+        retrieveLostData: () async => response,
+      );
+      final identity = _IdentityProvider([Future.value(_identity)]);
+      await tester.pumpWidget(
+        _host(controller: controller, identity: identity, session: _session()),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Photo selection was interrupted.'),
+        findsOneWidget,
+      );
+      final file = XFile.fromData(
+        Uint8List.fromList([0xff, 0xd8, 0xff]),
+        path: '/test/late.jpg',
+      );
+      response = LostDataResponse(type: RetrieveType.image, files: [file]);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(controller.recoveredFor(_photoContext)?.path, '/test/late.jpg');
+      expect(find.textContaining('Photo recovered for'), findsOneWidget);
+      expect(
+        find.textContaining('Photo selection was interrupted.'),
+        findsNothing,
+      );
+    },
+  );
+
   testWidgets('session loading does not consume Android recovery data', (
     tester,
   ) async {

@@ -173,6 +173,8 @@ void main() {
       expect(await selected, isNull);
       await recovery.initialize(owner);
       expect(recovery.ready, isTrue);
+      expect(recovery.pending?.target, 'loan-42');
+      await recovery.discard();
       expect(await recovery.pick(proof, () async => photo), photo);
     },
   );
@@ -198,6 +200,125 @@ void main() {
       await recovery.initialize(owner);
       expect(recovery.recoveredFor(proof)?.path, photo.path);
       expect(retrievals, 1);
+    },
+  );
+
+  test(
+    'retains context for gallery result delivered after empty startup and resume',
+    () async {
+      store.value = journal();
+      var response = LostDataResponse.empty();
+      var reads = 0;
+      final recovery = controller(
+        lost: () async {
+          reads++;
+          return response;
+        },
+      );
+      await recovery.initialize(owner);
+      expect(recovery.pending?.target, 'loan-42');
+      expect(store.value, isNotNull);
+      await recovery.recoverPending();
+      expect(recovery.recovered, isNull);
+      expect(recovery.pending?.target, 'loan-42');
+      response = LostDataResponse(type: RetrieveType.image, files: [photo]);
+      await recovery.recoverPending();
+      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(recovery.pending, isNull);
+      expect(reads, 3);
+      await recovery.recoverPending();
+      expect(reads, 3);
+    },
+  );
+
+  test(
+    'late result is drained before a new form can overwrite its context',
+    () async {
+      store.value = journal();
+      var response = LostDataResponse.empty();
+      final recovery = controller(lost: () async => response);
+      await recovery.initialize(owner);
+      response = LostDataResponse(type: RetrieveType.image, files: [photo]);
+      var launches = 0;
+      await expectLater(
+        recovery.pick(anotherLoan, () async {
+          launches++;
+          return photo;
+        }),
+        throwsStateError,
+      );
+      expect(launches, 0);
+      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(recovery.recoveredFor(anotherLoan), isNull);
+    },
+  );
+
+  test('late polling result is ignored after owner changes', () async {
+    store.value = journal();
+    final late = Completer<LostDataResponse>();
+    final started = Completer<void>();
+    var reads = 0;
+    final recovery = controller(
+      lost: () {
+        if (reads++ == 0) return Future.value(LostDataResponse.empty());
+        started.complete();
+        return late.future;
+      },
+    );
+    await recovery.initialize(owner);
+    final polling = recovery.recoverPending();
+    await started.future;
+    final switched = recovery.initialize('client-b');
+    late.complete(LostDataResponse(type: RetrieveType.image, files: [photo]));
+    await Future.wait([polling, switched]);
+    expect(recovery.recovered, isNull);
+    expect(recovery.pending, isNull);
+    expect(store.value, isNull);
+  });
+
+  test(
+    'explicit discard prevents later native data from being reused',
+    () async {
+      store.value = journal();
+      var reads = 0;
+      final recovery = controller(
+        lost: () async {
+          reads++;
+          return reads == 1
+              ? LostDataResponse.empty()
+              : LostDataResponse(type: RetrieveType.image, files: [photo]);
+        },
+      );
+      await recovery.initialize(owner);
+      await recovery.discard();
+      await recovery.recoverPending();
+      expect(reads, 1);
+      expect(recovery.recovered, isNull);
+      expect(recovery.pending, isNull);
+    },
+  );
+
+  test(
+    'expires unresolved pending context without reading native cache again',
+    () async {
+      store.value = journal();
+      var clock = now;
+      var reads = 0;
+      final recovery = ImageRecoveryController(
+        store: store,
+        enabled: true,
+        now: () => clock,
+        retrieveLostData: () async {
+          reads++;
+          return LostDataResponse.empty();
+        },
+      );
+      await recovery.initialize(owner);
+      clock = now.add(const Duration(hours: 24));
+      await recovery.recoverPending();
+      expect(recovery.pending, isNull);
+      expect(store.value, isNull);
+      expect(reads, 1);
     },
   );
 
@@ -411,14 +532,23 @@ void main() {
   );
 
   test(
-    'clears stale pending journal when picker was cancelled during restart',
+    'an empty interrupted selection requires discard before a new pick',
     () async {
       store.value = journal();
       final recovery = controller();
       await recovery.initialize(owner);
       expect(recovery.recovered, isNull);
-      expect(store.value, isNull);
+      expect(recovery.pending?.target, 'loan-42');
       expect(recovery.ready, isTrue);
+      await expectLater(
+        recovery.pick(anotherLoan, () async => photo),
+        throwsStateError,
+      );
+      expect(recovery.pending?.target, 'loan-42');
+      await recovery.discard();
+      expect(await recovery.pick(proof, () async => photo), photo);
+      expect(store.value, isNull);
+      expect(recovery.pending, isNull);
     },
   );
 

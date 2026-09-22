@@ -82,11 +82,50 @@ class ImageRecoveryController extends ChangeNotifier {
   String? _error;
   RecoveredImagePick? _recovered;
   DateTime? _recoveredCreatedAt;
+  _ImagePickJournal? _pending;
+  Future<void>? _polling;
 
   bool get ready => _ready;
-  bool get busy => _busy;
+  bool get busy => _busy || _polling != null;
   String? get error => _error;
   RecoveredImagePick? get recovered => _recovered;
+  ImagePickContext? get pending => _pending?.context;
+
+  /// Android can recreate Flutter behind a translucent gallery before the
+  /// native result is copied into the plugin cache. Retry only a journal whose
+  /// owner is still current, on resume or an explicit photo-form action.
+  Future<void> recoverPending() {
+    if (_polling != null) return _polling!;
+    if (!_enabled || !_ready || _busy || _pending == null || _owner == null) {
+      return Future<void>.value();
+    }
+    final revision = _revision;
+    final polling = _enqueue(() async {
+      try {
+        if (!_current(revision) || _busy || _pending == null) return;
+        final raw = await _store.read();
+        if (!_current(revision)) return;
+        final journal = _ImagePickJournal.parse(raw, _now());
+        if (journal == null || journal.owner != _owner) {
+          if (raw != null) await _store.delete();
+          if (_current(revision)) _pending = null;
+          return;
+        }
+        _error = null;
+        final lost = await _retrieveLostData();
+        if (_current(revision)) await _accept(journal, lost, revision);
+      } catch (_) {
+        if (_current(revision)) {
+          _error = 'The previous photo could not be checked. Please try again.';
+        }
+      } finally {
+        _polling = null;
+        _changed();
+      }
+    });
+    _polling = polling;
+    return polling;
+  }
 
   /// Invalidates the previous scope immediately while the host resolves the
   /// current device/session. Does not consume Android data or erase a journal
@@ -100,6 +139,7 @@ class ImageRecoveryController extends ChangeNotifier {
     _initializing = null;
     _recovered = null;
     _recoveredCreatedAt = null;
+    _pending = null;
     _error = null;
     _changed();
   }
@@ -117,6 +157,7 @@ class ImageRecoveryController extends ChangeNotifier {
     _ready = false;
     _recovered = null;
     _recoveredCreatedAt = null;
+    _pending = null;
     _error = null;
     _changed();
     final initializing = _enqueue(() async {
@@ -160,6 +201,20 @@ class ImageRecoveryController extends ChangeNotifier {
       return;
     }
 
+    await _accept(journal, lost, revision);
+  }
+
+  Future<void> _accept(
+    _ImagePickJournal journal,
+    LostDataResponse? lost,
+    int revision,
+  ) async {
+    if (journal.path == null && (lost == null || lost.isEmpty)) {
+      // Empty is also returned before the native executor finishes copying the
+      // result. Preserve context until a later check, replacement, or expiry.
+      _pending = journal;
+      return;
+    }
     XFile? file;
     if (journal.path != null) {
       file = XFile(journal.path!);
@@ -176,7 +231,10 @@ class ImageRecoveryController extends ChangeNotifier {
       }
     }
     if (file == null || !await _readable(file)) {
-      if (_current(revision)) await _store.delete();
+      if (_current(revision)) {
+        await _store.delete();
+        if (_current(revision)) _pending = null;
+      }
       return;
     }
     if (!_current(revision)) return;
@@ -186,6 +244,7 @@ class ImageRecoveryController extends ChangeNotifier {
     if (_current(revision)) {
       _recovered = RecoveredImagePick(context: journal.context, file: file);
       _recoveredCreatedAt = journal.createdAt;
+      _pending = null;
     }
   }
 
@@ -223,13 +282,14 @@ class ImageRecoveryController extends ChangeNotifier {
   }
 
   Future<void> discard() {
-    final revision = _revision;
+    final revision = ++_revision;
     return _enqueue(() async {
       if (!_current(revision)) return;
       if (_enabled) await _store.delete();
       if (!_current(revision)) return;
       _recovered = null;
       _recoveredCreatedAt = null;
+      _pending = null;
       _error = null;
       _changed();
     });
@@ -239,17 +299,28 @@ class ImageRecoveryController extends ChangeNotifier {
     ImagePickContext context,
     Future<XFile?> Function() launch,
   ) async {
+    final revision = _revision;
     if (!_ready || _owner == null || _disposed) {
       throw StateError('Please sign in and wait for photo recovery to finish.');
     }
-    if (_busy) throw StateError('A photo selection is already open.');
+    if (busy) throw StateError('A photo selection is already open.');
+    await recoverPending();
+    if (!_current(revision)) return null;
+    if (!_ready || _owner == null || busy) {
+      throw StateError('Please wait for photo recovery to finish.');
+    }
+    if (_pending != null) {
+      throw StateError(
+        _error ??
+            'Discard the interrupted photo selection before choosing another.',
+      );
+    }
     if (_recovered != null) {
       throw StateError('Review or discard the recovered photo first.');
     }
     if (!_ImagePickJournal.validContext(context)) {
       throw StateError('This photo selection has no valid destination.');
     }
-    final revision = _revision;
     final owner = _owner!;
     _busy = true;
     _error = null;
@@ -266,6 +337,7 @@ class ImageRecoveryController extends ChangeNotifier {
                 createdAt: _now().toUtc(),
               ).encode(),
             );
+            if (_current(revision)) _pending = null;
           } catch (_) {
             if (_current(revision)) {
               _error =
