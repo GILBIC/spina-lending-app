@@ -161,19 +161,20 @@ def test_record_retains_exact_support_without_financial_or_generic_evidence_writ
     assert record["version_number"] == 1
     assert record["review_digest"] == saved["review_digest"]
     assert record["financial_snapshot"] == public_financial_snapshot(payload)
-    assert not {
-        "support_storage_key",
-        "input_snapshot",
-        "source_snapshot",
-        "rule_snapshot",
-        "support_base64",
-        "ready",
-        "approved",
-    } & record.keys()
-    assert repository.get(**_actor(case), calculation_id=record["id"]) == record
-    metadata, content = repository.support(
-        **_actor(case), calculation_id=record["id"]
+    assert (
+        not {
+            "support_storage_key",
+            "input_snapshot",
+            "source_snapshot",
+            "rule_snapshot",
+            "support_base64",
+            "ready",
+            "approved",
+        }
+        & record.keys()
     )
+    assert repository.get(**_actor(case), calculation_id=record["id"]) == record
+    metadata, content = repository.support(**_actor(case), calculation_id=record["id"])
     assert content == SUPPORT
     assert metadata["content_sha256"] == saved["support_sha256"]
     assert "storage_key" not in metadata and "path" not in metadata
