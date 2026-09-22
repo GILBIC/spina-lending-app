@@ -6,6 +6,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_handover_image_context.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -80,9 +82,8 @@ class _CollectorRenewalRequestsPageState
   ) async {
     final result = await showDialog<_RecommendationDraft>(
       context: context,
-      builder: (context) => _RecommendationDialog(
-        recommendation: recommendation,
-      ),
+      builder: (context) =>
+          _RecommendationDialog(recommendation: recommendation),
     );
     if (result == null) return;
     final deviceId = _deviceId;
@@ -143,7 +144,8 @@ class _CollectorRenewalRequestsPageState
         deviceId: deviceId,
         requestId: request.requestId,
       ),
-      successMessage: 'Cash handover recorded. Client confirmation is still required.',
+      successMessage:
+          'Cash handover recorded. Client confirmation is still required.',
     );
   }
 
@@ -169,14 +171,19 @@ class _CollectorRenewalRequestsPageState
         ),
       ),
     );
-    if (source == null) return;
+    if (source == null || !mounted) return;
     try {
-      final image = await _imagePicker.pickImage(
-        source: source,
-        imageQuality: 75,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        requestFullMetadata: false,
+      final image = await pickRecoverableImage(
+        context,
+        recoveryContext: renewalHandoverImageContext(request),
+        recoveryActionLabel: 'Upload recovered photo',
+        pick: () => _imagePicker.pickImage(
+          source: source,
+          imageQuality: 75,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          requestFullMetadata: false,
+        ),
       );
       if (image == null || !mounted) return;
       final bytes = await image.readAsBytes();
@@ -289,12 +296,16 @@ class _CollectorRenewalRequestsPageState
               _MessageCard(
                 icon: Icons.error_outline,
                 message: _error!,
-                action: TextButton(onPressed: _load, child: const Text('Retry')),
+                action: TextButton(
+                  onPressed: _load,
+                  child: const Text('Retry'),
+                ),
               )
             else if (_requests.isEmpty)
               const _MessageCard(
                 icon: Icons.fact_check_outlined,
-                message: 'No assigned-client renewal requests need your attention.',
+                message:
+                    'No assigned-client renewal requests need your attention.',
               )
             else
               for (final request in _requests) ...[
@@ -371,9 +382,7 @@ class _RenewalCard extends StatelessWidget {
                     children: [
                       Text(
                         request.clientName,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       Text('${request.clientCode} • ${request.area}'),
@@ -399,7 +408,9 @@ class _RenewalCard extends StatelessWidget {
                 'Below normal 50% Regular threshold — only a controlled Management override may approve.',
               ),
             if (request.isSevenBySeven)
-              const Text('7x7 request requires Management approval at every paid percentage.'),
+              const Text(
+                '7x7 request requires Management approval at every paid percentage.',
+              ),
             const SizedBox(height: 6),
             Text('Client requested: ${_money(request.requestedAmount)}'),
             if (request.clientMessage.isNotEmpty)
@@ -451,7 +462,9 @@ class _RenewalCard extends StatelessWidget {
                   'Estimated net release: ${_money((request.approvedPrincipal! - request.remainingBalance).clamp(0, double.infinity))} before final same-day settlement.',
                 )
               else ...[
-                Text('Renewal offset: ${_money(request.renewalOffsetAmount ?? 0)}'),
+                Text(
+                  'Renewal offset: ${_money(request.renewalOffsetAmount ?? 0)}',
+                ),
                 Text(
                   'LOCKED cash release: ${_money(request.netReleaseAmount ?? 0)}',
                   style: const TextStyle(fontWeight: FontWeight.w900),
@@ -462,7 +475,8 @@ class _RenewalCard extends StatelessWidget {
               else
                 Text('Client decision: ${request.clientDecision}'),
             ],
-            if (request.signers.isNotEmpty || request.officeProcessingRequired) ...[
+            if (request.signers.isNotEmpty ||
+                request.officeProcessingRequired) ...[
               const Divider(height: 22),
               const Text(
                 'Required signers',
@@ -473,8 +487,7 @@ class _RenewalCard extends StatelessWidget {
                   'OFFICE PROCESSING REQUIRED — at least one required signer cannot complete the remote app flow.',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
-              for (final signer in request.signers)
-                _SignerRow(signer: signer),
+              for (final signer in request.signers) _SignerRow(signer: signer),
             ],
             if (request.cashReleasedToCollectorAt != null ||
                 request.collectorCashReceivedAt != null ||
@@ -484,10 +497,22 @@ class _RenewalCard extends StatelessWidget {
                 'Cash custody',
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
-              _Step('Management released cash', request.cashReleasedToCollectorAt != null),
-              _Step('Collector received cash', request.collectorCashReceivedAt != null),
-              _Step('Collector gave cash to client', request.cashGivenToClientAt != null),
-              _Step('Client confirmed cash received', request.clientCashConfirmedAt != null),
+              _Step(
+                'Management released cash',
+                request.cashReleasedToCollectorAt != null,
+              ),
+              _Step(
+                'Collector received cash',
+                request.collectorCashReceivedAt != null,
+              ),
+              _Step(
+                'Collector gave cash to client',
+                request.cashGivenToClientAt != null,
+              ),
+              _Step(
+                'Client confirmed cash received',
+                request.clientCashConfirmedAt != null,
+              ),
             ],
             if (request.canConfirmCashReceived) ...[
               const SizedBox(height: 10),
@@ -600,7 +625,10 @@ class _Step extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
-          Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 18),
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+          ),
           const SizedBox(width: 7),
           Expanded(child: Text(label)),
         ],
@@ -627,9 +655,9 @@ class _StatusPill extends StatelessWidget {
         text,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SpinaTheme.brandPinkDark,
-              fontWeight: FontWeight.w900,
-            ),
+          color: SpinaTheme.brandPinkDark,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -721,7 +749,9 @@ class _RecommendationDialogState extends State<_RecommendationDialog> {
             initialValue: _reason,
             decoration: const InputDecoration(labelText: 'Reason'),
             items: _reasons
-                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                .map(
+                  (value) => DropdownMenuItem(value: value, child: Text(value)),
+                )
                 .toList(growable: false),
             onChanged: (value) {
               if (value != null) setState(() => _reason = value);
@@ -769,16 +799,16 @@ class _RecommendationDialogState extends State<_RecommendationDialog> {
 String _money(double value) => '₱${value.toStringAsFixed(2)}';
 
 String _roleLabel(String value) => switch (value) {
-      'solidary_co_maker' => 'Solidary co-maker',
-      'surety' => 'Surety',
-      'guarantor' => 'Guarantor',
-      _ => 'Borrower',
-    };
+  'solidary_co_maker' => 'Solidary co-maker',
+  'surety' => 'Surety',
+  'guarantor' => 'Guarantor',
+  _ => 'Borrower',
+};
 
 String _proofLabel(String value) => switch (value) {
-      'under_review' => 'Under Management Review',
-      'approved' => 'Approved',
-      'correction_required' => 'Correction Required',
-      'flagged' => 'Flagged for Review',
-      _ => 'Not Submitted',
-    };
+  'under_review' => 'Under Management Review',
+  'approved' => 'Approved',
+  'correction_required' => 'Correction Required',
+  'flagged' => 'Flagged for Review',
+  _ => 'Not Submitted',
+};

@@ -7,6 +7,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_handover_image_context.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -52,7 +54,8 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
     super.initState();
     _repository =
         widget.repository ?? SpinaCollectorRenewalWorkflowRepository();
-    _routeRepository = widget.routeRepository ??
+    _routeRepository =
+        widget.routeRepository ??
         SpinaCollectorRouteRepository(
           deviceIdentityProvider: widget.deviceIdentityProvider,
         );
@@ -102,8 +105,9 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
           } else if (rightRouteIndex != null) {
             return 1;
           }
-          return (originalIndexByRequest[left.requestId] ?? 0)
-              .compareTo(originalIndexByRequest[right.requestId] ?? 0);
+          return (originalIndexByRequest[left.requestId] ?? 0).compareTo(
+            originalIndexByRequest[right.requestId] ?? 0,
+          );
         });
       } on Object {
         // Ordering is secondary; never block a physical-cash handover because
@@ -132,7 +136,8 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   }
 
   Future<void> _confirmCashGiven(CollectorRenewalRequest request) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Confirm cash given to client?'),
@@ -213,15 +218,20 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
         ),
       ),
     );
-    if (source == null) return;
+    if (source == null || !mounted) return;
 
     try {
-      final image = await _imagePicker.pickImage(
-        source: source,
-        imageQuality: 75,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        requestFullMetadata: false,
+      final image = await pickRecoverableImage(
+        context,
+        recoveryContext: renewalHandoverImageContext(request),
+        recoveryActionLabel: 'Upload recovered photo',
+        pick: () => _imagePicker.pickImage(
+          source: source,
+          imageQuality: 75,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          requestFullMetadata: false,
+        ),
       );
       if (image == null || !mounted) return;
       final bytes = await image.readAsBytes();
@@ -261,8 +271,9 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
 
   @override
   Widget build(BuildContext context) {
-    final waitingCount =
-        _requests.where((request) => request.canConfirmCashGiven).length;
+    final waitingCount = _requests
+        .where((request) => request.canConfirmCashGiven)
+        .length;
 
     return Scaffold(
       appBar: AppBar(
@@ -322,7 +333,10 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
               _MessageCard(
                 icon: Icons.error_outline,
                 message: _error!,
-                action: TextButton(onPressed: _load, child: const Text('Retry')),
+                action: TextButton(
+                  onPressed: _load,
+                  child: const Text('Retry'),
+                ),
               )
             else if (_requests.isEmpty)
               const _MessageCard(
@@ -382,13 +396,14 @@ class _ClientHandoverCard extends StatelessWidget {
                     children: [
                       Text(
                         request.clientName,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       if (meta.isNotEmpty)
-                        Text(meta, style: Theme.of(context).textTheme.bodySmall),
+                        Text(
+                          meta,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                     ],
                   ),
                 ),
@@ -397,9 +412,9 @@ class _ClientHandoverCard extends StatelessWidget {
                   _money(request.netReleaseAmount ?? 0),
                   key: Key('cash-to-client-amount-${request.requestId}'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: SpinaTheme.brandPinkDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: SpinaTheme.brandPinkDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ],
             ),
@@ -454,11 +469,7 @@ class _ClientHandoverCard extends StatelessWidget {
 }
 
 class _MessageCard extends StatelessWidget {
-  const _MessageCard({
-    required this.icon,
-    required this.message,
-    this.action,
-  });
+  const _MessageCard({required this.icon, required this.message, this.action});
 
   final IconData icon;
   final String message;

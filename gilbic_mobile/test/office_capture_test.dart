@@ -1,14 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/features/office/office_review_capture_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:image_picker/image_picker.dart';
 
 const clientId = '11111111-1111-4111-8111-111111111111';
 const cifId = '22222222-2222-4222-8222-222222222222';
@@ -77,7 +81,167 @@ Future<void> reveal(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
+class RecoveryStore implements ImageRecoveryStore {
+  String? value;
+  @override
+  Future<String?> read() async => value;
+  @override
+  Future<void> write(String value) async {
+    this.value = value;
+  }
+
+  @override
+  Future<void> delete() async {
+    value = null;
+  }
+}
+
+Future<ImageRecoveryController> recoveredPhoto(ImagePickContext context) async {
+  final directory = Directory.systemTemp.createTempSync(
+    'spina-office-recovery-',
+  );
+  addTearDown(() => directory.deleteSync(recursive: true));
+  final file = File('${directory.path}/signed.png')..writeAsBytesSync(png);
+  final store = RecoveryStore()
+    ..value = jsonEncode({
+      'version': 1,
+      'owner': 'office-device',
+      'purpose': context.purpose,
+      'target': context.target,
+      'label': context.label,
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'path': null,
+    });
+  final controller = ImageRecoveryController(
+    store: store,
+    enabled: true,
+    retrieveLostData: () async => LostDataResponse(
+      type: RetrieveType.image,
+      files: [XFile.fromData(png, path: file.path, mimeType: 'image/png')],
+    ),
+  );
+  await controller.initialize('office-device');
+  addTearDown(controller.dispose);
+  return controller;
+}
+
 void main() {
+  testWidgets(
+    'recovered office evidence still requires a fresh witness and explicit capture',
+    (tester) async {
+      final context = ImagePickContext(
+        purpose: 'cif_review',
+        target: jsonEncode({
+          'client_id': clientId,
+          'cif_version_id': cifId,
+          'application_id': null,
+          'application_version_id': null,
+          'snapshot_sha256': hash,
+        }),
+        label: 'Signed information review',
+      );
+      final controller = await recoveredPhoto(context);
+      final writes = <http.Request>[];
+      await tester.pumpWidget(
+        ImageRecoveryScope(
+          controller: controller,
+          child: MaterialApp(
+            home: OfficeReviewCapturePage(
+              actor: identity(),
+              clientId: clientId,
+              source: source(),
+              repository: OfficeRepository(
+                client: MockClient((request) async {
+                  if (request.method == 'GET') return json(contextRecord());
+                  writes.add(request);
+                  return json(captured(), 201);
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await reveal(tester, find.text('Gallery'));
+      await tester.tap(find.text('Gallery'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(writes, isEmpty);
+      expect(find.text('Clear image'), findsNothing);
+      await tester.tap(find.text('Use photo'));
+      await tester.pumpAndSettle();
+      expect(writes, isEmpty);
+      expect(find.text('Clear image'), findsOneWidget);
+      final witness = find.byType(CheckboxListTile);
+      await reveal(tester, witness);
+      expect(tester.widget<CheckboxListTile>(witness).value, isFalse);
+      final capture = find.text('Save signed review evidence');
+      await reveal(tester, capture);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.ancestor(of: capture, matching: find.byType(FilledButton)),
+            )
+            .onPressed,
+        isNull,
+      );
+      await reveal(tester, witness);
+      await tester.tap(witness);
+      await tester.pumpAndSettle();
+      await reveal(tester, capture);
+      await tester.tap(capture);
+      await tester.pumpAndSettle();
+      expect(writes, hasLength(1));
+      expect(
+        writes.single.url.queryParameters['expected_snapshot_sha256'],
+        hash,
+      );
+      expect(writes.single.bodyBytes, orderedEquals(png));
+      expect(controller.recovered, isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final privacy in [false, true]) {
+    testWidgets(
+      'image recovery binds the exact ${privacy ? 'privacy' : 'CIF'} review snapshot',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: OfficeReviewCapturePage(
+              actor: identity(),
+              clientId: clientId,
+              source: source(privacy: privacy),
+              privacy: privacy,
+              repository: OfficeRepository(
+                client: MockClient(
+                  (_) async => json(contextRecord(privacy: privacy)),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await reveal(tester, find.text('Gallery'));
+        final picker = tester.widget<OfficeEvidencePicker>(
+          find.byType(OfficeEvidencePicker),
+        );
+        expect(
+          picker.recoveryContext.purpose,
+          privacy ? 'privacy_acknowledgment' : 'cif_review',
+        );
+        expect(jsonDecode(picker.recoveryContext.target), {
+          'client_id': clientId,
+          'cif_version_id': cifId,
+          'application_id': null,
+          'application_version_id': null,
+          'snapshot_sha256': hash,
+          if (privacy) 'optional_service_communications': false,
+        });
+      },
+    );
+  }
+
   testWidgets(
     'uncertain privacy acknowledgment reuses the saved signed evidence',
     (tester) async {

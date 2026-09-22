@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
@@ -12,7 +13,7 @@ class OfficeReviewCapturePage extends StatefulWidget {
     required this.clientId,
     required this.source,
     this.privacy = false,
-    this.picker = pickOfficePhoto,
+    this.picker,
     super.key,
   });
   final OfficeIdentity actor;
@@ -20,7 +21,7 @@ class OfficeReviewCapturePage extends StatefulWidget {
   final String clientId;
   final OfficeRecord source;
   final bool privacy;
-  final OfficePhotoPicker picker;
+  final OfficePhotoPicker? picker;
   @override
   State<OfficeReviewCapturePage> createState() =>
       _OfficeReviewCapturePageState();
@@ -232,6 +233,22 @@ class _OfficeReviewCapturePageState
               OfficeEvidencePicker(
                 key: ValueKey(selection),
                 enabled: operation.canWrite,
+                recoveryContext: ImagePickContext(
+                  purpose: widget.source['purpose'] as String,
+                  target: jsonEncode({
+                    'client_id': widget.clientId,
+                    'cif_version_id': widget.source['cif_version_id'],
+                    'application_id': widget.source['application_id'],
+                    'application_version_id':
+                        widget.source['application_version_id'],
+                    'snapshot_sha256': current['snapshot_sha256'],
+                    if (widget.privacy)
+                      'optional_service_communications': optional,
+                  }),
+                  label: widget.privacy
+                      ? 'Signed privacy acknowledgment'
+                      : 'Signed information review',
+                ),
                 picker: widget.picker,
                 onChanged: (value) => setState(() {
                   photo = value;

@@ -7,6 +7,8 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance_photo.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_handover_image_context.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:image_picker/image_picker.dart';
 
 class RemittanceHandoverPhotoPage extends StatefulWidget {
@@ -57,12 +59,16 @@ class _RemittanceHandoverPhotoPageState
       _errorMessage = null;
     });
     try {
-      final image = await _imagePicker.pickImage(
-        source: source,
-        imageQuality: 75,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        requestFullMetadata: false,
+      final image = await pickRecoverableImage(
+        context,
+        recoveryContext: remittanceHandoverImageContext(widget.remittance),
+        pick: () => _imagePicker.pickImage(
+          source: source,
+          imageQuality: 75,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          requestFullMetadata: false,
+        ),
       );
       if (image == null || !mounted) {
         return;
@@ -221,9 +227,10 @@ class _RemittanceHandoverPhotoPageState
                       child: Image.memory(
                         draft.bytes,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Center(
-                          child: Text('Photo preview unavailable.'),
-                        ),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                              child: Text('Photo preview unavailable.'),
+                            ),
                       ),
                     ),
                     Padding(
@@ -241,9 +248,9 @@ class _RemittanceHandoverPhotoPageState
                             onPressed: _uploading
                                 ? null
                                 : () => setState(() {
-                                      _draft = null;
-                                      _uploaded = null;
-                                    }),
+                                    _draft = null;
+                                    _uploaded = null;
+                                  }),
                             child: const Text('Remove'),
                           ),
                         ],

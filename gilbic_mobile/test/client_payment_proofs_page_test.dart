@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -19,6 +21,49 @@ import 'client_documents_repository_test.dart' show session;
 import 'client_payment_proof_repository_test.dart' as fixture;
 
 void main() {
+  testWidgets('photo selection binds the owned loan and correction version', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final recovery = _RecordingRecovery();
+    for (final correction in [false, true]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ImageRecoveryScope(
+            controller: recovery,
+            child: ClientPaymentProofUploadPage(
+              key: ValueKey(correction),
+              session: session,
+              deviceIdentityProvider: device(),
+              repository: _Repository(),
+              capability: capability(),
+              loanRepository: _Loans(),
+              proof: correction
+                  ? ClientPaymentProof.fromPayload(fixture.proof)
+                  : null,
+              imagePicker: _Picker(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('proof-gallery')));
+      await tester.pumpAndSettle();
+      expect(recovery.contexts.length, correction ? 2 : 1);
+    }
+    expect(recovery.contexts[0].purpose, 'client_payment_proof');
+    expect(jsonDecode(recovery.contexts[0].target), {
+      'loan_id': 'loan-1',
+      'proof_id': null,
+      'version': null,
+    });
+    expect(jsonDecode(recovery.contexts[1].target), {
+      'loan_id': 'loan-1',
+      'proof_id': 'proof-1',
+      'version': 1,
+    });
+  });
   testWidgets(
     'a truncated successful response keeps the exact raw upload retry',
     (tester) async {
@@ -282,6 +327,21 @@ void main() {
       isNull,
     );
   });
+}
+
+class _RecordingRecovery extends ImageRecoveryController {
+  _RecordingRecovery() : super(enabled: false);
+  final contexts = <ImagePickContext>[];
+  @override
+  bool get ready => true;
+  @override
+  Future<XFile?> pick(
+    ImagePickContext context,
+    Future<XFile?> Function() launch,
+  ) {
+    contexts.add(context);
+    return launch();
+  }
 }
 
 DeviceIdentityProvider device() => DeviceIdentityProvider(

@@ -12,12 +12,16 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
+import 'support/app_platform_dependencies.dart';
+
 void main() {
   testWidgets('opens Daily Collection client ledger and expands audit details', (
     tester,
   ) async {
     await tester.pumpWidget(
       GilbicApp(
+        deviceIdentityProvider: testAppDeviceIdentity(),
+        imageRecoveryController: testAppImageRecovery(),
         sessionStore: MemorySessionStore(),
         authRepository: _FakeAuthRepository(),
         collectorRouteRepository: _FakeCollectorRouteRepository(),
@@ -96,6 +100,8 @@ void main() {
 
     await tester.pumpWidget(
       GilbicApp(
+        deviceIdentityProvider: testAppDeviceIdentity(),
+        imageRecoveryController: testAppImageRecovery(),
         sessionStore: store,
         authRepository: _ValidatingAuthRepository(
           onValidate: (_) async => validated,
@@ -129,6 +135,8 @@ void main() {
 
       await tester.pumpWidget(
         GilbicApp(
+          deviceIdentityProvider: testAppDeviceIdentity(),
+          imageRecoveryController: testAppImageRecovery(),
           sessionStore: store,
           authRepository: _ValidatingAuthRepository(
             onValidate: (_) async => restricted,
@@ -155,6 +163,8 @@ void main() {
 
       await tester.pumpWidget(
         GilbicApp(
+          deviceIdentityProvider: testAppDeviceIdentity(),
+          imageRecoveryController: testAppImageRecovery(),
           sessionStore: store,
           authRepository: _ValidatingAuthRepository(
             onValidate: (_) async => throw const SpinaApiException(
@@ -181,6 +191,8 @@ void main() {
 
     await tester.pumpWidget(
       GilbicApp(
+        deviceIdentityProvider: testAppDeviceIdentity(),
+        imageRecoveryController: testAppImageRecovery(),
         sessionStore: store,
         authRepository: _ValidatingAuthRepository(
           onValidate: (_) async => throw const SpinaApiException(

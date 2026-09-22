@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
+import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -266,13 +268,27 @@ class OfficePhoto {
 }
 
 typedef OfficePhotoPicker = Future<OfficePhoto?> Function(ImageSource source);
-Future<OfficePhoto?> pickOfficePhoto(ImageSource source) async {
-  final image = await ImagePicker().pickImage(
-    source: source,
-    imageQuality: 90,
-    requestFullMetadata: false,
+Future<OfficePhoto?> pickOfficePhoto(
+  BuildContext context,
+  ImagePickContext recoveryContext,
+  ImageSource source, {
+  ImagePicker? imagePicker,
+}) async {
+  final image = await pickRecoverableImage(
+    context,
+    recoveryContext: recoveryContext,
+    pick: () => (imagePicker ?? ImagePicker()).pickImage(
+      source: source,
+      imageQuality: 90,
+      requestFullMetadata: false,
+    ),
   );
   if (image == null) return null;
+  if (await image.length() > 10 * 1024 * 1024) {
+    throw const SpinaApiException(
+      'The signed image must be 10 MiB or smaller.',
+    );
+  }
   final bytes = await image.readAsBytes();
   final type = RemittancePhotoDraft.detectContentType(bytes) ?? '';
   validateOfficeEvidence(bytes, type);
@@ -283,12 +299,16 @@ class OfficeEvidencePicker extends StatefulWidget {
   const OfficeEvidencePicker({
     required this.enabled,
     required this.onChanged,
-    this.picker = pickOfficePhoto,
+    required this.recoveryContext,
+    this.picker,
+    this.imagePicker,
     super.key,
   });
   final bool enabled;
   final ValueChanged<OfficePhoto?> onChanged;
-  final OfficePhotoPicker picker;
+  final ImagePickContext recoveryContext;
+  final OfficePhotoPicker? picker;
+  final ImagePicker? imagePicker;
   @override
   State<OfficeEvidencePicker> createState() => _OfficeEvidencePickerState();
 }
@@ -303,9 +323,21 @@ class _OfficeEvidencePickerState extends State<OfficeEvidencePicker> {
       _picking = true;
       _error = null;
     });
+    final selectionContext = widget.recoveryContext;
     try {
-      final photo = await widget.picker(source);
+      final photo = widget.picker != null
+          ? await widget.picker!(source)
+          : await pickOfficePhoto(
+              context,
+              selectionContext,
+              source,
+              imagePicker: widget.imagePicker,
+            );
       if (!mounted || photo == null || !widget.enabled) return;
+      if (widget.recoveryContext.purpose != selectionContext.purpose ||
+          widget.recoveryContext.target != selectionContext.target) {
+        return;
+      }
       validateOfficeEvidence(photo.bytes, photo.mediaType);
       setState(() => _photo = photo);
       widget.onChanged(photo);
