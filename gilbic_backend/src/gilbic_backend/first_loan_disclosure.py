@@ -42,9 +42,15 @@ MAX_SUPPORT_BYTES = 10 * 1024 * 1024
 MAX_SUPPORT_BASE64 = 4 * ((MAX_SUPPORT_BYTES + 2) // 3)
 
 
+class DisclosureInputError(ValueError):
+    """Keep rejected types within Pydantic and repository validation handling."""
+
+
 def _decimal(value: object) -> Decimal:
     if isinstance(value, bool) or not isinstance(value, (str, int, Decimal)):
-        raise ValueError("Use exact decimal text, integers or Decimal values.")
+        raise DisclosureInputError(
+            "Use exact decimal text, integers or Decimal values."
+        )
     if isinstance(value, str) and len(value) > 128:
         raise ValueError("The decimal representation is too long.")
     try:
@@ -98,9 +104,7 @@ ExactRate = Annotated[
 ]
 Reference = Annotated[
     str,
-    StringConstraints(
-        strict=True, strip_whitespace=True, min_length=1, max_length=250
-    ),
+    StringConstraints(strict=True, strip_whitespace=True, min_length=1, max_length=250),
 ]
 Rationale = Annotated[
     str,
@@ -162,9 +166,7 @@ class DisclosureComponents(DisclosureInput):
 
 
 class DisclosureChargeItem(DisclosureInput):
-    item_id: Annotated[
-        str, StringConstraints(strict=True, min_length=1, max_length=80)
-    ]
+    item_id: Annotated[str, StringConstraints(strict=True, min_length=1, max_length=80)]
     kind: Literal["dst", "grt_recovery", "other_upfront", "other_scheduled"]
     timing: Literal["upfront", "repayments"]
     amount: ExactMoney
@@ -175,14 +177,14 @@ class DisclosureChargeItem(DisclosureInput):
     def canonical_identity(cls, value):
         value = value.strip().casefold()
         if not value or len(value) > 80:
-            raise ValueError("Each normalized charge identity needs 1 to 80 characters.")
+            raise ValueError(
+                "Each normalized charge identity needs 1 to 80 characters."
+            )
         return value
 
     @model_validator(mode="after")
     def classification(self):
-        expected = (
-            "upfront" if self.kind in ("dst", "other_upfront") else "repayments"
-        )
+        expected = "upfront" if self.kind in ("dst", "other_upfront") else "repayments"
         if self.timing != expected:
             raise ValueError("Charge timing conflicts with its classification.")
         reserved = {
@@ -208,9 +210,7 @@ def _itemized_upfront(
             if sum(item.kind == kind for item in items) > 1:
                 raise ValueError("Each tax classification must appear at most once.")
         totals = {
-            kind: sum(
-                (item.amount for item in items if item.kind == kind), ZERO
-            )
+            kind: sum((item.amount for item in items if item.kind == kind), ZERO)
             for kind in ("dst", "grt_recovery", "other_upfront", "other_scheduled")
         }
         expected = {
@@ -290,9 +290,7 @@ class DisclosureReviewRequest(DisclosureInput):
     support_media_type: Literal["application/pdf", "image/png", "image/jpeg"]
     support_base64: Annotated[
         str,
-        StringConstraints(
-            strict=True, min_length=1, max_length=MAX_SUPPORT_BASE64
-        ),
+        StringConstraints(strict=True, min_length=1, max_length=MAX_SUPPORT_BASE64),
     ]
     supersedes_calculation_id: UUID | None
 
@@ -360,11 +358,21 @@ def parse_components(payload: dict) -> DisclosureComponents:
 
 # Names have semantic money meaning in this contract. Never normalize an
 # arbitrary numeric-looking string (such as a source reference) or round a rate.
-_MONEY_NAMES = frozenset(DisclosureComponents.model_fields) | frozenset({
-    "amount", "installment_amount", "daily_interest_per_1000", "contractual_amount",
-    "principal_component", "interest_component", "amount_financed",
-    "finance_charge_total", "non_finance_charge_total", "net_cash", "total_deductions",
-})
+_MONEY_NAMES = frozenset(DisclosureComponents.model_fields) | frozenset(
+    {
+        "amount",
+        "installment_amount",
+        "daily_interest_per_1000",
+        "contractual_amount",
+        "principal_component",
+        "interest_component",
+        "amount_financed",
+        "finance_charge_total",
+        "non_finance_charge_total",
+        "net_cash",
+        "total_deductions",
+    }
+)
 
 
 def _canonical(value: object, name: str | None = None, depth: int = 0):
@@ -396,9 +404,7 @@ def _canonical(value: object, name: str | None = None, depth: int = 0):
                 )
         if not all(isinstance(key, str) for key in value):
             raise ValueError("Review objects require string keys.")
-        return {
-            key: _canonical(item, key, depth + 1) for key, item in value.items()
-        }
+        return {key: _canonical(item, key, depth + 1) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
         return [_canonical(item, depth=depth + 1) for item in value]
     raise ValueError("The review contains an inexact or non-JSON value.")
@@ -407,7 +413,7 @@ def _canonical(value: object, name: str | None = None, depth: int = 0):
 def canonical_review_digest(payload: dict) -> str:
     """Hash normalized JSON using first-loan conventions; not source approval."""
     if not isinstance(payload, dict):
-        raise ValueError("A review object is required.")
+        raise DisclosureInputError("A review object is required.")
     return snapshot_digest(_canonical(payload))
 
 
@@ -415,13 +421,12 @@ def project_components(
     components: DisclosureComponents, *, references: dict[str, str]
 ) -> dict[str, str]:
     expected_references = {
-        "loan_version_reference", "tax_loan_version_reference",
-        "tax_rule_snapshot_reference", "tax_calculation_reference",
+        "loan_version_reference",
+        "tax_loan_version_reference",
+        "tax_rule_snapshot_reference",
+        "tax_calculation_reference",
     }
-    if (
-        not isinstance(references, dict)
-        or set(references) != expected_references
-    ):
+    if not isinstance(references, dict) or set(references) != expected_references:
         raise ValueError("Supply exactly the four verified source references.")
     components = DisclosureComponents.model_validate(components)
     with localcontext(Context(prec=40)):
@@ -443,7 +448,8 @@ def project_components(
         )
     taxes = {line.code: line.amount for line in projected.tax_lines}
     return {
-        name: format(value, ".2f") for name, value in {
+        name: format(value, ".2f")
+        for name, value in {
             "principal": projected.principal,
             "contractual_interest": projected.contractual_interest,
             "dst_upfront": taxes["dst"],
@@ -469,13 +475,29 @@ def public_financial_snapshot(review_snapshot: dict) -> dict:
     _itemized_upfront(items, components)
     return {
         "components": components.model_dump(mode="json"),
-        "disclosure_values": values.model_dump(mode="json", include={
-            "amount_financed", "finance_charge_total", "non_finance_charge_total",
-            "effective_interest_rate", "rate_period", "calculation_method",
-        }),
-        "charge_items": [item.model_dump(mode="json", include={
-            "item_id", "kind", "timing", "amount",
-        }) for item in items],
+        "disclosure_values": values.model_dump(
+            mode="json",
+            include={
+                "amount_financed",
+                "finance_charge_total",
+                "non_finance_charge_total",
+                "effective_interest_rate",
+                "rate_period",
+                "calculation_method",
+            },
+        ),
+        "charge_items": [
+            item.model_dump(
+                mode="json",
+                include={
+                    "item_id",
+                    "kind",
+                    "timing",
+                    "amount",
+                },
+            )
+            for item in items
+        ],
     }
 
 
@@ -496,22 +518,28 @@ def require_component_compatibility(
         raise ValueError("component integration required")
     with localcontext(Context(prec=40)):
         if not isinstance(terms, FirstLoanTerms):
-            raise ValueError("Validated first-loan terms are required.")
+            raise DisclosureInputError("Validated first-loan terms are required.")
         terms = FirstLoanTerms.model_validate(
             terms.model_dump(mode="python", warnings=False)
         )
         if not isinstance(rows, tuple):
-            raise ValueError("A tuple of authoritative schedule rows is required.")
+            raise DisclosureInputError(
+                "A tuple of authoritative schedule rows is required."
+            )
         for row in rows:
             number = getattr(row, "installment_number", None)
             if isinstance(number, bool) or not isinstance(number, int):
-                raise ValueError("Each installment number must remain an integer.")
+                raise DisclosureInputError(
+                    "Each installment number must remain an integer."
+                )
             for name in (
-                "contractual_amount", "principal_component", "interest_component"
+                "contractual_amount",
+                "principal_component",
+                "interest_component",
             ):
                 amount = getattr(row, name, None)
                 if not isinstance(amount, Decimal):
-                    raise ValueError(
+                    raise DisclosureInputError(
                         "Schedule components must remain exact Decimal values."
                     )
                 _exact_money(amount)
