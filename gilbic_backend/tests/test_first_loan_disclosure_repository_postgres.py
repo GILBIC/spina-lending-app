@@ -124,8 +124,7 @@ def _business_rows(connection):
     return {
         (row["schemaname"], row["tablename"]): connection.execute(
             sql.SQL(
-                "select to_jsonb(t) as value from {}.{} t "
-                "order by to_jsonb(t)::text"
+                "select to_jsonb(t) as value from {}.{} t order by to_jsonb(t)::text"
             ).format(
                 sql.Identifier(row["schemaname"]), sql.Identifier(row["tablename"])
             )
@@ -229,9 +228,13 @@ def test_record_retains_exact_support_without_financial_or_generic_evidence_writ
     ).fetchall()
     assert len(audit) == 1 and audit[0]["actor_user_id"] == case["actor"]
     assert audit[0]["details"]["review_digest"] == record["review_digest"]
-    assert connection.execute(
-        "select * from core.audit_logs where id <> %s order by id", (audit[0]["id"],)
-    ).fetchall() == audits_before
+    assert (
+        connection.execute(
+            "select * from core.audit_logs where id <> %s order by id",
+            (audit[0]["id"],),
+        ).fetchall()
+        == audits_before
+    )
     assert len(after[2]) == len(before[2]) + 1
 
 
@@ -385,9 +388,7 @@ def test_stale_source_remains_readable_but_cannot_record_a_new_review(
     assert replay["approval_ready"] is False
     assert "source_context_changed" in replay["blockers"]
     assert repository.get(**_actor(case), calculation_id=first["id"]) == replay
-    recovered = repository.by_request(
-        **_actor(case), request_id=payload["request_id"]
-    )
+    recovered = repository.by_request(**_actor(case), request_id=payload["request_id"])
     assert recovered == replay
     payload["request_id"] = str(uuid4())
     with pytest.raises(FirstLoanConflict):
@@ -426,9 +427,7 @@ def test_different_management_actor_cannot_reuse_request_identity(
     assert _state(connection) == before
 
 
-def test_missing_values_and_unsupported_grt_never_become_ready(
-    connection, monkeypatch
-):
+def test_missing_values_and_unsupported_grt_never_become_ready(connection, monkeypatch):
     repository, case = _setup(connection, monkeypatch)
     payload = _payload(connection, repository, case)
     payload["components"].update(

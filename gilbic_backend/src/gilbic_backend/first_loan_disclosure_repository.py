@@ -86,7 +86,10 @@ def _transaction(actor_user_id, registered_device_id, *, management=True):
             connection.cursor(row_factory=dict_row) as cursor,
         ):
             isolation = cursor.execute("show transaction_isolation").fetchone()
-            if isolation["transaction_isolation"] != "read committed":
+            if (
+                isolation is None
+                or isolation["transaction_isolation"] != "read committed"
+            ):
                 raise owner.FirstLoanConflict(
                     "Disclosure review requires a READ COMMITTED transaction."
                 )
@@ -490,9 +493,10 @@ def record_review(cursor, *, actor_user_id, registered_device_id, request):
     storage_key = uuid5(request.request_id, "spina.r1.support.v1")
     store = PrivateEvidenceStore()
     stored_hash = store.put(storage_key, support, request.support_media_type)
-    if stored_hash != support_hash or store.read(
-        storage_key, support_hash, len(support)
-    ) != support:
+    if (
+        stored_hash != support_hash
+        or store.read(storage_key, support_hash, len(support)) != support
+    ):
         raise _owner().FirstLoanConflict("The retained support differs.")
     # Recheck wall-clock/source after bounded private-file I/O. A failed commit
     # leaves only an unreferenced immutable staged file for an exact retry.
