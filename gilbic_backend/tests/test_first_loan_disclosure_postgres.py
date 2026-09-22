@@ -7,13 +7,13 @@ those insert, replay and concurrency cases belong to subsequent task slices.
 """
 
 import pytest
+import test_client_cif_review_confirmation_postgres as cif_proof
 from psycopg.errors import CheckViolation
 
-from test_client_cif_review_confirmation_postgres import (
-    DATABASE_URL,
-    connection as connection,
-    runtime_url as runtime_url,
-)
+# Re-export the existing guarded fixtures without redundant import aliases.
+DATABASE_URL = cif_proof.DATABASE_URL
+connection = cif_proof.connection
+runtime_url = cif_proof.runtime_url
 
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="GILBIC_TEST_DATABASE_URL is not configured"
