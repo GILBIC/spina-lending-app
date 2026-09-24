@@ -9,8 +9,6 @@ from uuid import UUID, uuid4
 
 import pytest
 import test_first_loan_disclosure_repository_postgres as review_proof
-from gilbic_backend import first_loan_disclosure_binding as binding
-from gilbic_backend import first_loan_disclosure_repository as reviews_module
 from gilbic_backend.first_loan_repository import FirstLoanConflict
 from gilbic_backend.first_loan_terms import (
     FirstLoanTerms,
@@ -19,6 +17,9 @@ from gilbic_backend.first_loan_terms import (
     snapshot_digest,
 )
 from gilbic_backend.office_review_evidence_storage import PrivateEvidenceStore
+
+from gilbic_backend import first_loan_disclosure_binding as binding
+from gilbic_backend import first_loan_disclosure_repository as reviews_module
 
 runtime_url = review_proof.runtime_url
 connection = review_proof.connection
@@ -109,9 +110,10 @@ def test_bound_review_is_safe_exact_and_has_no_persistent_side_effects(
         "financial_snapshot": record["financial_snapshot"],
     }
     result["financial_snapshot"]["components"]["principal"] = "0.01"
-    assert _require(case, **_arguments(case, record))["financial_snapshot"] == record[
-        "financial_snapshot"
-    ]
+    assert (
+        _require(case, **_arguments(case, record))["financial_snapshot"]
+        == record["financial_snapshot"]
+    )
     assert _state(connection) == before
 
 

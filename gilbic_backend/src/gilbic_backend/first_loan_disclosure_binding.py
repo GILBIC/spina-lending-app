@@ -114,10 +114,9 @@ def require_for_approval(
     terms = reviews._terms(terms)
     with _bounded_binding(cursor):
         review = reviews._load_review(cursor, UUID(identity), application_version_id)
-        if (
-            review["review_digest"] != digest
-            or review["input_snapshot"]["terms"] != terms.model_dump(mode="json")
-        ):
+        if review["review_digest"] != digest or review["input_snapshot"][
+            "terms"
+        ] != terms.model_dump(mode="json"):
             raise conflict("The saved disclosure differs from the proposed approval.")
         context = reviews.review_context(
             cursor,
@@ -152,14 +151,17 @@ def require_for_approval(
         reviews._support_bytes(review)
         # Recheck time-sensitive validity after private-file I/O. Source and
         # rule locks remain held by the same owning transaction throughout.
-        if reviews.review_context(
-            cursor,
-            application_version_id=review["application_version_id"],
-            cif_version_id=review["cif_version_id"],
-            terms=terms,
-            dst_rule_id=review["dst_rule_id"],
-            grt_rule_id=review["grt_rule_id"],
-        ) != context:
+        if (
+            reviews.review_context(
+                cursor,
+                application_version_id=review["application_version_id"],
+                cif_version_id=review["cif_version_id"],
+                terms=terms,
+                dst_rule_id=review["dst_rule_id"],
+                grt_rule_id=review["grt_rule_id"],
+            )
+            != context
+        ):
             raise conflict("The disclosure source changed while checking its support.")
         financial = public_financial_snapshot(review["review_snapshot"])
         if any(
@@ -219,7 +221,9 @@ def require_packet_source(cursor, *, row):
         if packet["schedule"] != schedule_payload(rows):
             raise ValueError("The packet schedule differs.")
     except (KeyError, TypeError, ValueError) as error:
-        raise conflict("The packet source or schedule differs from its approval.") from error
+        raise conflict(
+            "The packet source or schedule differs from its approval."
+        ) from error
     expected = require_for_approval(
         cursor,
         calculation_id=binding["calculation_id"],
