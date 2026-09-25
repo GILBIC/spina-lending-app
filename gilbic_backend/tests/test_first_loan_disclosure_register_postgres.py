@@ -13,6 +13,7 @@ import pytest
 import test_client_cif_review_confirmation_postgres as cif_proof
 import test_first_loan_postgres as first_loan_proof
 import test_loan_application_repository_postgres as application_proof
+from first_loan_approval_fixtures import seed_historical_schema_one_approval
 from first_loan_disclosure_fixtures import component_values, review_values
 from gilbic_backend.first_loan_disclosure import (
     DisclosureReviewRequest,
@@ -453,9 +454,9 @@ def test_migration_rerun_preserves_committed_review_and_schema_one_packet(
     # runtime_url verifies the opt-in, loopback and disposable database name.
     # These synthetic records intentionally commit; the runner drops their DB.
     with psycopg.connect(runtime_url, row_factory=dict_row) as database:
-        repository, case = _case(database, monkeypatch)
+        _, case = _case(database, monkeypatch)
         record = _insert(database, _values(database, case))
-        first_loan_proof.approve(repository, case)
+        seed_historical_schema_one_approval(database, case)
         legacy = database.execute(
             "select * from lending.first_loan_approvals where client_id = %s",
             (case["client"],),

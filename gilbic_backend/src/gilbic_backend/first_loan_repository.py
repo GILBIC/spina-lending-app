@@ -605,7 +605,11 @@ class PostgresFirstLoanRepository:
         terms,
         template_version,
         request_id,
+        disclosure_calculation_id=None,
+        expected_disclosure_digest=None,
     ):
+        from .first_loan_disclosure_binding import require_for_approval, retry_matches
+
         terms = FirstLoanTerms.model_validate(terms)
         rows = generate_first_loan_schedule(terms)
         with (
@@ -636,11 +640,26 @@ class PostgresFirstLoanRepository:
                     or row["application_version_id"] != application_version_id
                     or row["packet"]["terms"] != terms.model_dump(mode="json")
                     or row["template_version"] != template_version
+                    or not retry_matches(
+                        row["packet"],
+                        disclosure_calculation_id,
+                        expected_disclosure_digest,
+                    )
                 ):
                     raise FirstLoanConflict(
                         "This approval request identity is already used."
                     )
                 return _public(cursor, row, actor_user_id)
+            # New approvals consume the exact saved review in this transaction.
+            # Authorized committed retries above do not revalidate current sources.
+            disclosure = require_for_approval(
+                cursor,
+                calculation_id=disclosure_calculation_id,
+                expected_digest=expected_disclosure_digest,
+                application_version_id=application_version_id,
+                terms=terms,
+                rows=rows,
+            )
             app, cif, client, privacy = _source(cursor, application_version_id)
             if cursor.execute(
                 "select 1 from lending.loans where client_id=%s and status not in ('draft','cancelled')",
@@ -692,7 +711,8 @@ class PostgresFirstLoanRepository:
                 )
             loan_id, packet_id = uuid4(), uuid4()
             packet = {
-                "schema_version": 1,
+                "schema_version": 2,
+                "tax_disclosure": disclosure,
                 "packet_id": str(packet_id),
                 "loan_id": str(loan_id),
                 "client_id": str(app["client_id"]),

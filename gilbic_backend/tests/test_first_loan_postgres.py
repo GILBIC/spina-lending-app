@@ -22,6 +22,7 @@ from test_loan_application_review_confirmation_postgres import (
     _insert_direct,
 )
 from test_first_loan_terms import values
+from first_loan_approval_fixtures import review_for_approval, reviewed_setup
 
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="GILBIC_TEST_DATABASE_URL is not configured"
@@ -225,6 +226,7 @@ def approve(repository, case, **changes):
             terms=case["terms"],
             template_version=case["template"],
             request_id=uuid4(),
+            **case["disclosure"],
             **changes,
         )
     )
@@ -248,7 +250,7 @@ def counts(connection):
 def test_approval_keeps_real_dates_null_and_has_no_schedule_cash_or_credentials(
     connection, monkeypatch
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     before = counts(connection)
     request_id = uuid4()
     record = repository.approve(
@@ -258,6 +260,7 @@ def test_approval_keeps_real_dates_null_and_has_no_schedule_cash_or_credentials(
         terms=case["terms"],
         template_version=case["template"],
         request_id=request_id,
+        **case["disclosure"],
     )
     loan = connection.execute(
         "select * from lending.loans where id=%s", (record["loan_id"],)
@@ -275,6 +278,7 @@ def test_approval_keeps_real_dates_null_and_has_no_schedule_cash_or_credentials(
         terms=case["terms"],
         template_version=case["template"],
         request_id=request_id,
+        **case["disclosure"],
     )
     assert retry["loan_id"] == record["loan_id"]
     assert counts(connection) == after
@@ -297,7 +301,7 @@ def test_approval_keeps_real_dates_null_and_has_no_schedule_cash_or_credentials(
 def test_approval_rechecks_exact_persisted_authority_and_current_confirmed_sources(
     connection, monkeypatch, change
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     if change in ("employee", "collector"):
         connection.execute(
             "delete from core.user_roles where user_id=%s", (case["actor"],)
@@ -358,7 +362,7 @@ def test_approval_rechecks_exact_persisted_authority_and_current_confirmed_sourc
 def test_unapproved_template_never_authorizes_signing_or_release(
     connection, monkeypatch
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     connection.execute(
         "update lending.first_loan_document_templates set approved_for_execution=false where version=%s",
         (case["template"],),
@@ -381,7 +385,7 @@ def test_unapproved_template_never_authorizes_signing_or_release(
 
 
 def test_approved_terms_and_snapshots_are_immutable(connection, monkeypatch):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record = approve(repository, case)
     import psycopg
 
@@ -440,7 +444,7 @@ def ready(repository, case):
 def test_complete_release_is_one_atomic_financial_transition_with_one_credential_intent(
     connection, monkeypatch
 ):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     before = counts(connection)
     auth_before = connection.execute("select count(*) as n from auth.users").fetchone()[
@@ -492,7 +496,7 @@ def test_complete_release_is_one_atomic_financial_transition_with_one_credential
 def test_invalid_handoff_leaves_approval_without_partial_cash_schedule_or_intent(
     connection, monkeypatch, field, value
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     before = counts(connection)
     args[field] = value
@@ -512,7 +516,7 @@ def test_invalid_handoff_leaves_approval_without_partial_cash_schedule_or_intent
 def test_revoked_authorization_and_future_release_basis_block_handoff(
     connection, monkeypatch
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     repository.revoke_release(
         actor_user_id=case["actor"],
@@ -531,7 +535,7 @@ def test_revoked_authorization_and_future_release_basis_block_handoff(
 def test_failure_after_schedule_creation_rolls_back_entire_release(
     connection, monkeypatch
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     before = counts(connection)
     connection.execute(
@@ -549,7 +553,7 @@ def test_failure_after_schedule_creation_rolls_back_entire_release(
 
 
 def test_missing_or_tampered_packet_pdf_blocks_signing(connection, monkeypatch):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     record = approve(repository, case)
     args = {
         "actor_user_id": case["actor"],
@@ -592,7 +596,7 @@ def test_missing_or_tampered_packet_pdf_blocks_signing(connection, monkeypatch):
 def test_resumed_review_reads_exact_recorded_evidence_and_new_authorization_invalidates_cash(
     connection, monkeypatch
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     read = repository.get(
         actor_user_id=case["actor"],
@@ -630,7 +634,7 @@ def test_unreleased_first_loan_cannot_use_generic_schedule_or_fake_activation(
 ):
     import psycopg
 
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record = approve(repository, case)
     with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
         connection.execute(
@@ -650,7 +654,7 @@ def test_unreleased_first_loan_cannot_use_generic_schedule_or_fake_activation(
 def test_client_first_payment_projection_uses_exact_verified_stored_schedule(
     connection, monkeypatch
 ):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     connection.execute(
         "update lending.clients set user_id=%s where id=%s",
@@ -686,7 +690,7 @@ def test_client_first_payment_projection_uses_exact_verified_stored_schedule(
 def test_signature_requires_witness_declaration_at_repository_boundary(
     connection, monkeypatch
 ):
-    module, repository, case = setup(connection, monkeypatch)
+    module, repository, case = reviewed_setup(connection, monkeypatch)
     record = approve(repository, case)
     with pytest.raises(module.FirstLoanConflict):
         repository.capture(
@@ -708,7 +712,7 @@ def test_generic_disbursement_cannot_record_unreleased_or_void_completed_first_l
     from decimal import Decimal
     from gilbic_backend import loan_disbursement_evidence_repository as generic
 
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
 
     @contextmanager
@@ -747,7 +751,7 @@ def test_generic_disbursement_cannot_record_unreleased_or_void_completed_first_l
 def test_employee_can_release_exact_packet_witnessed_by_another_office_staff(
     connection, monkeypatch
 ):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     employee = _seed(connection, "employee")
     device = uuid4()
@@ -825,6 +829,7 @@ def test_exact_7x7_review_is_pinned_to_issued_signed_pdf_and_release(
         installment_count=None,
         installment_amount="100.00",
     )
+    review_for_approval(connection, monkeypatch, case)
     record = approve(repository, case)
     args = {
         "actor_user_id": case["actor"],
