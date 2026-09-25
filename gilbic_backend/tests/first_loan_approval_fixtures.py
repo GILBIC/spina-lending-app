@@ -12,13 +12,14 @@ from uuid import UUID, uuid4
 
 def review_for_approval(connection, monkeypatch, case):
     """Record a real synthetic review after the test has chosen its exact terms."""
-    from gilbic_backend import first_loan_disclosure_repository as reviews
     from gilbic_backend.first_loan_terms import (
         FirstLoanTerms,
         generate_first_loan_schedule,
     )
     from test_first_loan_disclosure_register_postgres import _rule
     from test_first_loan_disclosure_repository_postgres import _payload
+
+    from gilbic_backend import first_loan_disclosure_repository as reviews
 
     @contextmanager
     def acquire():
@@ -85,8 +86,9 @@ def seed_historical_schema_one_approval(connection, case):
     This is not a new-approval entrypoint. The guarded disposable test supplies
     the connection; no production bypass flag or old approval method is used.
     """
-    from gilbic_backend import first_loan_repository as owner
     from psycopg.types.json import Jsonb
+
+    from gilbic_backend import first_loan_repository as owner
 
     terms = owner.FirstLoanTerms.model_validate(case["terms"])
     rows = owner.generate_first_loan_schedule(terms)
