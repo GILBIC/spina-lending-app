@@ -107,6 +107,7 @@ FULL_FLOW_TESTS = tuple(
         "test_first_loan_disclosure_repository_postgres.py",
         "test_first_loan_disclosure_binding_postgres.py",
         "test_first_loan_disclosure_binding_guards_postgres.py",
+        "test_first_loan_disclosure_lifecycle_postgres.py",
         "test_first_loan_credentials_postgres.py",
         "test_privacy_records_postgres.py",
         "test_client_cif_lending_guard_postgres.py",
