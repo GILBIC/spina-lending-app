@@ -80,15 +80,19 @@ def _prepare(connection, monkeypatch, stage):
         return context, repository.capture, arguments
     cash = repository.capture(**arguments)
     assert stage == "release"
-    return context, repository.release, {
-        **common,
-        "authorization_id": authorization_id,
-        "contract_evidence_reference": contract["evidence_reference"],
-        "cash_evidence_reference": cash["evidence_reference"],
-        "cash_amount": approval["packet"]["net_cash"],
-        "borrower_confirmed": True,
-        "request_id": uuid4(),
-    }
+    return (
+        context,
+        repository.release,
+        {
+            **common,
+            "authorization_id": authorization_id,
+            "contract_evidence_reference": contract["evidence_reference"],
+            "cash_evidence_reference": cash["evidence_reference"],
+            "cash_amount": approval["packet"]["net_cash"],
+            "borrower_confirmed": True,
+            "request_id": uuid4(),
+        },
+    )
 
 
 def _invalidate(connection, context, change):
@@ -114,8 +118,7 @@ def _invalidate(connection, context, change):
         payload["supersedes_calculation_id"] = context["calculation"]["id"]
         successor = review_proof._record(context["reviews"], case, payload)
         assert (
-            successor["version_number"]
-            == context["calculation"]["version_number"] + 1
+            successor["version_number"] == context["calculation"]["version_number"] + 1
         )
         assert successor["id"] != context["calculation"]["id"]
 
