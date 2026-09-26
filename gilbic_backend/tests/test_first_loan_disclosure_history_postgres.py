@@ -249,8 +249,9 @@ def test_released_schema_one_original_and_replay_survive_current_source_change(
     else:
         connection.execute(
             "update lending.client_cif_versions "
-            "set reverification_required_at=clock_timestamp() where id=%s",
-            (case["cif"],),
+            "set reverification_required_at=clock_timestamp(), "
+            "reverification_reason=%s where id=%s",
+            ("Synthetic historical readback proof", case["cif"]),
         )
     before = binding_proof._state(connection)
     assert repository.get(**read) == original
