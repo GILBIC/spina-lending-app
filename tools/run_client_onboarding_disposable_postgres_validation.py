@@ -93,6 +93,7 @@ CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0126_guard_new_credit_with_current_cif.sql",
     ROOT / "gilbic_backend" / "sql" / "0127_add_client_payment_proof_evidence.sql",
     ROOT / "gilbic_backend" / "sql" / "0128_add_employee_operations.sql",
+    ROOT / "gilbic_backend" / "sql" / "0129_add_first_loan_disclosure_source.sql",
 )
 FULL_FLOW_TESTS = tuple(
     ROOT / "gilbic_backend" / "tests" / name
@@ -101,6 +102,15 @@ FULL_FLOW_TESTS = tuple(
         "test_loan_application_extended_postgres.py",
         "test_office_review_evidence_postgres.py",
         "test_first_loan_postgres.py",
+        "test_first_loan_disclosure_postgres.py",
+        "test_first_loan_disclosure_register_postgres.py",
+        "test_first_loan_disclosure_repository_postgres.py",
+        "test_first_loan_disclosure_binding_postgres.py",
+        "test_first_loan_disclosure_binding_guards_postgres.py",
+        "test_first_loan_disclosure_lifecycle_postgres.py",
+        "test_first_loan_disclosure_history_postgres.py",
+        "test_first_loan_disclosure_concurrency_postgres.py",
+        "test_first_loan_disclosure_recovery_postgres.py",
         "test_first_loan_credentials_postgres.py",
         "test_privacy_records_postgres.py",
         "test_client_cif_lending_guard_postgres.py",
@@ -216,7 +226,7 @@ def validate(base_database_url: str) -> None:
 
     print(
         "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
-        "plus Area/CIF/application/release/Client/employee migrations 0113 through 0128 was replayed in a fresh loopback database; "
+        "plus Area/CIF/application/release/Client/employee/disclosure migrations 0113 through 0129 was replayed in a fresh loopback database; "
         "confirmation/application-history integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."
