@@ -383,10 +383,14 @@ def _source_action(connection, monkeypatch, stage):
     if stage == "review":
         repository, case = review_proof._setup(connection, monkeypatch)
         payload = review_proof._payload(connection, repository, case)
-        return case, repository.record, {
-            **review_proof._actor(case),
-            "request": payload,
-        }
+        return (
+            case,
+            repository.record,
+            {
+                **review_proof._actor(case),
+                "request": payload,
+            },
+        )
     if stage == "approve":
         repository, _, case, _, calculation = binding_proof._setup(
             connection, monkeypatch
@@ -414,21 +418,21 @@ def _consume_before_rule_writer(
 
     @contextmanager
     def acquire():
-        with psycopg.connect(
-            database_url,
-            row_factory=dict_row,
-            application_name=SESSION_NAME.get(),
-            options="-c statement_timeout=12000 -c lock_timeout=10000",
-        ) as consumer:
-            with consumer.transaction():
-                yield consumer
-                if SESSION_NAME.get() == consumer_name:
-                    consumer_pid.append(consumer.info.backend_pid)
-                    ready.set()
-                    if not commit_allowed.wait(timeout=8):
-                        raise AssertionError(
-                            "The bounded consumer commit gate timed out"
-                        )
+        with (
+            psycopg.connect(
+                database_url,
+                row_factory=dict_row,
+                application_name=SESSION_NAME.get(),
+                options="-c statement_timeout=12000 -c lock_timeout=10000",
+            ) as consumer,
+            consumer.transaction(),
+        ):
+            yield consumer
+            if SESSION_NAME.get() == consumer_name:
+                consumer_pid.append(consumer.info.backend_pid)
+                ready.set()
+                if not commit_allowed.wait(timeout=8):
+                    raise AssertionError("The bounded consumer commit gate timed out")
 
     def consume():
         token = SESSION_NAME.set(consumer_name)
@@ -592,7 +596,7 @@ def test_committed_source_invalidation_blocks_waiting_action_without_partial_sta
 def test_real_rule_lock_timeout_rolls_back_and_same_request_can_retry(
     seed_connection, isolated_r1_url, monkeypatch, stage
 ):
-    case, action, arguments = _source_action(seed_connection, monkeypatch, stage)
+    _case, action, arguments = _source_action(seed_connection, monkeypatch, stage)
     before = binding_proof._state(seed_connection)
     _independent_connections(monkeypatch, isolated_r1_url)
     name = f"r1-proof-{uuid4().hex}"
@@ -605,16 +609,15 @@ def test_real_rule_lock_timeout_rolls_back_and_same_request_can_retry(
             SESSION_NAME.reset(token)
 
     seed_connection.commit()
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        with seed_connection.transaction():
-            seed_connection.execute(
-                "lock table accounting.v1_tax_rule_evidence in access exclusive mode"
-            )
-            pending = pool.submit(invoke)
-            _wait_until_blocked(seed_connection, [name], time.monotonic() + 1.5)
-            # Keep the real lock held until the owner's unchanged 2s timeout.
-            with pytest.raises(owner.FirstLoanConflict, match="source is changing"):
-                pending.result(timeout=5)
+    with ThreadPoolExecutor(max_workers=1) as pool, seed_connection.transaction():
+        seed_connection.execute(
+            "lock table accounting.v1_tax_rule_evidence in access exclusive mode"
+        )
+        pending = pool.submit(invoke)
+        _wait_until_blocked(seed_connection, [name], time.monotonic() + 1.5)
+        # Keep the real lock held until the owner's unchanged 2s timeout.
+        with pytest.raises(owner.FirstLoanConflict, match="source is changing"):
+            pending.result(timeout=5)
     assert binding_proof._state(seed_connection) == before
     original = action(**arguments)
     after = binding_proof._state(seed_connection)
