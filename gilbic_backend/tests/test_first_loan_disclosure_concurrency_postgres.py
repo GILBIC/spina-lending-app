@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import ContextVar
 from copy import deepcopy
+from threading import Event
 from uuid import UUID, uuid4, uuid5
 
 import psycopg
@@ -66,8 +67,10 @@ def _independent_connections(monkeypatch, database_url):
     monkeypatch.setattr(reviews, "open_connection", acquire)
 
 
-def _wait_until_blocked(connection, names, deadline):
+def _wait_until_blocked(connection, names, deadline, *, blocker_pid=None):
     """Observe actual SQL waiters; elapsed sleep never establishes a race."""
+    if blocker_pid is None:
+        blocker_pid = connection.info.backend_pid
     while time.monotonic() < deadline:
         connection.execute("select pg_stat_clear_snapshot()")
         rows = connection.execute(
@@ -83,7 +86,7 @@ def _wait_until_blocked(connection, names, deadline):
                 row["wait_event_type"] == "Lock" and row["blockers"]
                 for row in seen.values()
             )
-            and connection.info.backend_pid in seen[names[0]]["blockers"]
+            and blocker_pid in seen[names[0]]["blockers"]
         ):
             return
         time.sleep(0.01)
@@ -373,3 +376,247 @@ def test_audit_rejection_rolls_back_review_and_exact_retry_reuses_staged_support
     assert content == SUPPORT
     assert metadata["byte_count"] == len(SUPPORT)
     assert binding_proof._state(seed_connection) == stable
+
+
+def _source_action(connection, monkeypatch, stage):
+    """Choose an actual owner after creating its committed-ready prerequisites."""
+    if stage == "review":
+        repository, case = review_proof._setup(connection, monkeypatch)
+        payload = review_proof._payload(connection, repository, case)
+        return case, repository.record, {
+            **review_proof._actor(case),
+            "request": payload,
+        }
+    if stage == "approve":
+        repository, _, case, _, calculation = binding_proof._setup(
+            connection, monkeypatch
+        )
+        return case, repository.approve, binding_proof._arguments(case, calculation)
+    assert stage == "release"
+    context, action, arguments = lifecycle_proof._prepare(
+        connection, monkeypatch, "release"
+    )
+    return context["case"], action, arguments
+
+
+def _consume_before_rule_writer(
+    connection, database_url, monkeypatch, action, arguments, case, kind
+):
+    """Hold the real consumer transaction open after its owner has succeeded.
+
+    The owner runs inside a real outer transaction, so its nested transaction
+    is a savepoint. No SQL lock or source guard is replaced. A separate observer
+    must see the actual rule writer waiting on this consumer's PostgreSQL PID.
+    """
+    ready, commit_allowed = Event(), Event()
+    consumer_name, writer_name = (f"r1-proof-{uuid4().hex}" for _ in range(2))
+    consumer_pid = []
+
+    @contextmanager
+    def acquire():
+        with psycopg.connect(
+            database_url,
+            row_factory=dict_row,
+            application_name=SESSION_NAME.get(),
+            options="-c statement_timeout=12000 -c lock_timeout=10000",
+        ) as consumer:
+            with consumer.transaction():
+                yield consumer
+                if SESSION_NAME.get() == consumer_name:
+                    consumer_pid.append(consumer.info.backend_pid)
+                    ready.set()
+                    if not commit_allowed.wait(timeout=8):
+                        raise AssertionError(
+                            "The bounded consumer commit gate timed out"
+                        )
+
+    def consume():
+        token = SESSION_NAME.set(consumer_name)
+        try:
+            return action(**deepcopy(arguments))
+        finally:
+            SESSION_NAME.reset(token)
+
+    def write_rule():
+        with psycopg.connect(
+            database_url,
+            row_factory=dict_row,
+            application_name=writer_name,
+            options="-c statement_timeout=12000 -c lock_timeout=10000",
+        ) as writer:
+            binding_proof._supersede_rule(writer, case, kind)
+        return True
+
+    connection.commit()
+    monkeypatch.setattr(owner, "open_connection", acquire)
+    monkeypatch.setattr(reviews, "open_connection", acquire)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        consumer = pool.submit(consume)
+        try:
+            if not ready.wait(timeout=5):
+                if consumer.done():
+                    consumer.result(timeout=0)
+                raise AssertionError(
+                    "The real consumer did not reach its commit boundary"
+                )
+            assert len(consumer_pid) == 1
+            writer = pool.submit(write_rule)
+            _wait_until_blocked(
+                connection,
+                [writer_name],
+                time.monotonic() + 1.5,
+                blocker_pid=consumer_pid[0],
+            )
+            locks = connection.execute(
+                "select a.application_name,l.mode,l.granted from pg_locks l "
+                "join pg_stat_activity a on a.pid=l.pid "
+                "where l.relation='accounting.v1_tax_rule_evidence'::regclass "
+                "and a.application_name=any(%s)",
+                ([consumer_name, writer_name],),
+            ).fetchall()
+            assert any(
+                lock["application_name"] == consumer_name
+                and lock["mode"] == "ShareLock"
+                and lock["granted"]
+                for lock in locks
+            )
+            assert any(
+                lock["application_name"] == writer_name and not lock["granted"]
+                for lock in locks
+            )
+            assert not consumer.done() and not writer.done()
+        finally:
+            # Release before executor cleanup even when an assertion fails.
+            commit_allowed.set()
+        result = consumer.result(timeout=15)
+        assert writer.result(timeout=15) is True
+    _independent_connections(monkeypatch, database_url)
+    return result
+
+
+@pytest.mark.parametrize("stage", ("review", "approve", "release"))
+@pytest.mark.parametrize("kind", ("dst", "grt"))
+def test_rule_writer_waits_for_valid_consumer_commit_then_replay_stays_immutable(
+    seed_connection, isolated_r1_url, monkeypatch, stage, kind
+):
+    case, action, arguments = _source_action(seed_connection, monkeypatch, stage)
+    old_rule = seed_connection.execute(
+        "select * from accounting.v1_tax_rule_evidence where id=%s",
+        (case[f"{kind}_rule"],),
+    ).fetchone()
+    original = _consume_before_rule_writer(
+        seed_connection, isolated_r1_url, monkeypatch, action, arguments, case, kind
+    )
+    successors = seed_connection.execute(
+        "select id from accounting.v1_tax_rule_evidence "
+        "where tax_type=%s and rule_key=%s and rule_version>%s",
+        (old_rule["tax_type"], old_rule["rule_key"], old_rule["rule_version"]),
+    ).fetchall()
+    assert len(successors) == 1
+    calculation_id = (
+        original["id"]
+        if stage == "review"
+        else original["packet"]["tax_disclosure"]["calculation_id"]
+    )
+    saved = review_proof._row(seed_connection, calculation_id)
+    assert saved[f"{kind}_rule_id"] == case[f"{kind}_rule"]
+    assert saved["rule_snapshot"][kind]["id"] == str(case[f"{kind}_rule"])
+    before_replay = binding_proof._state(seed_connection)
+    replay = action(**arguments)
+    if stage == "review":
+        assert review_proof._immutable_result(replay) == review_proof._immutable_result(
+            original
+        )
+        assert "source_context_changed" in replay["blockers"]
+        changed = deepcopy(arguments)
+        changed["request"]["request_id"] = str(uuid4())
+        with pytest.raises(owner.FirstLoanConflict):
+            action(**changed)
+    else:
+        assert replay == original
+        if stage == "approve":
+            with pytest.raises(owner.FirstLoanConflict):
+                owner.PostgresFirstLoanRepository().register_packet_document(
+                    **review_proof._actor(case),
+                    loan_id=UUID(original["loan_id"]),
+                    packet_hash=original["packet_hash"],
+                    content=lifecycle_proof.PDF,
+                    expected_pricing_snapshot={},
+                )
+        else:
+            releases = seed_connection.execute(
+                "select id from lending.first_loan_releases where loan_id=%s",
+                (arguments["loan_id"],),
+            ).fetchall()
+            assert len(releases) == 1
+    assert binding_proof._state(seed_connection) == before_replay
+
+
+@pytest.mark.parametrize("stage", ("review", "approve", "release"))
+@pytest.mark.parametrize("change", ("client", "cif"))
+def test_committed_source_invalidation_blocks_waiting_action_without_partial_state(
+    seed_connection, isolated_r1_url, monkeypatch, stage, change
+):
+    case, action, arguments = _source_action(seed_connection, monkeypatch, stage)
+    expected = []
+
+    def invalidate_while_blocked():
+        if change == "client":
+            seed_connection.execute(
+                "update lending.clients set status='inactive' where id=%s",
+                (case["client"],),
+            )
+        else:
+            seed_connection.execute(
+                "update lending.client_cif_versions "
+                "set reverification_required_at=clock_timestamp(), "
+                "reverification_reason=%s where id=%s",
+                ("Synthetic concurrent source invalidation", case["cif"]),
+            )
+        expected.append(binding_proof._state(seed_connection))
+
+    _independent_connections(monkeypatch, isolated_r1_url)
+    outcomes = _race(
+        seed_connection,
+        [(action, arguments)],
+        "select id from lending.loan_applications where id=%s for update",
+        (case["app"].application_id,),
+        while_blocked=invalidate_while_blocked,
+    )
+    assert len(expected) == 1
+    assert [kind for kind, _ in outcomes] == ["conflict"]
+    assert binding_proof._state(seed_connection) == expected[0]
+
+
+@pytest.mark.parametrize("stage", ("review", "approve", "release"))
+def test_real_rule_lock_timeout_rolls_back_and_same_request_can_retry(
+    seed_connection, isolated_r1_url, monkeypatch, stage
+):
+    case, action, arguments = _source_action(seed_connection, monkeypatch, stage)
+    before = binding_proof._state(seed_connection)
+    _independent_connections(monkeypatch, isolated_r1_url)
+    name = f"r1-proof-{uuid4().hex}"
+
+    def invoke():
+        token = SESSION_NAME.set(name)
+        try:
+            return action(**deepcopy(arguments))
+        finally:
+            SESSION_NAME.reset(token)
+
+    seed_connection.commit()
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with seed_connection.transaction():
+            seed_connection.execute(
+                "lock table accounting.v1_tax_rule_evidence in access exclusive mode"
+            )
+            pending = pool.submit(invoke)
+            _wait_until_blocked(seed_connection, [name], time.monotonic() + 1.5)
+            # Keep the real lock held until the owner's unchanged 2s timeout.
+            with pytest.raises(owner.FirstLoanConflict, match="source is changing"):
+                pending.result(timeout=5)
+    assert binding_proof._state(seed_connection) == before
+    original = action(**arguments)
+    after = binding_proof._state(seed_connection)
+    assert action(**arguments) == original
+    assert binding_proof._state(seed_connection) == after
