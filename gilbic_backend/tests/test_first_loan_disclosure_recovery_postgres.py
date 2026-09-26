@@ -113,12 +113,12 @@ def _consume_before_replacement(
                 row_factory=dict_row,
                 application_name=concurrency_proof.SESSION_NAME.get(),
                 options="-c statement_timeout=12000 -c lock_timeout=10000",
-            ) as connection,
-            connection.transaction(),
+            ) as consumer_connection,
+            consumer_connection.transaction(),
         ):
-            yield connection
+            yield consumer_connection
             if concurrency_proof.SESSION_NAME.get() == consumer_name:
-                consumer_pid.append(connection.info.backend_pid)
+                consumer_pid.append(consumer_connection.info.backend_pid)
                 ready.set()
                 if not allow_commit.wait(timeout=8):
                     raise AssertionError(
