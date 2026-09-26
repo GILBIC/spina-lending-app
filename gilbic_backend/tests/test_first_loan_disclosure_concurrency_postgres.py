@@ -5,6 +5,7 @@ caller's rollback-only database. Only connection acquisition is substituted.
 Business guards, row/advisory locks, private storage and writes remain real.
 """
 
+import base64
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -89,7 +90,7 @@ def _wait_until_blocked(connection, names, deadline):
     raise AssertionError("Both independent R1 sessions must reach real SQL locks")
 
 
-def _race(connection, calls, gate_sql, gate_arguments=()):
+def _race(connection, calls, gate_sql, gate_arguments=(), *, while_blocked=None):
     names = [f"r1-proof-{uuid4().hex}" for _ in calls]
 
     def invoke(name, action, arguments):
@@ -114,6 +115,8 @@ def _race(connection, calls, gate_sql, gate_arguments=()):
             for position, (action, arguments) in enumerate(calls):
                 futures.append(pool.submit(invoke, names[position], action, arguments))
                 _wait_until_blocked(connection, names[: position + 1], deadline)
+            if while_blocked is not None:
+                while_blocked()
         return [future.result(timeout=15) for future in futures]
 
 
@@ -264,3 +267,109 @@ def test_concurrent_release_records_one_handoff_and_never_repeats_financial_effe
     assert release(**arguments) == original
     assert release(**arguments) == original
     assert binding_proof._state(seed_connection) == after
+
+
+@pytest.mark.parametrize("stage", ("approve", "release"))
+@pytest.mark.parametrize("kind", ("dst", "grt"))
+def test_applicable_rule_successor_committed_while_action_waits_rejects_stale_source(
+    seed_connection, isolated_r1_url, monkeypatch, stage, kind
+):
+    if stage == "approve":
+        repository, _, case, _, calculation = binding_proof._setup(
+            seed_connection, monkeypatch
+        )
+        action = repository.approve
+        arguments = binding_proof._arguments(case, calculation)
+    else:
+        context, action, arguments = lifecycle_proof._prepare(
+            seed_connection, monkeypatch, "release"
+        )
+        case = context["case"]
+    expected = []
+
+    def supersede_while_blocked():
+        # The worker has reached a real SQL lock. Use the existing rule writer
+        # in this independent transaction, then commit before it can proceed.
+        binding_proof._supersede_rule(seed_connection, case, kind)
+        expected.append(binding_proof._state(seed_connection))
+
+    _independent_connections(monkeypatch, isolated_r1_url)
+    outcomes = _race(
+        seed_connection,
+        [(action, arguments)],
+        "lock table accounting.v1_tax_rule_evidence in access exclusive mode",
+        while_blocked=supersede_while_blocked,
+    )
+    assert len(expected) == 1
+    assert [result for result, _ in outcomes] == ["conflict"]
+    # Include the intentional rule/audit update but no stale approval, release,
+    # new evidence, review mutation or partial financial effect from the worker.
+    assert binding_proof._state(seed_connection) == expected[0]
+
+
+def test_audit_rejection_rolls_back_review_and_exact_retry_reuses_staged_support(
+    seed_connection, isolated_r1_url, monkeypatch
+):
+    repository, case = review_proof._setup(seed_connection, monkeypatch)
+    payload = review_proof._payload(seed_connection, repository, case)
+    actor = review_proof._actor(case)
+    before = binding_proof._state(seed_connection)
+    key = uuid5(UUID(payload["request_id"]), "spina.r1.support.v1")
+    staged = {**before[1][2], f"{key.hex}.bin": SUPPORT}
+    constraint = sql.Identifier(f"r1_test_audit_rejection_{uuid4().hex}")
+    seed_connection.commit()
+    _independent_connections(monkeypatch, isolated_r1_url)
+    # Add a test-only restriction in the separately generated disposable DB.
+    # Existing constraints/triggers are never disabled or weakened.
+    with seed_connection.transaction():
+        seed_connection.execute(
+            sql.SQL(
+                "alter table core.audit_logs add constraint {} "
+                "check (actor_user_id <> {}::uuid or action <> {}) not valid"
+            ).format(
+                constraint,
+                sql.Literal(str(case["actor"])),
+                sql.Literal(reviews.AUDIT_ACTION),
+            )
+        )
+    try:
+        with pytest.raises(owner.FirstLoanConflict):
+            repository.record(**actor, request=payload)
+        failed = binding_proof._state(seed_connection)
+        assert failed[0] == before[0]
+        assert failed[1][:2] == before[1][:2]
+        assert failed[2] == before[2]
+        assert failed[1][2] == staged
+        with pytest.raises(owner.FirstLoanConflict):
+            repository.by_request(**actor, request_id=UUID(payload["request_id"]))
+        assert binding_proof._state(seed_connection) == failed
+    finally:
+        # Release read snapshots before removing only our additional constraint.
+        seed_connection.rollback()
+        with seed_connection.transaction():
+            seed_connection.execute(
+                sql.SQL("alter table core.audit_logs drop constraint {}").format(
+                    constraint
+                )
+            )
+
+    different = SUPPORT.replace(b"SUPPORT", b"CHANGED")
+    assert different != SUPPORT
+    changed = {
+        **payload,
+        "support_base64": base64.b64encode(different).decode("ascii"),
+    }
+    with pytest.raises(owner.FirstLoanConflict):
+        repository.record(**actor, request=changed)
+    assert binding_proof._state(seed_connection) == failed
+
+    result = repository.record(**actor, request=payload)
+    assert result["version_number"] == 1
+    _assert_one_review(seed_connection, before, result, case, payload)
+    stable = binding_proof._state(seed_connection)
+    assert repository.record(**actor, request=payload) == result
+    assert repository.record(**actor, request=payload) == result
+    metadata, content = repository.support(**actor, calculation_id=UUID(result["id"]))
+    assert content == SUPPORT
+    assert metadata["byte_count"] == len(SUPPORT)
+    assert binding_proof._state(seed_connection) == stable
