@@ -11,7 +11,6 @@ import pytest
 import test_first_loan_disclosure_binding_postgres as binding_proof
 import test_first_loan_disclosure_repository_postgres as review_proof
 from first_loan_approval_fixtures import seed_historical_schema_one_approval
-from gilbic_backend import first_loan_repository as owner
 from gilbic_backend.office_review_evidence_storage import (
     EvidenceFileError,
     PrivateEvidenceStore,
@@ -19,6 +18,8 @@ from gilbic_backend.office_review_evidence_storage import (
 from psycopg.rows import tuple_row
 from psycopg.types.json import Jsonb
 from test_first_loan_postgres import PDF, setup
+
+from gilbic_backend import first_loan_repository as owner
 
 runtime_url = review_proof.runtime_url
 connection = review_proof.connection

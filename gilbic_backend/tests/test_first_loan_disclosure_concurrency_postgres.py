@@ -20,10 +20,11 @@ import test_first_loan_disclosure_lifecycle_postgres as lifecycle_proof
 import test_first_loan_disclosure_register_postgres as register_proof
 import test_first_loan_disclosure_repository_postgres as review_proof
 from first_loan_disclosure_fixtures import SUPPORT
-from gilbic_backend import first_loan_disclosure_repository as reviews
-from gilbic_backend import first_loan_repository as owner
 from psycopg import sql
 from psycopg.rows import dict_row
+
+from gilbic_backend import first_loan_disclosure_repository as reviews
+from gilbic_backend import first_loan_repository as owner
 
 isolated_database_url = isolated_proof.isolated_database_url
 private_fixture_configuration = review_proof.private_fixture_configuration
