@@ -32,6 +32,25 @@ class ApprovalRequest(StrictInput):
     application_version_id: UUID
     terms: FirstLoanTerms
     template_version: str = Field(min_length=1, max_length=200)
+    disclosure_calculation_id: UUID | None = Field(
+        default=None,
+        description="Required for new approvals; only historical replay may omit it.",
+    )
+    expected_disclosure_digest: str | None = Field(
+        default=None,
+        pattern="^[0-9a-f]{64}$",
+        description="Digest of the exact saved calculation selected for approval.",
+    )
+
+    @model_validator(mode="after")
+    def require_disclosure_pair(self):
+        if (self.disclosure_calculation_id is None) != (
+            self.expected_disclosure_digest is None
+        ):
+            raise ValueError("Supply the saved disclosure ID and digest together.")
+        # The existing repository distinguishes committed historical replay
+        # from a NEW source-less approval, which remains a protected conflict.
+        return self
 
 
 class RejectionRequest(StrictInput):
@@ -201,7 +220,10 @@ def create_first_loan_router():
         actor=Depends(reviewer),
         repository=Depends(first_loan_repository_dependency),
     ):
-        return execute(response, repository, actor, "context")
+        return {
+            **execute(response, repository, actor, "context"),
+            "disclosure_source_required": True,
+        }
 
     @router.get("/by-application/{application_id}")
     def by_application(
@@ -239,6 +261,8 @@ def create_first_loan_router():
             application_version_id=body.application_version_id,
             terms=body.terms.model_dump(mode="json"),
             template_version=body.template_version,
+            disclosure_calculation_id=body.disclosure_calculation_id,
+            expected_disclosure_digest=body.expected_disclosure_digest,
         )
 
     @router.post("/reject", status_code=201)
