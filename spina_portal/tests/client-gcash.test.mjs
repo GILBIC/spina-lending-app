@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { setImmediate } from 'node:timers/promises';
+import { Element, fire } from './helpers/dom.mjs';
 
 async function loadClientGcashModule() {
   try {
@@ -169,4 +171,55 @@ test('Client Web GCash refreshes the protected intent and renders server status 
   assert.match(html, /₱90,071,992,547,409\.91/);
   assert.match(html, /https:\/\/pay\.example\.test\/checkout\/1/);
   assert.match(html, /not yet an official SPINA payment/i);
+});
+
+test('QR-only intent exposes escaped provider code without claiming a scannable QR or payment', async () => {
+  const module = await loadClientGcashModule();
+  const html = module.renderClientGcashIntent({intent_id:'qr-only', qr_value:'000201 <provider>&"code"', checkout_url:'javascript:alert(1)', status:'provider_pending'});
+  assert.match(html, /data-gcash-payment-code/);
+  assert.match(html, /000201 &lt;provider&gt;&amp;&quot;code&quot;/);
+  assert.match(html, /Copy payment code/);
+  assert.match(html, /not yet an official SPINA payment/);
+  assert.doesNotMatch(html, /<img|<canvas|href=|Scan this|Official SPINA payment posted\./);
+  assert.doesNotMatch(module.renderClientGcashIntent({qr_value:'   '}), /data-gcash-payment-code|Copy payment code/);
+});
+
+test('initial and refreshed provider codes copy exactly; clipboard denial keeps manual handoff available', async () => {
+  const module = await loadClientGcashModule();
+  const root = new Element();
+  const initialCode = '  000201 <provider>&"code"  ';
+  root.innerHTML = module.renderClientGcashPanel({capability:{payment_available:true}, loans:[{loan_id:'loan',status:'active',loan_type_name:'Regular'}], intent:{intent_id:'intent/1',qr_value:initialCode,status:'provider_pending'}});
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const copied = [];
+  let denied = false;
+  Object.defineProperty(globalThis, 'navigator', {configurable:true, value:{clipboard:{writeText:async value => {if(denied) throw new Error('denied'); copied.push(value);}}}});
+  const calls = [];
+  try {
+    module.bindClientGcashPanel({root, api:{request:async path => {calls.push(path);return {intent_id:'intent/1',qr_value:'updated-code',status:'provider_pending'};}}});
+    // This fixture does not implement the browser's textarea value parsing.
+    root.querySelector('[data-gcash-payment-code]').value = initialCode;
+    fire(root.querySelector('[data-gcash-copy-code]'), 'click');
+    await setImmediate();
+    assert.deepEqual(copied, [initialCode]);
+    assert.match(root.querySelector('[data-gcash-copy-status]').textContent, /copied/i);
+    assert.equal(calls.length, 0);
+    denied = true;
+    fire(root.querySelector('[data-gcash-copy-code]'), 'click');
+    await setImmediate();
+    assert.match(root.querySelector('[data-gcash-copy-status]').textContent, /select and copy/i);
+    assert.equal(root.querySelector('[data-gcash-payment-code]').value, initialCode);
+    denied = false;
+    const refreshButton = root.querySelector('[data-gcash-refresh-intent]');
+    refreshButton.dataset = {};
+    fire(refreshButton, 'click');
+    await setImmediate();
+    assert.deepEqual(calls, ['/api/v1/client/gcash/payment-intents/intent%2F1']);
+    fire(root.querySelector('[data-gcash-copy-code]'), 'click');
+    await setImmediate();
+    assert.deepEqual(copied, [initialCode, 'updated-code']);
+    assert.match(root.innerHTML, /not yet an official SPINA payment/);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'navigator', descriptor);
+    else delete globalThis.navigator;
+  }
 });

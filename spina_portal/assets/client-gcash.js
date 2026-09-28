@@ -110,6 +110,7 @@ function renderLoanGroup(label, loans) {
 
 export function renderClientGcashIntent(intent = {}) {
   const checkoutUrl = safeCheckoutUrl(intent.checkout_url);
+  const paymentCode = typeof intent.qr_value === 'string' && intent.qr_value.trim() ? intent.qr_value : '';
   return `<div class="notice-card" data-client-gcash-intent>
     <div class="section-heading">
       <div><strong>GCash payment status</strong><div class="meta">Intent ${escapeHtml(intent.intent_id || '—')}</div></div>
@@ -120,6 +121,9 @@ export function renderClientGcashIntent(intent = {}) {
       <div class="kv-row"><span>Provider</span><strong>${escapeHtml(intent.provider || '—')}</strong></div>
       <div class="kv-row"><span>Mode</span><strong>${escapeHtml(intent.mode || '—')}</strong></div>
     </div>
+    ${paymentCode ? `<label>GCash QR/payment code<textarea data-gcash-payment-code readonly rows="3">${escapeHtml(paymentCode)}</textarea></label>
+      <button class="button button-secondary" type="button" data-gcash-copy-code>Copy payment code</button>
+      <p class="meta" data-gcash-copy-status role="status">Use this provider code according to its payment instructions.</p>` : ''}
     <div class="inline-actions">
       ${checkoutUrl ? `<a class="button button-primary" href="${escapeHtml(checkoutUrl)}" target="_blank" rel="noopener noreferrer">Open GCash checkout</a>` : ''}
       ${intent.intent_id ? `<button class="button button-secondary" type="button" data-gcash-refresh-intent="${escapeHtml(intent.intent_id)}">Refresh status</button>` : ''}
@@ -188,16 +192,30 @@ export function bindClientGcashPanel(context) {
 
   const actions = createClientGcashActions({ api });
 
-  const bindIntentControls = () => {
+  const bindIntentControls = (intent = null) => {
+    const codeField = statusPanel.querySelector('[data-gcash-payment-code]');
+    if (codeField && typeof intent?.qr_value === 'string') codeField.value = intent.qr_value;
+    const copyStatus = statusPanel.querySelector('[data-gcash-copy-status]');
+    statusPanel.querySelector('[data-gcash-copy-code]')?.addEventListener('click', async () => {
+      if (!codeField?.value) return;
+      try {
+        await globalThis.navigator.clipboard.writeText(codeField.value);
+        copyStatus.textContent = 'Payment code copied. Follow the provider’s payment instructions.';
+      } catch {
+        codeField.focus();
+        codeField.select?.();
+        copyStatus.textContent = 'Select and copy the payment code above.';
+      }
+    });
     const refreshButton = statusPanel.querySelector('[data-gcash-refresh-intent]');
     refreshButton?.addEventListener('click', async () => {
-      const intentId = String(refreshButton.dataset.gcashRefreshIntent || '').trim();
+      const intentId = String(refreshButton.getAttribute('data-gcash-refresh-intent') || '').trim();
       if (!intentId) return;
       setButtonBusy(refreshButton, true, 'Refreshing…');
       try {
         const intent = await actions.refresh(intentId);
         statusPanel.innerHTML = renderClientGcashIntent(intent);
-        bindIntentControls();
+        bindIntentControls(intent);
       } catch (error) {
         showToast(error?.message || 'GCash status could not be refreshed.', 'error');
         setButtonBusy(refreshButton, false);
@@ -212,7 +230,7 @@ export function bindClientGcashPanel(context) {
     try {
       const intent = await actions.start(readSelections(form));
       statusPanel.innerHTML = renderClientGcashIntent(intent);
-      bindIntentControls();
+      bindIntentControls(intent);
       showToast('GCash checkout prepared. Complete it with the provider, then refresh status.', 'success');
     } catch (error) {
       showToast(error?.message || 'GCash checkout could not be started.', 'error');
@@ -220,4 +238,5 @@ export function bindClientGcashPanel(context) {
       setButtonBusy(button, false);
     }
   });
+  bindIntentControls();
 }
