@@ -10,7 +10,6 @@ import psycopg
 import run_stage5d17_disposable_postgres_validation as disposable
 from psycopg import sql
 
-
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
 TARGET_TEST = (
@@ -103,6 +102,7 @@ FULL_FLOW_TESTS = tuple(
         "test_office_review_evidence_postgres.py",
         "test_first_loan_postgres.py",
         "test_first_loan_disclosure_postgres.py",
+        "test_release_preflight_postgres.py",
         "test_first_loan_disclosure_register_postgres.py",
         "test_first_loan_disclosure_repository_postgres.py",
         "test_first_loan_disclosure_binding_postgres.py",
