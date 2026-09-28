@@ -220,13 +220,18 @@ async function exportHarness(t, request) {
   const root = new Element();
   root.innerHTML = journal.managementGeneralJournalMarkup();
   const downloads = [];
+  let markDownloaded;
+  const downloaded = new Promise((resolve) => { markDownloaded = resolve; });
   const created = [];
   const revoked = [];
   const originalDocument = globalThis.document;
   globalThis.document = {
     createElement(tag) {
       assert.equal(tag, 'a');
-      return { click() { downloads.push({ href: this.href, filename: this.download }); } };
+      return { click() {
+        downloads.push({ href: this.href, filename: this.download });
+        markDownloaded();
+      } };
     },
   };
   t.after(() => { globalThis.document = originalDocument; });
@@ -246,10 +251,10 @@ async function exportHarness(t, request) {
   const status = root.querySelector('[data-accounting-export-status]');
   start.value = '2026-09-01';
   end.value = '2026-09-20';
-  return { root, form, start, end, button, status, downloads, created, revoked, dispose, context, controller };
+  return { root, form, start, end, button, status, downloads, downloaded, created, revoked, dispose, context, controller };
 }
 
-test('accounting export downloads the exact date scope through the authenticated device session', async (t) => {
+test('accounting export downloads the exact date scope through the authenticated device session', { timeout: 2000 }, async (t) => {
   let respond;
   const requests = [];
   const api = new SpinaApi({
@@ -278,7 +283,7 @@ test('accounting export downloads the exact date scope through the authenticated
   assert.equal(h.start.disabled, true);
   assert.equal(h.end.disabled, true);
   respond(new Response(new Blob(['zip bytes'], { type: 'application/zip' })));
-  await tick();
+  await h.downloaded;
   assert.equal(h.created.length, 1);
   assert.equal(await h.created[0].text(), 'zip bytes');
   assert.deepEqual(h.downloads, [{ href: 'blob:accounting-1', filename: 'spina-accounting-2024-01-01-to-2024-12-31.zip' }]);
