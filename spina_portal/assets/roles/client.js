@@ -120,6 +120,18 @@ function paymentRows(payments) {
   </table></div>`;
 }
 
+export function clientRenewalEligibilityRows(loans) {
+  return loans.map((loan) => `<article class="list-item">
+    <strong>${escapeHtml(loan.loan_number || 'Loan')}</strong>
+    <div class="detail-grid">
+      ${detailItem('Signed contractual total', formatAuthoritativeMoney(loan.contractual_total))}
+      ${detailItem('Paid amount', formatAuthoritativeMoney(loan.paid_amount))}
+      ${detailItem('Paid percentage', loan.paid_percent == null ? 'Unavailable' : `${escapeHtml(loan.paid_percent)}%`)}
+    </div>
+    <p>${escapeHtml(loan.eligibility_message || 'Renewal eligibility is unavailable.')}</p>
+  </article>`).join('');
+}
+
 export function clientRenewalRows(requests) {
   if (!requests.length) return emptyState('No renewal request has been submitted.');
   return `<div class="list-stack">${requests
@@ -434,6 +446,7 @@ function renderWorkspace(root, model, raw, errors) {
   <section class="section-card" id="client-renewals">
     <div class="section-heading"><div><h2>Renewal requests</h2><p>After you submit, your permanently assigned Collector must recommend the request before Management reviews and decides it. A request never creates or releases a new loan. If approved, complete only your own signer step; any other required signer must use their own SPINA account.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : clientRenewalRows(model.renewals)}
+    ${errors.renewals ? '' : clientRenewalEligibilityRows(asArray(raw.renewals.loans))}
     <details ${renewalLoans.length ? '' : 'hidden'}>
       <summary>Submit a renewal request</summary>
       <form id="client-renewal-form" class="entry-form">

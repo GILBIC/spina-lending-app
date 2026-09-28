@@ -408,7 +408,9 @@ class _RenewalLoanCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text('${loan.paidPercent.toStringAsFixed(1)}% paid'),
+                Text(loan.paidPercent == null
+                    ? 'Paid % unavailable'
+                    : '${loan.paidPercent!.toStringAsFixed(1)}% paid'),
               ],
             ),
             const Divider(height: 24),
@@ -417,9 +419,10 @@ class _RenewalLoanCard extends StatelessWidget {
             _LabelValue('Daily amount', _money(loan.dailyAmount)),
             _LabelValue('Due date', _date(loan.dueDate)),
             const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: (loan.paidPercent / 100).clamp(0.0, 1.0),
-            ),
+            if (loan.paidPercent != null)
+              LinearProgressIndicator(
+                value: (loan.paidPercent! / 100).clamp(0.0, 1.0),
+              ),
             const SizedBox(height: 10),
             Text(loan.eligibilityMessage),
             const SizedBox(height: 12),

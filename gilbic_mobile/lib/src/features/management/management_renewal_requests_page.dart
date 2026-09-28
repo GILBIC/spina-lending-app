@@ -586,16 +586,19 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
               'Remaining old balance',
               _money(request.remainingBalance),
             ),
-            _LabelValue('Contractual total', _money(request.contractualTotal)),
+            _LabelValue('Contractual total', request.contractualTotal == null
+                ? 'Verified schedule unavailable'
+                : _money(request.contractualTotal!)),
             _LabelValue(
               'Paid toward contractual total',
-              '${_money(request.paidCash)} • ${request.paidPercent.toStringAsFixed(1)}%',
+              '${_money(request.paidCash)} • ${request.paidPercent == null ? 'Paid % unavailable' : '${request.paidPercent!.toStringAsFixed(1)}%'}',
             ),
             _LabelValue('Client requested', _money(request.requestedAmount)),
             if (!request.isSevenBySeven)
               _LabelValue(
                 'Regular 50% gate',
-                request.regular50PercentEligible ? 'Eligible' : 'Below 50%',
+                request.regular50PercentEligible ? 'Eligible'
+                    : request.paidPercent == null ? 'Verified schedule required' : 'Below 50%',
               ),
             if (request.isSevenBySeven)
               const _LabelValue(

@@ -47,6 +47,10 @@ TARGET_TESTS = (
     ROOT
     / "gilbic_backend"
     / "tests"
+    / "test_renewal_signed_schedule_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
     / "test_combined_collection_renewal_workflow_postgres.py",
     ROOT
     / "gilbic_backend"

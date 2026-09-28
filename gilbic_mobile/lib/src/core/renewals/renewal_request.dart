@@ -69,10 +69,10 @@ class RenewalLoanOption {
   final String loanTypeName;
   final String calculationMode;
   final double principal;
-  final double contractualTotal;
+  final double? contractualTotal;
   final double remainingBalance;
   final double paidAmount;
-  final double paidPercent;
+  final double? paidPercent;
   final double dailyAmount;
   final DateTime dateReleased;
   final DateTime dueDate;
@@ -109,10 +109,14 @@ class RenewalLoanOption {
       loanTypeName: _requiredString(payload, 'loan_type_name'),
       calculationMode: _requiredString(payload, 'calculation_mode'),
       principal: _requiredDouble(payload, 'principal'),
-      contractualTotal: _requiredDouble(payload, 'contractual_total'),
+      contractualTotal: payload['contractual_total'] == null
+          ? null
+          : _requiredDouble(payload, 'contractual_total'),
       remainingBalance: _requiredDouble(payload, 'remaining_balance'),
       paidAmount: _requiredDouble(payload, 'paid_amount'),
-      paidPercent: _requiredDouble(payload, 'paid_percent'),
+      paidPercent: payload['paid_percent'] == null
+          ? null
+          : _requiredDouble(payload, 'paid_percent'),
       dailyAmount: _requiredDouble(payload, 'daily_amount'),
       dateReleased: _requiredDate(payload, 'date_released'),
       dueDate: _requiredDate(payload, 'due_date'),

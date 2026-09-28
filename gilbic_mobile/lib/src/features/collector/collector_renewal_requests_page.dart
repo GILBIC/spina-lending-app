@@ -401,11 +401,13 @@ class _RenewalCard extends StatelessWidget {
               'Current principal ${_money(request.currentPrincipal)} • Remaining ${_money(request.remainingBalance)}',
             ),
             Text(
-              'Total contractual ${_money(request.contractualTotal)} • Paid ${request.paidPercent.toStringAsFixed(1)}%',
+              'Total contractual ${request.contractualTotal == null ? 'unavailable' : _money(request.contractualTotal!)} • ${request.paidPercent == null ? 'Paid % unavailable' : 'Paid ${request.paidPercent!.toStringAsFixed(1)}%'}',
             ),
             if (!request.isSevenBySeven && !request.regular50PercentEligible)
-              const Text(
-                'Below normal 50% Regular threshold — only a controlled Management override may approve.',
+              Text(
+                request.paidPercent == null
+                    ? 'A verified signed schedule is required to assess the Regular 50% renewal threshold.'
+                    : 'Below normal 50% Regular threshold — only a controlled Management override may approve.',
               ),
             if (request.isSevenBySeven)
               const Text(

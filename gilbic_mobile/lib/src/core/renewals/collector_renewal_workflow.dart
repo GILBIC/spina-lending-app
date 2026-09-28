@@ -95,9 +95,9 @@ class CollectorRenewalRequest {
   final bool isSevenBySeven;
   final double currentPrincipal;
   final double remainingBalance;
-  final double contractualTotal;
+  final double? contractualTotal;
   final double paidCash;
-  final double paidPercent;
+  final double? paidPercent;
   final bool regular50PercentEligible;
   final double requestedAmount;
   final String clientMessage;
@@ -189,9 +189,13 @@ class CollectorRenewalRequest {
       isSevenBySeven: payload['is_7x7'] == true,
       currentPrincipal: _requiredDouble(payload, 'current_principal'),
       remainingBalance: _requiredDouble(payload, 'remaining_balance'),
-      contractualTotal: _requiredDouble(payload, 'contractual_total'),
+      contractualTotal: payload['contractual_total'] == null
+          ? null
+          : _requiredDouble(payload, 'contractual_total'),
       paidCash: _requiredDouble(payload, 'paid_cash'),
-      paidPercent: _requiredDouble(payload, 'paid_percent'),
+      paidPercent: payload['paid_percent'] == null
+          ? null
+          : _requiredDouble(payload, 'paid_percent'),
       regular50PercentEligible: payload['regular_50_percent_eligible'] == true,
       requestedAmount: _requiredDouble(payload, 'requested_amount'),
       clientMessage: firstNonEmptyString(<Object?>[payload['client_message']]) ?? '',
