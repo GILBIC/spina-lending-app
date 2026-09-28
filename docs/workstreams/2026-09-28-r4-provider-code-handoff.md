@@ -6,4 +6,4 @@ Client Web now exposes a nonblank provider `qr_value` as an escaped, read-only G
 
 This follows the existing Android code-copy behavior. An opaque value is not claimed to be a scannable QR image. No QR service, settlement verification, official posting, provider setup, production request or migration is introduced; the existing official-payment warning remains visible.
 
-Verification: six Client GCash tests passed, including QR-only escaping/unsafe-link rejection, exact copy, clipboard denial, initial/refreshed binding and no API call from copying. Two new regressions failed before implementation. Final integrated Portal validation is tracked with R3/R6 integration.
+Verification: six Client GCash tests passed, including QR-only escaping/unsafe-link rejection, exact copy, clipboard denial, initial/refreshed binding and no API call from copying. Two new regressions failed before implementation. Integrated R2/R3/R4/R6 Portal syntax, all 736 tests and build passed. Root independently reviewed the R4 diff without further findings.

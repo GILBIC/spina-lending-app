@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
 class CollectionCorrectionDraft {
@@ -13,7 +14,7 @@ class CollectionCorrectionDraft {
 
   final String transactionId;
   final String entryType;
-  final double? amount;
+  final Object? amount;
   final List<DateTime> coveredDates;
   final String note;
   final String reason;
@@ -37,7 +38,7 @@ class CollectionCorrectionDraft {
       return 'Covered dates must not contain duplicates.';
     }
     if (entryType == 'pass') {
-      if (amount != null && amount != 0) {
+      if (amount != null && requestMoneyCents(amount) != BigInt.zero) {
         return 'Unable-to-pay cannot contain an amount.';
       }
       if (dates.isNotEmpty) {
@@ -45,7 +46,7 @@ class CollectionCorrectionDraft {
       }
       return null;
     }
-    if (amount == null || amount! <= 0) {
+    if ((requestMoneyCents(amount) ?? BigInt.zero) <= BigInt.zero) {
       return 'Enter an amount greater than zero.';
     }
     if (dates.isEmpty) {
@@ -57,10 +58,10 @@ class CollectionCorrectionDraft {
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'entry_type': entryType,
-      'amount': amount,
-      'covered_dates': _sortedUniqueDates(coveredDates)
-          .map(_date)
-          .toList(growable: false),
+      'amount': amount == null ? null : requestMoney(amount),
+      'covered_dates': _sortedUniqueDates(
+        coveredDates,
+      ).map(_date).toList(growable: false),
       'note': note.trim(),
       'reason': reason.trim(),
       'expected_route_revision': expectedRouteRevision.trim(),
@@ -107,7 +108,8 @@ class CollectionCorrectionResult {
     }
     return CollectionCorrectionResult(
       transactionId: transactionId,
-      entryType: firstNonEmptyString(<Object?>[data['entry_type']]) ?? 'payment',
+      entryType:
+          firstNonEmptyString(<Object?>[data['entry_type']]) ?? 'payment',
       amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,
       coveredDates: _dateList(data['covered_dates']),
       note: firstNonEmptyString(<Object?>[data['note']]) ?? '',

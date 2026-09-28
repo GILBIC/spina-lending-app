@@ -4,7 +4,7 @@
 
 Source: [SPINA approved-idea/code-gap review, R3](https://app.notion.com/p/3e35ade7bef48197be58f91c865a9d6f), 22 September 2026, and the user's repeated approval to complete all priorities without over-engineering. This slice exposes existing protected server workflows for Collector Web/iPhone use; it adds no calculation engine, provider, migration, policy configuration or financial posting route.
 
-R3 starts from R2 commit `20c3f0bcbf287fa78a917d7cf548bde10261806c` on `gap/r3-collector-web-parity`. R6 exact-money changes are an integration dependency before publication acceptance.
+R3 starts from R2 commit `20c3f0bcbf287fa78a917d7cf548bde10261806c` on `gap/r3-collector-web-parity`. R4 code-copy handoff is separate commit `7963961d`; R3 implementation is `2897c235`. R6 exact-money commit `834b5464` was merged without rewriting either history. The shared validator retains R6 exact decimal normalization and unsafe-number rejection alongside R3 covered-date/allocation inputs. New money displays reuse the existing authoritative decimal display helper.
 
 ## Behavior
 
@@ -17,7 +17,7 @@ R3 starts from R2 commit `20c3f0bcbf287fa78a917d7cf548bde10261806c` on `gap/r3-c
 
 ## Verification
 
-Full Portal syntax (116 modules), 725 tests and the distributable build passed before the subsequent review fix. Focused mounted-form tests passed for reviewed Combined posting and edits, saved-date submission, correction scope/revision, late disposal, cross-area identity and recipient capacity, recommendation explanation, handover stages, uncertain lock and private photo type/size checks. Root spec review identified a missing Combined-preview response binding; fixed with 17 malformed-response variants plus exact large-value display regression, with 14 focused tests passing. The later scoped mutation-recovery fix passed 50 Collector/workspace-lifecycle cases, including null success, HTTP 500 and editable read-only preview errors. The shell precaches all four new modules under cache v13. Final integrated R6 verification and independent standards review are pending; these initial results are not production acceptance.
+Integrated R2/R3/R4/R6 Portal syntax (116 modules), all 736 tests and the distributable build passed. Focused mounted-form tests cover reviewed Combined posting and edits, saved-date submission, correction scope/revision, late disposal, cross-area identity and recipient capacity, recommendation explanation, handover stages, uncertain lock and private photo type/size checks. Root spec review identified a missing Combined-preview response binding; fixed with 17 malformed-response variants plus exact large-value display regression. The scoped mutation-recovery fix covers null success, HTTP 500 and editable read-only preview errors. Root reviewed both fixes and the R4 handoff without further findings. The shell precaches all four new modules under cache v13. Additional standards review and repository CI remain separate from these local checks; no production acceptance is claimed.
 
 ## Limits
 

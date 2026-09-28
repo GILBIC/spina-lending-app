@@ -37,7 +37,10 @@ void main() {
       await tester.pump();
 
       expect(repository.previews, hasLength(1));
-      expect(repository.previews.single.cashReceivedAmount, 150);
+      expect(
+        repository.previews.single.toJson()['cash_received_amount'],
+        '150.00',
+      );
       expect(repository.submissions, hasLength(1));
       expect(
         repository.submissions.single.reviewedAllocationHash,

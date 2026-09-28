@@ -11,6 +11,75 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 
 void main() {
+  testWidgets('cached route amounts keep exact cents in payment defaults', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final entry = CollectorRouteEntry.fromPayload({
+      ..._regularEntry.toJson(),
+      'daily_amount': '1000000000000000.01',
+      'contract_collection_ready': true,
+      'contract_today_unpaid_amount': '1000000000000000.02',
+      'today_amount': '1000000000000000.03',
+    })!;
+    final cached = CollectorRouteEntry.fromPayload(entry.toJson())!;
+    expect(cached.dailyAmountInput, '1000000000000000.01');
+    expect(cached.todayAmountInput, '1000000000000000.03');
+    final repository = _CaptureRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionEntryPage(
+          session: _session,
+          entry: cached,
+          repository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          collectionDate: DateTime(2026, 8, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('collection-amount')))
+          .controller!
+          .text,
+      '1000000000000000.02',
+    );
+    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    await tester.pumpAndSettle();
+    expect(repository.drafts.single.toJson()['amount'], '1000000000000000.02');
+  });
+
+  testWidgets('entered cents survive the real collection form submission', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _CaptureRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionEntryPage(
+          session: _session,
+          entry: _regularEntry,
+          repository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          collectionDate: DateTime(2026, 8, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('collection-amount')),
+      '1000000000000000.01',
+    );
+    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    await tester.pumpAndSettle();
+    expect(repository.drafts.single.toJson()['amount'], '1000000000000000.01');
+  });
+
   testWidgets('network retry reuses the same idempotency key and sequence', (
     tester,
   ) async {
@@ -289,7 +358,7 @@ void main() {
 
       expect(repository.drafts, hasLength(1));
       expect(repository.drafts.single.entryType, CollectionEntryType.payment);
-      expect(repository.drafts.single.amount, 35);
+      expect(repository.drafts.single.toJson()['amount'], '35.00');
       expect(repository.drafts.single.coveredDates, hasLength(1));
       expect(
         repository.drafts.single.routeRevision,

@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
+import 'package:gilbic_mobile/src/core/management/general_journal.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_collection_location_repository.dart';
@@ -190,13 +192,6 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     return null;
   }
 
-  double _normalDueAmount(CollectorRouteEntry entry) {
-    if (entry.contractCollectionReady && entry.contractTodayUnpaidAmount > 0) {
-      return entry.contractTodayUnpaidAmount;
-    }
-    return entry.dailyAmount;
-  }
-
   Future<PaymentSubmissionDraft> _buildDirectPaymentDraft(
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
@@ -211,7 +206,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       loanId: entry.loanId,
       collectionDate: collectionDate,
       entryType: CollectionEntryType.payment,
-      amount: _normalDueAmount(entry),
+      amount: entry.suggestedPaymentAmount,
       coveredDates: <DateTime>[collectionDate],
       recordedAt: DateTime.now().toUtc(),
       deviceId: identity.installationId,
@@ -249,9 +244,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       recordedAt: DateTime.now().toUtc(),
       deviceId: identity.installationId,
       deviceSequence: firstSequence,
-      cashReceivedAmount: payable.fold<double>(
-        0,
-        (sum, entry) => sum + _normalDueAmount(entry),
+      cashReceivedAmount: journalAmountFromCents(
+        payable.fold<BigInt>(
+          BigInt.zero,
+          (sum, entry) =>
+              sum + journalCents(requestMoney(entry.suggestedPaymentAmount)),
+        ),
       ),
       legs: ordered
           .map(
@@ -399,8 +397,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             !preview.regularPastDueFollowupRequired &&
             preview.shortAmount == 0 &&
             preview.extraAmount == 0 &&
-            (preview.cashReceivedAmount - cash).abs() < 0.005 &&
-            (preview.expectedTotalAmount - cash).abs() < 0.005;
+            preview.cashReceivedAmountText == requestMoney(cash) &&
+            preview.expectedTotalAmountText == requestMoney(cash);
         if (!exactNormal) {
           _pendingCombinedDrafts.remove(client.clientId);
           ScaffoldMessenger.of(context).showSnackBar(

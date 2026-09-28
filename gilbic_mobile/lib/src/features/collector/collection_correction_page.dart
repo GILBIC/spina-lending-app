@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
@@ -58,8 +59,8 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
     }
     _amountController = TextEditingController(
       text: widget.entry.todayAmount > 0
-          ? widget.entry.todayAmount.toStringAsFixed(2)
-          : widget.entry.dailyAmount.toStringAsFixed(2),
+          ? widget.entry.todayAmountInput ?? ''
+          : widget.entry.dailyAmountInput ?? '',
     );
     _noteController = TextEditingController(text: widget.entry.todayNote);
     _reasonController = TextEditingController();
@@ -175,7 +176,7 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
 
     final amount = _unableToPay
         ? null
-        : double.tryParse(_amountController.text.replaceAll(',', '').trim());
+        : tryRequestMoney(_amountController.text);
     final draft = CollectionCorrectionDraft(
       transactionId: transactionId,
       entryType: _replacementType,
@@ -200,7 +201,7 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
         content: Text(
           'Correct the entry recorded by ${widget.entry.todayCollectorName}?\n\n'
           'New type: ${_replacementTypeLabel(_replacementType)}\n'
-          '${_unableToPay ? '' : 'New amount: ${_money(amount!)}\n'}'
+          '${_unableToPay ? '' : 'New amount: ₱$amount\n'}'
           'Reason: ${_reasonController.text.trim()}\n\n'
           'The previous values will remain in the audit history.',
         ),
