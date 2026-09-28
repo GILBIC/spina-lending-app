@@ -28,7 +28,8 @@ class OfficeIdentity {
   bool accessDenied = false;
   bool get allowed =>
       !accessDenied &&
-      (session.hasRole(AppRole.employee) || session.hasRole(AppRole.management)) &&
+      (session.hasRole(AppRole.employee) ||
+          session.hasRole(AppRole.management)) &&
       session.hasPermission(officeReviewPermission);
   bool can(String permission, {bool management = false}) =>
       allowed &&
@@ -88,42 +89,78 @@ OfficeRecord officePublicDisclosureSnapshot(Object? raw) {
   officeCheck(value['components'] is Map && value['disclosure_values'] is Map);
   final components = stringMap(value['components']);
   final values = stringMap(value['disclosure_values']);
-  bool exact(Object? value) => value is String &&
-      RegExp(r'^\d{1,16}\.\d{2}$').hasMatch(value);
+  bool exact(Object? value) =>
+      value is String && RegExp(r'^\d{1,16}\.\d{2}$').hasMatch(value);
   final publicComponents = <String, dynamic>{};
-  for (final key in ['principal', 'contractual_interest', 'dst_upfront',
-    'grt_in_repayments', 'renewal_offset', 'other_upfront_deductions',
-    'other_scheduled_charges', 'total_upfront_deductions', 'net_proceeds',
-    'total_scheduled_payable']) {
+  for (final key in [
+    'principal',
+    'contractual_interest',
+    'dst_upfront',
+    'grt_in_repayments',
+    'renewal_offset',
+    'other_upfront_deductions',
+    'other_scheduled_charges',
+    'total_upfront_deductions',
+    'net_proceeds',
+    'total_scheduled_payable',
+  ]) {
     officeCheck(exact(components[key]));
     publicComponents[key] = components[key];
   }
   final publicValues = <String, dynamic>{};
-  for (final key in ['amount_financed', 'finance_charge_total', 'non_finance_charge_total']) {
-    officeCheck(values.containsKey(key) && (values[key] == null || exact(values[key])));
+  for (final key in [
+    'amount_financed',
+    'finance_charge_total',
+    'non_finance_charge_total',
+  ]) {
+    officeCheck(
+      values.containsKey(key) && (values[key] == null || exact(values[key])),
+    );
     publicValues[key] = values[key];
   }
   final rate = values['effective_interest_rate'];
-  officeCheck(values.containsKey('effective_interest_rate') && (rate == null ||
-      (rate is String && rate.length <= 128 && RegExp(r'^\d+(?:\.\d+)?$').hasMatch(rate))));
+  officeCheck(
+    values.containsKey('effective_interest_rate') &&
+        (rate == null ||
+            (rate is String &&
+                rate.length <= 128 &&
+                RegExp(r'^\d+(?:\.\d+)?$').hasMatch(rate))),
+  );
   publicValues['effective_interest_rate'] = rate;
   for (final key in ['rate_period', 'calculation_method']) {
     final text = values[key];
-    officeCheck(values.containsKey(key) && (text == null ||
-        (text is String && text.trim().isNotEmpty && text.length <= 500)));
+    officeCheck(
+      values.containsKey(key) &&
+          (text == null ||
+              (text is String && text.trim().isNotEmpty && text.length <= 500)),
+    );
     publicValues[key] = text;
   }
   final items = officeRecords(value['charge_items']);
   officeCheck(items.length <= 30);
   final publicItems = <OfficeRecord>[];
   for (final item in items) {
-    officeCheck(item['item_id'] is String && item['item_id'].length <= 200 &&
-        ['dst', 'grt_recovery', 'other_upfront', 'other_scheduled'].contains(item['kind']) &&
-        ['upfront', 'repayments'].contains(item['timing']) && exact(item['amount']));
-    publicItems.add({for (final key in ['item_id', 'kind', 'timing', 'amount']) key: item[key]});
+    officeCheck(
+      item['item_id'] is String &&
+          item['item_id'].length <= 200 &&
+          [
+            'dst',
+            'grt_recovery',
+            'other_upfront',
+            'other_scheduled',
+          ].contains(item['kind']) &&
+          ['upfront', 'repayments'].contains(item['timing']) &&
+          exact(item['amount']),
+    );
+    publicItems.add({
+      for (final key in ['item_id', 'kind', 'timing', 'amount']) key: item[key],
+    });
   }
-  return {'components': publicComponents, 'disclosure_values': publicValues,
-    'charge_items': publicItems};
+  return {
+    'components': publicComponents,
+    'disclosure_values': publicValues,
+    'charge_items': publicItems,
+  };
 }
 
 /// Office transport only. Business decisions remain in the existing backend.
@@ -762,34 +799,66 @@ class OfficeRepository {
     OfficeRecord application,
     String reference,
   ) async {
-    final value = await _json(actor,
+    final value = await _json(
+      actor,
       '$_loans/disclosure-calculations/${_id(reference)}?${_query({'application_version_id': application['application_version_id']})}',
-      permission: 'lending.first_loan.approve', management: true);
-    officeCheck(officeSame(value['id'], reference) &&
-        officeSame(value['application_version_id'], application['application_version_id']) &&
-        officeSame(value['cif_version_id'], application['cif_version_id']) &&
-        officeHash(value['review_digest']) && value['approval_ready'] is bool &&
-        value['blockers'] is List && (value['blockers'] as List).every((item) => item is String));
-    final snapshot = officePublicDisclosureSnapshot(value['financial_snapshot']);
-    officeCheck(value['approval_ready'] != true ||
-        ((value['blockers'] as List).isEmpty &&
-        stringMap(snapshot['disclosure_values']).values.every((item) => item != null)));
-    return {for (final key in ['id', 'application_version_id', 'cif_version_id', 'review_digest', 'approval_ready']) key: value[key],
-      'financial_snapshot': snapshot};
+      permission: 'lending.first_loan.approve',
+      management: true,
+    );
+    officeCheck(
+      officeSame(value['id'], reference) &&
+          officeSame(
+            value['application_version_id'],
+            application['application_version_id'],
+          ) &&
+          officeSame(value['cif_version_id'], application['cif_version_id']) &&
+          officeHash(value['review_digest']) &&
+          value['approval_ready'] is bool &&
+          value['blockers'] is List &&
+          (value['blockers'] as List).every((item) => item is String),
+    );
+    final snapshot = officePublicDisclosureSnapshot(
+      value['financial_snapshot'],
+    );
+    officeCheck(
+      value['approval_ready'] != true ||
+          ((value['blockers'] as List).isEmpty &&
+              stringMap(
+                snapshot['disclosure_values'],
+              ).values.every((item) => item != null)),
+    );
+    return {
+      for (final key in [
+        'id',
+        'application_version_id',
+        'cif_version_id',
+        'review_digest',
+        'approval_ready',
+      ])
+        key: value[key],
+      'financial_snapshot': snapshot,
+    };
   }
 
   void _loan(OfficeRecord loan, OfficeRecord application) {
     final packet = stringMap(loan['packet']);
     if (packet['tax_disclosure'] != null) {
       final disclosure = stringMap(packet['tax_disclosure']);
-      officeCheck(officeUuid(disclosure['calculation_id']) &&
-          officeHash(disclosure['review_digest']));
-      final snapshot = officePublicDisclosureSnapshot(disclosure['financial_snapshot']);
-      loan['packet'] = {...packet, 'tax_disclosure': {
-        'calculation_id': disclosure['calculation_id'],
-        'review_digest': disclosure['review_digest'],
-        'financial_snapshot': snapshot,
-      }};
+      officeCheck(
+        officeUuid(disclosure['calculation_id']) &&
+            officeHash(disclosure['review_digest']),
+      );
+      final snapshot = officePublicDisclosureSnapshot(
+        disclosure['financial_snapshot'],
+      );
+      loan['packet'] = {
+        ...packet,
+        'tax_disclosure': {
+          'calculation_id': disclosure['calculation_id'],
+          'review_digest': disclosure['review_digest'],
+          'financial_snapshot': snapshot,
+        },
+      };
     }
     officeCheck(
       officeUuid(loan['loan_id']) &&
@@ -867,13 +936,21 @@ class OfficeRepository {
     String templateVersion,
     String requestId, {
     required OfficeRecord disclosure,
-  }
-  ) async {
-    officeCheck(disclosure['approval_ready'] == true &&
-        officeUuid(disclosure['id']) && officeHash(disclosure['review_digest']) &&
-        officeSame(disclosure['application_version_id'], application['application_version_id']) &&
-        officeSame(disclosure['cif_version_id'], application['cif_version_id']),
-        'Load a ready saved disclosure for this application before approving.');
+  }) async {
+    officeCheck(
+      disclosure['approval_ready'] == true &&
+          officeUuid(disclosure['id']) &&
+          officeHash(disclosure['review_digest']) &&
+          officeSame(
+            disclosure['application_version_id'],
+            application['application_version_id'],
+          ) &&
+          officeSame(
+            disclosure['cif_version_id'],
+            application['cif_version_id'],
+          ),
+      'Load a ready saved disclosure for this application before approving.',
+    );
     final value = await _json(
       actor,
       '$_loans/approve',
@@ -901,8 +978,12 @@ class OfficeRepository {
               application['version_number'] &&
           officeSame(packet['cif_version_id'], application['cif_version_id']) &&
           stringMap(packet['template'])['version'] == templateVersion &&
-          officeSame(stringMap(packet['tax_disclosure'])['calculation_id'], disclosure['id']) &&
-          stringMap(packet['tax_disclosure'])['review_digest'] == disclosure['review_digest'] &&
+          officeSame(
+            stringMap(packet['tax_disclosure'])['calculation_id'],
+            disclosure['id'],
+          ) &&
+          stringMap(packet['tax_disclosure'])['review_digest'] ==
+              disclosure['review_digest'] &&
           value['status'] == 'approved_pending_release',
     );
     return value;

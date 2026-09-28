@@ -15,8 +15,10 @@ class PrivateImageStore {
   Future<void> _operations = Future<void>.value();
 
   static Future<Directory> _defaultDirectory() async => Directory(
-    paths.join((await getApplicationSupportDirectory()).path,
-        'spina_recovered_images_v1'),
+    paths.join(
+      (await getApplicationSupportDirectory()).path,
+      'spina_recovered_images_v1',
+    ),
   );
 
   Future<Directory> _root() async {
@@ -24,8 +26,10 @@ class PrivateImageStore {
     await root.create(recursive: true);
     if (await FileSystemEntity.type(root.path, followLinks: false) !=
             FileSystemEntityType.directory ||
-        !paths.equals(paths.normalize(root.absolute.path),
-            paths.normalize(await root.resolveSymbolicLinks()))) {
+        !paths.equals(
+          paths.normalize(root.absolute.path),
+          paths.normalize(await root.resolveSymbolicLinks()),
+        )) {
       throw StateError('Private photo storage is unavailable.');
     }
     return root;
@@ -50,8 +54,11 @@ class PrivateImageStore {
       flush: true,
     );
     await source.saveTo(photo.path);
-    return _PrivateImage(photo.path, name: paths.basename(source.name),
-        mimeType: source.mimeType);
+    return _PrivateImage(
+      photo.path,
+      name: paths.basename(source.name),
+      mimeType: source.mimeType,
+    );
   });
 
   Future<T> use<T>(XFile file, Future<T> Function(XFile) read) =>
@@ -96,12 +103,16 @@ class PrivateImageStore {
       final value = jsonDecode(await File(marker).readAsString());
       if (value is! Map<String, dynamic> ||
           value['owner'] != 'spina-image-recovery' ||
-          value['version'] != 1 || value['name'] is! String ||
+          value['version'] != 1 ||
+          value['name'] is! String ||
           (value['mimeType'] != null && value['mimeType'] is! String)) {
         return null;
       }
-      return _PrivateImage(photo, name: paths.basename(value['name'] as String),
-          mimeType: value['mimeType'] as String?);
+      return _PrivateImage(
+        photo,
+        name: paths.basename(value['name'] as String),
+        mimeType: value['mimeType'] as String?,
+      );
     } on FormatException {
       return null;
     }
@@ -109,7 +120,10 @@ class PrivateImageStore {
 
   Future<T> _enqueue<T>(Future<T> Function() action) {
     final next = _operations.then((_) => action());
-    _operations = next.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _operations = next.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
     return next;
   }
 }

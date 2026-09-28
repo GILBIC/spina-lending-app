@@ -116,6 +116,12 @@ http.Response json(Object? value, [int status = 200]) => http.Response(
   headers: {'content-type': 'application/json'},
 );
 Future<void> reveal(WidgetTester tester, Finder finder) async {
+  // The disclosure review revisits earlier fields as well as later actions.
+  tester
+      .state<ScrollableState>(find.byType(Scrollable).first)
+      .position
+      .jumpTo(0);
+  await tester.pumpAndSettle();
   await tester.scrollUntilVisible(
     finder,
     300,
@@ -125,52 +131,81 @@ Future<void> reveal(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
-  testWidgets('disclosure readiness, reload and late logout keep approval closed', (tester) async {
-    var ready = false;
-    Completer<http.Response>? pending;
-    final repository = OfficeRepository(client: MockClient((request) async {
-      if (request.url.path.endsWith('/review-summary')) return json(application());
-      if (request.url.path.endsWith('/context')) return json({'products': [], 'templates': []});
-      if (request.url.path.contains('/disclosure-calculations/')) {
-        if (pending != null) return pending!.future;
-        return json(savedDisclosure(versionId, cifId, ready: ready));
-      }
-      return json({'loans': [], 'decisions': []});
-    }));
-    await tester.pumpWidget(MaterialApp(home: OfficeFirstLoanPage(
-      actor: identity(role: AppRole.management), repository: repository,
-      clientId: clientId, applicationReference: 'APP-1')));
-    await tester.pumpAndSettle();
-    final reference = find.byKey(const Key('office-disclosure_reference'));
-    await reveal(tester, reference);
-    await tester.enterText(reference, disclosureId);
-    await reveal(tester, find.text('Load saved disclosure'));
-    await tester.tap(find.text('Load saved disclosure'));
-    await tester.pumpAndSettle();
-    await reveal(tester, find.textContaining('This saved review is not ready'));
-    expect(find.textContaining('This saved review is not ready'), findsOneWidget);
-    await reveal(tester, find.text('Approve exact terms'));
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Approve exact terms')).onPressed, isNull);
-    ready = true;
-    await reveal(tester, find.text('Load saved disclosure'));
-    await tester.tap(find.text('Load saved disclosure'));
-    await tester.pumpAndSettle();
-    await reveal(tester, find.textContaining('Reviewed source is ready'));
-    expect(find.textContaining('Reviewed source is ready'), findsOneWidget);
-    await tester.tap(find.byTooltip('Reload saved record'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Reviewed source is ready'), findsNothing);
-    pending = Completer<http.Response>();
-    await reveal(tester, find.text('Load saved disclosure'));
-    await tester.tap(find.text('Load saved disclosure'));
-    await tester.pump();
-    await tester.pumpWidget(const MaterialApp(home: Text('Signed out')));
-    pending!.complete(json(savedDisclosure(versionId, cifId)));
-    await tester.pumpAndSettle();
-    expect(find.text('Signed out'), findsOneWidget);
-    expect(find.textContaining('Reviewed source is ready'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'disclosure readiness, reload and late logout keep approval closed',
+    (tester) async {
+      var ready = false;
+      Completer<http.Response>? pending;
+      final repository = OfficeRepository(
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/review-summary')) {
+            return json(application());
+          }
+          if (request.url.path.endsWith('/context')) {
+            return json({'products': [], 'templates': []});
+          }
+          if (request.url.path.contains('/disclosure-calculations/')) {
+            if (pending != null) return pending.future;
+            return json(savedDisclosure(versionId, cifId, ready: ready));
+          }
+          return json({'loans': [], 'decisions': []});
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OfficeFirstLoanPage(
+            actor: identity(role: AppRole.management),
+            repository: repository,
+            clientId: clientId,
+            applicationReference: 'APP-1',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final reference = find.byKey(const Key('office-disclosure_reference'));
+      await reveal(tester, reference);
+      await tester.enterText(reference, disclosureId);
+      await reveal(tester, find.text('Load saved disclosure'));
+      await tester.tap(find.text('Load saved disclosure'));
+      await tester.pumpAndSettle();
+      await reveal(
+        tester,
+        find.textContaining('This saved review is not ready'),
+      );
+      expect(
+        find.textContaining('This saved review is not ready'),
+        findsOneWidget,
+      );
+      await reveal(tester, find.text('Approve exact terms'));
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Approve exact terms'),
+            )
+            .onPressed,
+        isNull,
+      );
+      ready = true;
+      await reveal(tester, find.text('Load saved disclosure'));
+      await tester.tap(find.text('Load saved disclosure'));
+      await tester.pumpAndSettle();
+      await reveal(tester, find.textContaining('Reviewed source is ready'));
+      expect(find.textContaining('Reviewed source is ready'), findsOneWidget);
+      await tester.tap(find.byTooltip('Reload saved record'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Reviewed source is ready'), findsNothing);
+      pending = Completer<http.Response>();
+      await reveal(tester, find.text('Load saved disclosure'));
+      await tester.tap(find.text('Load saved disclosure'));
+      await tester.pump();
+      await tester.pumpWidget(const MaterialApp(home: Text('Signed out')));
+      pending.complete(json(savedDisclosure(versionId, cifId)));
+      await tester.pumpAndSettle();
+      expect(find.text('Signed out'), findsOneWidget);
+      expect(find.textContaining('Reviewed source is ready'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'contract and cash recovery bind the exact packet and cash authorization',
@@ -243,7 +278,14 @@ void main() {
       };
       (approved['packet'] as Map)['cif_version_id'] = cifId;
       (approved['packet'] as Map)['template'] = {'version': 'T1'};
-      (approved['packet'] as Map)['tax_disclosure'] = {'calculation_id': disclosureId, 'review_digest': disclosureDigest, 'financial_snapshot': savedDisclosure(versionId, cifId)['financial_snapshot']};
+      (approved['packet'] as Map)['tax_disclosure'] = {
+        'calculation_id': disclosureId,
+        'review_digest': disclosureDigest,
+        'financial_snapshot': savedDisclosure(
+          versionId,
+          cifId,
+        )['financial_snapshot'],
+      };
       final repository = OfficeRepository(
         client: MockClient((request) async {
           if (request.url.path.endsWith('/review-summary')) {
@@ -274,7 +316,9 @@ void main() {
               'decisions': [],
             });
           }
-          if (request.url.path.contains('/disclosure-calculations/')) return json(savedDisclosure(versionId, cifId));
+          if (request.url.path.contains('/disclosure-calculations/')) {
+            return json(savedDisclosure(versionId, cifId));
+          }
           expect(request.url.path.endsWith('/approve'), isTrue);
           approvals++;
           final body = jsonDecode(request.body);
@@ -334,7 +378,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('T1').last);
       await tester.pumpAndSettle();
-      final disclosureReference = find.byKey(const Key('office-disclosure_reference'));
+      final disclosureReference = find.byKey(
+        const Key('office-disclosure_reference'),
+      );
       await reveal(tester, disclosureReference);
       await tester.enterText(disclosureReference, disclosureId);
       await reveal(tester, find.text('Load saved disclosure'));
@@ -347,7 +393,14 @@ void main() {
       await tester.enterText(principalField, '1000.02');
       await tester.pumpAndSettle();
       await reveal(tester, find.text('Approve exact terms'));
-      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Approve exact terms')).onPressed, isNull);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Approve exact terms'),
+            )
+            .onPressed,
+        isNull,
+      );
       await reveal(tester, principalField);
       await tester.enterText(principalField, '1000.01');
       await reveal(tester, find.text('Load saved disclosure'));

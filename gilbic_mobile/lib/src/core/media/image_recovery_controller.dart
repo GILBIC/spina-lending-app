@@ -283,8 +283,12 @@ class ImageRecoveryController extends ChangeNotifier {
       XFile? accepted;
       if (fresh) {
         accepted = await _images.use(file, (image) async {
-          return XFile.fromData(await image.readAsBytes(),
-              path: image.name, name: image.name, mimeType: image.mimeType);
+          return XFile.fromData(
+            await image.readAsBytes(),
+            path: image.name,
+            name: image.name,
+            mimeType: image.mimeType,
+          );
         });
       }
       if (!_current(revision)) return null;
@@ -326,7 +330,8 @@ class ImageRecoveryController extends ChangeNotifier {
     try {
       await _images.cleanup(keepPath: keepPath);
     } catch (_) {
-      _error = 'A temporary photo could not be removed. Spina will retry '
+      _error =
+          'A temporary photo could not be removed. Spina will retry '
           'cleanup when photo recovery starts again.';
     }
   }

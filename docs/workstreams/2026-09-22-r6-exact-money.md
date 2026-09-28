@@ -48,7 +48,7 @@ Trace current backend amount limits, rounding policy and exact helper behavior. 
 - [ ] Keep exact values through Android parse/display/edit/serialize where they can reach a write; separate percentages and non-money measurements.
 - [ ] Verify focused Web/Android tests and required exact-head CI; reconcile any R2/R3 dependency before integration.
 
-The remaining integration gate is remote CI on the published R6 head plus reconciliation with R2/R3.
+Superseding integrated checkpoint, 28 September: the R6 remote platform lane passed analysis, Flutter tests and the Android build. R2/R3/R4/R1/R9 have been reconciled in one candidate. Its Web suite passed 744 tests and build; Android analysis found no issues and all 858 Flutter tests passed with one Windows-host symlink skip. The earlier interrupted local analysis is resolved. Required CI on the combined published head and actual operational acceptance remain.
 
 ## Resume protocol
 

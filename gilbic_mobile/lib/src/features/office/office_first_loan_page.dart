@@ -31,13 +31,26 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
   OfficeRecord? disclosure;
   String? disclosureInputs;
   int disclosureGeneration = 0;
-  static const approvalFields = ['principal', 'interest_rate', 'interest',
-    'installment', 'count', 'basis_date', 'first_date', 'semi_days',
-    'custom_rows', 'deductions', 'pricing_reference', 'account_email',
-    'disclosure_reference'];
+  static const approvalFields = [
+    'principal',
+    'interest_rate',
+    'interest',
+    'installment',
+    'count',
+    'basis_date',
+    'first_date',
+    'semi_days',
+    'custom_rows',
+    'deductions',
+    'pricing_reference',
+    'account_email',
+    'disclosure_reference',
+  ];
 
   String get currentDisclosureInputs => jsonEncode({
-    'product': product, 'template': template, 'frequency': frequency,
+    'product': product,
+    'template': template,
+    'frequency': frequency,
     for (final key in approvalFields) key: fields.text(key),
   });
 
@@ -50,18 +63,34 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
   void _termsChanged([String? _]) => setState(_clearDisclosure);
 
   Future<void> _loadDisclosure() async {
-    if (!operation.canWrite || application == null || !widget.actor.manager) return;
+    if (!operation.canWrite || application == null || !widget.actor.manager) {
+      return;
+    }
     setState(_clearDisclosure);
     final generation = disclosureGeneration;
     final selectedApplication = application!;
     final inputs = currentDisclosureInputs;
     final reference = fields.text('disclosure_reference');
-    final result = await operation.run(() => widget.repository.loadDisclosure(
-      widget.actor, selectedApplication, reference));
-    if (!mounted || result == null || operation.denied || !widget.actor.allowed ||
-        generation != disclosureGeneration || inputs != currentDisclosureInputs ||
-        !identical(application, selectedApplication)) return;
-    setState(() { disclosure = result; disclosureInputs = inputs; });
+    final result = await operation.run(
+      () => widget.repository.loadDisclosure(
+        widget.actor,
+        selectedApplication,
+        reference,
+      ),
+    );
+    if (!mounted ||
+        result == null ||
+        operation.denied ||
+        !widget.actor.allowed ||
+        generation != disclosureGeneration ||
+        inputs != currentDisclosureInputs ||
+        !identical(application, selectedApplication)) {
+      return;
+    }
+    setState(() {
+      disclosure = result;
+      disclosureInputs = inputs;
+    });
   }
 
   List<Widget> _disclosureBreakdown(OfficeRecord snapshot) => [
@@ -70,8 +99,12 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
     OfficeFacts(stringMap(snapshot['disclosure_values'])),
     officeHeading('Itemized charges'),
     for (final item in officeRecords(snapshot['charge_items']))
-      OfficeFacts({'charge': item['item_id'], 'kind': item['kind'],
-        'timing': item['timing'], 'amount': item['amount']}),
+      OfficeFacts({
+        'charge': item['item_id'],
+        'kind': item['kind'],
+        'timing': item['timing'],
+        'amount': item['amount'],
+      }),
   ];
   List<OfficeRecord> decisions = [];
   String? product;
@@ -250,8 +283,10 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
   Future<void> _approve() async {
     final current = application;
     final selectedDisclosure = disclosure;
-    if (selectedDisclosure == null || selectedDisclosure['approval_ready'] != true ||
-        disclosureInputs != currentDisclosureInputs || current == null ||
+    if (selectedDisclosure == null ||
+        selectedDisclosure['approval_ready'] != true ||
+        disclosureInputs != currentDisclosureInputs ||
+        current == null ||
         options == null ||
         product == null ||
         template == null) {
@@ -441,7 +476,10 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
           ),
       ],
       onChanged: operation.canWrite
-          ? (value) => setState(() { product = value; _clearDisclosure(); })
+          ? (value) => setState(() {
+              product = value;
+              _clearDisclosure();
+            })
           : null,
     ),
     const SizedBox(height: 12),
@@ -456,7 +494,7 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
         field.key,
         field.value,
         enabled: operation.canWrite,
-      onChanged: _termsChanged,
+        onChanged: _termsChanged,
         money: true,
       ),
     DropdownButtonFormField<String>(
@@ -474,7 +512,10 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
           DropdownMenuItem(value: value, child: Text(officeLabel(value))),
       ],
       onChanged: operation.canWrite
-          ? (value) => setState(() { frequency = value!; _clearDisclosure(); })
+          ? (value) => setState(() {
+              frequency = value!;
+              _clearDisclosure();
+            })
           : null,
     ),
     const SizedBox(height: 12),
@@ -484,7 +525,13 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
       'first_date': 'First contractual payment date (YYYY-MM-DD)',
       'semi_days': 'Semi-monthly payment days (for example 15,30)',
     }.entries)
-      officeField(fields, field.key, field.value, enabled: operation.canWrite, onChanged: _termsChanged),
+      officeField(
+        fields,
+        field.key,
+        field.value,
+        enabled: operation.canWrite,
+        onChanged: _termsChanged,
+      ),
     officeField(
       fields,
       'custom_rows',
@@ -531,7 +578,10 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
           ),
       ],
       onChanged: operation.canWrite
-          ? (value) => setState(() { template = value; _clearDisclosure(); })
+          ? (value) => setState(() {
+              template = value;
+              _clearDisclosure();
+            })
           : null,
     ),
     const Padding(
@@ -540,19 +590,32 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
         '7x7 uses the catalog daily-interest basis and the server-generated maturity. Exact compliance review remains required before signing.',
       ),
     ),
-    officeField(fields, 'disclosure_reference', 'Saved disclosure reference',
-      enabled: operation.canWrite, onChanged: _termsChanged),
-    officeButton('Load saved disclosure', operation.canWrite ? _loadDisclosure : null),
+    officeField(
+      fields,
+      'disclosure_reference',
+      'Saved disclosure reference',
+      enabled: operation.canWrite,
+      onChanged: _termsChanged,
+    ),
+    officeButton(
+      'Load saved disclosure',
+      operation.canWrite ? _loadDisclosure : null,
+    ),
     if (disclosure != null) ...[
       ..._disclosureBreakdown(stringMap(disclosure!['financial_snapshot'])),
-      Text(disclosure!['approval_ready'] == true
-        ? 'Reviewed source is ready. The server rechecks the exact terms and current evidence at approval.'
-        : 'This saved review is not ready for approval. Management must resolve its missing or changed source evidence.'),
+      Text(
+        disclosure!['approval_ready'] == true
+            ? 'Reviewed source is ready. The server rechecks the exact terms and current evidence at approval.'
+            : 'This saved review is not ready for approval. Management must resolve its missing or changed source evidence.',
+      ),
     ],
     officeButton(
       'Approve exact terms',
-      operation.canWrite && product != null && template != null &&
-          disclosure?['approval_ready'] == true && disclosureInputs == currentDisclosureInputs
+      operation.canWrite &&
+              product != null &&
+              template != null &&
+              disclosure?['approval_ready'] == true &&
+              disclosureInputs == currentDisclosureInputs
           ? _approve
           : null,
       primary: true,
@@ -665,7 +728,11 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
           'locked_payment_schedule': packet['schedule'],
         }),
         if (packet['tax_disclosure'] != null)
-          ..._disclosureBreakdown(stringMap(stringMap(packet['tax_disclosure'])['financial_snapshot'])),
+          ..._disclosureBreakdown(
+            stringMap(
+              stringMap(packet['tax_disclosure'])['financial_snapshot'],
+            ),
+          ),
         if (current['document'] != null)
           officeButton(
             'Download locked PDF packet',
