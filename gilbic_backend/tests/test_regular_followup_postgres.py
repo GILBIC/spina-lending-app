@@ -9,6 +9,13 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
+from gilbic_backend.collector_schedule_repository import (
+    PostgresCollectorScheduleRepository,
+)
+from gilbic_backend.concurrent_receipt_collection_posting import (
+    ConcurrentReceiptSafeCollectionPostingBridge,
+)
+from gilbic_backend.contract_collection_posting import CONTRACT_ALLOCATION_SETTING
 from spina_mobile_collections.contracts import (
     CollectionCommand,
     CollectionEntryType,
@@ -22,14 +29,6 @@ from spina_mobile_collections.service import (
     CollectionSubmissionService,
     SubmissionHeaders,
 )
-
-from gilbic_backend.collector_schedule_repository import (
-    PostgresCollectorScheduleRepository,
-)
-from gilbic_backend.concurrent_receipt_collection_posting import (
-    ConcurrentReceiptSafeCollectionPostingBridge,
-)
-from gilbic_backend.contract_collection_posting import CONTRACT_ALLOCATION_SETTING
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
