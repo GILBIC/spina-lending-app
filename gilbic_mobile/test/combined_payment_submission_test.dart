@@ -12,7 +12,7 @@ import 'package:http/testing.dart';
 
 void main() {
   CombinedPaymentSubmissionDraft draft({
-    double cashReceivedAmount = 150,
+    Object cashReceivedAmount = 150,
     CombinedExtraAllocationChoice? extraChoice,
     String? reviewedAllocationHash,
     PastDueFollowupDraft? regularPastDueFollowup,
@@ -50,7 +50,7 @@ void main() {
 
       expect(value.validate(), isNull);
       final payload = value.toJson();
-      expect(payload['cash_received_amount'], 150);
+      expect(payload['cash_received_amount'], '150.00');
       final legs = payload['legs']! as List<Object?>;
       expect(legs, hasLength(2));
       expect(
@@ -59,6 +59,16 @@ void main() {
       );
     },
   );
+
+  test('combined payment rejects numeric amounts that cannot retain cents', () {
+    expect(draft(cashReceivedAmount: 1000000000000000.0).validate(), isNotNull);
+  });
+
+  test('combined cash preserves all supported decimal digits', () {
+    final value = draft(cashReceivedAmount: '9999999999999999.99');
+    expect(value.validate(), isNull);
+    expect(value.toJson()['cash_received_amount'], '9999999999999999.99');
+  });
 
   test('combined draft rejects cash finer than one cent', () {
     expect(
@@ -188,7 +198,7 @@ void main() {
     expect(
       (jsonDecode(captured.body)
           as Map<String, dynamic>)['cash_received_amount'],
-      150,
+      '150.00',
     );
     expect(preview.status, 'exact');
   });

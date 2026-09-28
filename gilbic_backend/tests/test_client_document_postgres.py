@@ -8,6 +8,7 @@ import pytest
 from psycopg import sql
 
 from gilbic_backend import client_document_repository as module
+from first_loan_approval_fixtures import reviewed_setup
 from test_client_cif_review_confirmation_postgres import (
     DATABASE_URL,
     connection as connection,
@@ -17,7 +18,6 @@ from test_first_loan_postgres import (
     PDF,
     private_fixture_configuration as private_fixture_configuration,
     ready,
-    setup,
 )
 
 pytestmark = pytest.mark.skipif(
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def released_case(connection, monkeypatch, *, release=True):
-    _, office, case = setup(connection, monkeypatch)
+    _, office, case = reviewed_setup(connection, monkeypatch)
     approval, args = ready(office, case)
     borrower = uuid4()
     connection.execute(

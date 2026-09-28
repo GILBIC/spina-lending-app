@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 
@@ -15,8 +16,9 @@ class ManagementRenewalWorkflowItem {
   ) {
     return ManagementRenewalWorkflowItem(
       request: CollectorRenewalRequest.fromPayload(payload),
-      borrowerUserId:
-          firstNonEmptyString(<Object?>[payload['borrower_user_id']]),
+      borrowerUserId: firstNonEmptyString(<Object?>[
+        payload['borrower_user_id'],
+      ]),
     );
   }
 }
@@ -37,12 +39,12 @@ class ManagementRenewalSignerDraft {
   final bool selfieVerified;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'party_role': partyRole,
-        'full_name': fullName,
-        'user_id': userId,
-        'government_id_verified': governmentIdVerified,
-        'selfie_verified': selfieVerified,
-      };
+    'party_role': partyRole,
+    'full_name': fullName,
+    'user_id': userId,
+    'government_id_verified': governmentIdVerified,
+    'selfie_verified': selfieVerified,
+  };
 }
 
 class ManagementRenewalTermsDraft {
@@ -56,18 +58,20 @@ class ManagementRenewalTermsDraft {
   });
 
   final String decision;
-  final double? approvedPrincipal;
+  final Object? approvedPrincipal;
   final String reviewNote;
   final String overrideReason;
   final bool officeProcessingRequired;
   final List<ManagementRenewalSignerDraft> signers;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'decision': decision,
-        'approved_principal': approvedPrincipal,
-        'review_note': reviewNote,
-        'override_reason': overrideReason,
-        'office_processing_required': officeProcessingRequired,
-        'signers': signers.map((item) => item.toJson()).toList(growable: false),
-      };
+    'decision': decision,
+    'approved_principal': approvedPrincipal == null
+        ? null
+        : requestMoney(approvedPrincipal),
+    'review_note': reviewNote,
+    'override_reason': overrideReason,
+    'office_processing_required': officeProcessingRequired,
+    'signers': signers.map((item) => item.toJson()).toList(growable: false),
+  };
 }

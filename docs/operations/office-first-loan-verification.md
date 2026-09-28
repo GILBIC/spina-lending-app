@@ -44,7 +44,7 @@ These are focused executions reported during this implementation, not an additiv
 | Protected storage and PDF environment | Operator-provisioned private persistent storage and backups, controlled template manifests, approved LibreOffice executable and licensed Arial faces. Successful local conversion alone does not configure the deployment. |
 | Identity and liveness providers | Approved production eGov/identity and baseline-liveness evidence process or integration. The repository stores controlled results/evidence; development did not perform live biometric enrollment or verify a real applicant. |
 | Managed Auth and delivery | Approved Auth service configuration and account-delivery settings, with real provider validation in the authorized environment. Local account tests use controlled provider doubles; PostgreSQL proof establishes local intent/profile consistency. |
-| Management integration and deployment | Review the complete exact-head results and authorize integration. Keep PR #420 Draft/open/unmerged until that approval; migrations, deployment and real applicants/cash remain outside development verification. |
+| Management integration and deployment | Review the exact-head results for the current [integration candidate PR #453](https://github.com/GILBIC/spina-lending-app/pull/453), including the [R1 workstream PR #449](https://github.com/GILBIC/spina-lending-app/pull/449), against the acceptance gates tracked in [issue #448](https://github.com/GILBIC/spina-lending-app/issues/448). PR #420 is merged historical implementation evidence; migrations, deployment and real applicants/cash remain outside development verification. |
 
 ## Combined local checkpoint — 2026-09-19
 
@@ -55,7 +55,7 @@ These are focused executions reported during this implementation, not an additiv
 - The complete synthetic browser workflow passed at **1366px and 390px**, across Management, Collector and Employee roles, through release and one-time credential handoff. Each run used 67 intercepted authenticated requests and 21 explicit writes; no external requests or browser errors occurred.
 - Two existing tax PDF proof cases require GitHub's real pull-request event metadata and therefore remain part of the actual Annex workflow, not a claimed local pass.
 
-Exact published commit, final workflow results and artifacts are recorded in [PR #420](https://github.com/GILBIC/spina-lending-app/pull/420) and the synchronized Notion/local handoff after publication. This checkpoint does not assert a CI outcome before that evidence exists. PR #420 remains Draft/open/unmerged; the external gates above remain in force.
+The original published commit, workflow results and artifacts are retained in merged [PR #420](https://github.com/GILBIC/spina-lending-app/pull/420) as historical evidence. Current exact-head results and remaining acceptance belong to [integration candidate PR #453](https://github.com/GILBIC/spina-lending-app/pull/453), [R1 workstream PR #449](https://github.com/GILBIC/spina-lending-app/pull/449) and [issue #448](https://github.com/GILBIC/spina-lending-app/issues/448). This historical checkpoint does not establish current CI or production acceptance; the external gates above remain in force.
 
 ### CI compatibility correction
 

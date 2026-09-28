@@ -131,7 +131,6 @@ def _renewal_row(cursor, *, request_id: UUID):
             loan_type.calculation_mode,
             loan.principal as current_principal,
             loan.daily_amount,
-            loan_type.term_days,
             coalesce(state.remaining_balance, loan.principal) as remaining_balance,
             request.requested_amount,
             request.client_message,
@@ -165,9 +164,15 @@ def _renewal_row(cursor, *, request_id: UUID):
                 from lending.collection_transactions tx
                 where tx.loan_id = loan.id and tx.is_voided = false
             ), 0)::numeric(18,2) as paid_cash,
-            greatest(
-                loan.principal,
-                (loan.daily_amount * greatest(coalesce(loan_type.term_days, 120), 1))::numeric(18,2)
+            (
+                select sum(installment.contractual_amount)
+                from lending.loan_contract_schedules schedule
+                join lending.loan_contract_schedule_registrations registration
+                  on registration.schedule_id = schedule.id
+                join lending.loan_contract_installments installment
+                  on installment.schedule_id = schedule.id
+                where schedule.loan_id = loan.id
+                  and schedule.status = 'active'
             ) as contractual_total
         from lending.client_renewal_requests request
         join lending.clients client on client.id = request.client_id
@@ -282,16 +287,21 @@ def _refresh_signer_readiness(cursor, *, request_id: UUID) -> str:
 
 
 def _payload(cursor, row) -> dict[str, object]:
-    contractual_total = Decimal(row["contractual_total"] or 0)
+    contractual_total = (
+        Decimal(row["contractual_total"])
+        if row["contractual_total"] is not None
+        else None
+    )
     paid_cash = Decimal(row["paid_cash"] or 0)
-    paid_percent = Decimal("0.0") if contractual_total <= 0 else min(
-        Decimal("100.0"),
-        (paid_cash / contractual_total * Decimal("100")).quantize(Decimal("0.1")),
+    paid_percent = (
+        None
+        if contractual_total is None or contractual_total <= 0
+        else min(Decimal("100.0"), paid_cash / contractual_total * Decimal("100"))
     )
     is_7x7 = str(row["calculation_mode"] or "").lower() == "seven_by_seven"
-    regular_eligible = paid_percent >= Decimal("50.0") or str(
-        row["old_loan_status"]
-    ).lower() == "paid"
+    regular_eligible = (
+        paid_percent is not None and paid_percent >= Decimal(50)
+    ) or str(row["old_loan_status"]).lower() == "paid"
     signers = _signer_payloads(cursor, request_id=row["request_id"])
     return {
         "request_id": str(row["request_id"]),
@@ -308,7 +318,11 @@ def _payload(cursor, row) -> dict[str, object]:
         "remaining_balance": _money(row["remaining_balance"]),
         "contractual_total": _money(contractual_total),
         "paid_cash": _money(paid_cash),
-        "paid_percent": format(paid_percent, "f"),
+        "paid_percent": (
+            format(paid_percent.quantize(Decimal("0.1")), "f")
+            if paid_percent is not None
+            else None
+        ),
         "regular_50_percent_eligible": regular_eligible,
         "requested_amount": _money(row["requested_amount"]),
         "client_message": row["client_message"],
@@ -568,9 +582,15 @@ def create_renewal_workflow_router() -> APIRouter:
             device_identifier=x_device_id,
             auth=auth,
             accounts=accounts,
-            permission="renewal.recommend.assigned",
-            permission_error="Assigned Collector renewal permission is required.",
         )
+        if not {
+            "renewal.recommend.assigned",
+            "renewal.cash_custody.assigned",
+        }.intersection(actor.permissions):
+            raise HTTPException(
+                status_code=403,
+                detail="Assigned Collector renewal permission is required.",
+            )
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(

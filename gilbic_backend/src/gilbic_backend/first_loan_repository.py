@@ -455,6 +455,8 @@ class PostgresFirstLoanRepository:
         expected_pricing_snapshot,
     ):
         """Trusted renderer seam only. Never expose this as a browser PDF upload."""
+        from .first_loan_disclosure_binding import require_packet_source
+
         with (
             open_connection() as connection,
             connection.transaction(),
@@ -468,10 +470,30 @@ class PostgresFirstLoanRepository:
                 management=True,
             )
             row = _load(cursor, loan_id)
-            if row["loan_status"] != "approved" or row["packet_hash"] != packet_hash:
+            if row["packet_hash"] != packet_hash:
+                raise FirstLoanConflict("The exact approved packet is required.")
+            existing = cursor.execute(
+                "select * from lending.first_loan_packet_documents where loan_id=%s",
+                (loan_id,),
+            ).fetchone()
+            if existing:
+                import hashlib
+
+                if (
+                    existing["content_sha256"] != hashlib.sha256(content).hexdigest()
+                    or existing["pricing_snapshot"] != expected_pricing_snapshot
+                ):
+                    raise FirstLoanConflict(
+                        "The issued packet is immutable; create a revised approval."
+                    )
+                # An authorized exact retry reads the retained original. It is
+                # not new issuance, even after sources change or cash is released.
+                return _document(cursor, row)
+            if row["loan_status"] != "approved":
                 raise FirstLoanConflict(
                     "The exact unreleased approved packet is required."
                 )
+            require_packet_source(cursor, row=row)
             _template(cursor, row, execution=True)
             _locked_source(cursor, row)
             terms = FirstLoanTerms.model_validate(row["packet"]["terms"])
@@ -482,18 +504,6 @@ class PostgresFirstLoanRepository:
                 raise FirstLoanConflict(
                     "The pricing authority changed while generating the packet. Reload its exact terms."
                 )
-            existing = cursor.execute(
-                "select * from lending.first_loan_packet_documents where loan_id=%s",
-                (loan_id,),
-            ).fetchone()
-            if existing:
-                import hashlib
-
-                if existing["content_sha256"] != hashlib.sha256(content).hexdigest():
-                    raise FirstLoanConflict(
-                        "The issued packet is immutable; create a revised approval."
-                    )
-                return _document(cursor, row)
             document_id = uuid4()
             digest = PrivateEvidenceStore().put(document_id, content, "application/pdf")
             cursor.execute(
@@ -605,7 +615,11 @@ class PostgresFirstLoanRepository:
         terms,
         template_version,
         request_id,
+        disclosure_calculation_id=None,
+        expected_disclosure_digest=None,
     ):
+        from .first_loan_disclosure_binding import require_for_approval, retry_matches
+
         terms = FirstLoanTerms.model_validate(terms)
         rows = generate_first_loan_schedule(terms)
         with (
@@ -636,11 +650,26 @@ class PostgresFirstLoanRepository:
                     or row["application_version_id"] != application_version_id
                     or row["packet"]["terms"] != terms.model_dump(mode="json")
                     or row["template_version"] != template_version
+                    or not retry_matches(
+                        row["packet"],
+                        disclosure_calculation_id,
+                        expected_disclosure_digest,
+                    )
                 ):
                     raise FirstLoanConflict(
                         "This approval request identity is already used."
                     )
                 return _public(cursor, row, actor_user_id)
+            # New approvals consume the exact saved review in this transaction.
+            # Authorized committed retries above do not revalidate current sources.
+            disclosure = require_for_approval(
+                cursor,
+                calculation_id=disclosure_calculation_id,
+                expected_digest=expected_disclosure_digest,
+                application_version_id=application_version_id,
+                terms=terms,
+                rows=rows,
+            )
             app, cif, client, privacy = _source(cursor, application_version_id)
             if cursor.execute(
                 "select 1 from lending.loans where client_id=%s and status not in ('draft','cancelled')",
@@ -692,7 +721,8 @@ class PostgresFirstLoanRepository:
                 )
             loan_id, packet_id = uuid4(), uuid4()
             packet = {
-                "schema_version": 1,
+                "schema_version": 2,
+                "tax_disclosure": disclosure,
                 "packet_id": str(packet_id),
                 "loan_id": str(loan_id),
                 "client_id": str(app["client_id"]),
@@ -878,6 +908,8 @@ class PostgresFirstLoanRepository:
     def authorize_release(
         self, *, actor_user_id, registered_device_id, loan_id, packet_hash, request_id
     ):
+        from .first_loan_disclosure_binding import require_packet_source
+
         with (
             open_connection() as connection,
             connection.transaction(),
@@ -912,6 +944,7 @@ class PostgresFirstLoanRepository:
                 raise FirstLoanConflict(
                     "Only the exact unreleased approved packet may be authorized."
                 )
+            require_packet_source(cursor, row=row)
             _template(cursor, row, execution=True)
             _document(cursor, row, execution=True)
             _locked_source(cursor, row)
@@ -987,6 +1020,8 @@ class PostgresFirstLoanRepository:
         authorization_id=None,
         witnessed_wet_signature=False,
     ):
+        from .first_loan_disclosure_binding import require_packet_source
+
         if purpose not in ("borrower_contract_signed", "borrower_cash_received"):
             raise FirstLoanConflict("Unsupported first-loan evidence purpose.")
         if (
@@ -1003,23 +1038,42 @@ class PostgresFirstLoanRepository:
         ):
             _actor(cursor, actor_user_id, registered_device_id, RELEASE_PERMISSION)
             row = _load(cursor, loan_id)
-            if row["loan_status"] != "approved" or packet_hash != row["packet_hash"]:
-                raise FirstLoanConflict("The exact unreleased packet is required.")
-            _template(cursor, row, execution=True)
-            _locked_source(cursor, row)
-            terms = FirstLoanTerms.model_validate(row["packet"]["terms"])
-            today = cursor.execute(
-                "select (clock_timestamp() at time zone 'Asia/Manila')::date as d"
-            ).fetchone()["d"]
-            if today != terms.schedule_basis_date:
-                raise FirstLoanConflict(
-                    "The signed date basis changed; obtain a revised approved packet and signatures."
+            if packet_hash != row["packet_hash"]:
+                raise FirstLoanConflict("The exact approved packet is required.")
+            # Use the evidence owner's request lock before deciding whether this
+            # is a committed replay. Its exact immutable comparison still runs.
+            cursor.execute(
+                "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (str(request_id),),
+            )
+            existing = cursor.execute(
+                "select id from lending.office_review_evidence where request_id = %s",
+                (request_id,),
+            ).fetchone()
+            if existing is not None:
+                document = _document(cursor, row)
+            else:
+                if row["loan_status"] != "approved":
+                    raise FirstLoanConflict("The exact unreleased packet is required.")
+                require_packet_source(cursor, row=row)
+                _template(cursor, row, execution=True)
+                _locked_source(cursor, row)
+                terms = FirstLoanTerms.model_validate(row["packet"]["terms"])
+                today = cursor.execute(
+                    "select (clock_timestamp() at time zone 'Asia/Manila')::date as d"
+                ).fetchone()["d"]
+                if today != terms.schedule_basis_date:
+                    raise FirstLoanConflict(
+                        "The signed date basis changed; obtain a revised approved packet and signatures."
+                    )
+                _pricing_settings(
+                    cursor, row, terms, generate_first_loan_schedule(terms)
                 )
-            _pricing_settings(cursor, row, terms, generate_first_loan_schedule(terms))
-            document = _document(cursor, row, execution=True)
+                document = _document(cursor, row, execution=True)
             snapshot = _sign_snapshot(row, document)
             if purpose == "borrower_cash_received":
-                _authorization(cursor, row, authorization_id)
+                if existing is None:
+                    _authorization(cursor, row, authorization_id)
                 snapshot = _cash_snapshot(row, authorization_id, document)
             evidence = capture_evidence(
                 cursor,
@@ -1057,6 +1111,8 @@ class PostgresFirstLoanRepository:
         borrower_confirmed,
         request_id,
     ):
+        from .first_loan_disclosure_binding import require_packet_source
+
         if borrower_confirmed is not True:
             raise FirstLoanConflict(
                 "The named borrower must confirm actual cash received."
@@ -1095,6 +1151,7 @@ class PostgresFirstLoanRepository:
                 raise FirstLoanConflict(
                     "The exact unreleased approved packet is required."
                 )
+            require_packet_source(cursor, row=row)
             _template(cursor, row, execution=True)
             document = _document(cursor, row, execution=True)
             _locked_source(cursor, row)

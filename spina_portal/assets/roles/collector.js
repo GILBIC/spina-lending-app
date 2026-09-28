@@ -1,8 +1,12 @@
 import { mountAccountCredentials } from '../account-credentials.js';
 import { createCollectorWriteGuard } from '../collector-write-guard.js';
 import { buildCollectionSubmission, classifyLoanType } from '../collector-contract.js';
+import { collectorMutation, collectionResultMatches } from '../collector-workflow-contract.js';
 import { buildCollectorRouteViewModel } from '../presenters.js';
 import { mountCollectorOnboardingVisit } from '../collector-onboarding-visit.js';
+import { allocationField, followupFields, readFollowup, mountCollectorWorkflows } from '../collector-workflows.js';
+import { mountCollectorOtherArea } from '../collector-other-area.js';
+import { mountCollectorRenewals } from '../collector-renewals.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
 import {
   asArray,
@@ -57,7 +61,8 @@ function entryForm(entry, defaultAmount) {
   return `<form class="entry-form collector-entry-form" data-route-entry-id="${escapeHtml(entry.route_entry_id)}" hidden style="grid-column:1/-1">
     <input type="hidden" name="entryType" value="payment" />
     <label class="payment-only">Amount<input name="amount" inputmode="decimal" value="${escapeHtml(defaultAmount)}" required /></label>
-    <label class="pass-only" hidden>Past Due reason<select name="reasonCode"><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick / hospital</option><option value="emergency">Emergency</option><option value="other">Other</option></select></label>
+    ${allocationField()}
+    ${followupFields()}
     <label>Note<textarea name="note" maxlength="500" placeholder="Short factual note"></textarea></label>
     <div class="action-row"><button class="button button-primary" type="submit">Save official entry</button><button class="button button-quiet cancel-entry" type="button">Cancel</button></div>
   </form>`;
@@ -68,9 +73,9 @@ function ledgerRow(entry, canCreate, online) {
   const canEnter = canCreate && online && entry.can_enter_payment === true && entry.processed_today !== true;
   const defaultAmount =
     numeric(entry.contract_today_unpaid_amount) > 0
-      ? Number(entry.contract_today_unpaid_amount).toFixed(2)
+      ? String(entry.contract_today_unpaid_amount)
       : numeric(entry.daily_amount) > 0
-        ? Number(entry.daily_amount).toFixed(2)
+        ? String(entry.daily_amount)
         : '';
   return `<div class="ledger-row ${entry.attention_required || !entry.processed_today ? 'needs-attention' : ''}" data-entry-row="${escapeHtml(entry.route_entry_id)}">
     <div class="ledger-cell"><strong class="ledger-client">${escapeHtml(entry.client_name || 'Client')}</strong><small>${escapeHtml(entry.note || entry.today_note || entry.collection_message || '')}</small></div>
@@ -132,7 +137,7 @@ function activityMarkup(items) {
 
 function lockFinancialEntry(root, message) {
   root.dataset.financialLocked = 'true';
-  for (const control of root.querySelectorAll('.collection-action, .collector-entry-form input, .collector-entry-form select, .collector-entry-form textarea, .collector-entry-form button, #collector-remittance-form input, #collector-remittance-form select, #collector-remittance-form textarea, #collector-remittance-form button')) {
+  for (const control of root.querySelectorAll('.collection-action, .collector-entry-form input, .collector-entry-form select, .collector-entry-form textarea, .collector-entry-form button, #collector-remittance-form input, #collector-remittance-form select, #collector-remittance-form textarea, #collector-remittance-form button, [data-collector-financial] input, [data-collector-financial] select, [data-collector-financial] textarea, [data-collector-financial] button')) {
     control.disabled = true;
   }
   const existing = root.querySelector('#collector-uncertain-lock');
@@ -152,7 +157,7 @@ function bindRouteActions(context, entryMap) {
       form.hidden = false;
       form.elements.entryType.value = isPass ? 'pass' : 'payment';
       form.querySelector('.payment-only').hidden = isPass;
-      form.querySelector('.pass-only').hidden = !isPass;
+      form.querySelector('.allocation-only').hidden = isPass;
       form.elements.amount.required = !isPass;
       form.elements.reasonCode.required = isPass;
       form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -181,24 +186,15 @@ function bindRouteActions(context, entryMap) {
           entryType,
           amount: data.get('amount'),
           note,
-          pastDueFollowup: entryType === 'pass' ? {
-            reason_code: data.get('reasonCode'),
-            note,
-            promised_payment_date: null,
-            promised_amount: null,
-          } : null,
+          pastDueFollowup: readFollowup(form),
+          paymentAllocationIntent: entryType === 'pass' ? 'scheduled' : data.get('allocation'),
           deviceId: context.sessionStore.deviceId(),
           deviceSequence: context.sessionStore.nextDeviceSequence(),
           clientTransactionId,
           recordedAt: new Date().toISOString(),
         });
         setButtonBusy(submitButton, true, 'Saving…');
-        const result = await context.api.request('/api/v1/collector/collections', {
-          method: 'POST',
-          headers: submission.headers,
-          body: submission.body,
-          financial: true,
-        });
+        const result = await collectorMutation({api:context.api,guard,path:'/api/v1/collector/collections',options:{method:'POST',...submission},verify:collectionResultMatches(submission)});
         if (!guard.current) return;
         const receipt = result?.receipt_number ? ` Receipt ${result.receipt_number}.` : '';
         const balance = result?.official_balance != null ? ` Official balance ${formatMoney(result.official_balance)}.` : '';
@@ -263,17 +259,24 @@ export async function mountCollectorWorkspace(context) {
   context.employeeOperationsCleanup = null;
   context.collectorOnboardingCleanup?.();
   context.collectorOnboardingCleanup = null;
+  for (const dispose of context.collectorWorkflowCleanups || []) dispose();
+  context.collectorWorkflowCleanups = [];
   const { root, api, session, setNavigation } = context;
   const online = globalThis.navigator?.onLine !== false;
   const canViewRoute = hasPermission(session, 'route.view');
   const canRecordVisit = hasPermission(session, 'client_onboarding.visit.record');
   const canCreate = hasPermission(session, 'collection.create');
+  const canCorrect = hasPermission(session, 'collection.correct.own_unremitted');
+  const canRenew = hasPermission(session, 'renewal.recommend.assigned') || hasPermission(session, 'renewal.cash_custody.assigned');
   const canCreateRemittance = hasPermission(session, 'remittance.create');
   const canViewRemittance = hasPermission(session, 'remittance.view') || canCreateRemittance;
   setNavigation([
     { id: 'collector-overview', label: "Today's route" },
     { id: 'collector-employee-operations', label: 'My attendance, tasks & pay' },
     { id: 'collector-master-review', label: 'Master Review' },
+    ...(canCreate || canCorrect ? [{ id: 'collector-workflows', label: 'Combined Pay, ADV & corrections' }] : []),
+    ...(canCreate ? [{ id: 'collector-other-area', label: 'Other-area collection' }] : []),
+    ...(canRenew ? [{ id: 'collector-renewals', label: 'Renewal handover' }] : []),
     ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit' }] : []),
     ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance' }] : []),
     { id: 'collector-updates', label: 'Updates' },
@@ -330,6 +333,9 @@ export async function mountCollectorWorkspace(context) {
     ${unresolvedMarkup(model.unresolved)}
   </section>
   <section class="section-card" id="collector-employee-operations"><div data-employee-operations></div></section>
+  ${canCreate || canCorrect ? '<section class="section-card" id="collector-workflows" data-collector-financial><div data-collector-workflows></div></section>' : ''}
+  ${canCreate ? '<section class="section-card" id="collector-other-area" data-collector-financial><div data-collector-other-area></div></section>' : ''}
+  ${canRenew ? '<section class="section-card" id="collector-renewals" data-collector-financial><div data-collector-renewals></div></section>' : ''}
   ${canViewRemittance ? remittanceSection(route.route_date, preview.data, recipients.data, history.data, { preview: preview.error, history: history.error }, canCreateRemittance) : ''}
   ${canRecordVisit ? '<section class="section-card" id="collector-onboarding"><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
   <section class="section-card" id="collector-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>
@@ -343,6 +349,21 @@ export async function mountCollectorWorkspace(context) {
   });
   bindRouteActions(context, entryMap);
   bindRemittance(context);
+  const workflowContext = {
+    api, session, routeDate: route.route_date, guard: writeGuard, signal: context.signal,
+    identity: (sequenceCount = 1) => {
+      const firstSequence = context.sessionStore.nextDeviceSequence();
+      for (let index = 1; index < sequenceCount; index += 1) context.sessionStore.nextDeviceSequence();
+      return {deviceId: context.sessionStore.deviceId(), deviceSequence: firstSequence, clientTransactionId: globalThis.crypto.randomUUID(), recordedAt: new Date().toISOString()};
+    },
+    onSaved: async result => {
+      showToast(result?.message || 'Saved. Loading the authoritative result.', 'success');
+      await mountCollectorWorkspace(context);
+    },
+  };
+  if (canCreate || canCorrect) context.collectorWorkflowCleanups.push(mountCollectorWorkflows({...workflowContext, root: root.querySelector('[data-collector-workflows]'), entries: model.entries}));
+  if (canCreate) context.collectorWorkflowCleanups.push(mountCollectorOtherArea({...workflowContext, root: root.querySelector('[data-collector-other-area]')}));
+  if (canRenew) context.collectorWorkflowCleanups.push(mountCollectorRenewals({...workflowContext, root: root.querySelector('[data-collector-renewals]')}));
   writeGuard.sync();
   if (canRecordVisit) {
     context.collectorOnboardingCleanup = mountCollectorOnboardingVisit({

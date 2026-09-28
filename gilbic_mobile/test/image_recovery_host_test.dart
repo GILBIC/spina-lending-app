@@ -12,6 +12,8 @@ import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'support/memory_private_image_store.dart';
+
 class _Store implements ImageRecoveryStore {
   String? value;
   @override
@@ -106,6 +108,7 @@ void main() {
       path: '/test/late.jpg',
     );
     final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
       store: store,
       enabled: true,
       retrieveLostData: () async => ++reads == 1
@@ -129,6 +132,7 @@ void main() {
       final store = _Store()..value = _pendingJournal();
       var response = LostDataResponse.empty();
       final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
         store: store,
         enabled: true,
         retrieveLostData: () async => response,
@@ -164,6 +168,7 @@ void main() {
     final store = _Store()..value = 'unread journal';
     var retrievals = 0;
     final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
       store: store,
       enabled: true,
       retrieveLostData: () async {
@@ -198,6 +203,7 @@ void main() {
     (tester) async {
       final store = _Store();
       final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
         store: store,
         enabled: true,
         retrieveLostData: () async => LostDataResponse.empty(),
@@ -234,6 +240,7 @@ void main() {
     (tester) async {
       final store = _Store();
       final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
         store: store,
         enabled: true,
         retrieveLostData: () async => LostDataResponse.empty(),
@@ -277,6 +284,7 @@ void main() {
   ) async {
     final store = _Store();
     final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
       store: store,
       enabled: true,
       retrieveLostData: () async => LostDataResponse.empty(),

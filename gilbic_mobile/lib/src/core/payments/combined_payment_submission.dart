@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 
@@ -58,14 +59,14 @@ class CombinedPaymentSubmissionDraft {
   final DateTime recordedAt;
   final String deviceId;
   final int deviceSequence;
-  final double cashReceivedAmount;
+  final Object cashReceivedAmount;
   final List<CombinedPaymentLegDraft> legs;
   final CombinedExtraAllocationChoice? extraAllocationChoice;
   final String? reviewedAllocationHash;
   final PastDueFollowupDraft? regularPastDueFollowup;
 
   CombinedPaymentSubmissionDraft withAllocationReview({
-    required double cashReceivedAmount,
+    required Object cashReceivedAmount,
     CombinedExtraAllocationChoice? extraAllocationChoice,
     String? reviewedAllocationHash,
     PastDueFollowupDraft? regularPastDueFollowup,
@@ -92,12 +93,12 @@ class CombinedPaymentSubmissionDraft {
     if (deviceId.trim().isEmpty || deviceSequence < 1) {
       return 'A valid device identity and sequence are required.';
     }
-    if (!cashReceivedAmount.isFinite || cashReceivedAmount <= 0) {
-      return 'Enter the total cash received from the client.';
-    }
-    final cashInCents = cashReceivedAmount * 100;
-    if ((cashInCents - cashInCents.roundToDouble()).abs() > 0.000001) {
+    final cashInCents = requestMoneyCents(cashReceivedAmount);
+    if (cashInCents == null) {
       return 'Enter the cash received using pesos and cents only.';
+    }
+    if (cashInCents <= BigInt.zero) {
+      return 'Enter the total cash received from the client.';
     }
     final reviewedHash = reviewedAllocationHash?.trim();
     if (reviewedHash != null &&
@@ -137,7 +138,7 @@ class CombinedPaymentSubmissionDraft {
     'recorded_at': recordedAt.toUtc().toIso8601String(),
     'device_id': deviceId,
     'device_sequence': deviceSequence,
-    'cash_received_amount': cashReceivedAmount,
+    'cash_received_amount': requestMoney(cashReceivedAmount),
     if (extraAllocationChoice != null)
       'extra_allocation_choice': extraAllocationChoice!.apiValue,
     if (reviewedAllocationHash != null)
@@ -192,6 +193,8 @@ class CombinedPaymentAllocationPreview {
     required this.requiresReview,
     required this.allocationHash,
     required this.cashReceivedAmount,
+    this.rawCashReceivedAmount,
+    this.rawExpectedTotalAmount,
     required this.expectedTotalAmount,
     required this.shortAmount,
     required this.extraAmount,
@@ -205,6 +208,12 @@ class CombinedPaymentAllocationPreview {
   final bool requiresReview;
   final String allocationHash;
   final double cashReceivedAmount;
+  final String? rawCashReceivedAmount;
+  final String? rawExpectedTotalAmount;
+  String? get cashReceivedAmountText =>
+      rawCashReceivedAmount ?? tryRequestMoney(cashReceivedAmount);
+  String? get expectedTotalAmountText =>
+      rawExpectedTotalAmount ?? tryRequestMoney(expectedTotalAmount);
   final double expectedTotalAmount;
   final double shortAmount;
   final double extraAmount;
@@ -245,6 +254,8 @@ class CombinedPaymentAllocationPreview {
       status: _requiredString(payload, 'status').toLowerCase(),
       requiresReview: payload['requires_review'] == true,
       allocationHash: _requiredString(payload, 'allocation_hash'),
+      rawCashReceivedAmount: tryRequestMoney(payload['cash_received_amount']),
+      rawExpectedTotalAmount: tryRequestMoney(payload['expected_total_amount']),
       cashReceivedAmount: _requiredDouble(payload, 'cash_received_amount'),
       expectedTotalAmount: _requiredDouble(payload, 'expected_total_amount'),
       shortAmount: _requiredDouble(payload, 'short_amount'),

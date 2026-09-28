@@ -1,17 +1,17 @@
-from __future__ import annotations
-
 import base64
 import binascii
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from psycopg.errors import CheckViolation
 from pydantic import Field, StrictBool, model_validator
 
-from .account_repository import PostgresAccountRepository
+from .account_repository import AccountContext, PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .first_loan_disclosure import DisclosureReviewRequest
+from .first_loan_disclosure_repository import PostgresFirstLoanDisclosureRepository
 from .first_loan_repository import (
     APPROVE_PERMISSION,
     RELEASE_PERMISSION,
@@ -22,9 +22,17 @@ from .first_loan_repository import (
 )
 from .first_loan_terms import FirstLoanTerms, Money, StrictInput
 from .office_review_evidence_repository import OfficeReviewEvidenceConflict
-from .office_review_evidence_storage import EvidenceFileError
 from .office_review_evidence_route import PrivateOfficeRoute
+from .office_review_evidence_storage import EvidenceFileError
 from .request_auth import authenticated_device_context
+
+
+class DisclosureContextRequest(StrictInput):
+    application_version_id: UUID
+    cif_version_id: UUID
+    terms: FirstLoanTerms
+    dst_rule_id: UUID
+    grt_rule_id: UUID
 
 
 class ApprovalRequest(StrictInput):
@@ -32,6 +40,25 @@ class ApprovalRequest(StrictInput):
     application_version_id: UUID
     terms: FirstLoanTerms
     template_version: str = Field(min_length=1, max_length=200)
+    disclosure_calculation_id: UUID | None = Field(
+        default=None,
+        description="Required for new approvals; only historical replay may omit it.",
+    )
+    expected_disclosure_digest: str | None = Field(
+        default=None,
+        pattern="^[0-9a-f]{64}$",
+        description="Digest of the exact saved calculation selected for approval.",
+    )
+
+    @model_validator(mode="after")
+    def require_disclosure_pair(self):
+        if (self.disclosure_calculation_id is None) != (
+            self.expected_disclosure_digest is None
+        ):
+            raise ValueError("Supply the saved disclosure ID and digest together.")
+        # The existing repository distinguishes committed historical replay
+        # from a NEW source-less approval, which remains a protected conflict.
+        return self
 
 
 class RejectionRequest(StrictInput):
@@ -84,6 +111,10 @@ class ReleaseRequest(PacketRequest):
 
 def first_loan_repository_dependency():
     return PostgresFirstLoanRepository()
+
+
+def first_loan_disclosure_repository_dependency():
+    return PostgresFirstLoanDisclosureRepository()
 
 
 class LazyPostReleaseProvisioner:
@@ -201,7 +232,10 @@ def create_first_loan_router():
         actor=Depends(reviewer),
         repository=Depends(first_loan_repository_dependency),
     ):
-        return execute(response, repository, actor, "context")
+        return {
+            **execute(response, repository, actor, "context"),
+            "disclosure_source_required": True,
+        }
 
     @router.get("/by-application/{application_id}")
     def by_application(
@@ -212,6 +246,101 @@ def create_first_loan_router():
     ):
         return execute(
             response, repository, actor, "by_application", application_id=application_id
+        )
+
+    @router.post("/disclosure-context")
+    def disclosure_context(
+        body: DisclosureContextRequest,
+        response: Response,
+        actor: Annotated[AccountContext, Depends(manager)],
+        repository: Annotated[
+            PostgresFirstLoanDisclosureRepository,
+            Depends(first_loan_disclosure_repository_dependency),
+        ],
+    ):
+        return execute(
+            response,
+            repository,
+            actor,
+            "context",
+            application_version_id=body.application_version_id,
+            cif_version_id=body.cif_version_id,
+            terms=body.terms.model_dump(mode="json"),
+            dst_rule_id=body.dst_rule_id,
+            grt_rule_id=body.grt_rule_id,
+        )
+
+    @router.post("/disclosure-calculations", status_code=201)
+    def record_disclosure(
+        body: DisclosureReviewRequest,
+        response: Response,
+        actor: Annotated[AccountContext, Depends(manager)],
+        repository: Annotated[
+            PostgresFirstLoanDisclosureRepository,
+            Depends(first_loan_disclosure_repository_dependency),
+        ],
+    ):
+        return execute(response, repository, actor, "record", request=body)
+
+    @router.get("/disclosure-calculations/by-request/{request_id}")
+    def disclosure_by_request(
+        request_id: UUID,
+        response: Response,
+        actor: Annotated[AccountContext, Depends(manager)],
+        repository: Annotated[
+            PostgresFirstLoanDisclosureRepository,
+            Depends(first_loan_disclosure_repository_dependency),
+        ],
+    ):
+        return execute(response, repository, actor, "by_request", request_id=request_id)
+
+    @router.get("/disclosure-calculations/{calculation_id}")
+    def get_disclosure(
+        calculation_id: UUID,
+        application_version_id: UUID,
+        response: Response,
+        actor: Annotated[AccountContext, Depends(reviewer)],
+        repository: Annotated[
+            PostgresFirstLoanDisclosureRepository,
+            Depends(first_loan_disclosure_repository_dependency),
+        ],
+    ):
+        return execute(
+            response,
+            repository,
+            actor,
+            "get",
+            calculation_id=calculation_id,
+            application_version_id=application_version_id,
+        )
+
+    @router.get("/disclosure-calculations/{calculation_id}/support")
+    def disclosure_support(
+        calculation_id: UUID,
+        application_version_id: UUID,
+        response: Response,
+        actor: Annotated[AccountContext, Depends(manager)],
+        repository: Annotated[
+            PostgresFirstLoanDisclosureRepository,
+            Depends(first_loan_disclosure_repository_dependency),
+        ],
+    ):
+        metadata, content = execute(
+            response,
+            repository,
+            actor,
+            "support",
+            calculation_id=calculation_id,
+            application_version_id=application_version_id,
+        )
+        return Response(
+            content=content,
+            media_type=metadata["media_type"],
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Disposition": "attachment",
+            },
         )
 
     @router.get("/{loan_id}")
@@ -239,6 +368,8 @@ def create_first_loan_router():
             application_version_id=body.application_version_id,
             terms=body.terms.model_dump(mode="json"),
             template_version=body.template_version,
+            disclosure_calculation_id=body.disclosure_calculation_id,
+            expected_disclosure_digest=body.expected_disclosure_digest,
         )
 
     @router.post("/reject", status_code=201)

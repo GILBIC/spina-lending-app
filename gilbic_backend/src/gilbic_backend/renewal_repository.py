@@ -43,7 +43,7 @@ class RenewalLoanOption:
     loan_type_name: str
     calculation_mode: str
     principal: Decimal
-    contractual_total: Decimal
+    contractual_total: Decimal | None
     remaining_balance: Decimal
     paid_amount: Decimal
     daily_amount: Decimal
@@ -56,9 +56,9 @@ class RenewalLoanOption:
     blocking_request_status: str | None = None
 
     @property
-    def paid_percent(self) -> Decimal:
-        if self.contractual_total <= 0:
-            return Decimal("0")
+    def paid_percent(self) -> Decimal | None:
+        if self.contractual_total is None or self.contractual_total <= 0:
+            return None
         return min(
             Decimal("100.0"),
             (self.paid_amount / self.contractual_total * Decimal("100")).quantize(
@@ -111,9 +111,15 @@ class PostgresRenewalRepository:
                             as loan_type_name,
                         loan_type.calculation_mode,
                         loan.principal,
-                        greatest(
-                            loan.principal,
-                            (loan.daily_amount * greatest(coalesce(loan_type.term_days, 120), 1))::numeric(18,2)
+                        (
+                            select sum(installment.contractual_amount)
+                            from lending.loan_contract_schedules schedule
+                            join lending.loan_contract_schedule_registrations registration
+                              on registration.schedule_id = schedule.id
+                            join lending.loan_contract_installments installment
+                              on installment.schedule_id = schedule.id
+                            where schedule.loan_id = loan.id
+                              and schedule.status = 'active'
                         ) as contractual_total,
                         coalesce(state.remaining_balance, loan.principal)
                             as remaining_balance,
@@ -185,11 +191,16 @@ class PostgresRenewalRepository:
                         loan.status,
                         loan.principal,
                         loan.daily_amount,
-                        loan_type.term_days,
                         loan_type.calculation_mode,
-                        greatest(
-                            loan.principal,
-                            (loan.daily_amount * greatest(coalesce(loan_type.term_days, 120), 1))::numeric(18,2)
+                        (
+                            select sum(installment.contractual_amount)
+                            from lending.loan_contract_schedules schedule
+                            join lending.loan_contract_schedule_registrations registration
+                              on registration.schedule_id = schedule.id
+                            join lending.loan_contract_installments installment
+                              on installment.schedule_id = schedule.id
+                            where schedule.loan_id = loan.id
+                              and schedule.status = 'active'
                         ) as contractual_total,
                         coalesce((
                             select sum(tx.applied_amount)
@@ -218,21 +229,30 @@ class PostgresRenewalRepository:
                         "Only an active or fully paid loan can be renewed."
                     )
                 is_7x7 = str(loan["calculation_mode"]).lower() == "seven_by_seven"
-                contractual_total = Decimal(loan["contractual_total"] or 0)
+                contractual_total = (
+                    Decimal(loan["contractual_total"])
+                    if loan["contractual_total"] is not None
+                    else None
+                )
                 paid_amount = Decimal(loan["paid_amount"] or 0)
                 paid_percent = (
-                    Decimal("100")
-                    if status == "paid"
+                    None
+                    if contractual_total is None or contractual_total <= 0
                     else (
-                        Decimal("0")
-                        if contractual_total <= 0
+                        Decimal("100")
+                        if status == "paid"
                         else paid_amount / contractual_total * Decimal("100")
                     )
                 )
-                if not is_7x7 and status != "paid" and paid_percent < Decimal("50"):
-                    raise RenewalLoanNotEligible(
-                        "Regular renewal becomes available after 50% of the total contractual balance has been paid. Management may review an earlier renewal only through the controlled override path."
-                    )
+                if not is_7x7 and status != "paid":
+                    if paid_percent is None:
+                        raise RenewalLoanNotEligible(
+                            "A verified signed schedule is required to assess the Regular 50% renewal threshold."
+                        )
+                    if paid_percent < Decimal("50"):
+                        raise RenewalLoanNotEligible(
+                            "Regular renewal becomes available after 50% of the total contractual balance has been paid. Management may review an earlier renewal only through the controlled override path."
+                        )
 
                 cursor.execute(
                     """
@@ -314,7 +334,9 @@ class PostgresRenewalRepository:
                         loan_id,
                         requested_amount,
                         loan["calculation_mode"],
-                        paid_percent.quantize(Decimal("0.1")),
+                        paid_percent.quantize(Decimal("0.1"))
+                        if paid_percent is not None
+                        else None,
                     ),
                 )
                 return self._fetch_request(cursor, request_id=request_id)
@@ -464,13 +486,17 @@ class PostgresRenewalRepository:
             if row["blocking_request_status"]
             else None
         )
-        contractual_total = Decimal(row["contractual_total"] or row["principal"])
+        contractual_total = (
+            Decimal(row["contractual_total"])
+            if row["contractual_total"] is not None
+            else None
+        )
         paid_amount = Decimal(row["paid_amount"] or 0)
-        if status.lower() == "paid":
+        if status.lower() == "paid" and contractual_total is not None:
             paid_amount = max(paid_amount, contractual_total)
         paid_percent = (
             Decimal("0")
-            if contractual_total <= 0
+            if contractual_total is None or contractual_total <= 0
             else min(Decimal("100"), paid_amount / contractual_total * Decimal("100"))
         )
         is_7x7 = calculation_mode.lower() == "seven_by_seven"
@@ -483,8 +509,12 @@ class PostgresRenewalRepository:
             message = "Your approved renewal is awaiting completion."
         elif row["pending_request_id"]:
             message = "A renewal request is already pending."
+        elif contractual_total is None and not is_7x7 and status.lower() != "paid":
+            message = "A verified signed schedule is required to assess Regular renewal eligibility."
         elif is_7x7:
             message = "7x7 may be requested for consideration at any paid percentage. Every 7x7 renewal requires Management approval."
+        elif status.lower() == "paid":
+            message = "Regular renewal is available because this loan is fully paid."
         elif eligible:
             message = "Regular renewal is available because at least 50% of the total contractual balance has been paid."
         else:

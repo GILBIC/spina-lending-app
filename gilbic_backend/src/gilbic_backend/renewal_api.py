@@ -65,8 +65,8 @@ def renewal_repository_dependency() -> PostgresRenewalRepository:
     return PostgresRenewalRepository()
 
 
-def _decimal(value: Decimal) -> str:
-    return format(value, "f")
+def _decimal(value: Decimal | None) -> str | None:
+    return format(value, "f") if value is not None else None
 
 
 def _loan_payload(record) -> dict[str, object]:

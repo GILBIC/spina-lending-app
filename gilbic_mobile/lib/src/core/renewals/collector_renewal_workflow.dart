@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'dart:typed_data';
 
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -68,6 +69,7 @@ class CollectorRenewalRequest {
     required this.handoverProofStatus,
     required this.activationStatus,
     required this.readyForActivation,
+    this.requestedAmountText,
     this.collectorRecommendation,
     this.recommendedAt,
     this.approvedPrincipal,
@@ -95,11 +97,14 @@ class CollectorRenewalRequest {
   final bool isSevenBySeven;
   final double currentPrincipal;
   final double remainingBalance;
-  final double contractualTotal;
+  final double? contractualTotal;
   final double paidCash;
-  final double paidPercent;
+  final double? paidPercent;
   final bool regular50PercentEligible;
   final double requestedAmount;
+  final String? requestedAmountText;
+  String? get requestedAmountInput =>
+      requestedAmountText ?? tryRequestMoney(requestedAmount);
   final String clientMessage;
   final String status;
   final DateTime submittedAt;
@@ -189,46 +194,64 @@ class CollectorRenewalRequest {
       isSevenBySeven: payload['is_7x7'] == true,
       currentPrincipal: _requiredDouble(payload, 'current_principal'),
       remainingBalance: _requiredDouble(payload, 'remaining_balance'),
-      contractualTotal: _requiredDouble(payload, 'contractual_total'),
+      contractualTotal: payload['contractual_total'] == null
+          ? null
+          : _requiredDouble(payload, 'contractual_total'),
       paidCash: _requiredDouble(payload, 'paid_cash'),
-      paidPercent: _requiredDouble(payload, 'paid_percent'),
+      paidPercent: payload['paid_percent'] == null
+          ? null
+          : _requiredDouble(payload, 'paid_percent'),
       regular50PercentEligible: payload['regular_50_percent_eligible'] == true,
+      requestedAmountText: tryRequestMoney(payload['requested_amount']),
       requestedAmount: _requiredDouble(payload, 'requested_amount'),
-      clientMessage: firstNonEmptyString(<Object?>[payload['client_message']]) ?? '',
+      clientMessage:
+          firstNonEmptyString(<Object?>[payload['client_message']]) ?? '',
       status: _requiredString(payload, 'status').toLowerCase(),
       submittedAt: _requiredDate(payload, 'submitted_at'),
-      collectorRecommendation:
-          firstNonEmptyString(<Object?>[payload['collector_recommendation']]),
+      collectorRecommendation: firstNonEmptyString(<Object?>[
+        payload['collector_recommendation'],
+      ]),
       collectorReasonCode:
-          firstNonEmptyString(<Object?>[payload['collector_reason_code']]) ?? '',
+          firstNonEmptyString(<Object?>[payload['collector_reason_code']]) ??
+          '',
       collectorComment:
           firstNonEmptyString(<Object?>[payload['collector_comment']]) ?? '',
       recommendedAt: _optionalDate(payload['recommended_at']),
       approvedPrincipal: _optionalDouble(payload['approved_principal']),
       reviewNote: firstNonEmptyString(<Object?>[payload['review_note']]) ?? '',
       managementOverrideReason:
-          firstNonEmptyString(<Object?>[payload['management_override_reason']]) ?? '',
+          firstNonEmptyString(<Object?>[
+            payload['management_override_reason'],
+          ]) ??
+          '',
       reviewedAt: _optionalDate(payload['reviewed_at']),
-      clientDecision: firstNonEmptyString(<Object?>[payload['client_decision']]),
+      clientDecision: firstNonEmptyString(<Object?>[
+        payload['client_decision'],
+      ]),
       clientDecidedAt: _optionalDate(payload['client_decided_at']),
-      signerReadinessStatus:
-          _requiredString(payload, 'signer_readiness_status'),
+      signerReadinessStatus: _requiredString(
+        payload,
+        'signer_readiness_status',
+      ),
       officeProcessingRequired: payload['office_processing_required'] == true,
       signers: rawSigners is List
           ? rawSigners
-              .map((item) => CollectorRenewalSigner.fromPayload(stringMap(item)))
-              .toList(growable: false)
+                .map(
+                  (item) => CollectorRenewalSigner.fromPayload(stringMap(item)),
+                )
+                .toList(growable: false)
           : const <CollectorRenewalSigner>[],
       renewalOffsetAmount: _optionalDouble(payload['renewal_offset_amount']),
       netReleaseAmount: _optionalDouble(payload['net_release_amount']),
       amountLockedAt: _optionalDate(payload['amount_locked_at']),
-      cashReleasedToCollectorAt:
-          _optionalDate(payload['cash_released_to_collector_at']),
-      collectorCashReceivedAt:
-          _optionalDate(payload['collector_cash_received_at']),
+      cashReleasedToCollectorAt: _optionalDate(
+        payload['cash_released_to_collector_at'],
+      ),
+      collectorCashReceivedAt: _optionalDate(
+        payload['collector_cash_received_at'],
+      ),
       cashGivenToClientAt: _optionalDate(payload['cash_given_to_client_at']),
-      clientCashConfirmedAt:
-          _optionalDate(payload['client_cash_confirmed_at']),
+      clientCashConfirmedAt: _optionalDate(payload['client_cash_confirmed_at']),
       handoverProofStatus: _requiredString(payload, 'handover_proof_status'),
       activationStatus: _requiredString(payload, 'activation_status'),
       newLoanId: firstNonEmptyString(<Object?>[payload['new_loan_id']]),
@@ -253,8 +276,11 @@ class RenewalHandoverPhotoDraft {
     if (bytes.length > 8 * 1024 * 1024) {
       return 'Renewal handover photo must be 8 MB or smaller.';
     }
-    if (!const <String>{'image/jpeg', 'image/png', 'image/webp'}
-        .contains(contentType)) {
+    if (!const <String>{
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+    }.contains(contentType)) {
       return 'Use a JPEG, PNG or WebP handover photo.';
     }
     return null;
@@ -266,7 +292,11 @@ class RenewalHandoverPhotoDraft {
     String? suggestedContentType,
   }) {
     final lower = filename.toLowerCase();
-    final contentType = suggestedContentType?.split(';').first.trim().toLowerCase();
+    final contentType = suggestedContentType
+        ?.split(';')
+        .first
+        .trim()
+        .toLowerCase();
     final normalized = switch (contentType) {
       'image/jpeg' || 'image/png' || 'image/webp' => contentType!,
       _ when lower.endsWith('.png') => 'image/png',

@@ -22,6 +22,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'support/memory_private_image_store.dart';
+
 const _session = UserSession(
   userId: 'collector',
   username: 'collector',
@@ -29,6 +31,7 @@ const _session = UserSession(
   role: AppRole.collector,
   rawRole: 'collector',
   accessToken: 'token',
+  permissions: <String>['renewal.cash_custody.assigned'],
 );
 final _png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -124,6 +127,7 @@ Future<ImageRecoveryController> _recovered(ImagePickContext context) async {
       'path': null,
     });
   final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
     store: store,
     enabled: true,
     retrieveLostData: () async => LostDataResponse(

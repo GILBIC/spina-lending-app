@@ -1,0 +1,113 @@
+import {buildCollectionSubmission} from './collector-contract.js';
+import {buildCombinedSubmission, buildCorrection, collectorMutation, collectionResultMatches, combinedPairs, createCombinedReview, formatServerMoney, EXTRA_CHOICES, selectableScheduleDates} from './collector-workflow-contract.js';
+import {escapeHtml as h, hasPermission} from './ui.js';
+import {formatAuthoritativeMoney as formatMoney} from './client-schedule.js';
+
+const value = (root, name) => root.querySelector(`[name="${name}"]`)?.value || '';
+export function allocationField() {
+  return '<label class="allocation-only">Payment allocation<select name="allocation"><option value="scheduled">Scheduled payment</option><option value="extra_as_advance">Extra cash as Advance</option><option value="extra_as_principal_reduction">Extra cash as Principal Reduction</option><option value="no_collection_voluntary">Voluntary payment on a No Collection date</option></select></label>';
+}
+export function followupFields() {
+  return `<label>Past Due reason (required for short Regular payment)<select name="reasonCode"><option value="">No follow-up</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick / hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select></label><label>Follow-up note<textarea name="followupNote" maxlength="500"></textarea></label><label>Promised payment date<input name="promiseDate" type="date" /></label><label>Promised amount<input name="promiseAmount" inputmode="decimal" /></label>`;
+}
+
+export function readFollowup(form) {
+  const reason = value(form,'reasonCode');
+  return reason ? {reason_code:reason, note:value(form,'followupNote'), promised_payment_date:reason === 'promised_to_pay_later' ? value(form,'promiseDate') : null, promised_amount:reason === 'promised_to_pay_later' ? value(form,'promiseAmount') : null} : null;
+}
+
+export function renderCombinedPreview(result) {
+  return `<div class="notice-card"><strong>${h(result.message || 'Review both loan allocations before saving.')}</strong><p>Cash ${formatServerMoney(result.cash_received_amount)} · Expected ${formatServerMoney(result.expected_total_amount)} · Short ${formatServerMoney(result.short_amount)} · Extra ${formatServerMoney(result.extra_amount)}</p>${(result.legs || []).map(leg => `<p>${h(leg.loan_type === 'seven_by_seven' ? '7x7' : 'Regular')}: Scheduled ${formatServerMoney(leg.scheduled_amount)} + Extra ${formatServerMoney(leg.extra_amount)} = ${formatServerMoney(leg.total_amount)}${leg.projected_covered_dates?.length ? `<br>Covered dates: ${leg.projected_covered_dates.map(h).join(', ')}` : ''}</p>`).join('')}</div>`;
+}
+
+// Uses the workspace guard for every request that can change financial state.
+// No replay queue: uncertainty locks the workspace until authoritative refresh.
+export function mountCollectorWorkflows({root, api, session, entries, routeDate, guard, identity, onSaved, signal}) {
+  const pairs = hasPermission(session,'collection.create') ? combinedPairs(entries) : [];
+  const canCorrect = hasPermission(session,'collection.correct.own_unremitted');
+  const choices = entries.filter(entry => (hasPermission(session,'collection.create') && entry.can_enter_payment && !entry.processed_today) || (canCorrect && entry.can_edit_today && !entry.today_is_locked));
+  const review = createCombinedReview(api);
+  let disposed = false;
+  let selected = null;
+  let scheduleDates = [];
+  let loadVersion = 0;
+  const current = () => !disposed && guard.current && !signal?.aborted;
+  root.innerHTML = `<h2>Combined Pay and covered-date payments</h2>
+    ${pairs.length ? `<form data-combined-form class="entry-form"><label>Client<select name="pair">${pairs.map((pair,index) => `<option value="${index}">${h(pair[0].client_name)} · Regular + 7x7</option>`).join('')}</select></label><label>Total cash received<input name="amount" inputmode="decimal" required /></label><label>Borrower’s choice for extra cash<select name="extraChoice"><option value="">Choose if cash exceeds both obligations</option>${Object.entries(EXTRA_CHOICES).map(([key,label]) => `<option value="${key}">${label}</option>`).join('')}</select></label>${followupFields()}<button class="button button-outline" data-preview type="button">Preview server allocation</button><div data-combined-preview></div><button class="button button-primary" data-combined-save type="submit" disabled>Confirm reviewed payment</button></form>` : '<p>No available Regular + 7x7 pair is on this route.</p>'}
+    <h2>Covered dates and corrections</h2><p>Load the saved schedule to choose covered dates. Corrections are available only for your unlocked, unremitted entry.</p>
+    ${choices.length ? `<label>Loan<select name="scheduleLoan">${choices.map((entry,index) => `<option value="${index}">${h(entry.client_name)} · ${h(entry.loan_type)}</option>`).join('')}</select></label><button class="button button-outline" type="button" data-load-schedule>Load schedule / entry</button><div data-schedule-form></div>` : '<p>No editable loan is available.</p>'}
+    <div data-workflow-status role="status"></div>`;
+  const status = message => { if(current()) root.querySelector('[data-workflow-status]').textContent = message; };
+  const run = async (operation) => {
+    if (!current() || !guard.begin()) return;
+    try { await operation(); }
+    catch(error) { if(current()) status(error.message); }
+    finally {guard.finish();}
+  };
+  const form = root.querySelector('[data-combined-form]');
+  const invalidate = () => {review.invalidate(); if(form) {form.querySelector('[data-combined-save]').disabled = true;form.querySelector('[data-combined-preview]').innerHTML = '';} };
+  form?.addEventListener('input', invalidate);
+  form?.addEventListener('change', invalidate);
+  form?.querySelector('[data-preview]').addEventListener('click', () => run(async () => {
+    const draft = buildCombinedSubmission({...identity(3),routeDate,entries:pairs[Number(value(form,'pair')) || 0],amount:value(form,'amount'),extraChoice:value(form,'extraChoice'),pastDueFollowup:readFollowup(form)});
+    const result = await review.preview(draft);
+    if (!current() || !result) return;
+    form.querySelector('[data-combined-preview]').innerHTML = renderCombinedPreview(result);
+    try {review.submission(); form.querySelector('[data-combined-save]').disabled = guard.locked;status('Review the allocation above, then confirm.');}
+    catch(error) {form.querySelector('[data-combined-save]').disabled = true;status(error.message);}
+  }));
+  form?.addEventListener('submit', event => {
+    event.preventDefault();
+    run(async () => {
+      const request = review.submission();
+      const result = await collectorMutation({api,guard,path:'/api/v1/collector/collections/combined',options:{method:'POST',...request},verify:result=>['accepted','duplicate'].includes(result.status) && result.client_transaction_id===request.body.client_transaction_id && result.total_amount===request.body.cash_received_amount && Array.isArray(result.legs) && result.legs.length>0 && result.legs.every(leg=>request.body.legs.some(item=>item.loan_id===leg.loan_id) && typeof leg.receipt_number==='string' && leg.receipt_number.length>0)});
+      if (!current()) return;
+      invalidate();
+      status(result.message || 'Combined payment saved.');
+      await onSaved(result);
+    });
+  });
+  root.querySelector('[name="scheduleLoan"]')?.addEventListener('change', () => {loadVersion += 1;selected=null;root.querySelector('[data-schedule-form]').innerHTML='';});
+  root.querySelector('[data-load-schedule]')?.addEventListener('click', () => run(async () => {
+    const version = ++loadVersion;
+    const entry = choices[Number(value(root,'scheduleLoan')) || 0];
+    const correcting = entry.processed_today === true;
+    const schedule = await api.request(`/api/v1/collector/loans/${encodeURIComponent(entry.loan_id)}/schedule`);
+    if (!current() || version !== loadVersion) return;
+    selected = entry;
+    scheduleDates = selectableScheduleDates(schedule);
+    if(correcting) {
+      for(const date of entry.today_covered_dates || []) if(!scheduleDates.some(row=>row.date===date)) scheduleDates.push({date,amount:null});
+      scheduleDates.sort((left,right)=>left.date.localeCompare(right.date));
+    }
+    const target = root.querySelector('[data-schedule-form]');
+    target.innerHTML = `<form data-dates-form class="entry-form"><p>${h(entry.client_name)} · ${h(entry.loan_type)} · ${h(schedule.contract_reference || '')}</p><label>Entry type<select name="entryType">${correcting ? '<option value="payment">Payment</option><option value="advance">Covered-date payment</option><option value="pass">Unable to pay</option>' : '<option value="advance">Covered-date payment / ADV</option>'}</select></label><label>Amount<input name="amount" inputmode="decimal" value="${h(correcting ? entry.today_amount || '' : '')}" /></label><fieldset><legend>Saved installment dates</legend>${scheduleDates.map(row=>`<label><input name="coveredDate" type="checkbox" value="${h(row.date)}" ${(entry.today_covered_dates || []).includes(row.date) ? 'checked' : ''} />${h(row.date)}${row.amount == null ? ' · Current entry' : ` · Remaining ${formatMoney(row.amount)}`}</label>`).join('') || '<p>No unpaid saved installment is available.</p>'}</fieldset>${correcting ? '<label>Correction reason<textarea name="reason" maxlength="500" required></textarea></label>' : ''}<label>Note<textarea name="note" maxlength="500">${h(correcting ? entry.today_note || '' : '')}</textarea></label><button class="button button-primary" type="submit">${correcting ? 'Save correction' : 'Save covered-date payment'}</button></form>`;
+    const datesForm = target.querySelector('[data-dates-form]');
+    if (correcting) datesForm.querySelector('[name="entryType"]').value = entry.today_entry_type || 'payment';
+    datesForm.addEventListener('submit', event => {
+      event.preventDefault();
+      run(async () => {
+        if (selected !== entry || version !== loadVersion) throw new Error('Reload the schedule before saving.');
+        const dates = [...datesForm.querySelectorAll('[name="coveredDate"]')].filter(node=>node.checked).map(node=>node.value);
+        const amount = value(datesForm,'amount');
+        const note = value(datesForm,'note');
+        let result;
+        if(correcting) {
+          if(!canCorrect) throw new Error('Collection correction permission is required.');
+          const request = buildCorrection({entry,entryType:value(datesForm,'entryType'),amount,coveredDates:dates,reason:value(datesForm,'reason'),note});
+          result = await collectorMutation({api,guard,path:request.path,options:{method:'PATCH',body:request.body},verify:result=>result.transaction_id===entry.today_transaction_id && typeof result.route_revision==='string' && result.route_revision.length>0});
+        } else {
+          const request = buildCollectionSubmission({...identity(),entry,routeDate,entryType:'advance',amount,note,coveredDates:dates});
+          result = await collectorMutation({api,guard,path:'/api/v1/collector/collections',options:{method:'POST',...request},verify:collectionResultMatches(request)});
+        }
+        if(current()) await onSaved(result);
+      });
+    });
+    status('Review the saved installment dates before confirming.');
+    guard.sync();
+  }));
+  function dispose() {disposed=true;loadVersion+=1;review.invalidate();signal?.removeEventListener('abort',dispose);}
+  signal?.addEventListener('abort',dispose,{once:true});
+  if(signal?.aborted) dispose();
+  return dispose;
+}

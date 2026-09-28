@@ -2,6 +2,8 @@
 
 **Scope:** SPINA Desktop, Gilbic Mobile, GitHub-first FastAPI, Supabase Auth, PostgreSQL, CI, and known legacy/external boundaries.
 
+**Current acceptance state:** [28 September 2026](../release/2026-09-28-implementation-state.md). This map identifies code ownership; its historical examples are not production or device acceptance evidence.
+
 ## Product at a glance
 
 ```mermaid
@@ -16,6 +18,7 @@ flowchart TB
     subgraph SURFACES[User surfaces]
         DESKTOP[SPINA Desktop\nPython + Tkinter]
         MOBILE[Gilbic Mobile\nFlutter Android / iOS]
+        PORTAL[Company portal\nShared Web / Windows]
         LEGACY[Earlier local web portals\nExternal / needs inventory]
     end
 
@@ -42,7 +45,7 @@ flowchart TB
 
     subgraph DELIVERY[Delivery and verification]
         GITHUB[GitHub branches + pull requests]
-        CI[Owner-only self-hosted Windows CI\nPython, Flutter, architecture checks]
+        CI[GitHub Actions CI\nBackend, platform, financial checks]
     end
 
     MANAGEMENT --> DESKTOP
@@ -51,8 +54,13 @@ flowchart TB
     EMPLOYEE --> MOBILE
     COLLECTOR --> MOBILE
     CLIENT --> MOBILE
+    MANAGEMENT --> PORTAL
+    EMPLOYEE --> PORTAL
+    COLLECTOR --> PORTAL
+    CLIENT --> PORTAL
 
     MOBILE -->|HTTPS JSON| FASTAPI
+    PORTAL -->|HTTPS JSON| FASTAPI
     FASTAPI --> SUPAAUTH
     FASTAPI --> CORE
     FASTAPI --> LENDING
@@ -77,8 +85,8 @@ flowchart TB
 |---|---|---|
 | SPINA Desktop | Mature Python/Tkinter and local PostgreSQL office workflows remain operational, including legacy role labels and modules that have not yet moved behind the GitHub-first API. | The primary office platform for canonical Management and Employee work, reusing the same FastAPI contracts, server permissions, official records, maker-checker controls, and audit outcomes as mobile. This is a migration of the current project, not a copy or reconnection of an old portal/backend. |
 | Gilbic Mobile | Collector and Client flows plus incremental protected Management/Employee modules. Management now has a read-only live overview backed by one permission-filtered PostgreSQL snapshot and existing protected destinations. | Functional capability parity for appropriate Management and Employee workflows. Mobile layouts remain task-focused; they do not redefine roles, financial rules, approvals, or official results. Collector stays mobile-first. |
-| Management and Employee access | Coverage differs by current client and module. Legacy Desktop labels still exist in local workflows; server-backed surfaces use canonical roles and granular permissions. Draft PR #378 implements a read-only FastAPI/Mobile Employee Activity list and timeline for active canonical Employees, with independent shell/domain permissions and registered Accounting, CRM/support, and remittance sources. HR, Payroll, administration, Desktop parity, merge, deployment, and release remain incomplete. | Both clients recognize canonical Management and Employee roles. Accounting, HR/payroll, and client-relationship access remain separable; Management retains sensitive approvals and final authorization. The permission-scoped Employee Activity workspace expands only through authoritative owning modules and links Management to authorized Employee work and owning review flows without impersonation, surveillance, or maker-checker bypass. Legacy labels are not the new role model. |
-| Website | Earlier Client/Staff portal implementations remain external or legacy until inventoried. | Phase 1 public site and secure Client Web Portal; a later, separately scoped Staff Web Portal for selected remote workflows. No second authoritative backend and no automatic duplication of the entire Desktop app. |
+| Management and Employee access | Current source includes protected Employee Activity and employee-operation/payroll modules with portal/mobile workspaces. Canonical roles and granular permissions govern server-backed access; actual staff/company settings and acceptance remain separately tracked. | Accounting, HR/payroll, and client-relationship access remain separable; Management retains sensitive approvals. Activity is a permission-filtered projection of owning-domain evidence, without impersonation or maker-checker bypass. Legacy labels are not the new role model. |
+| Company portal | `spina_portal/` provides Client, Collector, Employee and Management workspaces through shared FastAPI authority. The dated state tracks remaining Collector parity and platform acceptance. | Web and shared Windows clients reuse the same permissions, financial owners and official outcomes. Earlier external portals are separate legacy inventory, not the current company portal. |
 | Office cash and growth planning | The live overview reports authoritative portfolio, collection, unremitted cash, queue, and activity aggregates only. | New Client Fund, renewal fund, and smart client capacity become separate server-authoritative modules for leaving manageable office cash, tracking it, and deciding when capacity supports another client. |
 
 ## Non-negotiable ownership rules
@@ -95,7 +103,7 @@ flowchart TB
 | Offline route display | SQLCipher snapshot on the phone | Official current balance source |
 | Mobile retry identity | Original idempotency UUID plus device sequence | A newly generated UUID after uncertainty |
 | Desktop feature wiring | `spina_app/features/*` installers and final application shell | Reintroduced duplicate monkey-patch chains |
-| Progress status | Merged code, open PR state, and `progress-map.md` | Memory or an old local folder |
+| Progress status | Issue296, current PR heads/checks and the dated implementation/acceptance matrix | Archived progress notes, memory or an old local folder |
 
 ## Repository component map
 
@@ -157,8 +165,8 @@ Mobile safety boundary:
 - A cached route is visibly offline and is not authoritative.
 - Official balance and receipt values come from FastAPI.
 - The live Management overview displays server aggregates only; it does not authorize a mutation or calculate New Client Fund, renewal fund, smart client capacity, balances, or receipts.
-- All 7x7 mobile collection entry remains blocked until the dedicated allocator is verified.
-- Automatic offline payment retry remains disabled until the encrypted outbox is implemented.
+- 7x7 collection availability is decided by protected backend readiness and its verified schedule/allocation owner. Clients obey the returned capability; an old blanket prohibition is not the current gate.
+- Offline financial writes and automatic payment replay queues remain outside V1. Offline route display is read-only; uncertain results require authoritative reconciliation or the existing exact-identity retry protocol.
 
 ### 3. GitHub-first FastAPI backend
 
@@ -318,7 +326,7 @@ flowchart LR
     S --> C{Calculation mode approved?}
     C -->|Regular/direct balance safe| READY[Mobile collection enabled]
     C -->|Unreconciled or unsupported| BLOCK[Visible on route, collection blocked]
-    C -->|7x7 allocator not verified| DESKTOP[Use SPINA Desktop]
+    C -->|7x7 schedule and allocator ready| READY
 ```
 
 ## Financial rule boundary
@@ -337,19 +345,18 @@ When a calculation disagrees, fix the protected calculation/reconciliation layer
 
 ```mermaid
 flowchart LR
-    B[agent/* branch] --> PR[Draft pull request]
-    PR --> CHECKS[Focused GitHub Actions]
-    CHECKS --> WIN[Self-hosted Windows X64 runner]
-    WIN --> PY[Python compile + pytest]
-    WIN --> FL[Flutter pub get + analyze + test]
-    WIN --> ARCH[Architecture regeneration / zero-diff checks]
+    B[Work branch] --> PR[Pull request]
+    PR --> CHECKS[SPINA CI on Ubuntu]
+    CHECKS --> PY[Backend, quality, and security]
+    CHECKS --> FL[Portal, Flutter, and Android]
+    CHECKS --> ARCH[Financial and disposable PostgreSQL]
     PY --> REVIEW[Review + manual safe-data verification]
     FL --> REVIEW
     ARCH --> REVIEW
     REVIEW --> MAIN[Merge to main]
 ```
 
-A queued workflow often means the self-hosted Windows runner is offline, busy, or has not picked up the job. It does not automatically mean the code failed.
+`spina-ci.yml` runs these three lanes on hosted Ubuntu. Some separately dispatched protected maintenance/live-verifier workflows still require a self-hosted Windows runner. Check the actual workflow and job before interpreting queued status; a queue is not a code failure. Main protection requires the three trusted CI checks and an up-to-date pull request. Green CI remains separate from actual release/device/business acceptance.
 
 ## Change-impact checklist
 

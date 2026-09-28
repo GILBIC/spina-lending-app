@@ -11,20 +11,34 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
-from decimal import Decimal
 import tempfile
+from decimal import Context, Decimal, localcontext
+from pathlib import Path
 
+from fitz import FileDataError
+from pydantic import TypeAdapter
 from pypdf import PdfReader, PdfWriter
 from pypdf.errors import PdfReadError
 from pypdf.generic import NameObject
-from fitz import FileDataError
-from .first_loan_annex import ANNEX_R2_SHA256, bind_annex_docx, convert_annex_pdf
-from .document_font_gate import verify_arial_pdf
 
+from .document_font_gate import verify_arial_pdf
+from .first_loan_annex import (
+    ANNEX_R2_SHA256,
+    bind_annex_docx,
+    convert_annex_pdf,
+    project_packet_schedule,
+)
+from .first_loan_disclosure import (
+    DisclosureInput,
+    ExactMoney,
+    ExactRate,
+    Reference,
+    parse_components,
+    project_components,
+)
+from .first_loan_disclosure_binding import source_pair
 from .first_loan_repository import FirstLoanConflict
 from .first_loan_terms import snapshot_digest
-
 
 KINDS = ("disclosure", "agreement", "promissory_note")
 REQUIRED_FIELDS = {
@@ -35,6 +49,131 @@ REQUIRED_FIELDS = {
     "first_payment_date",
     "maturity_date",
 }
+COMPONENT_FIELDS = {
+    "deductions",
+    "dst_upfront",
+    "grt_in_repayments",
+    "other_upfront_deductions",
+    "other_scheduled_charges",
+    "total_upfront_deductions",
+    "net_proceeds",
+    "contractual_interest",
+    "total_scheduled_payable",
+    "disclosure_calculation_id",
+    "disclosure_review_digest",
+}
+DISCLOSURE_FIELDS = COMPONENT_FIELDS | {
+    "amount_financed",
+    "finance_charge_total",
+    "non_finance_charge_total",
+    "effective_interest_rate",
+    "rate_period",
+    "calculation_method",
+}
+
+
+class _DocumentDisclosureValues(DisclosureInput):
+    amount_financed: ExactMoney
+    finance_charge_total: ExactMoney
+    non_finance_charge_total: ExactMoney
+    effective_interest_rate: ExactRate
+    rate_period: Reference
+    calculation_method: Reference
+
+
+def _bound_disclosure_fields(packet):
+    """Project the saved public snapshot; source authority is checked by its owner."""
+    try:
+        binding = packet["tax_disclosure"]
+        if set(binding) != {"calculation_id", "review_digest", "financial_snapshot"}:
+            raise ValueError("Invalid source binding")
+        identity, digest = source_pair(
+            binding["calculation_id"], binding["review_digest"]
+        )
+        financial = binding["financial_snapshot"]
+        if set(financial) != {"components", "disclosure_values", "charge_items"}:
+            raise ValueError("Invalid public snapshot")
+        components = parse_components(financial["components"])
+        values = _DocumentDisclosureValues.model_validate(
+            financial["disclosure_values"]
+        )
+        projection = project_packet_schedule(packet)
+        money = TypeAdapter(ExactMoney)
+        terms = packet["terms"]
+        deductions = {
+            item["code"].strip().casefold(): money.validate_python(item["amount"])
+            for item in terms["deductions"]
+        }
+        if len(deductions) != len(terms["deductions"]):
+            raise ValueError("Duplicate deduction")
+        if (
+            components.principal != projection.total_principal
+            or components.contractual_interest != projection.total_interest
+            or components.total_scheduled_payable != projection.total_due
+            or components.grt_in_repayments != 0
+            or components.other_scheduled_charges != 0
+            or components.renewal_offset != 0
+            or components.net_proceeds != money.validate_python(packet["net_cash"])
+            or components.total_upfront_deductions
+            != money.validate_python(packet["total_deductions"])
+            or components.total_upfront_deductions
+            != sum(deductions.values(), Decimal(0))
+        ):
+            raise ValueError("Components differ from approved schedule/cash")
+        # Public items deliberately have no retained support-section references.
+        items = financial["charge_items"]
+        if not isinstance(items, list) or len(items) > 30:
+            raise ValueError("Invalid charge items")
+        upfront = {}
+        totals = {
+            kind: Decimal(0)
+            for kind in ("dst", "grt_recovery", "other_upfront", "other_scheduled")
+        }
+        identities = set()
+        for item in items:
+            if set(item) != {"item_id", "kind", "timing", "amount"}:
+                raise ValueError("Invalid public charge")
+            item_id = TypeAdapter(Reference).validate_python(item["item_id"]).casefold()
+            kind = item["kind"]
+            timing = "upfront" if kind in {"dst", "other_upfront"} else "repayments"
+            if item_id in identities or kind not in totals or item["timing"] != timing:
+                raise ValueError("Duplicate or inconsistent charge")
+            identities.add(item_id)
+            amount = money.validate_python(item["amount"])
+            totals[kind] += amount
+            if timing == "upfront":
+                upfront[item_id] = amount
+        if upfront != deductions or totals != {
+            "dst": components.dst_upfront,
+            "grt_recovery": components.grt_in_repayments,
+            "other_upfront": components.other_upfront_deductions,
+            "other_scheduled": components.other_scheduled_charges,
+        }:
+            raise ValueError("Itemization differs")
+        projected = project_components(
+            components,
+            references={
+                "loan_version_reference": packet["packet_id"],
+                "tax_loan_version_reference": packet["packet_id"],
+                # The immutable review digest covers its exact saved rule snapshot.
+                "tax_rule_snapshot_reference": f"review:{digest}",
+                "tax_calculation_reference": identity,
+            },
+        )
+        return {
+            **projected,
+            **values.model_dump(mode="json"),
+            "disclosure_calculation_id": identity,
+            "disclosure_review_digest": digest,
+            "deductions": "\n".join(
+                f"{code}: PHP {amount:.2f}" for code, amount in upfront.items()
+            )
+            or "None / PHP 0.00",
+        }
+    except (KeyError, TypeError, ValueError, ArithmeticError) as error:
+        raise FirstLoanConflict(
+            "The packet requires a complete, consistent saved disclosure."
+        ) from error
 
 
 def template_bundle() -> tuple[dict, dict[str, bytes], str]:
@@ -101,6 +240,11 @@ def template_bundle() -> tuple[dict, dict[str, bytes], str]:
 
 
 def packet_fields(record: dict) -> dict[str, str]:
+    with localcontext(Context(prec=40)):
+        return _packet_fields(record)
+
+
+def _packet_fields(record: dict) -> dict[str, str]:
     packet = record["packet"]
     terms = packet["terms"]
     rows = packet["schedule"]
@@ -150,17 +294,23 @@ def packet_fields(record: dict) -> dict[str, str]:
             "version"
         ],
     }
+    if packet.get("schema_version", 1) == 2:
+        fields.update(_bound_disclosure_fields(packet))
+    elif packet.get("schema_version", 1) != 1 or "tax_disclosure" in packet:
+        raise FirstLoanConflict("The approved packet schema is unsupported.")
     return {key: str(value) for key, value in fields.items()}
 
 
-def _filled_pdf(content: bytes, values: dict[str, str]) -> bytes:
+def _filled_pdf(content: bytes, values: dict[str, str], *, required_fields=()) -> bytes:
     try:
-        return _fill_template_pdf(content, values)
+        return _fill_template_pdf(content, values, required_fields=required_fields)
     except PdfReadError as error:
         raise FirstLoanConflict("The controlled PDF template is malformed.") from error
 
 
-def _fill_template_pdf(content: bytes, values: dict[str, str]) -> bytes:
+def _fill_template_pdf(
+    content: bytes, values: dict[str, str], *, required_fields=()
+) -> bytes:
     reader = PdfReader(io.BytesIO(content), strict=True)
     if reader.is_encrypted:
         raise FirstLoanConflict("Controlled templates must not be encrypted.")
@@ -172,7 +322,7 @@ def _fill_template_pdf(content: bytes, values: dict[str, str]) -> bytes:
             "Active PDF content is not permitted in a legal template."
         )
     fields = reader.get_fields() or {}
-    if not REQUIRED_FIELDS.issubset(fields) or any(
+    if not (REQUIRED_FIELDS | set(required_fields)).issubset(fields) or any(
         name not in values for name in fields
     ):
         raise FirstLoanConflict(
@@ -240,7 +390,17 @@ def _render_packet(record: dict) -> bytes:
     values = packet_fields(record)
     writer = PdfWriter()
     for kind in KINDS:
-        writer.append(PdfReader(io.BytesIO(_filled_pdf(files[kind], values))))
+        required = ()
+        if record["packet"].get("schema_version") == 2:
+            if kind == "disclosure":
+                required = DISCLOSURE_FIELDS
+            elif kind == "agreement":
+                required = COMPONENT_FIELDS
+        writer.append(
+            PdfReader(
+                io.BytesIO(_filled_pdf(files[kind], values, required_fields=required))
+            )
+        )
     writer.append(
         PdfReader(
             io.BytesIO(

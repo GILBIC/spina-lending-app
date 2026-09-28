@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v11';
+const CACHE_NAME = 'spina-company-shell-v13';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -13,6 +13,10 @@ const SHELL_ASSETS = [
   '/assets/presenters.js',
   '/assets/collector-contract.js',
   '/assets/collector-write-guard.js',
+  '/assets/collector-workflow-contract.js',
+  '/assets/collector-workflows.js',
+  '/assets/collector-other-area.js',
+  '/assets/collector-renewals.js',
   '/assets/remittance-review.js',
   '/assets/staff-invite.js',
   '/assets/management-devices.js',
@@ -30,6 +34,7 @@ const SHELL_ASSETS = [
   '/assets/office-privacy.js',
   '/assets/office-evidence-capture.js',
   '/assets/office-first-loan.js',
+  '/assets/first-loan-disclosure.js',
   '/assets/collector-onboarding-visit.js',
   '/assets/office-cif-review.js',
   '/assets/office-cif-correction.js',

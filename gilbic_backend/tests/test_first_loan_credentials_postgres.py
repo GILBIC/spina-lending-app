@@ -12,6 +12,7 @@ from test_client_cif_review_confirmation_postgres import (  # noqa: F401
 )
 from test_first_loan_postgres import setup, ready, private_fixture_configuration  # noqa: F401
 from gilbic_backend.account_repository import AccountConflict
+from first_loan_approval_fixtures import reviewed_setup
 from gilbic_backend import client_account_repository as accounts_module
 from gilbic_backend import first_loan_credential_service as service_module
 
@@ -69,7 +70,7 @@ def test_active_onboarding_client_cannot_receive_manual_credentials_before_relea
 def test_committed_release_provisions_one_reserved_auth_and_permanent_client_link(
     connection, monkeypatch
 ):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     repository.release(**args)
     acquire_on(connection, monkeypatch)
@@ -137,7 +138,7 @@ def test_committed_release_provisions_one_reserved_auth_and_permanent_client_lin
 def test_credential_intent_cannot_be_borrowed_by_another_client_or_auth_identity(
     connection, monkeypatch
 ):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     repository.release(**args)
     acquire_on(connection, monkeypatch)
@@ -165,7 +166,7 @@ def test_credential_intent_cannot_be_borrowed_by_another_client_or_auth_identity
 def test_revoked_device_blocks_credential_processing_without_reserving_auth(
     connection, monkeypatch
 ):
-    _, repository, case = setup(connection, monkeypatch)
+    _, repository, case = reviewed_setup(connection, monkeypatch)
     record, args = ready(repository, case)
     repository.release(**args)
     acquire_on(connection, monkeypatch)

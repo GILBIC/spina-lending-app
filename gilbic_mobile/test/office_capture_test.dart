@@ -14,6 +14,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'support/memory_private_image_store.dart';
+
 const clientId = '11111111-1111-4111-8111-111111111111';
 const cifId = '22222222-2222-4222-8222-222222222222';
 const evidenceId = '33333333-3333-4333-8333-333333333333';
@@ -113,6 +115,7 @@ Future<ImageRecoveryController> recoveredPhoto(ImagePickContext context) async {
       'path': null,
     });
   final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
     store: store,
     enabled: true,
     retrieveLostData: () async => LostDataResponse(

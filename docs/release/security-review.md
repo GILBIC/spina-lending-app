@@ -34,3 +34,13 @@ Before release acceptance, also record actual main-branch protection, independen
 review, deployment/secret ownership, private evidence access/retention, and alert
 delivery. At the starting checkpoint the repository reported no active main
 rules or classic protection. A green CI run does not establish those controls.
+
+On 28 September 2026, main protection was applied and read back: the three named
+SPINA CI checks must come from GitHub Actions, the branch must be up to date,
+pull-request conversations must be resolved, administrators are included, and
+force pushes/deletion are disabled. Required human approvals remain zero until
+actual independent review ownership is supplied. This closes the missing
+branch-protection setting, not the retained findings, rotation, deployment,
+private-file or alert-delivery evidence. See the
+[current implementation state](2026-09-28-implementation-state.md) and
+[recorded governance checkpoint](https://github.com/GILBIC/spina-lending-app/issues/448#issuecomment-5862043042).

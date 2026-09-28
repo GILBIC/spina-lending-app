@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -94,7 +95,7 @@ class _ManagementRenewalRequestsPageState
         if (draft.approvedPrincipal != null)
           ManagementReviewFact(
             label: 'Approved principal',
-            value: _money(draft.approvedPrincipal!),
+            value: '₱${requestMoney(draft.approvedPrincipal)}',
           ),
         if (draft.reviewNote.trim().isNotEmpty)
           ManagementReviewFact(
@@ -586,16 +587,19 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
               'Remaining old balance',
               _money(request.remainingBalance),
             ),
-            _LabelValue('Contractual total', _money(request.contractualTotal)),
+            _LabelValue('Contractual total', request.contractualTotal == null
+                ? 'Verified schedule unavailable'
+                : _money(request.contractualTotal!)),
             _LabelValue(
               'Paid toward contractual total',
-              '${_money(request.paidCash)} • ${request.paidPercent.toStringAsFixed(1)}%',
+              '${_money(request.paidCash)} • ${request.paidPercent == null ? 'Paid % unavailable' : '${request.paidPercent!.toStringAsFixed(1)}%'}',
             ),
             _LabelValue('Client requested', _money(request.requestedAmount)),
             if (!request.isSevenBySeven)
               _LabelValue(
                 'Regular 50% gate',
-                request.regular50PercentEligible ? 'Eligible' : 'Below 50%',
+                request.regular50PercentEligible ? 'Eligible'
+                    : request.paidPercent == null ? 'Verified schedule required' : 'Below 50%',
               ),
             if (request.isSevenBySeven)
               const _LabelValue(
@@ -841,7 +845,7 @@ class _ManagementRenewalTermsDialogState
   void initState() {
     super.initState();
     _principalController = TextEditingController(
-      text: widget.item.request.requestedAmount.toStringAsFixed(2),
+      text: widget.item.request.requestedAmountInput ?? '',
     );
   }
 
@@ -879,8 +883,8 @@ class _ManagementRenewalTermsDialogState
   }
 
   void _submit() {
-    final principal = double.tryParse(_principalController.text.trim());
-    if (principal == null || principal <= 0) {
+    final principal = tryRequestMoney(_principalController.text);
+    if ((requestMoneyCents(principal) ?? BigInt.zero) <= BigInt.zero) {
       setState(() => _error = 'Enter the approved new principal.');
       return;
     }

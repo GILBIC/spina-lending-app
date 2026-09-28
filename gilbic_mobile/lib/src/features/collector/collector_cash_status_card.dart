@@ -40,7 +40,8 @@ class CollectorCashStatusCard extends StatefulWidget {
   final ValueChanged<CollectorRenewalRequest>? onCashReleaseAlert;
 
   @override
-  State<CollectorCashStatusCard> createState() => _CollectorCashStatusCardState();
+  State<CollectorCashStatusCard> createState() =>
+      _CollectorCashStatusCardState();
 }
 
 class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
@@ -63,8 +64,10 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (!mounted) return;
 
     final canLoadCash = widget.session.hasPermission('remittance.view');
-    final canLoadRenewals =
-        widget.session.hasPermission('renewal.recommend.assigned');
+    final canLoadRenewals = widget.session.hasAnyPermission(const <String>[
+      'renewal.recommend.assigned',
+      'renewal.cash_custody.assigned',
+    ]);
 
     // A route-only Collector does not need a device identity or any cash/release
     // network request merely to render Daily Collection. Keeping this path local
@@ -119,10 +122,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (!mounted || _renewalAlertLoading) return;
     _renewalAlertLoading = true;
     try {
-      final requests = await _renewals.list(
-        widget.session,
-        deviceId: deviceId,
-      );
+      final requests = await _renewals.list(widget.session, deviceId: deviceId);
       if (!mounted) return;
       for (final request in requests) {
         if (request.canConfirmCashReceived) {
@@ -166,9 +166,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               Expanded(
                 child: Text(
                   'Field cash',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
               IconButton(
@@ -237,9 +237,9 @@ class _PrimaryCashHeldTile extends StatelessWidget {
                     Text(
                       'Cash held',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: SpinaTheme.brandPinkDark,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        color: SpinaTheme.brandPinkDark,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     const SizedBox(height: 1),
                     Text(
@@ -254,9 +254,9 @@ class _PrimaryCashHeldTile extends StatelessWidget {
                 _money(amount),
                 key: const Key('collector-total-cash-held-value'),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: SpinaTheme.brandPinkDark,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  color: SpinaTheme.brandPinkDark,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),
@@ -291,9 +291,9 @@ class _PrimaryCashHeldTile extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               'Different collector breakdown',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
             for (final item in otherAreaByCollector)
@@ -316,9 +316,9 @@ class _PrimaryCashHeldTile extends StatelessWidget {
                     Text(
                       _money(item.amount),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: SpinaTheme.brandPinkDark,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        color: SpinaTheme.brandPinkDark,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),
@@ -351,17 +351,17 @@ class _CashHeldBreakdown extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 1),
         Text(
           _money(amount),
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: SpinaTheme.brandPinkDark,
-                fontWeight: FontWeight.w900,
-              ),
+            color: SpinaTheme.brandPinkDark,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         Text(
           subtitle,

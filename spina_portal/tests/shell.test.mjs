@@ -65,7 +65,7 @@ test('service worker explicitly bypasses authenticated API and health traffic', 
 test('service worker refreshes the shell and includes the office CIF review modules', async () => {
   const serviceWorker = await text('../sw.js');
 
-  assert.match(serviceWorker, /spina-company-shell-v11/);
+  assert.match(serviceWorker, /spina-company-shell-v13/);
   assert.match(serviceWorker, /'\/assets\/collector-write-guard\.js'/);
   assert.match(serviceWorker, /'\/assets\/remittance-review\.js'/);
   assert.match(serviceWorker, /'\/assets\/office-evidence-capture\.js'/);
@@ -91,6 +91,13 @@ test('service worker precaches the Client schedule module imported by Client wor
 
   assert.match(clientWorkspace, /from '\.\.\/client-schedule\.js'/);
   assert.match(serviceWorker, /'\/assets\/client-schedule\.js'/);
+});
+
+test('service worker precaches every Collector workflow dependency', async () => {
+  const serviceWorker = await text('../sw.js');
+  for (const module of ['collector-workflow-contract','collector-workflows','collector-other-area','collector-renewals']) {
+    assert.ok(serviceWorker.includes(`/assets/${module}.js`));
+  }
 });
 
 test('service worker precaches the Client GCash module imported by Client workspace', async () => {

@@ -11,6 +11,27 @@ import 'package:gilbic_mobile/src/features/client/client_renewal_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_renewal_workflow_page.dart';
 
 void main() {
+  testWidgets('missing verified schedule shows unavailable percentage without a progress bar',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClientRenewalPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeClientRenewalRepository(scheduleAvailable: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paid % unavailable'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    final requestButton = find.byKey(const Key('request-renewal-regular-loan'));
+    await tester.scrollUntilVisible(requestButton, 250,
+        scrollable: find.byType(Scrollable).first);
+    expect(tester.widget<FilledButton>(requestButton).onPressed, isNull);
+  });
+
   testWidgets('client can submit and monitor a renewal request',
       (tester) async {
     final repository = _FakeClientRenewalRepository();
@@ -127,9 +148,10 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 }
 
 class _FakeClientRenewalRepository implements ClientRenewalRepository {
-  _FakeClientRenewalRepository({this.status = 'pending'});
+  _FakeClientRenewalRepository({this.status = 'pending', this.scheduleAvailable = true});
 
   final String status;
+  final bool scheduleAvailable;
   String? deviceId;
   String? submittedLoanId;
   String? submittedAmount;
@@ -154,15 +176,15 @@ class _FakeClientRenewalRepository implements ClientRenewalRepository {
           loanTypeName: 'Regular',
           calculationMode: 'fixed_daily',
           principal: 5000,
-          contractualTotal: 6000,
+          contractualTotal: scheduleAvailable ? 6000 : null,
           remainingBalance: 4900,
           paidAmount: 100,
-          paidPercent: 1.7,
+          paidPercent: scheduleAvailable ? 1.7 : null,
           dailyAmount: 50,
           dateReleased: DateTime(2026, 8, 1),
           dueDate: DateTime(2026, 11, 29),
           status: 'active',
-          eligible: true,
+          eligible: scheduleAvailable,
           eligibilityMessage:
               'Management will review this request before office processing.',
           pendingRequestId: status == 'approved' ? 'request-1' : null,

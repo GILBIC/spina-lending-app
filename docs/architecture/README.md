@@ -2,14 +2,15 @@
 
 This directory is the navigation center for understanding the whole lending platform, tracking delivery progress, and debugging problems without guessing which layer owns them.
 
-**Current product snapshot:** 2026-08-01 (Asia/Manila)
+**Current implementation state:** [28 September 2026](../release/2026-09-28-implementation-state.md), Asia/Manila. Generated desktop maps keep their own source dates.
 
 ## Start here
 
 | Need | Open |
 |---|---|
 | Understand the whole platform | [`system-map.md`](system-map.md) |
-| See completed, current, blocked, and next work | [`progress-map.md`](progress-map.md) |
+| See implementation, configuration and acceptance gaps | [Dated current state](../release/2026-09-28-implementation-state.md) |
+| Read historical progress context | [`progress-map.md`](progress-map.md), archived |
 | Diagnose an error by symptom and layer | [`debugging-playbook.md`](debugging-playbook.md) |
 | See the generated desktop feature inventory | [`feature-map.md`](feature-map.md) |
 | Find a desktop Python function or method | [`function-index.md`](function-index.md) |
@@ -23,7 +24,7 @@ This directory is the navigation center for understanding the whole lending plat
 The repository intentionally keeps two complementary architecture views:
 
 1. **Generated desktop map** — `architecture-map.json` and the generated Markdown files. These are produced from Python source and should not be edited by hand.
-2. **Living product map** — `system-map.md`, `progress-map.md`, and `debugging-playbook.md`. These connect Desktop, Mobile, FastAPI, Supabase/PostgreSQL, CI, and legacy/external boundaries.
+2. **Product ownership map** — `system-map.md` and `debugging-playbook.md` connect Desktop, Mobile, FastAPI, Supabase/PostgreSQL, CI, and legacy/external boundaries. The dated current state tracks implementation and acceptance; `progress-map.md` is an archive.
 
 The generated map answers **“where is this desktop symbol and what calls it?”** The living map answers **“which product layer owns this behavior, what is finished, and where do I start debugging?”**
 
@@ -66,7 +67,7 @@ Python desktop changes must continue to regenerate and validate the static archi
 
 Before starting a new wave:
 
-1. Read the current critical path in `progress-map.md`.
+1. Read the current [implementation and acceptance state](../release/2026-09-28-implementation-state.md) and its live GitHub checkpoints.
 2. Locate the owning component in `system-map.md`.
 3. Use `debugging-playbook.md` to identify the IDs and evidence the change must preserve.
 4. Open one focused branch and pull request.

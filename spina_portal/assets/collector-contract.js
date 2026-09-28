@@ -19,16 +19,27 @@ function requiredText(value, label) {
   return normalized;
 }
 
-function normalizeMoney(value, label = 'Payment amount') {
+export function normalizeMoney(value, label = 'Payment amount') {
+  // At 2^46 a Number can no longer distinguish every adjacent cent.
+  if (typeof value === 'number' && (!Number.isFinite(value) || Math.abs(value) >= 2 ** 46)) {
+    throw new TypeError(`${label} must be provided as decimal text.`);
+  }
   const normalized = String(value ?? '').trim().replace(/,/g, '');
   if (!MONEY_PATTERN.test(normalized)) {
     throw new TypeError(`${label} must be a valid peso amount.`);
   }
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const [rawWhole, rawFraction = ''] = normalized.split('.');
+  const whole = rawWhole.replace(/^0+(?=\d)/, '');
+  const fraction = rawFraction.padEnd(2, '0');
+  // The collection contract stores numeric(18,2). Keep decimal text all the
+  // way to JSON; Number loses cents within that supported range.
+  if (whole.length > 16) {
+    throw new TypeError(`${label} exceeds the supported 16 whole digits.`);
+  }
+  if (!/[1-9]/.test(`${whole}${fraction}`)) {
     throw new TypeError(`${label} must be greater than zero.`);
   }
-  return amount.toFixed(2);
+  return `${whole}.${fraction}`;
 }
 
 function normalizeRecordedAt(value) {
@@ -90,6 +101,8 @@ export function buildCollectionSubmission({
   amount,
   note = '',
   pastDueFollowup = null,
+  coveredDates = [],
+  paymentAllocationIntent = 'scheduled',
   deviceId,
   deviceSequence,
   clientTransactionId,
@@ -111,14 +124,21 @@ export function buildCollectionSubmission({
     throw new TypeError('Device sequence must be a positive integer.');
   }
   const normalizedType = String(entryType ?? '').trim().toLowerCase();
-  if (!['payment', 'pass'].includes(normalizedType)) {
-    throw new TypeError('Spina supports Payment and Unable to pay entries only.');
+  if (!['payment', 'advance', 'pass'].includes(normalizedType)) {
+    throw new TypeError('Choose Payment, Covered-date payment or Unable to pay.');
   }
+  if (!Array.isArray(coveredDates) || coveredDates.some(date => !DATE_PATTERN.test(date)) || new Set(coveredDates).size !== coveredDates.length) throw new TypeError('Choose valid, unique covered dates.');
+  const dates = [...coveredDates].sort();
+  if (normalizedType === 'advance' && !dates.length) throw new TypeError('Choose at least one saved covered date.');
+  if (normalizedType !== 'advance' && dates.length) throw new TypeError('Choose Covered-date payment to select installment dates.');
+  if (!['scheduled','no_collection_voluntary','extra_as_advance','extra_as_principal_reduction'].includes(paymentAllocationIntent)) throw new TypeError('Choose a supported payment allocation.');
+  if (normalizedType !== 'payment' && paymentAllocationIntent !== 'scheduled') throw new TypeError('Extra allocation applies only to Payment.');
 
   let normalizedAmount = null;
   let normalizedFollowup = null;
-  if (normalizedType === 'payment') {
+  if (normalizedType !== 'pass') {
     normalizedAmount = normalizeMoney(amount);
+    if (normalizedType === 'advance' && pastDueFollowup != null) throw new TypeError('Covered-date payment cannot contain a Past Due follow-up.');
     if (pastDueFollowup != null) {
       normalizedFollowup = normalizePastDueFollowup(pastDueFollowup, collectionDate);
     }
@@ -134,15 +154,15 @@ export function buildCollectionSubmission({
     collection_date: collectionDate,
     entry_type: normalizedType,
     amount: normalizedAmount,
-    advance_from: null,
-    advance_until: null,
-    covered_dates: [],
+    advance_from: normalizedType === 'advance' ? dates[0] : null,
+    advance_until: normalizedType === 'advance' ? dates.at(-1) : null,
+    covered_dates: dates,
     recorded_at: normalizeRecordedAt(recordedAt),
     device_id: installationId,
     device_sequence: deviceSequence,
     note: String(note ?? '').trim(),
     route_revision: String(entry.route_revision ?? '').trim() || null,
-    payment_allocation_intent: 'scheduled',
+    payment_allocation_intent: paymentAllocationIntent,
     past_due_followup: normalizedFollowup,
   };
 

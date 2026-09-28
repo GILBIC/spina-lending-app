@@ -40,6 +40,11 @@ class _CollectorRenewalRequestsPageState
   bool _loading = true;
   final Set<String> _busy = <String>{};
 
+  bool get _canRecommend =>
+      widget.session.hasPermission('renewal.recommend.assigned');
+  bool get _canHandleCash =>
+      widget.session.hasPermission('renewal.cash_custody.assigned');
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +85,7 @@ class _CollectorRenewalRequestsPageState
     CollectorRenewalRequest request,
     String recommendation,
   ) async {
+    if (!_canRecommend) return;
     final result = await showDialog<_RecommendationDraft>(
       context: context,
       builder: (context) =>
@@ -105,6 +111,7 @@ class _CollectorRenewalRequestsPageState
   }
 
   Future<void> _confirmCashReceived(CollectorRenewalRequest request) async {
+    if (!_canHandleCash) return;
     if (!await _confirm(
       title: 'Confirm cash received?',
       message:
@@ -127,6 +134,7 @@ class _CollectorRenewalRequestsPageState
   }
 
   Future<void> _confirmCashGiven(CollectorRenewalRequest request) async {
+    if (!_canHandleCash) return;
     if (!await _confirm(
       title: 'Confirm cash given to client?',
       message:
@@ -150,6 +158,7 @@ class _CollectorRenewalRequestsPageState
   }
 
   Future<void> _captureProof(CollectorRenewalRequest request) async {
+    if (!_canHandleCash) return;
     final deviceId = _deviceId;
     if (deviceId == null || _busy.contains(request.requestId)) return;
     final source = await showModalBottomSheet<ImageSource>(
@@ -312,6 +321,8 @@ class _CollectorRenewalRequestsPageState
                 _RenewalCard(
                   request: request,
                   busy: _busy.contains(request.requestId),
+                  canRecommend: _canRecommend,
+                  canHandleCash: _canHandleCash,
                   onRecommend: () => _recommend(request, 'recommend'),
                   onDoNotRecommend: () =>
                       _recommend(request, 'do_not_recommend'),
@@ -349,6 +360,8 @@ class _RenewalCard extends StatelessWidget {
   const _RenewalCard({
     required this.request,
     required this.busy,
+    required this.canRecommend,
+    required this.canHandleCash,
     required this.onRecommend,
     required this.onDoNotRecommend,
     required this.onCashReceived,
@@ -358,6 +371,8 @@ class _RenewalCard extends StatelessWidget {
 
   final CollectorRenewalRequest request;
   final bool busy;
+  final bool canRecommend;
+  final bool canHandleCash;
   final VoidCallback onRecommend;
   final VoidCallback onDoNotRecommend;
   final VoidCallback onCashReceived;
@@ -401,11 +416,13 @@ class _RenewalCard extends StatelessWidget {
               'Current principal ${_money(request.currentPrincipal)} • Remaining ${_money(request.remainingBalance)}',
             ),
             Text(
-              'Total contractual ${_money(request.contractualTotal)} • Paid ${request.paidPercent.toStringAsFixed(1)}%',
+              'Total contractual ${request.contractualTotal == null ? 'unavailable' : _money(request.contractualTotal!)} • ${request.paidPercent == null ? 'Paid % unavailable' : 'Paid ${request.paidPercent!.toStringAsFixed(1)}%'}',
             ),
             if (!request.isSevenBySeven && !request.regular50PercentEligible)
-              const Text(
-                'Below normal 50% Regular threshold — only a controlled Management override may approve.',
+              Text(
+                request.paidPercent == null
+                    ? 'A verified signed schedule is required to assess the Regular 50% renewal threshold.'
+                    : 'Below normal 50% Regular threshold — only a controlled Management override may approve.',
               ),
             if (request.isSevenBySeven)
               const Text(
@@ -415,7 +432,7 @@ class _RenewalCard extends StatelessWidget {
             Text('Client requested: ${_money(request.requestedAmount)}'),
             if (request.clientMessage.isNotEmpty)
               Text('Client note: ${request.clientMessage}'),
-            if (request.needsCollectorRecommendation) ...[
+            if (canRecommend && request.needsCollectorRecommendation) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -514,7 +531,7 @@ class _RenewalCard extends StatelessWidget {
                 request.clientCashConfirmedAt != null,
               ),
             ],
-            if (request.canConfirmCashReceived) ...[
+            if (canHandleCash && request.canConfirmCashReceived) ...[
               const SizedBox(height: 10),
               FilledButton.icon(
                 key: Key('renewal-cash-received-${request.requestId}'),
@@ -525,7 +542,7 @@ class _RenewalCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (request.canConfirmCashGiven) ...[
+            if (canHandleCash && request.canConfirmCashGiven) ...[
               const SizedBox(height: 10),
               FilledButton.icon(
                 key: Key('renewal-cash-given-${request.requestId}'),
@@ -542,7 +559,7 @@ class _RenewalCard extends StatelessWidget {
                 'Proof: ${_proofLabel(request.handoverProofStatus)}',
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
-              if (request.needsPhoto)
+              if (canHandleCash && request.needsPhoto)
                 OutlinedButton.icon(
                   key: Key('renewal-proof-${request.requestId}'),
                   onPressed: busy ? null : onProof,
