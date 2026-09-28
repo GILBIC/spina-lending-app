@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:gilbic_mobile/src/core/media/private_image_store.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as paths;
-
-import 'private_image_store.dart';
 
 class ImagePickContext {
   const ImagePickContext({

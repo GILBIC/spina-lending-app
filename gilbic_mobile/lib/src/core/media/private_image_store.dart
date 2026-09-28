@@ -89,7 +89,9 @@ class PrivateImageStore {
       }
     }
     if (await FileSystemEntity.type(marker, followLinks: false) !=
-        FileSystemEntityType.file) return null;
+        FileSystemEntityType.file) {
+      return null;
+    }
     try {
       final value = jsonDecode(await File(marker).readAsString());
       if (value is! Map<String, dynamic> ||
