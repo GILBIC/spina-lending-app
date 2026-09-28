@@ -60,6 +60,101 @@ Map<String, dynamic> workspace({bool owner = false}) => {
 
 void main() {
   testWidgets(
+    'history correction prefills facts and locks original provenance',
+    (tester) async {
+      final commands = <Map<String, dynamic>>[];
+      final repository = EmployeeOperationsRepository(
+        StaffOperationsClient(
+          deviceIdentityProvider: identity(),
+          client: MockClient((request) async {
+            final command = jsonDecode(request.body) as Map<String, dynamic>;
+            commands.add(command);
+            return http.Response(
+              jsonEncode({
+                'id': command['id'],
+                'request_id': command['request_id'],
+                'version': 1,
+                'status': 'accepted',
+              }),
+              200,
+            );
+          }),
+        ),
+      );
+      final record = {
+        'id': recordId,
+        'employee_id': user,
+        'version': 3,
+        'payload': {
+          'year': 2026,
+          'through_date': '2026-08-31',
+          'basic_earned': '10000.15',
+          'taxable_earned': '11000.25',
+          'tax_withheld': '100.10',
+          'thirteenth_paid': '500.20',
+          'other_benefits_paid': '50.30',
+          'source': 'Verified original records',
+        },
+      };
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EmployeeCommandForm(
+            session: employeeSession,
+            workspace: EmployeeWorkspace.parse(
+              workspace(owner: true),
+              employeeSession,
+            ),
+            repository: repository,
+            action: 'payroll_history_correct',
+            record: record,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const Key('employee-field-basic_earned')),
+            )
+            .controller!
+            .text,
+        '10000.15',
+      );
+      expect(
+        find.byKey(const Key('employee-field-original_history_id')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('employee-field-original_expected_version')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('employee-field-year')), findsNothing);
+      await tester.enterText(
+        find.byKey(const Key('employee-field-basic_earned')),
+        '10001.16',
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('employee-field-reason')), 350,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.byKey(const Key('employee-field-reason')),
+        'Corrected transcription',
+      );
+      await tester.ensureVisible(find.byKey(const Key('employee-submit')));
+      await tester.tap(find.byKey(const Key('employee-submit')));
+      await tester.pumpAndSettle();
+      expect(commands.single['original_history_id'], recordId);
+      expect(commands.single['original_expected_version'], 3);
+      expect(commands.single['id'], isNot(recordId));
+      expect(commands.single['expected_version'], 0);
+      expect(commands.single['basic_earned'], '10001.16');
+      expect(commands.single['year'], 2026);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
     'owner without an employee identity can select actual staff during private setup',
     (tester) async {
       final provider = identity();

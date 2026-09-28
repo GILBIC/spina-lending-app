@@ -20,6 +20,7 @@ pytestmark = pytest.mark.skipif(
 SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
 SQL_0091 = (SQL_ROOT / "0091_add_protected_period_close.sql").read_text(encoding="utf-8")
 SQL_0092 = (SQL_ROOT / "0092_harden_period_close_balance_scope.sql").read_text(encoding="utf-8")
+SQL_0130 = (SQL_ROOT / "0130_guard_period_close_unfiltered_balances.sql").read_text(encoding="utf-8")
 POLICY = "period_close_retained_earnings_v1"
 
 
@@ -32,6 +33,7 @@ def _body(source: str) -> str:
 def _install(connection: psycopg.Connection) -> None:
     connection.execute(_body(SQL_0091))
     connection.execute(_body(SQL_0092))
+    connection.execute(_body(SQL_0130))
 
 
 def _management_actor(connection: psycopg.Connection, suffix: str):

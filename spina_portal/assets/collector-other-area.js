@@ -6,18 +6,18 @@ import {formatAuthoritativeMoney as formatMoney} from './client-schedule.js';
 
 const val=(root,name)=>root.querySelector(`[name="${name}"]`)?.value || '';
 const available=entry=>entry.can_collect_mobile === true && entry.can_enter_payment === true && !entry.processed_today && Boolean(entry.route_revision);
-export function renderOtherAreaEntries(entries) {
-  return entries.map((entry,index)=>`<article class="list-item"><h3>${h(entry.client_name)} · ${h(entry.loan_type)}</h3><p>${h(entry.area)} · Assigned Collector: ${h(entry.assigned_collector_name)} · Balance ${formatMoney(entry.remaining_balance)}</p>${available(entry) ? `<form data-other-payment="${index}" class="entry-form"><label>Cash received<input name="amount" inputmode="decimal" required /></label>${allocationField()}${followupFields()}<label>Note<textarea name="note" maxlength="500"></textarea></label><label><input name="recorderConfirmation" type="checkbox" required />I am recording this collection. The assigned Collector remains ${h(entry.assigned_collector_name)}.</label><button type="submit" class="button button-primary">Save cross-area payment</button></form>` : `<p>${h(entry.processed_today ? `Recorded today by ${entry.today_collector_name || 'another collector'}.` : entry.collection_message || 'Collection unavailable.')}</p>`}</article>`).join('') || '<p>No matching other-area client is available.</p>';
+export function renderOtherAreaEntries(entries,mode='collector') {
+  return entries.map((entry,index)=>`<article class="list-item"><h3>${h(entry.client_name)} · ${h(entry.loan_type)}</h3><p>${h(entry.area)} · Assigned Collector: ${h(entry.assigned_collector_name)} · Balance ${formatMoney(entry.remaining_balance)}</p>${available(entry) ? `<form data-other-payment="${index}" class="entry-form"><label>Cash received<input name="amount" inputmode="decimal" required /></label>${allocationField()}${followupFields()}<label>Note<textarea name="note" maxlength="500"></textarea></label><label><input name="recorderConfirmation" type="checkbox" required />I am recording this collection. The assigned Collector remains ${h(entry.assigned_collector_name)}.</label><button type="submit" class="button button-primary">${mode==='management'?'Save direct payment':'Save cross-area payment'}</button></form>` : `<p>${h(entry.processed_today ? `Recorded today by ${entry.today_collector_name || 'another collector'}.` : entry.collection_message || 'Collection unavailable.')}</p>`}</article>`).join('') || '<p>No matching other-area client is available.</p>';
 }
 
-export function mountCollectorOtherArea({root,api,session,routeDate,guard,identity,onSaved,signal}) {
+export function mountCollectorOtherArea({root,api,session,routeDate,guard,identity,onSaved,signal,mode='collector'}) {
   if(!/^\d{4}-\d{2}-\d{2}$/.test(routeDate || '')) {
     root.textContent='Refresh today’s route before searching or collecting other-area payments.';
     return ()=>{};
   }
   let disposed=false;let searchVersion=0;let previewVersion=0;let reviewedTarget=null;
   const current=()=>!disposed && guard.current && !signal?.aborted;
-  root.innerHTML=`<h2>Other-area collection</h2><p>You remain the recorder. Assigned ownership and cash custody are preserved by SPINA.</p><form data-other-search class="entry-form"><label>Client name, code, phone or area<input name="query" minlength="2" maxlength="120" required /></label><button class="button button-outline" type="submit">Search other-area clients</button></form><div data-other-results></div><div data-cross-remittance></div><div data-other-status role="status"></div>`;
+  root.innerHTML=`<h2>${mode==='management'?'Direct payment':'Other-area collection'}</h2><p>You remain the recorder. Assigned ownership and cash custody are preserved by SPINA.</p><form data-other-search class="entry-form"><label>Client name, code, phone or area<input name="query" minlength="2" maxlength="120" required /></label><button class="button button-outline" type="submit">${mode==='management'?'Find client':'Search other-area clients'}</button></form><div data-other-results></div><div data-cross-remittance></div><div data-other-status role="status"></div>`;
   const status=message=>{if(current()) root.querySelector('[data-other-status]').textContent=message;};
   const run=async operation=>{
     if(!current() || !guard.begin()) return;
@@ -33,7 +33,7 @@ export function mountCollectorOtherArea({root,api,session,routeDate,guard,identi
       const response=await api.request(`/api/v1/collector/other-area-clients/search?q=${encodeURIComponent(query)}&limit=25`);
       if(!current() || version!==searchVersion)return;
       const entries=Array.isArray(response)?response:[];
-      const results=root.querySelector('[data-other-results]');results.innerHTML=renderOtherAreaEntries(entries);
+      const results=root.querySelector('[data-other-results]');results.innerHTML=renderOtherAreaEntries(entries,mode);
       for(const form of results.querySelectorAll('[data-other-payment]'))form.addEventListener('submit',event=>{
         event.preventDefault();run(async()=>{
           const entry=entries[Number(form.getAttribute('data-other-payment'))];
@@ -80,7 +80,7 @@ export function mountCollectorOtherArea({root,api,session,routeDate,guard,identi
       guard.sync();
     }catch(error){if(current())container.textContent=error.message;}
   };
-  if(routeDate && (hasPermission(session,'remittance.create') || hasPermission(session,'remittance.view')))loadRemittance();
+  if(mode!=='management' && routeDate && (hasPermission(session,'remittance.create') || hasPermission(session,'remittance.view')))loadRemittance();
   function dispose(){disposed=true;searchVersion+=1;previewVersion+=1;signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();
   return dispose;

@@ -38,7 +38,18 @@ def verify_helper_contract() -> None:
                     "run_id": 12345,
                     "droplet_id": 67890,
                     "host": "159.223.39.43",
-                    "hostname": "spina.159-223-39-43.sslip.io",
+                    "hostname": "spina.com.ph",
+                    "aliases": [
+                        "app.spina.com.ph",
+                        "api.spina.com.ph",
+                        "www.spina.com.ph",
+                        "spina.159-223-39-43.sslip.io",
+                    ],
+                    "cors_origins": [
+                        "https://spina.com.ph",
+                        "https://app.spina.com.ph",
+                    ],
+                    "staff_invite_redirect_url": "https://app.spina.com.ph/",
                 }
             ),
             encoding="utf-8",
@@ -96,7 +107,8 @@ def verify_helper_contract() -> None:
             "direct IPv6 database URL must not reach the Droplet",
         )
         require(
-            'GILBIC_CORS_ORIGINS="https://spina.159-223-39-43.sslip.io"' in env_text,
+            'GILBIC_CORS_ORIGINS="https://spina.com.ph,https://app.spina.com.ph"'
+            in env_text,
             "public HTTPS origin is missing",
         )
         # Windows chmod does not express POSIX owner-only permissions. Production
@@ -107,6 +119,25 @@ def verify_helper_contract() -> None:
                 "environment file must be 0600",
             )
         evidence_path = directory / "evidence.json"
+        checks_path = directory / "public-checks.json"
+        target = json.loads(target_path.read_text(encoding="utf-8"))
+        checks_path.write_text(
+            json.dumps(
+                {
+                    "run_id": target["run_id"],
+                    "domains": {
+                        host: {
+                            "liveness": "ok",
+                            "readiness": "ready",
+                            "database": "ok",
+                            "portal": "ok",
+                        }
+                        for host in [target["hostname"], *target["aliases"]]
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
         requested_sha = "a" * 40
         for active_sha, expected_success in (("b" * 40, False), (requested_sha, True)):
             evidence = run_helper(
@@ -119,6 +150,8 @@ def verify_helper_contract() -> None:
                 requested_sha,
                 "--verified-active-sha",
                 active_sha,
+                "--public-checks",
+                str(checks_path),
             )
             require(
                 (evidence.returncode == 0) == expected_success,
@@ -203,27 +236,52 @@ def main() -> None:
         "dpkg --configure -a" in bootstrap, "interrupted package state must be repaired"
     )
 
-    require("id-token: write" in workflow, "workflow must request GitHub OIDC")
     require(
-        "https://$HOSTNAME/health/live" in workflow, "public liveness must use HTTPS"
+        "contents: read" in workflow and "contents: write" not in workflow,
+        "deployment must not write protected source branches",
     )
     require(
-        "https://$HOSTNAME/health/ready" in workflow, "public readiness must use HTTPS"
-    )
-    require('database == "ok"' in workflow, "database readiness must be asserted")
-    require("ssh-keygen -t ed25519" in workflow, "deployment key must be ephemeral")
-    require(
-        "digitalocean-public-key.txt" in workflow, "public-key rendezvous is required"
-    )
-    require("digitalocean-target.json" in workflow, "target rendezvous is required")
-    require(
-        'if encoded_target="$(gh api' in workflow,
-        "missing rendezvous must be handled by command status",
+        "environment: Production" in workflow,
+        "deployment credentials must use the protected production environment",
     )
     require(
-        'digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null || true'
-        not in workflow,
-        "missing rendezvous must not be decoded as base64",
+        "github.ref == 'refs/heads/main' && github.ref_protected == true" in workflow,
+        "deployment must reject non-protected source",
+    )
+    require(
+        "prepare-inputs --directory /tmp" in workflow,
+        "trusted workflow context and production inputs must be validated",
+    )
+    require(
+        "workflow_helper.py verify-public" in workflow,
+        "public verification must cover declared domains",
+    )
+    require(
+        "--public-checks /tmp/spina-public-checks.json" in workflow,
+        "evidence must require completed domain verification",
+    )
+    require(
+        "SPINA_DEPLOY_SSH_KEY" in workflow,
+        "deployment requires an environment-owned SSH credential",
+    )
+    require(
+        "SPINA_DEPLOY_KNOWN_HOSTS" in workflow,
+        "deployment requires an independently verified host pin",
+    )
+    require(
+        "ssh-keyscan" not in workflow, "network scans must never establish host trust"
+    )
+    require(
+        'ssh-keygen -F "$HOST" -f /tmp/spina-known-hosts' in workflow,
+        "host pin must cover the declared target before upload",
+    )
+    require(
+        "StrictHostKeyChecking=yes" in workflow,
+        "SSH must reject an identity that differs from the pin",
+    )
+    require(
+        "SECRET_BROKER_URL" not in workflow and "put_branch_file" not in workflow,
+        "deployment must not rely on the unavailable broker or branch rendezvous",
     )
     require("trap 'rm -f" in workflow, "temporary secret files must be deleted")
     require(
@@ -242,16 +300,17 @@ def main() -> None:
     )
 
     require(
-        "spina-digitalocean-run-${GITHUB_RUN_ID}" in workflow,
-        "workflow key cleanup must target the exact run comment",
+        "authorized_keys" not in workflow,
+        "redeployment must not remove a managed deployment or recovery key",
     )
     require(
-        "/root/.ssh/authorized_keys" in workflow,
-        "workflow must clean the server authorized_keys file",
+        "--require-hashes --only-binary=:all:" in bootstrap
+        and "--no-build-isolation" in bootstrap,
+        "runtime and build dependencies must use the verified lock",
     )
     require(
-        "grep -vF" in workflow,
-        "workflow must remove only the exact short-lived key comment",
+        "requirements-runtime.lock" in workflow,
+        "immutable release archive must include the runtime lock",
     )
 
     require(

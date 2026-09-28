@@ -1240,3 +1240,10 @@ details > :not(summary) {
 .employee-checkbox input { width: auto; min-height: auto; }
 #workspace-choice-label { min-width: 140px; }
 #workspace-choice-label[hidden] { display: none; }
+
+.accounting-actions { flex-wrap: wrap; }
+.accounting-details > div { min-width: 0; }
+.accounting-details dt { color: var(--ink-600); font-size: 0.8rem; }
+.accounting-details dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
+[data-journal-form] fieldset { min-width: 0; }
+[data-evidence-form] fieldset { min-width: 0; grid-column: 1 / -1; }

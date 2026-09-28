@@ -21,6 +21,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_period_close_api_contract.py",
     TEST_ROOT / "test_period_close_postgres.py",
     TEST_ROOT / "test_period_close_loss_postgres.py",
+    TEST_ROOT / "test_period_close_unfiltered_postgres.py",
 )
 
 
@@ -40,6 +41,7 @@ def _run_tests(test_database_url: str) -> int:
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
+    env["SPINA_ALLOW_DISPOSABLE_DATABASE"] = "1"
     completed = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", *(str(path) for path in INTEGRATION_TESTS)],
         env=env,
@@ -52,7 +54,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through A6.2/0090, then apply A6.3 migrations 0091-0092 only "
+            "SPINA schema through A6.2/0090, then apply close migrations 0091-0092 and 0130 only "
             "inside rollback-isolated tests and prove formal Management period close, exact "
             "direct transfer of period profit/loss to 3100 Retained Earnings, review-period "
             "freeze, closed-period write protection, immutable close audit/retry identity, "
@@ -116,7 +118,7 @@ def main() -> int:
         print(
             "Period-close disposable PostgreSQL validation passed: current main schema through "
             "A6.2/0090 was replayed into a fresh loopback-only database; A6.3 migrations "
-            "0091-0092 were applied only inside rollback-isolated tests and proved Management-only "
+            "0091-0092 and 0130 were applied only inside rollback-isolated tests and proved Management-only "
             "open-to-review freeze, exact posted-period balance scoping, exact income/expense "
             "temporary-account closing coordinates, exact profit and loss transfer to existing "
             "3100 Retained Earnings, deterministic preparation/retry, exact review-period close "

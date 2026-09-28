@@ -10,6 +10,36 @@ import 'package:gilbic_mobile/src/features/management/management_general_journal
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
 void main() {
+  testWidgets(
+    'Linked reversal draft can post but cannot be edited or cancelled',
+    (tester) async {
+      final repository = _FakeGeneralJournalRepository(
+        sourceType: 'reversal',
+        reversalOfEntryId: 'original-1',
+      );
+      await _pumpCompactJournalPage(tester, repository);
+      await _expandEntry(tester, title: 'Draft journal');
+      expect(find.byKey(const Key('post-journal-entry-1')), findsOneWidget);
+      expect(find.byKey(const Key('edit-journal-entry-1')), findsNothing);
+      expect(find.byKey(const Key('cancel-journal-entry-1')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Generated journal drafts stay in their protected posting workflow',
+    (tester) async {
+      final repository = _FakeGeneralJournalRepository(
+        sourceType: 'loan_interest',
+      );
+      await _pumpCompactJournalPage(tester, repository);
+      await _expandEntry(tester, title: 'Draft journal');
+      expect(find.byKey(const Key('post-journal-entry-1')), findsNothing);
+      expect(find.byKey(const Key('edit-journal-entry-1')), findsNothing);
+      expect(find.byKey(const Key('cancel-journal-entry-1')), findsNothing);
+      expect(repository.postCalls, 0);
+    },
+  );
+
   testWidgets('Journal rejects fractional cents instead of rounding', (
     tester,
   ) async {
@@ -425,7 +455,14 @@ final _periods = <AccountingFiscalPeriod>[
 ];
 
 class _FakeGeneralJournalRepository implements GeneralJournalRepository {
-  _FakeGeneralJournalRepository({this.posted = false});
+  _FakeGeneralJournalRepository({
+    this.posted = false,
+    this.sourceType = 'manual',
+    this.reversalOfEntryId,
+  });
+
+  final String sourceType;
+  final String? reversalOfEntryId;
 
   final bool posted;
   SpinaApiException? createError;
@@ -457,9 +494,9 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     postingDate: DateTime(2026, 8, 8),
     description: 'Test manual journal',
     status: posted ? 'posted' : 'draft',
-    sourceType: 'manual',
+    sourceType: sourceType,
     sourceReference: null,
-    reversalOfEntryId: null,
+    reversalOfEntryId: reversalOfEntryId,
     createdByName: 'Management',
     postedByName: posted ? 'Management' : null,
     createdAt: DateTime(2026, 8, 8),

@@ -1,0 +1,4 @@
+# Reviewed false positive: a synthetic Caddy configuration fixture containing
+# public hostnames and redirects, not a credential. Ignore only this historical
+# finding; full-history scanning and the retained scanner baseline stay intact.
+9b63194214df385c0cd595ddf276cad3be3587ca:tests/test_deployment_recovery.py:generic-api-key:270

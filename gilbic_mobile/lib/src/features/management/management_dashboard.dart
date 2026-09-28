@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_alerts_audit.dart';
@@ -240,7 +241,11 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     }
 
     final page = switch (module.action) {
-      _ManagementAction.employeeOperations => EmployeeOperationsPage(session: session, deviceIdentityProvider: deviceIdentityProvider, initialSection: EmployeeSection.payroll),
+      _ManagementAction.employeeOperations => EmployeeOperationsPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+        initialSection: EmployeeSection.payroll,
+      ),
       _ManagementAction.office => OfficeWorkspacePage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -1017,7 +1022,7 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
 }
 
 String _updatedText(BuildContext context, DateTime generatedAt) {
-  final local = generatedAt.toLocal();
+  final local = spinaBusinessWallClock(generatedAt);
   final date = MaterialLocalizations.of(context).formatMediumDate(local);
   final time = TimeOfDay.fromDateTime(local).format(context);
   return 'Updated $date at $time';
@@ -1347,14 +1352,14 @@ const _managementSections = <_ManagementSection>[
     description: 'See alerts and activity that may need your attention first.',
     modules: <_ManagementModule>[
       _ManagementModule(
-        'Payment proof review',
+        'Payment evidence review',
         'Review uploaded evidence and corrections without changing balances',
         Icons.receipt_long_outlined,
         action: _ManagementAction.paymentProofs,
         requiredPermissions: <String>['client_payment_proof.review'],
       ),
       _ManagementModule(
-        'Alerts & activity',
+        'Alerts & audit',
         'Payments, custody changes, approvals, failures, and other updates',
         Icons.notifications_active_outlined,
         action: _ManagementAction.alertsActivity,

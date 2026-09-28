@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 
@@ -16,8 +17,12 @@ class CollectorRouteHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recorded = route.entries.where((entry) => entry.processedToday).length;
-    final dateText = route.routeDate == null ? 'Saved route' : _longDate(route.routeDate!);
+    final recorded = route.entries
+        .where((entry) => entry.processedToday)
+        .length;
+    final dateText = route.routeDate == null
+        ? 'Saved route'
+        : _longDate(route.routeDate!);
     final activePromiseReminders = route.entries
         .map(_activePromiseReminder)
         .whereType<String>()
@@ -50,18 +55,18 @@ class CollectorRouteHeaderCard extends StatelessWidget {
               Text(
                 activePromiseReminders.single,
                 key: const Key('collector-header-active-promise'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
               )
             else if (activePromiseReminders.length > 1)
               Text(
                 '${activePromiseReminders.length} active promises • '
                 'Open each client for date, remaining amount, and status',
                 key: const Key('collector-header-active-promises'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
               ),
           ],
         ),
@@ -130,7 +135,7 @@ String _longDate(DateTime value) {
 }
 
 String _time(DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   return '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';
 }

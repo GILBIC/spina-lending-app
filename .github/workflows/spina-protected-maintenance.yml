@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   protected-maintenance:
+    if: github.ref == 'refs/heads/main' && inputs.confirm_protected_live_database == true
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 90
 

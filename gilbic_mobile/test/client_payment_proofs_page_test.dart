@@ -21,6 +21,103 @@ import 'client_documents_repository_test.dart' show session;
 import 'client_payment_proof_repository_test.dart' as fixture;
 
 void main() {
+  testWidgets(
+    'PDF correction keeps private raw bytes and exact revision on uncertain retry',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final posts = <http.Request>[];
+      final pdf = Uint8List.fromList(
+        '%PDF-1.7\nsynthetic proof\n%%EOF'.codeUnits,
+      );
+      final repository = SpinaClientPaymentProofRepository(
+        client: MockClient((request) async {
+          posts.add(request);
+          return posts.length == 1
+              ? http.Response('{', 201)
+              : http.Response(
+                  jsonEncode({'success': true, 'data': fixture.detail}),
+                  201,
+                );
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ClientPaymentProofUploadPage(
+            session: session,
+            deviceIdentityProvider: device(),
+            repository: repository,
+            capability: capability(),
+            proof: ClientPaymentProof.fromPayload(fixture.proof),
+            documentPicker: () async => XFile.fromData(
+              pdf,
+              name: 'receipt.pdf',
+              mimeType: 'application/pdf',
+            ),
+            requestIdGenerator: () => 'pdf-correction',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('proof-document')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('submit-payment-proof')));
+      await tester.pumpAndSettle();
+      expect(find.text('Retry same upload'), findsOneWidget);
+      expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const Key('proof-document')))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.byKey(const Key('submit-payment-proof')));
+      await tester.pumpAndSettle();
+      expect(posts.length, 2);
+      expect(posts.first.bodyBytes, pdf);
+      expect(posts.first.headers['content-type'], 'application/pdf');
+      expect(posts.first.url.queryParameters['expected_version'], '1');
+      expect(posts.last.url, posts.first.url);
+      expect(posts.last.bodyBytes, pdf);
+    },
+  );
+
+  testWidgets(
+    'document selection rejects non-PDF bytes and oversize files before upload',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final bytes in [png, Uint8List(101)]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ClientPaymentProofUploadPage(
+              key: UniqueKey(),
+              session: session,
+              deviceIdentityProvider: device(),
+              repository: _Repository(),
+              capability: capability(),
+              proof: ClientPaymentProof.fromPayload(fixture.proof),
+              documentPicker: () async => XFile.fromData(
+                bytes,
+                name: 'fake.pdf',
+                mimeType: 'application/pdf',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('proof-document')));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const Key('submit-payment-proof')),
+              )
+              .onPressed,
+          isNull,
+        );
+      }
+    },
+  );
   testWidgets('photo selection binds the owned loan and correction version', (
     tester,
   ) async {
@@ -356,7 +453,7 @@ PaymentProofList capability({bool available = true}) =>
       'capability': {
         'upload_available': available,
         'posts_payment': false,
-        'allowed_media_types': ['image/png', 'image/jpeg'],
+        'allowed_media_types': ['image/png', 'image/jpeg', 'application/pdf'],
         'max_bytes': 100,
         'message': 'Evidence only',
       },

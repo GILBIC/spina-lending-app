@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -233,6 +234,117 @@ grep -q 'smtp-secret' operator.env
     )
     assert result.returncode == 0, result.stderr
     assert "secret" not in result.stdout + result.stderr
+
+
+def test_existing_domain_and_invite_assignments_survive_upgrade_and_redeploy(
+    tmp_path: Path,
+) -> None:
+    result = _bash(
+        tmp_path,
+        """
+printf '%s\\n' 'GILBIC_CORS_ORIGINS="https://spina.com.ph,https://app.spina.com.ph"' 'GILBIC_STAFF_INVITE_REDIRECT_URL="https://app.spina.com.ph/"' > legacy.env
+printf '%s\\n' 'SPINA_EMPLOYEE_OWNER_USER_ID="owner-id"' > operator.env
+preserve_operator_environment legacy.env operator.env
+cp operator.env expected.env
+printf '%s\\n' 'GILBIC_CORS_ORIGINS="https://fallback.example"' > legacy.env
+preserve_operator_environment legacy.env operator.env
+cmp expected.env operator.env
+grep -q 'https://spina.com.ph,https://app.spina.com.ph' operator.env
+grep -q 'https://app.spina.com.ph/' operator.env
+""",
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_redeploy_retains_existing_caddy_bytes_and_redirect_behaviors(
+    tmp_path: Path,
+) -> None:
+    script = BOOTSTRAP.read_text(encoding="utf-8")
+    candidate = script.split("if [[ -s /etc/caddy/Caddyfile", 1)[1].split(
+        "\nCADDY\nfi", 1
+    )[0]
+    candidate = "if [[ -s /etc/caddy/Caddyfile" + candidate + "\nCADDY\nfi\n"
+    candidate = candidate.replace("/etc/caddy/Caddyfile", "active-caddy").replace(
+        "/opt/spina/current", "current"
+    )
+    original = (
+        "spina.com.ph, app.spina.com.ph, api.spina.com.ph, "
+        "spina.159-223-39-43.sslip.io {\n"
+        ' respond "synthetic retained site"\n'
+        "}\n"
+        "www.spina.com.ph {\n"
+        " redir https://spina.com.ph{uri} permanent\n"
+        "}\n"
+    )
+    (tmp_path / "active-caddy").write_text(original, encoding="utf-8")
+    result = _bash(
+        tmp_path,
+        "mkdir current candidate\nRELEASE_DIR=candidate\nHOSTNAMES=example.test\n"
+        + candidate,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "candidate/Caddyfile").read_bytes() == (
+        tmp_path / "active-caddy"
+    ).read_bytes()
+
+
+def test_unmatched_host_pin_stops_workflow_before_any_upload(tmp_path: Path) -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    body = textwrap.dedent(
+        workflow.split("        run: |\n", 1)[1].split(
+            "          python tools/test_digitalocean_deployment_contract.py", 1
+        )[0]
+    )
+    body = body.replace("/tmp/", str(tmp_path).replace("\\", "/") + "/")
+    helper_dir = tmp_path / "ops/digitalocean"
+    helper_dir.mkdir(parents=True)
+    shutil.copyfile(
+        ROOT / "ops/digitalocean/workflow_helper.py", helper_dir / "workflow_helper.py"
+    )
+    (tmp_path / "test-target.json").write_text(
+        json.dumps(
+            {
+                "droplet_id": 1234,
+                "host": "159.223.39.43",
+                "hostname": "spina.com.ph",
+                "aliases": ["app.spina.com.ph"],
+                "cors_origins": ["https://spina.com.ph"],
+                "staff_invite_redirect_url": "https://spina.com.ph/",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "test-secrets.json").write_text(
+        json.dumps(
+            {
+                "database_pooler_url": "postgresql://user:synthetic-private@pooler.example:5432/postgres?sslmode=require",
+                "supabase_url": "https://project.example",
+                "supabase_publishable_key": "synthetic-public",
+                "supabase_secret_key": "synthetic-private",
+            }
+        ),
+        encoding="utf-8",
+    )
+    # All commands before the first upload run locally. A nonmatching, independently
+    # supplied host pin must fail before scp/ssh can receive an environment file.
+    setup = """
+export GITHUB_REF=refs/heads/main GITHUB_REF_PROTECTED=true GITHUB_EVENT_NAME=workflow_dispatch
+export GITHUB_REPOSITORY=example/spina GITHUB_WORKFLOW_REF=example/spina/.github/workflows/spina-digitalocean-deploy.yml@refs/heads/main
+export GITHUB_SHA=$(printf 'a%.0s' {1..40}) GITHUB_RUN_ID=12345 GITHUB_RUN_ATTEMPT=1
+export SPINA_DEPLOY_TARGET_JSON=$(cat test-target.json) SPINA_RUNTIME_SECRETS_JSON=$(cat test-secrets.json)
+export SPINA_DEPLOY_SSH_KEY=synthetic-private SPINA_DEPLOY_KNOWN_HOSTS='other.example ssh-ed25519 AAAA'
+ssh() { touch network-contact; exit 99; }
+scp() { touch network-contact; exit 99; }
+jq() { if [[ "$2" = .host ]]; then printf '159.223.39.43\\n'; else printf 'spina.com.ph\\n'; fi; }
+"""
+    result = _bash(
+        tmp_path, setup + body + "\nprintf reached-upload > network-contact\n"
+    )
+    assert result.returncode != 0
+    assert "host pin does not cover" in result.stderr
+    assert not (tmp_path / "network-contact").exists()
+    assert not (tmp_path / "spina.env").exists()
+    assert "synthetic-private" not in result.stdout + result.stderr
 
 
 def test_activation_failure_restores_runtime_portal_config_and_service(

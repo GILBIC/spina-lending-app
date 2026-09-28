@@ -10,6 +10,14 @@ test('other-area rows preserve owner and suppress unavailable/processed writes',
   html=module.renderOtherAreaEntries([{...entry,processed_today:true,today_collector_name:'Recorder'}]);assert.doesNotMatch(html,/data-other-payment/);assert.match(html,/Recorder/);
   html=module.renderOtherAreaEntries([{...entry,can_collect_mobile:false}]);assert.doesNotMatch(html,/data-other-payment/);
 });
+
+test('Management direct payment reuses protected exact-money submission without cross-remittance controls',async()=>{
+ const root=new Element();const calls=[];const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock:()=>{}});
+ const dispose=module.mountCollectorOtherArea({root,mode:'management',session:{permissions:['collection.create','remittance.create','remittance.view']},routeDate:'2026-09-29',guard,identity:()=>({deviceId:'web',deviceSequence:4,clientTransactionId:'11111111-2222-4333-8444-555555555555'}),onSaved:async()=>{},api:{request:async(path,options)=>{calls.push({path,options});return options?.method==='POST'?{status:'accepted',client_transaction_id:options.body.client_transaction_id,receipt_number:'RCPT-2'}:[entry];}}});
+ assert.match(root.textContent,/Direct payment/);assert.equal(calls.length,0);
+ root.querySelector('[name="query"]').value='Client';fire(root.querySelector('[data-other-search]'),'submit');await setImmediate();const form=root.querySelector('[data-other-payment]');form.querySelector('[name="amount"]').value='100.15';form.querySelector('[name="recorderConfirmation"]').checked=true;fire(form,'submit');await setImmediate();
+ const post=calls.find(call=>call.options?.method==='POST');assert.equal(post.options.body.amount,'100.15');assert.equal(post.options.body.collection_date,'2026-09-29');assert.equal(post.options.body.loan_id,'loan');assert.equal(calls.some(call=>call.path.includes('cross-remittances')),false);dispose();guard.dispose();
+});
 test('cross-area payment preserves route identity and needs recorder confirmation',async()=>{
   const root=new Element();const calls=[];let saved=0;
   const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock:()=>{}});

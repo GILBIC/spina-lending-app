@@ -228,14 +228,14 @@ function trialBalanceMarkup(payload) {
 
 export function managementGeneralJournalMarkup({ journals = {}, trialBalance = {} } = {}) {
   const managementNotice = journals.can_manage === true
-    ? 'The server reports journal-management permission for this account, but this Web surface is intentionally read-only.'
-    : 'This Web surface is read-only.';
+    ? 'Authorized journal actions are available below. Review each draft before posting.'
+    : 'Journal changes are unavailable for this account.';
   const automaticPostingNotice = journals.automatic_loan_posting_enabled === true
     ? 'Automatic loan posting is enabled by the authoritative server.'
     : 'Automatic loan posting is not enabled.';
 
   return `<div class="list-stack">
-    <div class="notice-card"><strong>Read-only accounting view</strong><br>${escapeHtml(managementNotice)} ${escapeHtml(automaticPostingNotice)}</div>
+    <div class="notice-card"><strong>Accounting evidence</strong><br>${escapeHtml(managementNotice)} ${escapeHtml(automaticPostingNotice)}</div>
     <article class="data-card">
       <h3>Download accounting books</h3>
       <p>Download posted journal entries, ledger, trial balance and accounting audit records for an inclusive date range of up to 366 days. Opening balances are included.</p>

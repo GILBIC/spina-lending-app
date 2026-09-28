@@ -11,7 +11,7 @@ from gilbic_backend.seven_by_seven_operational_allocator import (
     SevenBySevenCashEvent,
     allocate_seven_by_seven_payments,
 )
-from spina_app.calculation_rules import allocate_x7_payments
+from reference_7x7_rules import allocate_x7_payments
 
 
 MONEY = Decimal("0.01")

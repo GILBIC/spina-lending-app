@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/employee_operations/employee_form_values.
 import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 
 class EmployeeCommandForm extends StatefulWidget {
   const EmployeeCommandForm({
@@ -59,10 +60,13 @@ class _EmployeeCommandFormState extends State<EmployeeCommandForm> {
       'backup_save',
       'calendar_save',
       'accounting_prepare',
+      'payroll_history_correct',
     ].contains(widget.action);
     for (final field in _fields) {
       final name = field['name'] as String;
-      if (sameFields && payload.containsKey(name)) {
+      if (sameFields &&
+          payload.containsKey(name) &&
+          !(widget.action == 'payroll_history_correct' && name == 'reason')) {
         _values[name] = payload[name];
       } else if (field.containsKey('default')) {
         _values[name] = field['default'];
@@ -76,6 +80,10 @@ class _EmployeeCommandFormState extends State<EmployeeCommandForm> {
     }
     if (widget.action == 'payroll_adjustment') {
       _values['original_payroll_id'] = widget.record?['id'];
+    }
+    if (widget.action == 'payroll_history_correct') {
+      _values['original_history_id'] = widget.record?['id'];
+      _values['original_expected_version'] = widget.record?['version'];
     }
   }
 
@@ -150,9 +158,10 @@ class _EmployeeCommandFormState extends State<EmployeeCommandForm> {
     String path,
   ) async {
     final name = field['name'] as String, kind = field['kind'];
-    DateTime selected =
-        DateTime.tryParse(target[name]?.toString() ?? '')?.toLocal() ??
-        DateTime.now();
+    final stored = DateTime.tryParse(target[name]?.toString() ?? '');
+    DateTime selected = kind == 'timestamp'
+        ? spinaBusinessWallClock(stored ?? DateTime.now())
+        : stored ?? spinaBusinessWallClock(DateTime.now());
     if (kind != 'time') {
       final date = await showDatePicker(
         context: context,
@@ -181,7 +190,7 @@ class _EmployeeCommandFormState extends State<EmployeeCommandForm> {
         ? selected.toIso8601String().substring(0, 10)
         : kind == 'time'
         ? '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}'
-        : selected.toUtc().toIso8601String();
+        : spinaBusinessWallClockToUtc(selected).toIso8601String();
     setState(() {
       target[name] = value;
       _controllers[path]?.text = _displayDate(value, kind);
@@ -190,8 +199,8 @@ class _EmployeeCommandFormState extends State<EmployeeCommandForm> {
 
   String _displayDate(String value, Object? kind) {
     if (kind != 'timestamp') return value;
-    final date = DateTime.tryParse(value)?.toLocal();
-    return date == null ? value : date.toString().substring(0, 16);
+    final date = DateTime.tryParse(value);
+    return date == null ? value : formatSpinaBusinessDateTime(date);
   }
 
   List<DropdownMenuItem<String>> _employees() {
@@ -226,18 +235,27 @@ class _EmployeeCommandFormState extends State<EmployeeCommandForm> {
     final name = field['name'] as String, kind = field['kind'] as String;
     final path = '$prefix$name';
     final label =
-        '${employeeLabel(name)}${field['required'] == true ? '' : ' (optional)'}';
+        '${employeeLabel(name)}${kind == 'timestamp' ? ' (Asia/Manila)' : ''}${field['required'] == true ? '' : ' (optional)'}';
     final value = target[name];
     final fixed =
         name == 'employee_id' &&
             (widget.record != null || _selfActions.contains(widget.action)) ||
-        name == 'original_payroll_id' && widget.record != null;
+        name == 'original_payroll_id' && widget.record != null ||
+        widget.action == 'payroll_history_correct' &&
+            widget.record != null &&
+            [
+              'original_history_id',
+              'original_expected_version',
+              'year',
+            ].contains(name);
     if (fixed) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
           name == 'employee_id'
               ? 'Employee: ${widget.workspace.employeeName(value as String?)}'
+              : widget.action == 'payroll_history_correct'
+              ? '${employeeLabel(name)}: $value (original history is preserved)'
               : 'Adjustment linked to the selected paid payroll.',
         ),
       );

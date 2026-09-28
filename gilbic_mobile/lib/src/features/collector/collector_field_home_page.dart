@@ -17,6 +17,7 @@ import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.d
 import 'package:gilbic_mobile/src/features/collector/collector_renewal_cash_release_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_residence_visit_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
@@ -238,6 +239,26 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     style: Theme.of(sheetContext).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 14),
+                  if (widget.session.hasPermission(
+                    'client_onboarding.visit.record',
+                  ))
+                    _CollectorToolTile(
+                      key: const Key('collector-more-residence-visit'),
+                      icon: Icons.home_work_outlined,
+                      title: 'Residence visit',
+                      subtitle:
+                          'Record the observed visit for an office intake case',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _open(
+                          CollectorResidenceVisitPage(
+                            session: widget.session,
+                            deviceIdentityProvider:
+                                widget.deviceIdentityProvider,
+                          ),
+                        );
+                      },
+                    ),
                   _CollectorToolTile(
                     key: const Key('collector-more-employee-operations'),
                     icon: Icons.badge_outlined,
@@ -268,7 +289,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                   _CollectorToolTile(
                     key: const Key('collector-more-other-area'),
                     icon: Icons.person_search_outlined,
-                    title: 'Other area payment',
+                    title: 'Other-area collection',
                     subtitle:
                         'Record an allowed payment outside your assigned route',
                     onTap: () {

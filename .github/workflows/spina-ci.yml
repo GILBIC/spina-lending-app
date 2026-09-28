@@ -59,12 +59,24 @@ jobs:
             'pip-audit>=2.8,<3'
           mkdir -p ci-artifacts/backend
 
+      - name: Verify the locked Linux production runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$RUNNER_TEMP/spina-locked-runtime"
+          python -m venv "$runtime"
+          "$runtime/bin/python" -m pip install --disable-pip-version-check \
+            --require-hashes --only-binary=:all: -r requirements-runtime.lock
+          "$runtime/bin/python" -m pip install --disable-pip-version-check \
+            --no-deps --no-build-isolation ./spina_backend_mobile ./gilbic_backend
+          "$runtime/bin/python" -m pip check
+          "$runtime/bin/python" -c 'import fastapi, uvicorn, psycopg, pydantic, httpx, pypdf, reportlab, docx, pymupdf, uvloop, gilbic_backend.main, spina_mobile_collections; print("Locked production runtime imports passed")'
+
       - name: Compile Python sources
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          python -m compileall -q spina_app gilbic_backend/src spina_backend_mobile/src tools
+          python -m compileall -q gilbic_backend/src spina_backend_mobile/src tools
 
       - name: Ruff lint baseline
         id: ruff_lint

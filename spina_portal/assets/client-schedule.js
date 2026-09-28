@@ -3,17 +3,12 @@ import {
   badge,
   escapeHtml,
   formatDate,
+  formatExactMoney,
   setButtonBusy,
 } from './ui.js';
 
 export function formatAuthoritativeMoney(value) {
-  if (value == null || value === '') return '—';
-  const raw = String(value).trim().replaceAll(',', '');
-  const match = raw.match(/^([+-]?)(\d+)(?:\.(\d+))?$/);
-  if (!match) return escapeHtml(value);
-  const [, sign, whole, fraction] = match;
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${sign === '-' ? '-' : sign === '+' ? '+' : ''}₱${grouped}${fraction == null ? '' : `.${fraction}`}`;
+  return formatExactMoney(value, { minimumFractionDigits: 0 });
 }
 
 export function renderClientSchedule(schedule = {}) {

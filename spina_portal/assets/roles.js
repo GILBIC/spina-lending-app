@@ -82,6 +82,10 @@ export const ROLE_ENDPOINTS = Object.freeze({
       permission: 'management.dashboard.view',
     }),
     action('management-loans', 'Clients & loans', '/api/v1/management/loans', { section: 'Portfolio' }),
+    action('management-contract-collection', 'Contract collection', '/api/v1/management/financial-accounting/contract-collection-activation', { section: 'Collection actions', permission: 'lending.contract_collection.activate' }),
+    action('management-no-collection', 'No Collection', '/api/v1/management/no-collection/loans/{loan_id}', { section: 'Collection actions', permission: 'lending.no_collection.manage' }),
+    action('management-direct-payment', 'Direct payment', '/api/v1/collector/other-area-clients/search', { section: 'Collection actions', permission: 'collection.create' }),
+    action('management-void-payment', 'Void incorrect payment', '/api/v1/management/collections/by-receipt/{receipt_number}', { section: 'Collection actions', permission: 'collection.void.unremitted' }),
     action('management-loan-operations', 'Loan operations', '/api/v1/management/loan-operations', {
       section: 'Operations',
     }),
@@ -89,6 +93,12 @@ export const ROLE_ENDPOINTS = Object.freeze({
       section: 'Reports',
       permission: 'management.dashboard.view',
     }),
+    action('management-financial-accounting', 'Financial accounting', '/api/v1/management/financial-accounting', { section: 'Accounting', permission: 'accounting.view' }),
+    action('management-period-close', 'Period close', '/api/v1/management/financial-accounting/period-close', { section: 'Accounting', permission: 'accounting.view' }),
+    action('management-initial-capital', 'Initial capital', '/api/v1/management/financial-accounting/initial-capital-funding', { section: 'Accounting', permission: 'accounting.view' }),
+    action('management-opening-workbook', 'Opening workbook & loan measurement', '/api/v1/management/financial-accounting/opening-balance-workbook', { section: 'Accounting', permission: 'accounting.view' }),
+    action('management-opening-journal', 'Opening journal', '/api/v1/management/financial-accounting/opening-balance-workbook/{workbook_id}/journal-draft', { section: 'Accounting', permission: 'accounting.view' }),
+    action('management-historical-outcomes', 'Historical outcomes', '/api/v1/management/financial-accounting/ecl-outcome-review', { section: 'Accounting', permission: 'accounting.view' }),
     action(
       'management-financial-statements',
       'Financial statements',

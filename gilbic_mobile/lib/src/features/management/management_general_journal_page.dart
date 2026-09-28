@@ -569,6 +569,9 @@ class _ManagementGeneralJournalPageState
               _JournalCard(
                 entry: entry,
                 canManage: snapshot.canManage,
+                hasReversal: entries.any(
+                  (other) => other.reversalOfEntryId == entry.entryId,
+                ),
                 busy: !_canMutate,
                 onEdit: () => _editDraft(entry),
                 onPost: () => _post(entry),
@@ -690,6 +693,7 @@ class _JournalCard extends StatelessWidget {
   const _JournalCard({
     required this.entry,
     required this.canManage,
+    required this.hasReversal,
     required this.busy,
     required this.onEdit,
     required this.onPost,
@@ -699,6 +703,7 @@ class _JournalCard extends StatelessWidget {
 
   final AccountingJournalEntry entry;
   final bool canManage;
+  final bool hasReversal;
   final bool busy;
   final VoidCallback onEdit;
   final VoidCallback onPost;
@@ -768,14 +773,21 @@ class _JournalCard extends StatelessWidget {
                     icon: const Icon(Icons.cancel_outlined),
                     label: const Text('Cancel draft'),
                   ),
-                if (entry.isDraft)
+                if (entry.isDraft &&
+                    (entry.isManual ||
+                        (entry.sourceType == 'reversal' &&
+                            entry.reversalOfEntryId != null)))
                   FilledButton.icon(
                     key: Key('post-journal-${entry.entryId}'),
                     onPressed: busy ? null : onPost,
                     icon: const Icon(Icons.post_add_outlined),
                     label: const Text('Post'),
                   ),
-                if (entry.isPosted)
+                if (entry.isPosted &&
+                    !hasReversal &&
+                    entry.reversalOfEntryId == null &&
+                    entry.sourceType != 'period_close' &&
+                    entry.sourceType != 'reversal')
                   OutlinedButton.icon(
                     key: Key('reverse-journal-${entry.entryId}'),
                     onPressed: busy ? null : onReverse,

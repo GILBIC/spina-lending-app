@@ -8,6 +8,21 @@ DateTime spinaBusinessWallClock(DateTime value) {
   return value.toUtc().add(_spinaBusinessUtcOffset);
 }
 
+/// Interprets manually selected calendar fields as Manila time, regardless of
+/// the phone's timezone. The result is an instant suitable for API submission.
+DateTime spinaBusinessWallClockToUtc(DateTime value) {
+  return DateTime.utc(
+    value.year,
+    value.month,
+    value.day,
+    value.hour,
+    value.minute,
+    value.second,
+    value.millisecond,
+    value.microsecond,
+  ).subtract(_spinaBusinessUtcOffset);
+}
+
 String formatSpinaBusinessDate(DateTime value) {
   final businessTime = spinaBusinessWallClock(value);
   return '${businessTime.year.toString().padLeft(4, '0')}-'

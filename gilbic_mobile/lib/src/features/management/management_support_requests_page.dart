@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -507,7 +508,7 @@ String _statusLabel(String status) {
 }
 
 String _dateTime(DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   return '${local.year.toString().padLeft(4, '0')}-'
       '${local.month.toString().padLeft(2, '0')}-'
       '${local.day.toString().padLeft(2, '0')} '

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:flutter/services.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -112,10 +113,7 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       }
     }
     for (final loan in loans) {
-      _amountControllers.putIfAbsent(
-        loan.loanId,
-        TextEditingController.new,
-      );
+      _amountControllers.putIfAbsent(loan.loanId, TextEditingController.new);
       if (loans.length == 1) {
         _selectedLoanIds.add(loan.loanId);
       }
@@ -135,16 +133,18 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       final raw = _amountControllers[loan.loanId]?.text;
       final amount = _normalizeGcashAmount(raw);
       if (amount != null) {
-        allocations.add(ClientGcashAllocation(loanId: loan.loanId, amount: amount));
+        allocations.add(
+          ClientGcashAllocation(loanId: loan.loanId, amount: amount),
+        );
       }
     }
     return allocations;
   }
 
   BigInt get _totalCents => _allocations().fold<BigInt>(
-        BigInt.zero,
-        (total, allocation) => total + _gcashCents(allocation.amount),
-      );
+    BigInt.zero,
+    (total, allocation) => total + _gcashCents(allocation.amount),
+  );
 
   Future<void> _createPayment() async {
     final capability = _capability;
@@ -203,10 +203,7 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
       _showMessage('The payment provider returned an invalid checkout link.');
       return;
     }
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.inAppBrowserView,
-    );
+    final launched = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     if (!launched && mounted) {
       _showMessage('GCash checkout could not be opened on this device.');
     }
@@ -241,9 +238,10 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
 
   String _newIdempotencyKey() {
     final random = Random.secure();
-    final suffix = List<int>.generate(4, (_) => random.nextInt(1 << 32))
-        .map((part) => part.toRadixString(16).padLeft(8, '0'))
-        .join();
+    final suffix = List<int>.generate(
+      4,
+      (_) => random.nextInt(1 << 32),
+    ).map((part) => part.toRadixString(16).padLeft(8, '0')).join();
     return 'mobile-${widget.session.userId}-${DateTime.now().toUtc().microsecondsSinceEpoch}-$suffix';
   }
 
@@ -251,7 +249,9 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -355,9 +355,9 @@ class _ClientGcashPaymentPageState extends State<ClientGcashPaymentPage> {
               Text(
                 _gcashMoneyFromCents(_totalCents),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: SpinaTheme.brandPinkDark,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  color: SpinaTheme.brandPinkDark,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),
@@ -463,8 +463,8 @@ class _ProviderStatusCard extends StatelessWidget {
                         capability.isSandbox
                             ? 'SANDBOX'
                             : connected
-                                ? 'READY'
-                                : 'NOT CONNECTED',
+                            ? 'READY'
+                            : 'NOT CONNECTED',
                         style: TextStyle(
                           color: connected
                               ? SpinaTheme.success
@@ -553,7 +553,9 @@ class _LoanPaymentSelector extends StatelessWidget {
                 key: Key('client-gcash-amount-${loan.loanId}'),
                 controller: controller,
                 enabled: enabled,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
@@ -593,10 +595,10 @@ class _IntentStatusCard extends StatelessWidget {
     final title = official
         ? 'Payment posted by SPINA'
         : verified
-            ? 'GCash verified — SPINA posting pending'
-            : pending
-                ? 'Waiting for GCash verification'
-                : 'GCash status: ${intent.status}';
+        ? 'GCash verified — SPINA posting pending'
+        : pending
+        ? 'Waiting for GCash verification'
+        : 'GCash status: ${intent.status}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -609,7 +611,9 @@ class _IntentStatusCard extends StatelessWidget {
                   official
                       ? Icons.verified_rounded
                       : Icons.hourglass_top_rounded,
-                  color: official ? SpinaTheme.success : SpinaTheme.brandPinkDark,
+                  color: official
+                      ? SpinaTheme.success
+                      : SpinaTheme.brandPinkDark,
                 ),
                 const SizedBox(width: 9),
                 Expanded(
@@ -625,7 +629,9 @@ class _IntentStatusCard extends StatelessWidget {
             if (intent.providerReference != null)
               Text('Provider reference: ${intent.providerReference}'),
             if (intent.expiresAt != null)
-              Text('Checkout expires: ${intent.expiresAt!.toLocal()}'),
+              Text(
+                'Checkout expires: ${formatSpinaBusinessDateTime(intent.expiresAt)} (Asia/Manila)',
+              ),
             if (!official) ...[
               const SizedBox(height: 8),
               const Text(
@@ -642,7 +648,8 @@ class _IntentStatusCard extends StatelessWidget {
                 label: const Text('Copy GCash QR/payment code'),
               ),
             ],
-            if (intent.checkoutUrl != null && intent.checkoutUrl!.isNotEmpty) ...[
+            if (intent.checkoutUrl != null &&
+                intent.checkoutUrl!.isNotEmpty) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: loading ? null : onOpenCheckout,

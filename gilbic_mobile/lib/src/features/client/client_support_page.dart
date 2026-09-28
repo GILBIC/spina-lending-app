@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -98,9 +99,9 @@ class _ClientSupportPageState extends State<ClientSupportPage> {
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -146,9 +147,9 @@ class _ClientSupportPageState extends State<ClientSupportPage> {
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -335,8 +336,10 @@ class _SupportRequestCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor,
                     borderRadius: BorderRadius.circular(10),
@@ -525,7 +528,7 @@ class _SupportDraft {
 }
 
 String _dateTime(DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   return '${local.year.toString().padLeft(4, '0')}-'
       '${local.month.toString().padLeft(2, '0')}-'
       '${local.day.toString().padLeft(2, '0')} '

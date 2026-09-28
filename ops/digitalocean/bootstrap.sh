@@ -43,13 +43,30 @@ preserve_operator_environment() {
         if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)= ]]; then
           keep=true
           case "${BASH_REMATCH[1]}" in
-            GILBIC_APP_NAME|GILBIC_ENVIRONMENT|GILBIC_DATABASE_URL|GILBIC_SUPABASE_URL|GILBIC_SUPABASE_PUBLISHABLE_KEY|GILBIC_SUPABASE_SECRET_KEY|GILBIC_CORS_ORIGINS|GILBIC_STAFF_INVITE_REDIRECT_URL|GILBIC_GCASH_MODE)
+            GILBIC_APP_NAME|GILBIC_ENVIRONMENT|GILBIC_DATABASE_URL|GILBIC_SUPABASE_URL|GILBIC_SUPABASE_PUBLISHABLE_KEY|GILBIC_SUPABASE_SECRET_KEY|GILBIC_GCASH_MODE)
               keep=false ;;
           esac
         fi
         if [[ "$keep" == true ]]; then printf '%s\n' "$line" >> "$operator"; fi
       done < "$legacy"
     fi
+  fi
+  # Retain the active origin assignments on an upgrade even when an older
+  # operator file already exists. Existing operator-owned values take precedence.
+  local key
+  if [[ -f "$legacy" ]]; then
+    for key in GILBIC_CORS_ORIGINS GILBIC_STAFF_INVITE_REDIRECT_URL; do
+      if ! grep -Eq "^[[:space:]]*${key}=" "$operator"; then
+        keep=false
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)= ]]; then
+            keep=false
+            if [[ "${BASH_REMATCH[1]}" == "$key" ]]; then keep=true; fi
+          fi
+          if [[ "$keep" == true ]]; then printf '%s\n' "$line" >> "$operator"; fi
+        done < "$legacy"
+      fi
+    done
   fi
   chmod 600 "$operator"
 }
@@ -208,7 +225,7 @@ RUN_DIR="$3"
 ARCHIVE_SHA256="$4"
 
 [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || fail "invalid Git SHA"
-[[ "$HOSTNAME" =~ ^spina\.[0-9]{1,3}(-[0-9]{1,3}){3}\.sslip\.io$ ]] || fail "invalid deployment hostname"
+[[ "$HOSTNAME" =~ ^[a-z0-9][a-z0-9.-]*\.[a-z]{2,63}$ ]] || fail "invalid deployment hostname"
 [[ "$RUN_DIR" =~ ^/var/lib/spina-deploy/run-[1-9][0-9]*-[1-9][0-9]*$ ]] || fail "invalid run directory"
 [[ "$(readlink -f -- "$RUN_DIR")" == "$RUN_DIR" && -d "$RUN_DIR" ]] || fail "run directory must be a real private directory"
 readonly SHA HOSTNAME RUN_DIR ARCHIVE_SHA256
@@ -262,7 +279,11 @@ fi
 
 install -d -m 0755 /opt/spina/releases /etc/spina /var/www
 install -d -m 0700 -o spina -g spina /var/lib/spina
-preserve_operator_environment /etc/spina/spina.env /etc/spina/operator.env
+if [[ -f /opt/spina/current/runtime.env ]]; then
+  preserve_operator_environment /opt/spina/current/runtime.env /etc/spina/operator.env
+else
+  preserve_operator_environment /etc/spina/spina.env /etc/spina/operator.env
+fi
 chown root:root /etc/spina/operator.env
 
 # A unique, final path avoids moving virtualenvs (their launchers embed paths)
@@ -271,15 +292,16 @@ RELEASE_DIR="$(mktemp -d "/opt/spina/releases/${SHA}.XXXXXX")"
 chmod 0755 "$RELEASE_DIR"
 tar -xzf "$RUN_DIR/release.tar.gz" -C "$RELEASE_DIR"
 [[ -f "$RELEASE_DIR/requirements.txt" ]] || fail "release is missing requirements.txt"
+[[ -f "$RELEASE_DIR/requirements-runtime.lock" ]] || fail "release is missing requirements-runtime.lock"
 [[ -d "$RELEASE_DIR/gilbic_backend" ]] || fail "release is missing gilbic_backend"
 [[ -d "$RELEASE_DIR/spina_backend_mobile" ]] || fail "release is missing spina_backend_mobile"
 [[ -f "$RELEASE_DIR/dist/index.html" ]] || fail "release is missing portal build"
 printf '%s\n' "$SHA" > "$RELEASE_DIR/git-sha"
 
 python3 -m venv "$RELEASE_DIR/venv"
-"$RELEASE_DIR/venv/bin/python" -m pip install --disable-pip-version-check --upgrade pip setuptools wheel
-"$RELEASE_DIR/venv/bin/python" -m pip install --disable-pip-version-check -r "$RELEASE_DIR/requirements.txt"
-"$RELEASE_DIR/venv/bin/python" -m pip install --disable-pip-version-check --no-deps \
+"$RELEASE_DIR/venv/bin/python" -c 'import platform, sys; assert sys.version_info[:2] == (3, 12) and sys.platform == "linux" and platform.machine() == "x86_64", "Runtime lock requires Linux x86_64 / Python 3.12"'
+"$RELEASE_DIR/venv/bin/python" -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r "$RELEASE_DIR/requirements-runtime.lock"
+"$RELEASE_DIR/venv/bin/python" -m pip install --disable-pip-version-check --no-deps --no-build-isolation \
   "$RELEASE_DIR/spina_backend_mobile" \
   "$RELEASE_DIR/gilbic_backend"
 
@@ -340,6 +362,10 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 UNIT
 
+HOSTNAMES="$(python3 "$RELEASE_DIR/ops/digitalocean/workflow_helper.py" hostnames --target "$RELEASE_DIR/spina-target.json")"
+if [[ -s /etc/caddy/Caddyfile && ( -e /opt/spina/current || -f /etc/spina/spina.env ) ]]; then
+  cp -a /etc/caddy/Caddyfile "$RELEASE_DIR/Caddyfile"
+else
 cat > "$RELEASE_DIR/Caddyfile" <<CADDY
 {
   email gilbicsanjose@gmail.com
@@ -348,7 +374,7 @@ cat > "$RELEASE_DIR/Caddyfile" <<CADDY
   }
 }
 
-$HOSTNAME {
+$HOSTNAMES {
   encode zstd gzip
 
   header {
@@ -375,6 +401,7 @@ $HOSTNAME {
   }
 }
 CADDY
+fi
 
 # Verify the candidate interpreter before activation; systemd validates syntax
 # using an executable path that already exists rather than the old current link.
@@ -382,6 +409,9 @@ sed "s|/opt/spina/current|$RELEASE_DIR|g" \
   "$RELEASE_DIR/spina-api.service" > "$RELEASE_DIR/spina-api-verify.service"
 systemd-analyze verify "$RELEASE_DIR/spina-api-verify.service"
 caddy validate --config "$RELEASE_DIR/Caddyfile" --adapter caddyfile
+caddy adapt --config "$RELEASE_DIR/Caddyfile" --adapter caddyfile > "$RELEASE_DIR/caddy-adapted.json"
+python3 "$RELEASE_DIR/ops/digitalocean/workflow_helper.py" validate-caddy \
+  --target "$RELEASE_DIR/spina-target.json" --config "$RELEASE_DIR/caddy-adapted.json"
 
 ufw allow OpenSSH
 ufw allow 80/tcp

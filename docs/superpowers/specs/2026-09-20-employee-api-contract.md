@@ -317,6 +317,20 @@ Every command has a strict finite schema below. Required fields must be sent. Op
 | other_benefits_paid | `{"decimal_places":2,"ge":0,"max_digits":14,"type":"string"}` | Yes |
 | source | `{"maxLength":2000,"minLength":1,"type":"string"}` | Yes |
 
+### payroll_history_correct
+
+Owner-only, append-only replacement of the current opening history. All fields
+from `payroll_history_import` are required, with `action` set to
+`payroll_history_correct`, fresh `id` and `request_id`, and `expected_version: 0`.
+Also required: `original_history_id` (UUID), `original_expected_version` (integer
+at least 1), and `reason` (nonempty text, at most 2000 characters). The employee
+and year must match the original. Superseded targets, stale versions and periods
+overlapping recorded weekly payroll are rejected. The original is immutable;
+the latest linked replacement supplies annual facts and invalidates unpaid
+approvals. Standard receipt status is `accepted`; refreshed history row status
+is `reviewed`. Only the owner receives `payroll_history_correct` in the current
+row's `allowed_actions`.
+
 ### payroll_payment
 
 | Field | Type / constraint | Required |

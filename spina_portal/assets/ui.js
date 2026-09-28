@@ -10,18 +10,20 @@ export function escapeHtml(value) {
 }
 
 export function formatMoney(value) {
+  return formatExactMoney(value);
+}
+
+export function formatExactMoney(value, { minimumFractionDigits = 2 } = {}) {
   if (value == null || value === '') {
     return '—';
   }
-  const amount = Number(String(value).replaceAll(',', ''));
-  if (!Number.isFinite(amount)) {
+  const match = String(value).trim().replaceAll(',', '').match(/^([+-]?)(\d+)(?:\.(\d+))?$/);
+  if (!match) {
     return escapeHtml(value);
   }
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2,
-  }).format(amount);
+  const [, sign, whole, fraction = ''] = match;
+  const cents = fraction.padEnd(minimumFractionDigits, '0');
+  return `${sign}₱${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${cents ? `.${cents}` : ''}`;
 }
 
 export function formatDate(value) {
@@ -53,6 +55,7 @@ export function formatDateTime(value) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'Asia/Manila',
   }).format(date);
 }
 

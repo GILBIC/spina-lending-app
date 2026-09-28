@@ -51,15 +51,13 @@ Never collect or paste:
 flowchart TD
     START[Problem reported] --> WHERE{Where is it visible?}
 
-    WHERE -->|Desktop UI| DESK[Desktop path]
+    WHERE -->|Web or Windows UI| DESK[Portal path]
     WHERE -->|Mobile UI| MOB[Mobile path]
     WHERE -->|API / network| API[Backend path]
     WHERE -->|Data mismatch| DATA[Database and reconciliation path]
     WHERE -->|GitHub check| CI[CI path]
 
-    DESK --> D1{Startup/navigation or feature-specific?}
-    D1 -->|Startup/login/sidebar| DSHELL[Check application shell, accounts, startup, side navigation]
-    D1 -->|Feature-specific| DFEATURE[Use generated feature/dependency map and focused wave tests]
+    DESK --> D1[Check session, role workspace, API result and service-worker version]
 
     MOB --> M1{Online or Offline copy?}
     M1 -->|Offline copy| MCACHE[Inspect SQLCipher cache state; writes should be disabled]
@@ -77,88 +75,23 @@ flowchart TD
     H3 -->|Yes| REQUEST[Inspect endpoint guard, repository, and domain result]
 
     DATA --> AUTHORITY{Which record is authoritative?}
-    AUTHORITY -->|Desktop legacy loan| RECON[Compare Desktop state and reconciliation output]
+    AUTHORITY -->|Historical loan| RECON[Compare preserved source records and reconciliation output]
     AUTHORITY -->|Gilbic official collection| POSTING[Trace collection transaction, state, receipt, idempotency]
 
     CI --> RUNNER{Workflow queued or failed?}
-    RUNNER -->|Queued| QUEUE[Check self-hosted Windows runner online/busy/labels]
+    RUNNER -->|Queued| QUEUE[Check hosted CI capacity; only dispatched maintenance uses Windows runners]
     RUNNER -->|Failed| STEP[Open job step and logs for exact head]
 ```
 
 ## Layer-by-layer checks
 
-### A. SPINA Desktop
+### A. Web and Windows
 
-Start here for:
+Both surfaces use `spina_portal/`; Windows is installed by `spina_pc/`. Check the portal build/service-worker identity, active session and permissions, then trace the request through `assets/api.js` to the owning backend API/repository. Late responses must not restore a logged-out user or clear a newer user's session. Logout must clear local access immediately.
 
-- startup, account, sidebar, or missing-tab errors
-- Data Bank, Clients, Reports, Collector Route, Dashboard, Cash Control, or backup problems
-- Regular/7x7 calculation disagreement
-- Tkinter callback errors
+For missing actions, check the exact server permission and capability response before changing navigation. For amount/time differences, use shared exact decimal formatting and Manila business timestamps. For a financial disagreement, identify the loan, cycle, transactions, idempotency identity and official result; presentation totals never repair the ledger.
 
-#### 1. Locate the owner
-
-Use:
-
-- [`feature-map.md`](feature-map.md) — feature and risk overview
-- [`function-index.md`](function-index.md) — exact symbol location
-- [`dependency-map.md`](dependency-map.md) — callers and dependencies
-- [`database-access-map.md`](database-access-map.md) — tables and SQL access
-- [`risk-map.md`](risk-map.md) — financial/write/authentication/backup risk
-- `architecture-map.json` — machine-readable detail
-
-#### 2. Check final runtime ownership
-
-Many old errors were caused by missing dependency injection or duplicate monkey patches. Verify:
-
-- the final `spina_app/features/*` installer is called
-- the installer is idempotent
-- required helper functions are injected before callbacks execute
-- a stale installed marker does not hide missing methods
-- the old duplicate wrapper has not returned
-- startup order remains accounts → side navigation → startup runtime
-
-Typical symptom patterns:
-
-| Symptom | Likely cause |
-|---|---|
-| `NameError` for `_spina_*` helper | Extracted helper not imported/injected into final feature namespace |
-| `App` has no attribute | Installer aborted early or stale marker says installed while binding is missing |
-| Tab missing after login | role/sidebar rebuild or hidden-tab restoration problem |
-| Duplicate controls or repeated refresh | old wrapper and final installer both own the lifecycle |
-| Error during app close/theme change | scheduled Tk callback or event runs after root destruction |
-
-#### 3. Calculation problems
-
-Do not patch the display first.
-
-For Regular or 7x7 disagreement:
-
-1. Identify the loan cycle and original/current principal.
-2. List current-cycle transactions in date order.
-3. Separate Payment, ADV, PASS, and blank dates.
-4. Confirm renewal boundaries and due-date cycle.
-5. Run or inspect protected calculation tests.
-6. Compare Dashboard, Cash Control, Reports, and Collector Route outputs against the same service rule.
-
-7x7 invariants:
-
-- every started ₱1,000 of recorded/current principal carries ₱7 daily interest
-- the daily interest basis stays fixed for that loan cycle
-- payment covers interest before principal
-- completion is principal-based
-- a mobile generic balance subtraction is not valid
-
-#### 4. Useful local checks
-
-From the repository root on Windows:
-
-```powershell
-python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-python tools/test_architecture_map.py
-```
-
-Run the focused permanent wave test for the owning feature, then the closest compatibility tests. Avoid running a destructive manual test on production data.
+The original Tkinter application is retired. Do not restart it, regenerate its maps or create a parallel account/data authority. Preserve historical records and use the supported reconciliation procedures when investigating older loans.
 
 ### B. Gilbic Mobile
 

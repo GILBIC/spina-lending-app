@@ -56,13 +56,15 @@ const FORMS = {
   accounting_prepare: {label:'Prepare accounting draft',capability:'can_prepare_accounting',group:'Accounting',fields:[choice('preparation_kind','Preparation type',['journal','reconciliation']),note('description','Draft description'),date('as_of','Accounting date'),note('evidence','Supporting evidence'),field('lines','Journal draft lines','rows',{fields:[field('account_code','Account code'),amount('debit','Debit (PHP)'),amount('credit','Credit (PHP)')],min:0,max:100}),amount('statement_balance','Statement balance (PHP)',true),amount('ledger_balance','Ledger balance (PHP)',true)]},
 };
 
+FORMS.payroll_history_correct = {label:'Correct verified payroll history',fields:[...FORMS.payroll_history_import.fields.filter(item=>item.name!=='year'),reason]};
+
 const COLLECTIONS = {
   profiles:'Employee profiles',schedules:'Effective work schedules',backups:'Independent backup grants',calendar:'Reviewed calendar',statutory_months:'Monthly statutory review',statutory_remittances:'Agency remittance evidence',payroll_history:'Verified payroll history',attendance:'Original attendance events',requests:'Requests and decisions',leave_ledger:'Leave ledger',tasks:'Extra tasks',advances:'Advances and repayments',shortages:'Shortage cases',payroll:'Payslips and payroll',payments:'Actual payment evidence',accounting_preparations:'Accounting preparations',
 };
 const CAPABILITIES = ['can_self_service','can_manage_staff','can_configure','can_prepare_payroll','can_approve_payroll','can_record_payments','can_assign_tasks','can_review_requests','can_review_shortages','can_prepare_accounting','can_view_statutory','can_report_shortage','can_record_advances'];
 const MONEY_FIELDS = new Set(['daily_rate','amount','expected_cash','accounted_cash','shortage_amount','disbursed_amount','repaid_amount','outstanding_amount','gross_pay','deductions','net_pay','paid_amount','balance_due','statement_balance','ledger_balance','sss_employee','sss_employer','philhealth_employee','philhealth_employer','pagibig_employee','pagibig_employer','employer_other','maximum_authorized_recovery','basic_earned','taxable_earned','tax_withheld','thirteenth_paid','other_benefits_paid','debit','credit']);
 const LABELS = Object.fromEntries(Object.values(FORMS).flatMap(form=>form.fields.map(item=>[item.name,item.label])));
-Object.assign(LABELS,{full_name:'Employee',status:'Status',working_minutes:'Accepted working minutes',unpaid_break_minutes:'Unpaid break minutes',event_type:'Event',captured_at:'Captured at',received_at:'Received by server',decision_reason:'Review decision reason',request_kind:'Request category',disbursed_amount:'Principal disbursed',repaid_amount:'Principal repaid',outstanding_amount:'Outstanding principal',shortage_amount:'Recorded shortage',gross_pay:'Gross pay',deductions:'Deductions',net_pay:'Net pay',paid_amount:'Completed payments',balance_due:'Still due',period_end:'Period ends',journal_entry_id:'General Journal draft reference',explanation:'Employee explanation',approved_by:'Approved by',decided_by:'Decision by',recorded_by:'Payment recorded by',disbursed_at:'Disbursed at',original_payroll_id:'Original payroll reference',approval_reason:'Approval reason'});
+Object.assign(LABELS,{full_name:'Employee',status:'Status',working_minutes:'Accepted working minutes',unpaid_break_minutes:'Unpaid break minutes',event_type:'Event',captured_at:'Captured at',received_at:'Received by server',decision_reason:'Review decision reason',request_kind:'Request category',disbursed_amount:'Principal disbursed',repaid_amount:'Principal repaid',outstanding_amount:'Outstanding principal',shortage_amount:'Recorded shortage',gross_pay:'Gross pay',deductions:'Deductions',net_pay:'Net pay',paid_amount:'Completed payments',balance_due:'Still due',period_end:'Period ends',journal_entry_id:'General Journal draft reference',explanation:'Employee explanation',approved_by:'Approved by',decided_by:'Decision by',recorded_by:'Payment recorded by',disbursed_at:'Disbursed at',original_payroll_id:'Original payroll reference',approval_reason:'Approval reason',original_history_id:'Original history reference',original_expected_version:'Original history revision'});
 Object.assign(LABELS,{minutes:'Minutes',amount:'Amount (PHP)',work_date:'Work date',as_of:'As of',description:'Description',reason:'Reason',source:'Reviewed source',reference:'Reference',evidence:'Supporting evidence',employee_acknowledgment:'Employee acknowledgment',settlement_evidence:'Verified settlement evidence',paid_minutes:'Reviewed payable minutes'});
 
 function currency(value) {
@@ -108,6 +110,7 @@ function createAllowed(workspace,action) {
 }
 function recordAllowed(workspace,record,action) {
   if(!FORMS[action]||!record.allowed_actions.includes(action))return false;
+  if(action==='payroll_history_correct'&&workspace.actor.is_owner!==true)return false;
   const self=record.employee_id===workspace.actor.user_id;
   if(self&&['payroll_approve','advance_decide','shortage_decide'].includes(action))return false;
   if(['advance_disburse','advance_repay'].includes(action)&&!workspace.capabilities.can_record_advances)return false;
@@ -255,10 +258,12 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     if(action==='request_decide')fields=[choice('decision','Decision',record.employee_id===workspace.actor.user_id?['cancelled']:['approved','rejected','cancelled']),reason,minutes('paid_minutes','Reviewed payable minutes (when applicable)',true)];
     const profiles=workspace.profiles.filter(item=>action!=='shortage_report'||workspace.capabilities.can_manage_staff||item.employee_id===workspace.actor.user_id);
     const target=record?`<p>Employee: ${esc(employeeName(workspace,record.employee_id))}</p>`:form.subject==='self'?`<p>For: ${esc(employeeName(workspace,workspace.actor.employee_id))}</p>`:form.subject?inputMarkup(field('employee_id','Employee account', 'account'),{},form.subject==='account'?workspace.account_candidates:profiles.map(item=>({user_id:item.employee_id,full_name:item.payload.full_name} ))):'';
-    const values=action==='advance_terms'&&object(record?.payload.proposed_terms)?record.payload.proposed_terms:record?.payload??{};
+    let values=action==='advance_terms'&&object(record?.payload.proposed_terms)?record.payload.proposed_terms:record?.payload??{};
+    if(action==='payroll_history_correct')values={...values,reason:''};
     return `<section class="employee-editor" data-employee-editor><h3>${esc(form.label)}</h3>${record||form.subject==='self'?target:''}
       ${action==='payroll_payment'?'<p>Record a payment that actually occurred. This form does not initiate a transfer. A reference alone is insufficient evidence of completion.</p>':''}
       ${action==='payroll_adjustment'?'<p>This creates a linked adjustment. Shortage recovery requires a lawful basis, individual responsibility, employee response and an authorized cap; it is never automatic.</p>':''}
+      ${action==='payroll_history_correct'?`<p>The original history is preserved. Enter the complete corrected totals for payroll year ${esc(record.payload.year)} and a reason for this replacement.</p>`:''}
       ${action==='accounting_prepare'?'<p>Preparation creates a draft for authorized review. It does not post a journal or confirm settlement.</p>':''}
       ${fields.some(spec=>spec.type==='integer'&&/minutes/.test(spec.name))?'<p class="meta">For an eight-hour schedule, a full day is 480 minutes and half a day is 240 minutes. Enter the actual applicable time.</p>':''}
       <form class="entry-form" data-employee-form="${action}">${!record&&form.subject&&form.subject!=='self'?target:''}${fields.map(spec=>inputMarkup(spec,values,workspace.account_candidates)).join('')}<div class="inline-actions"><button type="submit" class="button button-primary">${esc(form.label)}</button><button type="button" class="button button-outline" data-employee-cancel>Cancel editing</button></div></form></section>`;
@@ -273,8 +278,11 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     else if(!record&&definition.subject)employeeId=form.querySelector('[name="employee_id"]')?.value;
     if(definition.subject||record?.employee_id){if(!UUID.test(employeeId))throw new Error('Select the employee account.');body.employee_id=employeeId;}
     const adjustment=action==='payroll_adjustment';
-    const command={action,request_id:crypto.randomUUID(),id:adjustment?crypto.randomUUID():record?.id||(action==='profile_save'?employeeId:crypto.randomUUID()),expected_version:adjustment?0:record?.version??0,...body};
+    const historyCorrection=action==='payroll_history_correct';
+    const replacement=adjustment||historyCorrection;
+    const command={action,request_id:crypto.randomUUID(),id:replacement?crypto.randomUUID():record?.id||(action==='profile_save'?employeeId:crypto.randomUUID()),expected_version:replacement?0:record?.version??0,...body};
     if(adjustment)command.original_payroll_id=record.id;
+    if(historyCorrection){command.original_history_id=record.id;command.original_expected_version=record.version;command.year=record.payload.year;}
     return command;
   }
   async function attendance(eventType){

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_alerts_audit.dart';
@@ -546,7 +547,7 @@ String _date(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}';
 
 String _timestamp(BuildContext context, DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   final time = TimeOfDay.fromDateTime(local).format(context);
   return '${_date(local)} $time';
 }

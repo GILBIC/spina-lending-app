@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/account/account_repository.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -41,7 +42,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ??
+    _repository =
+        widget.repository ??
         SpinaAccountRepository(
           deviceIdentityProvider: widget.deviceIdentityProvider,
         );
@@ -124,17 +126,17 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         }
         _revokingDeviceId = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Device access revoked.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Device access revoked.')));
     } on SpinaApiException catch (error) {
       if (!mounted) {
         return;
       }
       setState(() => _revokingDeviceId = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     } on Exception {
       if (!mounted) {
         return;
@@ -159,9 +161,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       ),
     );
     if (changed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password changed.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password changed.')));
     }
   }
 
@@ -194,7 +196,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     if (value == null) {
       return 'Not available';
     }
-    final local = value.toLocal();
+    final local = spinaBusinessWallClock(value);
     String two(int value) => value.toString().padLeft(2, '0');
     return '${local.year}-${two(local.month)}-${two(local.day)} '
         '${two(local.hour)}:${two(local.minute)}';
@@ -228,7 +230,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Current session', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Current session',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             const _DetailRow(label: 'State', value: 'Signed in'),
             _DetailRow(
@@ -243,7 +248,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             else
               _DetailRow(
                 label: 'Permission scope',
-                value: '${widget.session.permissions.length} server permissions',
+                value:
+                    '${widget.session.permissions.length} server permissions',
               ),
             const SizedBox(height: 10),
             FilledButton.icon(
@@ -372,59 +378,59 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.cloud_off_outlined, size: 42),
-                          const SizedBox(height: 12),
-                          Text(_error!, textAlign: TextAlign.center),
-                          const SizedBox(height: 16),
-                          FilledButton(
-                            key: const Key('account-retry'),
-                            onPressed: _load,
-                            child: const Text('Try again'),
-                          ),
-                        ],
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cloud_off_outlined, size: 42),
+                      const SizedBox(height: 12),
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        key: const Key('account-retry'),
+                        onPressed: _load,
+                        child: const Text('Try again'),
                       ),
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _profileCard(_overview!.profile),
-                        _sessionCard(),
-                        if (widget.session.role != AppRole.client) _passwordCard(),
-                        if (_canResetClientPassword) _clientPasswordResetCard(),
-                        _renewalSignaturesCard(),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Registered devices',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        if (_overview!.devices.isEmpty)
-                          const Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(18),
-                              child: Text('No registered devices were returned.'),
-                            ),
-                          )
-                        else
-                          ..._overview!.devices.map(_deviceCard),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Device identifiers are never shown here. Only platform, '
-                          'app version, status, and activity timestamps are displayed.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _profileCard(_overview!.profile),
+                    _sessionCard(),
+                    if (widget.session.role != AppRole.client) _passwordCard(),
+                    if (_canResetClientPassword) _clientPasswordResetCard(),
+                    _renewalSignaturesCard(),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Registered devices',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    if (_overview!.devices.isEmpty)
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(18),
+                          child: Text('No registered devices were returned.'),
+                        ),
+                      )
+                    else
+                      ..._overview!.devices.map(_deviceCard),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Device identifiers are never shown here. Only platform, '
+                      'app version, status, and activity timestamps are displayed.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -527,7 +533,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                 obscureText: true,
                 enableSuggestions: false,
                 autocorrect: false,
-                decoration: const InputDecoration(labelText: 'Confirm new password'),
+                decoration: const InputDecoration(
+                  labelText: 'Confirm new password',
+                ),
               ),
               if (_errorMessage.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -541,7 +549,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
         ),
         actions: [
           TextButton(
-            onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+            onPressed: _submitting
+                ? null
+                : () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
           FilledButton(
@@ -577,9 +587,9 @@ class _DetailRow extends StatelessWidget {
             width: 132,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(child: Text(value)),
