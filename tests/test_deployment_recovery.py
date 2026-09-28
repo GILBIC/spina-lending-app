@@ -267,7 +267,15 @@ def test_redeploy_retains_existing_caddy_bytes_and_redirect_behaviors(
     candidate = candidate.replace("/etc/caddy/Caddyfile", "active-caddy").replace(
         "/opt/spina/current", "current"
     )
-    original = 'spina.com.ph, app.spina.com.ph, api.spina.com.ph, spina.159-223-39-43.sslip.io {\n respond "synthetic retained site"\n}\nwww.spina.com.ph {\n redir https://spina.com.ph{uri} permanent\n}\n'
+    original = (
+        "spina.com.ph, app.spina.com.ph, api.spina.com.ph, "
+        "spina.159-223-39-43.sslip.io {\n"
+        ' respond "synthetic retained site"\n'
+        "}\n"
+        "www.spina.com.ph {\n"
+        " redir https://spina.com.ph{uri} permanent\n"
+        "}\n"
+    )
     (tmp_path / "active-caddy").write_text(original, encoding="utf-8")
     result = _bash(
         tmp_path,
