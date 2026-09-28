@@ -37,9 +37,30 @@ are not restored, and recovery does not post payments or change balances.
 
 This recovers a camera/picker result, not general form fields, an upload interrupted
 after submission, or a financial offline queue. Notes and other form choices may
-need entering again. The image remains in the plugin's temporary storage; if
-Android has removed it, select or take another photo. Clearing recovery metadata
-does not promise erasure of the plugin cache or user-saved gallery files.
+need entering again. A recovered result is copied into Spina's private application
+support directory before its path is journaled. This private copy preserves a
+reviewable selection across another restart even if Android clears the plugin's
+cache. A normal picker result still follows the form's existing byte-reading path.
+
+The private store owns only copies it creates under
+`spina_recovered_images_v1/pick_*/photo`, with a matching ownership marker. It
+checks the directory and file types without following symbolic links. Cleanup
+does not recurse, and refuses unrecognized entries. Picker, gallery, download
+and server evidence paths never authorize deletion.
+
+Preview reads, accepting the recovered bytes and cleanup are serialized. On
+acceptance, bytes are detached into memory before the private disk copy is
+removed; existing form submission and uncertain-upload retry behavior retains
+those bytes. Discard, logout, authorization changes and the existing 24-hour
+expiry invalidate the journal before removing eligible private copies. Expiry
+is checked when restoring or accepting a recovered photo, not by a background
+timer. A failed journal invalidation preserves the private copy. Failed cleanup
+is reported and retried on the next recovery initialization; clearing metadata
+alone is not proof of file removal. Startup also removes eligible orphaned copies
+while preserving the current journaled photo.
+
+This does not establish erasure of the image-picker plugin's cache, gallery
+originals, user-saved downloads, device backups, or finalized server evidence.
 
 ## Verification
 
@@ -49,6 +70,10 @@ storage failures, expiry, concurrent selection, late native results and logout
 races. Widget tests
 exercise recovery review and explicit submission, office witness reset, account
 startup gating and stale device-identity completions.
+Private-store integration tests use synthetic files for copy ownership,
+second-restart survival, consumption/discard/logout/expiry cleanup, deletion
+failure and read/cleanup races. Symbolic-link coverage may be skipped on a
+Windows host that disallows link creation; Linux CI must exercise that case.
 
 Physical acceptance uses an isolated application ID and disposable backend.
 Open the native camera, run `adb shell am kill <test-package>` while that
