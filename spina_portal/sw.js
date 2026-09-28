@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v13';
+const CACHE_NAME = 'spina-company-shell-v14';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -53,7 +53,9 @@ const SHELL_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)),
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(SHELL_ASSETS.map((asset) => new Request(asset, { cache: 'reload' }))),
+    ),
   );
   self.skipWaiting();
 });

@@ -47,6 +47,10 @@ TARGET_TESTS = (
     ROOT
     / "gilbic_backend"
     / "tests"
+    / "test_regular_followup_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
     / "test_regular_advance_postgres.py",
     ROOT
     / "gilbic_backend"
