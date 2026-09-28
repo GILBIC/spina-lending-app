@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:convert';
+import 'package:file_selector/file_selector.dart' as documents;
 
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -368,6 +369,7 @@ class ClientPaymentProofUploadPage extends StatefulWidget {
     this.proof,
     this.loanRepository,
     this.imagePicker,
+    this.documentPicker,
     this.requestIdGenerator,
     super.key,
   });
@@ -378,6 +380,7 @@ class ClientPaymentProofUploadPage extends StatefulWidget {
   final ClientPaymentProof? proof;
   final ClientLoanRepository? loanRepository;
   final ImagePicker? imagePicker;
+  final Future<XFile?> Function()? documentPicker;
   final String Function()? requestIdGenerator;
   @override
   State<ClientPaymentProofUploadPage> createState() =>
@@ -492,6 +495,70 @@ class _ClientPaymentProofUploadPageState
       if (mounted) {
         setState(
           () => _error = 'The image could not be opened. Try another photo.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    if (_busy ||
+        _uncertain ||
+        _conflict ||
+        !widget.capability.allowedMediaTypes.contains('application/pdf')) {
+      return;
+    }
+    if (_loanId == null) {
+      setState(() => _error = 'Choose the loan before selecting a PDF.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final file =
+          await (widget.documentPicker?.call() ??
+              documents.openFile(
+                acceptedTypeGroups: const [
+                  documents.XTypeGroup(
+                    label: 'PDF payment proof',
+                    extensions: ['pdf'],
+                    mimeTypes: ['application/pdf'],
+                    uniformTypeIdentifiers: ['com.adobe.pdf'],
+                  ),
+                ],
+              ));
+      if (file == null || !mounted) return;
+      if (await file.length() > widget.capability.maxBytes) {
+        throw const SpinaApiException(
+          'The PDF exceeds the upload size allowed by SPINA.',
+        );
+      }
+      final bytes = await file.readAsBytes();
+      if (bytes.length > widget.capability.maxBytes ||
+          bytes.length < 5 ||
+          ascii.decode(bytes.take(5).toList(), allowInvalid: true) != '%PDF-') {
+        throw const SpinaApiException(
+          'Choose a supported PDF payment proof within the allowed size.',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _draft = PaymentProofDraft(
+          filename: file.name,
+          mediaType: 'application/pdf',
+          bytes: bytes,
+        );
+        _requestId = null;
+      });
+    } on SpinaApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _error = 'The PDF could not be opened. Select it again.',
         );
       }
     } finally {
@@ -630,6 +697,15 @@ class _ClientPaymentProofUploadPageState
               Wrap(
                 spacing: 8,
                 children: [
+                  if (widget.capability.allowedMediaTypes.contains(
+                    'application/pdf',
+                  ))
+                    OutlinedButton.icon(
+                      key: const Key('proof-document'),
+                      onPressed: locked ? null : _pickDocument,
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('Choose PDF'),
+                    ),
                   OutlinedButton.icon(
                     key: const Key('proof-gallery'),
                     onPressed: locked ? null : () => _pick(ImageSource.gallery),

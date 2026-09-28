@@ -10,13 +10,13 @@ from fastapi.routing import APIRoute
 from psycopg.errors import CheckViolation
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from starlette.concurrency import run_in_threadpool
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .database import open_connection
 from .request_auth import authenticated_device_context
-
 
 MAX_PROOF_BYTES = 8 * 1024 * 1024
 ALLOWED_PROOF_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -564,6 +564,85 @@ def _try_activate(cursor, *, row, actor_user_id: UUID) -> tuple[bool, str]:
         request_id=row["request_id"],
     )
     return True, "Renewal activation completed."
+
+
+def _save_handover_photo(
+    *,
+    request_id: UUID,
+    actor_user_id: UUID,
+    original_filename: str,
+    content_type: str,
+    data: bytes,
+) -> dict[str, object]:
+    digest = hashlib.sha256(data).hexdigest()
+    with (
+        open_connection() as connection,
+        connection.cursor(row_factory=dict_row) as cursor,
+    ):
+        row = _renewal_row(cursor, request_id=request_id)
+        _assert_assigned(row, actor_user_id)
+        if row["cash_given_to_client_at"] is None:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "renewal_cash_not_given",
+                    "message": (
+                        "Confirm Cash Given to Client before uploading "
+                        "handover proof."
+                    ),
+                },
+            )
+        cursor.execute(
+            """
+            select coalesce(max(version),0)+1 as next_version
+            from lending.renewal_handover_photos
+            where renewal_request_id=%s
+            """,
+            (request_id,),
+        )
+        version = int(cursor.fetchone()["next_version"])
+        cursor.execute(
+            """
+            insert into lending.renewal_handover_photos (
+                renewal_request_id, version, uploaded_by_user_id,
+                original_filename, content_type, byte_size,
+                sha256_hex, photo_data
+            ) values (%s,%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                request_id,
+                version,
+                actor_user_id,
+                original_filename,
+                content_type,
+                len(data),
+                digest,
+                data,
+            ),
+        )
+        cursor.execute(
+            """
+            update lending.client_renewal_requests
+            set handover_proof_status='under_review', updated_at=now()
+            where id=%s
+            """,
+            (request_id,),
+        )
+        _audit(
+            cursor,
+            actor_user_id=actor_user_id,
+            action="renewal.handover_proof.submitted",
+            request_id=request_id,
+            details=f"version={version};sha256={digest}",
+        )
+    return {
+        "success": True,
+        "data": {
+            "version": version,
+            "sha256": digest,
+            "status": "under_review",
+        },
+    }
 
 
 def create_renewal_workflow_router() -> APIRouter:
@@ -1269,7 +1348,8 @@ def create_renewal_workflow_router() -> APIRouter:
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
     ) -> dict[str, object]:
-        actor = authenticated_device_context(
+        actor = await run_in_threadpool(
+            authenticated_device_context,
             authorization=authorization,
             device_identifier=x_device_id,
             auth=auth,
@@ -1277,9 +1357,28 @@ def create_renewal_workflow_router() -> APIRouter:
             permission="renewal.cash_custody.assigned",
             permission_error="Assigned Collector renewal cash permission is required.",
         )
-        data = await request.body()
+        too_large = HTTPException(
+            status_code=413,
+            detail={
+                "code": "renewal_proof_invalid",
+                "message": "Upload a JPEG, PNG or WebP handover photo up to 8 MB.",
+            },
+        )
+        length = request.headers.get("content-length")
+        if length is not None:
+            try:
+                declared_size = int(length) if length.isdecimal() else -1
+            except ValueError:
+                raise too_large from None
+            if not 0 <= declared_size <= MAX_PROOF_BYTES:
+                raise too_large
+        data = bytearray()
+        async for chunk in request.stream():
+            if len(data) + len(chunk) > MAX_PROOF_BYTES:
+                raise too_large
+            data.extend(chunk)
         actual_type = (content_type or "").split(";", 1)[0].strip().lower()
-        if actual_type not in ALLOWED_PROOF_TYPES or not data or len(data) > MAX_PROOF_BYTES:
+        if actual_type not in ALLOWED_PROOF_TYPES or not data:
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -1287,73 +1386,14 @@ def create_renewal_workflow_router() -> APIRouter:
                     "message": "Upload a JPEG, PNG or WebP handover photo up to 8 MB.",
                 },
             )
-        digest = hashlib.sha256(data).hexdigest()
-        with open_connection() as connection:
-            with connection.cursor(row_factory=dict_row) as cursor:
-                row = _renewal_row(cursor, request_id=request_id)
-                _assert_assigned(row, actor.user_id)
-                if row["cash_given_to_client_at"] is None:
-                    raise HTTPException(
-                        status_code=409,
-                        detail={
-                            "code": "renewal_cash_not_given",
-                            "message": (
-                                "Confirm Cash Given to Client before uploading "
-                                "handover proof."
-                            ),
-                        },
-                    )
-                cursor.execute(
-                    """
-                    select coalesce(max(version),0)+1 as next_version
-                    from lending.renewal_handover_photos
-                    where renewal_request_id=%s
-                    """,
-                    (request_id,),
-                )
-                version = int(cursor.fetchone()["next_version"])
-                cursor.execute(
-                    """
-                    insert into lending.renewal_handover_photos (
-                        renewal_request_id, version, uploaded_by_user_id,
-                        original_filename, content_type, byte_size,
-                        sha256_hex, photo_data
-                    ) values (%s,%s,%s,%s,%s,%s,%s,%s)
-                    """,
-                    (
-                        request_id,
-                        version,
-                        actor.user_id,
-                        x_file_name or "renewal-handover.jpg",
-                        actual_type,
-                        len(data),
-                        digest,
-                        data,
-                    ),
-                )
-                cursor.execute(
-                    """
-                    update lending.client_renewal_requests
-                    set handover_proof_status='under_review', updated_at=now()
-                    where id=%s
-                    """,
-                    (request_id,),
-                )
-                _audit(
-                    cursor,
-                    actor_user_id=actor.user_id,
-                    action="renewal.handover_proof.submitted",
-                    request_id=request_id,
-                    details=f"version={version};sha256={digest}",
-                )
-        return {
-            "success": True,
-            "data": {
-                "version": version,
-                "sha256": digest,
-                "status": "under_review",
-            },
-        }
+        return await run_in_threadpool(
+            _save_handover_photo,
+            request_id=request_id,
+            actor_user_id=actor.user_id,
+            original_filename=x_file_name or "renewal-handover.jpg",
+            content_type=actual_type,
+            data=bytes(data),
+        )
 
     @router.get("/api/v1/renewals/{request_id}/handover-photo")
     @router.get(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_outcome_review.dart';
@@ -907,7 +908,7 @@ String _dateOrDash(DateTime? value) {
 
 String _dateTimeOrDash(DateTime? value) {
   if (value == null) return '—';
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
   return '${_dateOrDash(local)} $hour:$minute';

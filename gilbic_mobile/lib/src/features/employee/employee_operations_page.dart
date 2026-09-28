@@ -9,6 +9,7 @@ import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_r
 import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_service.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/features/employee/employee_command_form.dart';
 
 enum EmployeeSection {
@@ -355,10 +356,10 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
     if (value is bool) return value ? 'Yes' : 'No';
     if (value is String) {
       if (RegExp(r'^\d{4}-\d{2}-\d{2}T').hasMatch(value)) {
-        return DateTime.tryParse(
-              value,
-            )?.toLocal().toString().replaceFirst(RegExp(r'\.\d+.*$'), '') ??
-            value;
+        final instant = DateTime.tryParse(value);
+        return instant == null
+            ? value
+            : '${formatSpinaBusinessDateTime(instant)} (Asia/Manila)';
       }
       return value;
     }
@@ -427,9 +428,14 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
         ? '${employeeLabel(payload['payroll_kind']?.toString() ?? 'payroll')} · ${payload['week_start'] ?? ''}'
         : null;
     final id = record['employee_id'] as String?;
-    final actions = stringList(
-      record['allowed_actions'],
-    ).where(employeeActionFields.containsKey).toList();
+    final actions = stringList(record['allowed_actions'])
+        .where(
+          (action) =>
+              employeeActionFields.containsKey(action) &&
+              (action != 'payroll_history_correct' ||
+                  _workspace!.actor['is_owner'] == true),
+        )
+        .toList();
     return Card(
       child: ExpansionTile(
         key: ValueKey(

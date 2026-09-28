@@ -139,6 +139,7 @@ _PORTAL_ALLOWED_HEADERS = [
     "X-App-Version",
     "X-Client-Transaction-Id",
     "X-Device-Id",
+    "X-File-Name",
     "X-Gilbic-Contract-Version",
     "X-Proof-Note",
 ]

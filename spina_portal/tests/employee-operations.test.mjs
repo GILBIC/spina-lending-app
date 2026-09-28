@@ -147,6 +147,24 @@ test('linked payroll adjustment uses a new record while preserving original payr
  await submit(h);assert.notEqual(body.id,ID);assert.equal(body.original_payroll_id,ID);assert.equal(body.expected_version,0);assert.equal(body.amount,'-25.15');assert.equal(body.maximum_authorized_recovery,'25.15');assert.equal(body.employee_id,OTHER);
 });
 
+test('history correction preserves original version and exact replacement facts under a new identity',async()=>{
+ let body;const facts={year:2026,through_date:'2026-08-31',basic_earned:'10000.15',taxable_earned:'11000.25',tax_withheld:'100.10',thirteenth_paid:'500.20',other_benefits_paid:'50.30',source:'Reviewed original historical record'};
+ const h=await harness(workspace({actor:{user_id:SELF,employee_id:SELF,device_id:DEVICE,is_owner:true},payroll_history:[record(facts,['payroll_history_correct'],OTHER)]}),async(path,options,h)=>{if(options.method==='POST'){body=options.body;return {request_id:body.request_id,id:body.id,version:1,status:'accepted',message:'Historical correction saved'};}return h.value;});
+ click(h,'[data-employee-action="payroll_history_correct"]');await setImmediate();
+ assert.equal(h.root.querySelector('[name="basic_earned"]').value,'10000.15');
+ assert.match(h.root.textContent,/original.*preserved|preserves.*original/i);
+ set(h,'basic_earned','10001.16');set(h,'source','Verified replacement records');set(h,'reason','Corrected a transcription error');await submit(h);
+ assert.equal(body.action,'payroll_history_correct');assert.notEqual(body.id,ID);assert.notEqual(body.request_id,ID);assert.equal(body.expected_version,0);assert.equal(body.original_history_id,ID);assert.equal(body.original_expected_version,3);assert.equal(body.employee_id,OTHER);assert.equal(body.basic_earned,'10001.16');assert.equal(body.taxable_earned,'11000.25');assert.equal(body.year,2026);assert.equal(body.reason,'Corrected a transcription error');
+});
+
+test('history correction is absent on superseded history and for non-owner accounts',async()=>{
+ const facts={year:2026,source:'Reviewed historical records'};
+ const superseded=await harness(workspace({actor:{user_id:SELF,is_owner:true},payroll_history:[record(facts,[],OTHER)]}));
+ assert.equal(superseded.root.querySelector('[data-employee-action="payroll_history_correct"]'),null);
+ const nonowner=await harness(workspace({payroll_history:[record(facts,['payroll_history_correct'],OTHER)]}));
+ assert.equal(nonowner.root.querySelector('[data-employee-action="payroll_history_correct"]'),null);
+});
+
 test('accounting form sends structured journal lines to preparation and never to a posting endpoint',async()=>{
  let body;const h=await harness(workspace({capabilities:{...capabilities,can_prepare_accounting:true}}),async(path,options,h)=>{if(options.method==='POST'){body=options.body;return {request_id:body.request_id,id:body.id,version:1,status:'accepted',message:'Draft prepared'};}return h.value;});
  await open(h,'accounting_prepare');set(h,'preparation_kind','journal');set(h,'description','Synthetic adjustment draft');set(h,'as_of','2026-09-20');set(h,'evidence','Reviewed synthetic supporting record');

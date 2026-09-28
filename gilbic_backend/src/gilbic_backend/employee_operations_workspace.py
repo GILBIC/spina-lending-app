@@ -89,6 +89,12 @@ def allowed(tx, domain, row, caps):
             actions.append("payroll_payment")
         if owner and status in ("paid", "partially_paid"):
             actions.append("payroll_adjustment")
+    elif domain == "payroll_history" and owner:
+        if not any(
+            r["payload"].get("original_history_id") == row["id"]
+            for r in tx.all("payroll_history", row["employee_id"])
+        ):
+            actions.append("payroll_history_correct")
     elif (
         domain == "accounting_preparations"
         and caps["can_prepare_accounting"]

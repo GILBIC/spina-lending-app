@@ -66,6 +66,7 @@ test('Employee and Management reset tools are mounted only with the exact creden
 
 test('the updated PWA shell includes the staff credential module for staff workspace imports', async () => {
   const worker = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-  assert.match(worker, /spina-company-shell-v14/);
+  const version = worker.match(/spina-company-shell-v(\d+)/);
+  assert.ok(Number(version?.[1]) >= 14);
   assert.match(worker, /'\/assets\/account-credentials\.js'/);
 });

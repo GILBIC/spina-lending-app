@@ -473,7 +473,7 @@ def test_owner_change_before_device_lock_fails_closed_without_side_effects(
                 device_case.actor_user_id,
                 device_case.pending_collector_device_id,
             ),
-        ).fetchone()[0]
+        ).fetchone()["count"]
 
     assert {
         "conflict": isinstance(outcome, AccountConflict),

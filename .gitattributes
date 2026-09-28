@@ -1,2 +1,6 @@
 # Preserve the byte identity used to verify controlled form review mirrors.
 docs/forms-documents/**/templates/*.md text eol=lf
+# Deployment and dependency identities must not depend on the checkout OS.
+*.sh text eol=lf
+*.yml text eol=lf
+requirements-runtime.lock text eol=lf

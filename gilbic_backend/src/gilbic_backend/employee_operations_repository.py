@@ -529,6 +529,7 @@ class EmployeeTransaction:
             "attendance_record": "attendance",
             "leave_balance_adjust": "leave_ledger",
             "payroll_history_import": "payroll_history",
+            "payroll_history_correct": "payroll_history",
             "statutory_remittance": "statutory_remittances",
             "schedule_save": "schedules",
             "payroll_adjustment": "payroll",

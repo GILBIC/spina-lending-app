@@ -2,6 +2,7 @@ import { SpinaApi } from './api.js';
 import { PORTAL_CONFIG } from './config.js';
 import { normalizeRole, sessionWorkspaceRoles } from './roles.js';
 import { SessionStore } from './session.js';
+import { SessionRefreshController } from './session-refresh.js';
 import {
   bindNavigation,
   escapeHtml,
@@ -39,6 +40,19 @@ const workspaceChoiceLabel = document.getElementById('workspace-choice-label');
 let currentMount = null;
 let currentContext = null;
 let workspaceController = null;
+const refreshController = new SessionRefreshController({
+  api, sessionStore,
+  onRefreshed: async (session) => {
+    if (!currentContext || currentContext.session.user.id !== session.user.id) return;
+    const scope = (value) => JSON.stringify([sessionWorkspaceRoles(value), value.permissions, value.user?.permissions]);
+    if (scope(currentContext.session) !== scope(session)) {
+      await showAuthenticated(session, currentContext.role);
+    } else {
+      currentContext.session = session;
+    }
+  },
+  onExpired: () => { showAuthentication(); showToast('Your session ended. Sign in again.', 'error'); },
+});
 
 function updateConnectionStatus() {
   const online = navigator.onLine !== false;
@@ -68,6 +82,7 @@ function clearWorkspace() {
 }
 
 function showAuthentication() {
+  refreshController.stop();
   clearWorkspace();
   authenticatedApp.hidden = true;
   authView.hidden = false;
@@ -132,6 +147,7 @@ async function showAuthenticated(session, requestedRole) {
     setNavigation,
     uncertainCollection: null,
   };
+  refreshController.start();
   await mountCurrentWorkspace();
   if (currentContext?.session === session) roleContent.focus({ preventScroll: true });
 }
@@ -165,14 +181,14 @@ workspaceChoice?.addEventListener('change', () => {
 });
 logoutButton.addEventListener('click', async () => {
   setButtonBusy(logoutButton, true, 'Signing out…');
-  clearWorkspace();
+  const revocation = api.logout();
+  showAuthentication();
   try {
-    await api.logout();
+    await revocation;
   } catch (error) {
     showToast(error.message, 'error');
   } finally {
     setButtonBusy(logoutButton, false);
-    showAuthentication();
   }
 });
 
@@ -201,13 +217,19 @@ if ('serviceWorker' in navigator) {
 
 async function boot() {
   updateConnectionStatus();
-  const session = sessionStore.load();
+  let session = sessionStore.load();
+  let revision = sessionStore.revision;
   if (!session) {
     showAuthentication();
     return;
   }
   try {
+    if (session.refresh_token && Date.parse(session.expires_at) <= Date.now() + 120000) {
+      session = await api.refresh();
+      revision = sessionStore.revision;
+    }
     const current = await api.request('/api/v1/auth/me');
+    api.assertSessionRevision(revision);
     const refreshed = {
       ...session,
       user: {
@@ -218,6 +240,7 @@ async function boot() {
     sessionStore.save(refreshed);
     await showAuthenticated(refreshed);
   } catch (error) {
+    if (error.code === 'session_changed' || sessionStore.revision !== revision) return;
     if (error.status === 401 || error.status === 403) {
       sessionStore.clear();
       showAuthentication();

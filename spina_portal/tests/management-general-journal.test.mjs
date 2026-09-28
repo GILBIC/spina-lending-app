@@ -24,7 +24,7 @@ async function importJournalModule() {
   }
 }
 
-test('Management General Journal requires accounting.view and stays read-only in Web', () => {
+test('Management General Journal evidence requires accounting.view', () => {
   const withoutAccounting = availableRoleActions('management', [
     'management.dashboard.view',
   ]);
@@ -195,14 +195,14 @@ test('General Journal markup renders authoritative server values and no mutation
   assert.doesNotMatch(markup, /Create journal|Edit journal|Post journal|Reverse journal|Cancel draft/i);
 });
 
-test('Management workspace mounts the isolated General Journal and Trial Balance read-only surface', () => {
+test('Management workspace mounts General Journal evidence and protected action controls', () => {
   assert.match(managementSource, /management-general-journal\.js/);
   assert.match(managementSource, /loadManagementGeneralJournal/);
   assert.match(managementSource, /loadManagementTrialBalance/);
   assert.match(managementSource, /managementGeneralJournalMarkup/);
   assert.match(managementSource, /id="management-general-journal"/);
   assert.match(managementSource, /hasPermission\(session, 'accounting\.view'\)/);
-  assert.doesNotMatch(managementSource, /accounting\.journal\.manage/);
+  assert.match(managementSource, /mountManagementJournalActions/);
 });
 
 test('installed Web shell precaches the isolated Management General Journal dependency', () => {

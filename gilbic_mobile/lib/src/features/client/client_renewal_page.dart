@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -118,9 +119,9 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -169,9 +170,9 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -227,7 +228,8 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       return const SizedBox.shrink();
     }
 
-    final hasApprovedWorkflow = portal.requests.any(
+    final hasApprovedWorkflow =
+        portal.requests.any(
           (request) => request.status.toLowerCase() == 'approved',
         ) ||
         portal.loans.any((loan) => loan.isAwaitingProcessing);
@@ -408,9 +410,11 @@ class _RenewalLoanCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(loan.paidPercent == null
-                    ? 'Paid % unavailable'
-                    : '${loan.paidPercent!.toStringAsFixed(1)}% paid'),
+                Text(
+                  loan.paidPercent == null
+                      ? 'Paid % unavailable'
+                      : '${loan.paidPercent!.toStringAsFixed(1)}% paid',
+                ),
               ],
             ),
             const Divider(height: 24),
@@ -433,10 +437,10 @@ class _RenewalLoanCard extends StatelessWidget {
                 onPressed: busy
                     ? null
                     : loan.isAwaitingProcessing
-                        ? onContinue
-                        : loan.canRequest
-                            ? onRequest
-                            : null,
+                    ? onContinue
+                    : loan.canRequest
+                    ? onRequest
+                    : null,
                 icon: Icon(
                   loan.isAwaitingProcessing
                       ? Icons.arrow_forward
@@ -531,9 +535,7 @@ class _RenewalRequestCard extends StatelessWidget {
             ],
             if (request.reviewedAt != null) ...[
               const Divider(height: 22),
-              Text(
-                'Reviewed by: ${request.reviewedByName ?? 'Management'}',
-              ),
+              Text('Reviewed by: ${request.reviewedByName ?? 'Management'}'),
               Text('Reviewed at: ${_dateTime(request.reviewedAt!)}'),
               if (request.reviewNote.isNotEmpty)
                 Text('Management note: ${request.reviewNote}'),
@@ -622,8 +624,9 @@ class _RenewalRequestDialogState extends State<_RenewalRequestDialog> {
             TextField(
               key: const Key('renewal-request-amount'),
               controller: _amountController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: InputDecoration(
                 labelText: 'Requested amount',
                 prefixText: '₱',
@@ -724,7 +727,7 @@ String _date(DateTime value) {
 }
 
 String _dateTime(DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   return '${_date(local)} '
       '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';

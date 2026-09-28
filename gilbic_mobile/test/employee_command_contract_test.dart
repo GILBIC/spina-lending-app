@@ -8,6 +8,33 @@ import 'package:gilbic_mobile/src/core/employee_operations/employee_form_values.
 const employee = '00000000-0000-4000-8000-000000000001';
 const device = '00000000-0000-4000-8000-000000000002';
 void main() {
+  test('historical payroll correction creates a new immutable replacement', () {
+    final command = buildEmployeeCommand(
+      action: 'payroll_history_correct',
+      values: {
+        'employee_id': employee,
+        'original_history_id': device,
+        'original_expected_version': '3',
+        'year': '2026',
+        'through_date': '2026-08-31',
+        'basic_earned': '10001.16',
+        'taxable_earned': '11000.25',
+        'tax_withheld': '100.10',
+        'thirteenth_paid': '500.20',
+        'other_benefits_paid': '50.30',
+        'source': 'Verified replacement records',
+        'reason': 'Corrected transcription error',
+      },
+      requestId: '00000000-0000-4000-8000-000000000003',
+      newRecordId: '00000000-0000-4000-8000-000000000004',
+      record: {'id': device, 'version': 3},
+    );
+    expect(command['id'], '00000000-0000-4000-8000-000000000004');
+    expect(command['expected_version'], 0);
+    expect(command['original_history_id'], device);
+    expect(command['original_expected_version'], 3);
+    expect(command['basic_earned'], '10001.16');
+  });
   test(
     'every typed form builds a strict command with exact money for backend cross-validation',
     () async {
@@ -88,7 +115,7 @@ void main() {
           offline: true,
         )).command,
       );
-      expect(commands.length, 30);
+      expect(commands.length, 31);
       final artifact = Platform.environment['EMPLOYEE_CONTRACT_ARTIFACT'];
       if (artifact != null) {
         File(artifact).writeAsStringSync(

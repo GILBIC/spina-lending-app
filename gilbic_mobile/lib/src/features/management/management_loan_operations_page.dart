@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_operations.dart';
@@ -378,7 +379,10 @@ class _OperationEntryCard extends StatelessWidget {
           _DetailRow(label: 'Receipt', value: entry.receiptNumber),
           _DetailRow(label: 'Loan', value: entry.loanNumber),
           _DetailRow(label: 'Collector', value: entry.collectorName),
-          _DetailRow(label: 'Collection date', value: _date(entry.collectionDate)),
+          _DetailRow(
+            label: 'Collection date',
+            value: _date(entry.collectionDate),
+          ),
           _DetailRow(label: 'Entry type', value: _titleCase(entry.entryType)),
           _DetailRow(label: 'Amount', value: _money(entry.amount)),
           _DetailRow(
@@ -393,10 +397,7 @@ class _OperationEntryCard extends StatelessWidget {
           ),
           _DetailRow(label: 'Edit version', value: '${entry.editVersion}'),
           if (entry.remittanceNumber != null)
-            _DetailRow(
-              label: 'Remittance',
-              value: entry.remittanceNumber!,
-            ),
+            _DetailRow(label: 'Remittance', value: entry.remittanceNumber!),
           if (entry.voidReason != null)
             _DetailRow(label: 'Void reason', value: entry.voidReason!),
           _DetailRow(label: 'Recorded', value: _dateTime(entry.acceptedAt)),
@@ -517,7 +518,7 @@ String _date(DateTime value) {
 }
 
 String _dateTime(DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   return '${_date(local)} '
       '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';

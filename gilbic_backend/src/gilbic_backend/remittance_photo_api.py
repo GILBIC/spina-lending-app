@@ -3,11 +3,13 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .remittance_photo_repository import (
+    MAX_PHOTO_BYTES,
     PostgresRemittancePhotoRepository,
     RemittancePhotoError,
     RemittancePhotoForbidden,
@@ -77,7 +79,8 @@ def create_remittance_photo_router() -> APIRouter:
             remittance_photo_repository_dependency
         ),
     ) -> dict[str, object]:
-        actor = authenticated_device_context(
+        actor = await run_in_threadpool(
+            authenticated_device_context,
             authorization=authorization,
             device_identifier=x_device_id,
             auth=auth,
@@ -85,14 +88,34 @@ def create_remittance_photo_router() -> APIRouter:
             permission="remittance.create",
             permission_error="Remittance creation permission is required.",
         )
-        photo_data = await request.body()
+        too_large = HTTPException(
+            status_code=413,
+            detail={
+                "code": "remittance_photo_invalid",
+                "message": "The handover photo must be 5 MB or smaller.",
+            },
+        )
+        length = request.headers.get("content-length")
+        if length is not None:
+            try:
+                declared_size = int(length) if length.isdecimal() else -1
+            except ValueError:
+                raise too_large from None
+            if not 0 <= declared_size <= MAX_PHOTO_BYTES:
+                raise too_large
+        photo_data = bytearray()
+        async for chunk in request.stream():
+            if len(photo_data) + len(chunk) > MAX_PHOTO_BYTES:
+                raise too_large
+            photo_data.extend(chunk)
         try:
-            record = photos.upload(
+            record = await run_in_threadpool(
+                photos.upload,
                 remittance_id=remittance_id,
                 actor_user_id=actor.user_id,
                 content_type=content_type or "application/octet-stream",
                 original_filename=x_file_name or "handover-photo",
-                photo_data=photo_data,
+                photo_data=bytes(photo_data),
             )
         except RemittancePhotoError as error:
             _raise_photo_error(error)

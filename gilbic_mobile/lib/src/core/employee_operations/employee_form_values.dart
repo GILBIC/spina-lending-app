@@ -26,7 +26,8 @@ Map<String, dynamic> buildEmployeeCommand({
     if (value is String) value = value.trim();
     body[name] = value;
   }
-  final adjustment = action == 'payroll_adjustment';
+  final adjustment =
+      action == 'payroll_adjustment' || action == 'payroll_history_correct';
   return {
     'action': action,
     'request_id': requestId,
@@ -48,6 +49,9 @@ String employeeLabel(String value) =>
       'schedule_save': 'Set schedule',
       'backup_save': 'Assign dated backup',
       'payroll_history_import': 'Import verified payroll history',
+      'payroll_history_correct': 'Correct verified payroll history',
+      'original_history_id': 'Original history reference',
+      'original_expected_version': 'Original history revision',
       'payroll_history': 'Verified historical payroll',
       'ordinary_leave_days_per_year':
           'Existing annual ordinary leave benefit (days)',

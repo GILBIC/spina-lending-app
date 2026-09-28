@@ -20,13 +20,16 @@ approved privacy and loan-template manifests, approved document converter, SMTP
 and other operator settings. Do not put its values in GitHub, Notion, test
 artifacts or logs. It is read after the generated environment, so an intentional
 operator assignment takes precedence. Avoid duplicating generated database/Auth
-credentials or CORS settings in it unless an operator deliberately owns that
-override and the associated rotation process.
+credentials in it unless an operator deliberately owns that override and its
+rotation process. Deployment retains existing CORS and staff-invite assignments
+there so a new primary-host declaration cannot silently replace them.
 
 On the first upgrade, if no operator file exists, the bootstrap preserves the
 non-generated assignments from the old `/etc/spina/spina.env`. It does not execute
 those assignments, copy the old generated DB/Auth credentials, or overwrite an
-existing operator file. Keep the old environment file until rollback to the
+existing operator values. Missing CORS/invite assignments are copied from the
+currently selected runtime environment, or the legacy file on first upgrade.
+Keep the old environment file until rollback to the
 legacy service is no longer required. Later redeployments leave operator settings
 unchanged. Any deliberate operator-setting change needs its own verified recovery
 copy; application deployment does not roll that file backward.
@@ -57,6 +60,11 @@ The bootstrap keeps first-boot package coordination, Caddy TLS, the firewall,
 loopback-only Uvicorn, and systemd isolation. A host lock prevents overlapping
 activation attempts. It builds the candidate runtime and validates candidate
 service/Caddy configuration before changing the active deployment.
+
+An upgrade retains the active Caddy file byte-for-byte and validates that every
+protected production target hostname is represented before activation. See the
+[production deployment inputs](../../ops/digitalocean/README.md) for the protected
+main/environment gate, independently verified SSH host pin and runtime lock.
 
 The generated service runs `gilbic_backend.release_preflight --profile runtime`
 as `ExecStartPre` using the selected release interpreter and environment. Missing

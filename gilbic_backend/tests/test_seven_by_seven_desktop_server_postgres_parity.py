@@ -32,7 +32,7 @@ from gilbic_backend.seven_by_seven_operational_allocator import (  # noqa: E402
     allocate_seven_by_seven_payments,
     fixed_daily_interest_for_original_principal,
 )
-from spina_app.calculation_rules import allocate_x7_payments  # noqa: E402
+from reference_7x7_rules import allocate_x7_payments  # noqa: E402
 import test_seven_by_seven_desktop_server_parity_matrix as b2_matrix  # noqa: E402
 
 

@@ -38,6 +38,25 @@ pre-system records. Preserve better existing recurring leave/benefit terms using
 the reviewed profile options. Missing inputs produce an explanation and block the
 affected calculation; they are not treated as zero deductions or zero wages.
 
+Opening history and weekly payroll must cover nonoverlapping dates, including
+weeks that cross 31 December. Use a reviewed opening cutoff before the first
+recorded payroll week. Annual calculations reject a whole weekly snapshot that
+crosses the calendar year because its tax allocation cannot be inferred. Import
+reviewed year-specific opening facts before recording the following full weeks;
+existing cross-year payroll needs a supported reviewed allocation before annual
+reconciliation can proceed.
+
+To correct a mistaken opening summary, the owner selects its current history
+record and records replacement facts, source and reason. The new record links to
+the original; both remain visible and only the latest replacement enters payroll
+calculations. Changed facts require unpaid drafts to be recalculated and approved
+again. A correction does not rewrite previously settled payslips.
+
+Annual reconciliation includes completed payroll tax refunds and deductions once.
+Settle an outstanding payroll that contains tax before preparing another annual
+or separation reconciliation. Partial cash payments do not identify the settled
+tax component, so the system does not estimate one.
+
 Daily-rate wages cover Sunday through Saturday and are paid after Saturday's
 shift. Employees record attendance and meal breaks; corrections retain the original
 events. Review unresolved time, leave and overtime before approval. The owner or

@@ -279,7 +279,6 @@ def relevant(path: str) -> bool:
             "gilbic_backend/src/",
             "gilbic_backend/sql/",
             "spina_backend_mobile/src/",
-            "spina_app/",
             "spina_portal/assets/",
             "gilbic_mobile/lib/",
             "docs/accounting/",

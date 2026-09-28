@@ -1,3 +1,6 @@
+import { mountManagementCollectionActions } from '../management-collection-actions.js';
+import { mountManagementJournalActions } from '../management-journal-actions.js';
+import { mountManagementAccounting } from '../management-accounting.js';
 import { mountAccountCredentials } from '../account-credentials.js';
 import { mountAreaManagement } from '../area-management.js';
 import { buildManagementViewModel } from '../presenters.js';
@@ -296,6 +299,8 @@ function bindLoanSearch(context) {
 
 export async function mountManagementWorkspace(context) {
   if (context.signal?.aborted) return;
+  const journalEvidenceVersion = context.journalEvidenceVersion = (context.journalEvidenceVersion || 0) + 1;
+  for (const key of ['collectionActionsCleanup', 'journalActionsCleanup', 'managementAccountingCleanup']) { context[key]?.(); context[key] = null; }
   context.accountCredentialsCleanup?.();
   context.accountCredentialsCleanup = null;
   context.accountingExportCleanup?.();
@@ -313,6 +318,7 @@ export async function mountManagementWorkspace(context) {
   context.officeOnboardingCleanup?.();
   context.officeOnboardingCleanup = null;
   const { root, api, session, setNavigation } = context;
+  const canCollectionActions = ['collection.create', 'collection.void.unremitted', 'lending.no_collection.manage', 'lending.contract_collection.activate'].some(permission => hasPermission(session, permission));
   const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canDashboard = hasPermission(session, 'management.dashboard.view');
   const canViewFinancialStatements = hasPermission(session, 'accounting.view');
@@ -338,13 +344,15 @@ export async function mountManagementWorkspace(context) {
     { id: 'management-loans', label: 'Clients & loans' },
     ...(canUseAreaManagement ? [{ id: 'management-area-management', label: 'Area Management' }] : []),
     { id: 'management-loan-operations', label: 'Loan operations' },
+    ...(canCollectionActions ? [{ id: 'management-collection-actions', label: 'Collection actions' }] : []),
+    ...(canViewFinancialStatements ? [{ id: 'management-accounting', label: 'Financial accounting' }] : []),
     ...(canDashboard ? [{ id: 'management-past-due-report', label: 'Past-due reasons' }] : []),
     ...(canViewFinancialStatements ? [{ id: 'management-financial-statements', label: 'Financial statements' }] : []),
     ...(canViewGeneralJournal ? [{ id: 'management-general-journal', label: 'General journal & trial balance' }] : []),
     ...(canDashboard ? [{ id: 'management-alerts', label: 'Alerts & audit' }] : []),
     ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewals' }] : []),
     ...(canSupport ? [{ id: 'management-support', label: 'Support' }] : []),
-    ...(canReviewPaymentProof ? [{ id: 'management-payment-proofs', label: 'Payment evidence' }] : []),
+    ...(canReviewPaymentProof ? [{ id: 'management-payment-proofs', label: 'Payment evidence review' }] : []),
     ...(canManageAccounts ? [{ id: 'management-client-accounts', label: 'Client accounts' }] : []),
     ...(canViewStaff ? [{ id: 'management-staff', label: 'Staff & devices' }] : []),
     { id: 'management-account', label: 'My account' },
@@ -397,10 +405,12 @@ export async function mountManagementWorkspace(context) {
   ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
   <section class="section-card" id="management-employee-operations"><div data-employee-operations></div></section>
   ${canReviewPaymentProof ? '<section class="section-card" id="management-payment-proofs"><h2>Payment evidence review</h2><div data-management-payment-proofs></div></section>' : ''}
+  ${canCollectionActions ? '<section class="section-card" id="management-collection-actions"><div data-management-collection-actions></div></section>' : ''}
+  ${canViewFinancialStatements ? '<section class="section-card" id="management-accounting"><div data-management-accounting></div></section>' : ''}
   <section class="section-card" id="management-loan-operations"><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" placeholder="Client, receipt, loan, or collector" /><select name="status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Read-only server summary of Past-Due reasons. No penalty, balance, or schedule calculation is performed in Web.</p></div></div><form id="management-past-due-report-search" class="search-bar"><input type="date" name="start_date" aria-label="Start date" /><input type="date" name="end_date" aria-label="End date" /><input name="area" maxlength="200" placeholder="Area" /><select name="reason_code"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select><select name="event_kind"><option value="">All events</option><option value="unable_to_pay">Full Unable to Pay</option><option value="partial_payment">Partial-payment Past Due</option></select><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
-  ${canViewGeneralJournal ? `<section class="section-card" id="management-general-journal"><div class="section-heading"><div><h2>General journal & trial balance</h2><p>Read-only accounting evidence from the protected SPINA accounting service. Journal changes remain in dedicated protected workflows.</p></div></div>${generalJournal.error ? errorCard(generalJournal.error) : ''}${trialBalance.error ? errorCard(trialBalance.error) : ''}${managementGeneralJournalMarkup({ journals: generalJournal.data, trialBalance: trialBalance.data })}</section>` : ''}
+  ${canViewGeneralJournal ? `<section class="section-card" id="management-general-journal"><div class="section-heading"><div><h2>General journal & trial balance</h2><p>Review accounting evidence and use the authorized journal actions below.</p></div></div>${generalJournal.error ? errorCard(generalJournal.error) : ''}${trialBalance.error ? errorCard(trialBalance.error) : ''}<div data-management-journal-evidence>${managementGeneralJournalMarkup({ journals: generalJournal.data, trialBalance: trialBalance.data })}</div><div data-management-journal-actions></div></section>` : ''}
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
@@ -433,11 +443,24 @@ export async function mountManagementWorkspace(context) {
       root: root.querySelector('[data-management-payment-proofs]'), api, mode: 'management', signal: context.signal,
     });
   }
+  if (canCollectionActions) context.collectionActionsCleanup = mountManagementCollectionActions({root: root.querySelector('[data-management-collection-actions]'), api, session, sessionStore: context.sessionStore, signal: context.signal});
+  if (canViewFinancialStatements) context.managementAccountingCleanup = await mountManagementAccounting({root: root.querySelector('[data-management-accounting]'), api, session, signal: context.signal});
+  if (context.signal?.aborted) return;
   bindLoanSearch(context);
   bindManagementLoanOperations(context);
   bindManagementPastDueReport(context);
   if (canViewGeneralJournal) {
     context.accountingExportCleanup = bindManagementAccountingExport(context);
+    context.journalActionsCleanup = mountManagementJournalActions({
+      root: root.querySelector('[data-management-journal-actions]'), api, session, signal: context.signal,
+      onSaved: async () => {
+        const [journals, trialBalance] = await Promise.all([loadManagementGeneralJournal(api), loadManagementTrialBalance(api)]);
+        if (context.signal?.aborted || context.journalEvidenceVersion !== journalEvidenceVersion) return;
+        context.accountingExportCleanup?.();
+        root.querySelector('[data-management-journal-evidence]').innerHTML = managementGeneralJournalMarkup({journals, trialBalance});
+        context.accountingExportCleanup = bindManagementAccountingExport(context);
+      },
+    });
   }
   bindRenewals(context);
   bindSupport(context);

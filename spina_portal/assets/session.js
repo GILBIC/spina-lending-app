@@ -51,6 +51,7 @@ export class SessionStore {
       throw new TypeError('cryptoRef.randomUUID is required.');
     }
     this._crypto = cryptoRef;
+    this.revision = 0;
   }
 
   deviceId() {
@@ -78,6 +79,7 @@ export class SessionStore {
       SessionStore.SESSION_KEY,
       JSON.stringify(session),
     );
+    this.revision += 1;
     return session;
   }
 
@@ -107,6 +109,7 @@ export class SessionStore {
 
   clear() {
     this._sessionStorage.removeItem(SessionStore.SESSION_KEY);
+    this.revision += 1;
   }
 
   nextDeviceSequence() {

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from uuid import UUID, uuid4
 
 import gilbic_backend.account_repository as account_repository_module
+import gilbic_backend.management_repository as management_repository_module
 import psycopg
 import pytest
 from gilbic_backend.account_repository import (
@@ -12,8 +13,8 @@ from gilbic_backend.account_repository import (
     DeviceRevoked,
     PostgresAccountRepository,
 )
+from gilbic_backend.management_repository import PostgresManagementRepository
 from psycopg.rows import dict_row
-
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -42,6 +43,7 @@ def _seed_user(
     auth_user_id = uuid4()
     username = f"ca2-device-{uuid4().hex}"
     with psycopg.connect(DATABASE_URL) as connection:
+        connection.execute("insert into auth.users (id) values (%s)", (auth_user_id,))
         connection.execute(
             """
             insert into core.users (
@@ -91,7 +93,12 @@ def _seed_user(
 def _delete_user(user_id: UUID) -> None:
     assert DATABASE_URL is not None
     with psycopg.connect(DATABASE_URL) as connection:
-        connection.execute("delete from core.users where id = %s", (user_id,))
+        deleted = connection.execute(
+            "delete from core.users where id = %s returning external_auth_id",
+            (user_id,),
+        ).fetchone()
+        if deleted and deleted[0]:
+            connection.execute("delete from auth.users where id = %s", (deleted[0],))
 
 
 def _device_rows(user_id: UUID) -> list[dict[str, object]]:
@@ -283,3 +290,127 @@ def test_revoked_collector_mobile_login_retains_revoked_denial(
         assert device == {"status": "revoked", "app_version": "0.2.0+2"}
     finally:
         _delete_user(user_id)
+
+
+@pytest.mark.parametrize("claimed_platform", ["web", "desktop"])
+def test_pending_native_platform_relabel_remains_denied_in_postgres(
+    monkeypatch: pytest.MonkeyPatch,
+    claimed_platform: str,
+) -> None:
+    user_id, auth_user_id, _ = _seed_user(
+        device_identifier="pending-phone",
+        device_status="pending",
+    )
+    monkeypatch.setattr(account_repository_module, "open_connection", _test_connection)
+    repository = PostgresAccountRepository()
+    try:
+        for platform in (claimed_platform, "android"):
+            with pytest.raises(DeviceApprovalRequired):
+                repository.activate_and_register_device(
+                    auth_user_id=auth_user_id,
+                    device_identifier="pending-phone",
+                    platform=platform,
+                    app_version="test-build",
+                )
+            with pytest.raises(DeviceApprovalRequired):
+                repository.get_context_for_device(
+                    auth_user_id=auth_user_id,
+                    device_identifier="pending-phone",
+                )
+        assert _device_rows(user_id)[0]["platform"] == "android"
+        assert _device_rows(user_id)[0]["status"] == "pending"
+    finally:
+        _delete_user(user_id)
+
+
+def test_web_to_native_transition_requires_management_replacement_approval_and_audit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user_id, auth_user_id, old_device_id = _seed_user(device_identifier="old-phone")
+    manager_id, _, _ = _seed_user(role="management")
+    monkeypatch.setattr(account_repository_module, "open_connection", _test_connection)
+    monkeypatch.setattr(
+        management_repository_module, "open_connection", _test_connection
+    )
+    repository = PostgresAccountRepository()
+    try:
+        # A previously approved phone cannot hide from replacement revocation.
+        repository.activate_and_register_device(
+            auth_user_id=auth_user_id,
+            device_identifier="old-phone",
+            platform="web",
+            app_version="test-build",
+        )
+        replacement = repository.activate_and_register_device(
+            auth_user_id=auth_user_id,
+            device_identifier="replacement",
+            platform="web",
+            app_version="test-build",
+        )
+        new_device_id = replacement.registered_device_id
+        for platform in ("android", "web"):
+            with pytest.raises(DeviceApprovalRequired):
+                repository.activate_and_register_device(
+                    auth_user_id=auth_user_id,
+                    device_identifier="replacement",
+                    platform=platform,
+                    app_version="test-build",
+                )
+        with pytest.raises(DeviceApprovalRequired):
+            repository.get_context_for_device(
+                auth_user_id=auth_user_id,
+                device_identifier="replacement",
+            )
+
+        approved = PostgresManagementRepository().set_device_status(
+            actor_user_id=manager_id,
+            device_id=new_device_id,
+            device_status="active",
+        )
+        assert approved.status == "active"
+        assert approved.platform == "android"
+        assert (
+            repository.get_context_for_device(
+                auth_user_id=auth_user_id,
+                device_identifier="replacement",
+            ).registered_device_id
+            == new_device_id
+        )
+        with pytest.raises(DeviceRevoked):
+            repository.get_context_for_device(
+                auth_user_id=auth_user_id,
+                device_identifier="old-phone",
+            )
+
+        with psycopg.connect(DATABASE_URL, row_factory=dict_row) as connection:
+            devices = connection.execute(
+                "select id, platform, status from core.devices where user_id = %s",
+                (user_id,),
+            ).fetchall()
+            audits = connection.execute(
+                "select action, target_id, details from core.audit_logs where actor_user_id = %s",
+                (manager_id,),
+            ).fetchall()
+        assert {
+            device["id"]: (device["platform"], device["status"]) for device in devices
+        } == {
+            old_device_id: ("android", "revoked"),
+            new_device_id: ("android", "active"),
+        }
+        assert {audit["action"]: audit["target_id"] for audit in audits} == {
+            "device.status_change": new_device_id,
+            "device.replacement_auto_revoke": old_device_id,
+        }
+        approval = next(
+            audit for audit in audits if audit["action"] == "device.status_change"
+        )
+        assert approval["details"]["previous_status"] == "pending"
+        assert approval["details"]["new_status"] == "active"
+        assert approval["details"]["platform"] == "android"
+    finally:
+        with psycopg.connect(DATABASE_URL) as connection:
+            connection.execute(
+                "delete from core.audit_logs where actor_user_id = %s", (manager_id,)
+            )
+        _delete_user(user_id)
+        _delete_user(manager_id)

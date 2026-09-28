@@ -254,7 +254,7 @@ class PostgresAccountRepository:
                         identifier_hash = self.device_hash(device_identifier)
                         cursor.execute(
                             """
-                            select id, status
+                            select id, status, platform
                             from core.devices
                             where user_id = %s and device_identifier_hash = %s
                             for update
@@ -264,44 +264,38 @@ class PostgresAccountRepository:
                         device = cursor.fetchone()
                         if device and device[1] == "revoked":
                             raise DeviceRevoked("This device has been revoked.")
-                        approval_required = (
+                        native_platforms = {"android", "ios"}
+                        if (
+                            device
+                            and device[2] in native_platforms
+                            and normalized_platform not in native_platforms
+                        ):
+                            # Keep native provenance so a platform claim cannot hide
+                            # a phone from approval or replacement-device revocation.
+                            normalized_platform = device[2]
+                        approval_required = bool(device and device[1] == "pending") or (
                             is_collector
-                            and normalized_platform in {"android", "ios"}
-                            and (device is None or device[1] == "pending")
+                            and normalized_platform in native_platforms
+                            and (device is None or device[2] not in native_platforms)
                         )
                         if device:
                             registered_device_id = device[0]
-                            if approval_required:
-                                cursor.execute(
-                                    """
-                                    update core.devices
-                                    set platform = %s,
-                                        app_version = %s,
-                                        last_seen_at = now()
-                                    where id = %s
-                                    """,
-                                    (
-                                        normalized_platform,
-                                        app_version,
-                                        registered_device_id,
-                                    ),
-                                )
-                            else:
-                                cursor.execute(
-                                    """
-                                    update core.devices
-                                    set platform = %s,
-                                        app_version = %s,
-                                        status = 'active',
-                                        last_seen_at = now()
-                                    where id = %s
-                                    """,
-                                    (
-                                        normalized_platform,
-                                        app_version,
-                                        registered_device_id,
-                                    ),
-                                )
+                            cursor.execute(
+                                """
+                                update core.devices
+                                set platform = %s,
+                                    app_version = %s,
+                                    status = %s,
+                                    last_seen_at = now()
+                                where id = %s
+                                """,
+                                (
+                                    normalized_platform,
+                                    app_version,
+                                    "pending" if approval_required else "active",
+                                    registered_device_id,
+                                ),
+                            )
                         else:
                             cursor.execute(
                                 """

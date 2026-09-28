@@ -316,8 +316,7 @@ class PayrollPrepare(EmployeeCommand):
     reason: Note
 
 
-class PayrollHistoryImport(EmployeeCommand):
-    action: Literal["payroll_history_import"]
+class PayrollHistoryFacts(EmployeeCommand):
     year: int = Field(ge=2000, le=2200)
     through_date: date
     basic_earned: Money
@@ -326,6 +325,17 @@ class PayrollHistoryImport(EmployeeCommand):
     thirteenth_paid: Money
     other_benefits_paid: Money
     source: Note
+
+
+class PayrollHistoryImport(PayrollHistoryFacts):
+    action: Literal["payroll_history_import"]
+
+
+class PayrollHistoryCorrect(PayrollHistoryFacts):
+    action: Literal["payroll_history_correct"]
+    original_history_id: UUID
+    original_expected_version: int = Field(ge=1)
+    reason: Note
 
 
 class PayrollApprove(EmployeeCommand):
@@ -416,6 +426,7 @@ EmployeeAction = Annotated[
     | PayrollPayment
     | PayrollAdjustment
     | PayrollHistoryImport
+    | PayrollHistoryCorrect
     | AccountingPrepare,
     Field(discriminator="action"),
 ]

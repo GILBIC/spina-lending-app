@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -75,7 +76,9 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
       }
     } on Object {
       if (mounted) {
-        setState(() => _errorMessage = 'Remittance history could not be loaded.');
+        setState(
+          () => _errorMessage = 'Remittance history could not be loaded.',
+        );
       }
     } finally {
       if (mounted) {
@@ -102,13 +105,15 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
     }
     if (record.recipientUserId != widget.session.userId) {
       setState(() {
-        _errorMessage = 'Only the selected recipient can confirm this remittance.';
+        _errorMessage =
+            'Only the selected recipient can confirm this remittance.';
       });
       return;
     }
     if (!_reviewed.contains(record.remittanceId)) {
       setState(() {
-        _errorMessage = 'Review the full payment list and confirm that you reviewed it first.';
+        _errorMessage =
+            'Review the full payment list and confirm that you reviewed it first.';
       });
       return;
     }
@@ -181,7 +186,8 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
     }
     if (!_reviewed.contains(record.remittanceId)) {
       setState(() {
-        _errorMessage = 'Review the full payment list before rejecting the handover.';
+        _errorMessage =
+            'Review the full payment list before rejecting the handover.';
       });
       return;
     }
@@ -269,7 +275,10 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
     if (!mounted) return;
     setState(() {
       _records = _records
-          .map((item) => item.remittanceId == updated.remittanceId ? updated : item)
+          .map(
+            (item) =>
+                item.remittanceId == updated.remittanceId ? updated : item,
+          )
           .toList(growable: false);
       _reviewed.remove(updated.remittanceId);
     });
@@ -324,13 +333,17 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
                         _RemittanceCard(
                           record: record,
                           signedInUserId: widget.session.userId,
-                          canReceive: widget.session.hasPermission('remittance.receive'),
+                          canReceive: widget.session.hasPermission(
+                            'remittance.receive',
+                          ),
                           reviewed: _reviewed.contains(record.remittanceId),
                           acting: _actionId == record.remittanceId,
-                          onReviewedChanged: (value) => _setReviewed(record, value),
+                          onReviewedChanged: (value) =>
+                              _setReviewed(record, value),
                           onConfirm: () => _confirmReceived(record),
                           onReject: () => _reject(record),
-                          initiallyExpanded: widget.focusRemittanceId == record.remittanceId,
+                          initiallyExpanded:
+                              widget.focusRemittanceId == record.remittanceId,
                         ),
                   ],
                 ),
@@ -369,13 +382,13 @@ class _RemittanceCard extends StatelessWidget {
     final statusLabel = record.isReceived
         ? 'Accepted'
         : record.isRejected
-            ? 'Rejected'
-            : 'Pending';
+        ? 'Rejected'
+        : 'Pending';
     final statusIcon = record.isReceived
         ? Icons.verified
         : record.isRejected
-            ? Icons.cancel_outlined
-            : Icons.lock_clock;
+        ? Icons.cancel_outlined
+        : Icons.lock_clock;
 
     return Card(
       child: ExpansionTile(
@@ -519,7 +532,9 @@ class _RemittanceCard extends StatelessWidget {
             const SizedBox(height: 12),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('View only — remittance receiving permission is required.'),
+              child: Text(
+                'View only — remittance receiving permission is required.',
+              ),
             ),
           ],
           if (record.isReceived && record.receivedAt != null) ...[
@@ -558,7 +573,7 @@ String _date(DateTime value) {
 }
 
 String _dateTime(DateTime value) {
-  final local = value.toLocal();
+  final local = spinaBusinessWallClock(value);
   return '${_date(local)} '
       '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';

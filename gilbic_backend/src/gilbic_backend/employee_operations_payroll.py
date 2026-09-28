@@ -328,14 +328,32 @@ def _advance_allocations(tx, employee_id, end, current_id, available):
     return allocations, issues
 
 
+def _active_histories(tx, employee_id):
+    histories = tx.all("payroll_history", employee_id)
+    superseded = {
+        r["payload"]["original_history_id"]
+        for r in histories
+        if r["payload"].get("original_history_id")
+    }
+    return [r for r in histories if r["id"] not in superseded]
+
+
+def _history_overlaps_week(history, start, end):
+    return start <= _date(history["through_date"]) and end >= date(
+        history["year"], 1, 1
+    )
+
+
 def _annual_facts(tx, employee_id, as_of, current_id=None):
     year = as_of.year
     hire = _date(tx.profile(employee_id)["payload"]["hire_date"])
     histories = [
-        r
-        for r in tx.all("payroll_history", employee_id)
-        if r["payload"]["year"] == year
+        r for r in _active_histories(tx, employee_id) if r["payload"]["year"] == year
     ]
+    if len(histories) > 1:
+        raise EmployeeConflict(
+            "Resolve competing opening history corrections before annual calculation"
+        )
     history = histories[0]["payload"] if histories else None
     if history and _date(history["through_date"]) > as_of:
         raise EmployeeConflict(
@@ -363,6 +381,14 @@ def _annual_facts(tx, employee_id, as_of, current_id=None):
         ]
     )
     for start, end in intervals:
+        if start.year != year:
+            raise EmployeeConflict(
+                "A weekly payroll crosses the calendar year; reviewed nonoverlapping year-specific earnings and tax facts are required"
+            )
+        if history and start <= cutoff:
+            raise EmployeeConflict(
+                "Historical opening facts overlap recorded payroll periods"
+            )
         if start > cursor:
             raise EmployeeConflict(
                 "Verified historical earnings are incomplete; import the reviewed year-to-date opening facts"
@@ -383,14 +409,27 @@ def _annual_facts(tx, employee_id, as_of, current_id=None):
         taxable += Decimal(
             row["payload"].get("taxable_pay", row["payload"]["gross_pay"])
         )
-        withheld -= values.get("tax", 0)
     for row in tx.all("payroll", employee_id):
         if (
-            row["status"] in ("approved", "partially_paid", "paid")
-            and row["payload"].get("payroll_kind") == "adjustment"
-            and date(year, 1, 1) <= _date(row["payload"]["period_end"]) <= as_of
+            row["id"] == str(current_id)
+            or row["status"] not in ("approved", "partially_paid", "paid")
+            or not date(year, 1, 1) <= _date(row["payload"]["period_end"]) <= as_of
         ):
-            adjustment_values = _amounts(row["payload"])
+            continue
+        values = _amounts(row["payload"])
+        # Opening facts already contain the earlier weekly payroll. Other kinds
+        # are separate settlements, including annual refunds and leave conversion.
+        if row["payload"].get("payroll_kind") != "weekly" or row in rows:
+            tax = values.get("tax", Decimal(0))
+            if tax and row["status"] != "paid":
+                # Partial cash payments do not identify which component settled.
+                # Never infer a withholding allocation from their cash proportion.
+                raise EmployeeConflict(
+                    "Settle the outstanding tax-bearing payroll before annual reconciliation; partial payments do not allocate tax components"
+                )
+            withheld -= tax
+        if row["payload"].get("payroll_kind") == "adjustment":
+            adjustment_values = values
             basic += adjustment_values.get("basic_pay", 0) + adjustment_values.get(
                 "leave_pay", 0
             )
@@ -408,15 +447,8 @@ def _annual_facts(tx, employee_id, as_of, current_id=None):
                 ),
                 Decimal(0),
             )
-            if row["status"] == "paid":
-                withheld -= adjustment_values.get("tax", 0)
-        if (
-            row["id"] != str(current_id)
-            and row["status"] in ("approved", "partially_paid", "paid")
-            and row["payload"].get("payroll_kind") in ("thirteenth_month", "separation")
-            and _date(row["payload"]["period_end"]).year == year
-        ):
-            thirteenth_paid += _amounts(row["payload"]).get("thirteenth_month", 0)
+        if row["payload"].get("payroll_kind") in ("thirteenth_month", "separation"):
+            thirteenth_paid += values.get("thirteenth_month", 0)
     return {
         "basic": basic,
         "taxable": taxable,
@@ -445,7 +477,14 @@ def prepare(tx):
     tx.staff("prepare_payroll")
     tx.profile(c.employee_id)
     previous = tx.get("payroll", c.id, required=False)
-    if previous and Decimal(previous["payload"].get("paid_amount", "0")) > 0:
+    if previous and (
+        previous["status"] in ("paid", "partially_paid")
+        or Decimal(previous["payload"].get("paid_amount", "0")) > 0
+        or any(
+            r["status"] == "completed" and r["payload"].get("payroll_id") == str(c.id)
+            for r in tx.all("payments", c.employee_id)
+        )
+    ):
         raise EmployeeConflict(
             "Paid or partially paid snapshots cannot be overwritten; create a linked adjustment"
         )
@@ -458,6 +497,15 @@ def prepare(tx):
     p["advance_allocations"] = []
     p["statutory_allocations"] = []
     if c.payroll_kind == "weekly":
+        if any(
+            _history_overlaps_week(
+                r["payload"], c.week_start, c.week_start + timedelta(days=6)
+            )
+            for r in _active_histories(tx, c.employee_id)
+        ):
+            raise EmployeeConflict(
+                "Historical opening facts overlap this payroll week; use reviewed nonoverlapping periods"
+            )
         amounts, days, ot_issues, shortages, profile = _reviewed_week(tx, c)
         end = c.week_start + timedelta(days=6)
         p["days"] = days
@@ -551,6 +599,21 @@ def prepare(tx):
         elif profile["tax_exempt"]:
             amounts["tax"] = Decimal(0)
         else:
+            # A settled conversion records a reviewed tax amount, not its taxable
+            # versus exempt earnings allocation. A zero withholding is not proof
+            # of exemption, and aggregate opening history cannot identify whether
+            # that particular conversion was included. Require a reviewed final
+            # reconciliation instead of silently omitting or double-counting it.
+            if any(
+                row["id"] != str(c.id)
+                and row["status"] == "paid"
+                and date(end.year, 1, 1) <= _date(row["payload"]["period_end"]) <= end
+                and _amounts(row["payload"]).get("leave_conversion", Decimal(0)) != 0
+                for row in tx.all("payroll", c.employee_id)
+            ):
+                raise EmployeeConflict(
+                    "Prior settled leave-conversion earnings have no recorded taxable/exempt allocation; provide an explicitly reviewed annual withholding amount and reconciliation basis"
+                )
             # Reviewed historical benefits remain explicit; do not infer exemption
             # from the name of an allowance or performance benefit.
             taxable_benefits = max(
@@ -874,29 +937,63 @@ def adjustment(tx):
     return tx.save("payroll", c.id, c.employee_id, p, "draft")
 
 
-def history_import(tx):
+def _validate_history_period(tx):
     c = tx.command
-    tx.owner()
-    tx.profile(c.employee_id)
     if c.through_date.year != c.year or c.through_date > tx.today:
         raise EmployeeConflict(
             "Historical payroll facts must belong to the selected year and not the future"
         )
-    if tx.all("payroll_history", c.employee_id) and any(
-        r["payload"]["year"] == c.year for r in tx.all("payroll_history", c.employee_id)
-    ):
-        raise EmployeeConflict(
-            "Reviewed opening payroll history already exists for that year"
-        )
     if any(
         r["payload"].get("payroll_kind") == "weekly"
         and _date(r["payload"]["week_start"]) <= c.through_date
-        and _date(r["payload"]["period_end"]).year == c.year
+        and _date(r["payload"]["period_end"]) >= date(c.year, 1, 1)
         for r in tx.all("payroll", c.employee_id)
     ):
         raise EmployeeConflict(
             "Historical opening facts overlap recorded payroll periods"
         )
+
+
+def history_import(tx):
+    c = tx.command
+    tx.owner()
+    tx.profile(c.employee_id)
+    if any(
+        r["payload"]["year"] == c.year for r in _active_histories(tx, c.employee_id)
+    ):
+        raise EmployeeConflict(
+            "Reviewed opening payroll history already exists for that year; create a linked correction"
+        )
+    _validate_history_period(tx)
+    row = tx.save(
+        "payroll_history", c.id, c.employee_id, tx.command_payload(), "reviewed"
+    )
+    tx.invalidate(c.employee_id)
+    return row
+
+
+def history_correct(tx):
+    c = tx.command
+    tx.owner()
+    tx.profile(c.employee_id)
+    original = tx.get("payroll_history", c.original_history_id)
+    if original["employee_id"] != str(c.employee_id):
+        raise EmployeeAccessDenied(
+            "The original payroll history belongs to another employee"
+        )
+    if original["version"] != c.original_expected_version:
+        raise EmployeeConflict(
+            "The original history version changed; refresh and review it"
+        )
+    if original not in _active_histories(tx, c.employee_id):
+        raise EmployeeConflict(
+            "The original history is superseded; correct the current record"
+        )
+    if c.year != original["payload"]["year"]:
+        raise EmployeeConflict(
+            "A history correction must preserve the original calendar year"
+        )
+    _validate_history_period(tx)
     row = tx.save(
         "payroll_history", c.id, c.employee_id, tx.command_payload(), "reviewed"
     )
@@ -911,5 +1008,6 @@ def execute_payroll_command(tx):
         "payroll_payment": payment,
         "payroll_adjustment": adjustment,
         "payroll_history_import": history_import,
+        "payroll_history_correct": history_correct,
     }
     return handlers[tx.command.action](tx)

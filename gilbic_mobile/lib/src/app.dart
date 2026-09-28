@@ -74,6 +74,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   Timer? _sessionRefreshTimer;
   bool _loading = true;
   bool _refreshingSession = false;
+  int _sessionGeneration = 0;
+  Future<void> _sessionStorageWork = Future<void>.value();
   String? _updateRequiredMessage;
   String? _sessionNotice;
 
@@ -117,6 +119,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _sessionGeneration++;
     WidgetsBinding.instance.removeObserver(this);
     _sessionRefreshTimer?.cancel();
     _employeeOperations.attach(null);
@@ -134,6 +137,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<void> _restoreSession() async {
+    final generation = _sessionGeneration;
     UserSession? session;
     String? updateRequiredMessage;
     String? sessionNotice;
@@ -147,6 +151,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         }
       }
     } on SpinaApiException catch (error) {
+      if (!_isCurrentGeneration(generation)) return;
       if (session != null) {
         try {
           await _collectorRouteCache?.clearForUser(session.userId);
@@ -155,7 +160,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         }
         session.clearRefreshOverride();
       }
-      await _sessionStore.clear();
+      await _persistSession(null, generation);
       if (error.statusCode == 426) {
         updateRequiredMessage = error.message;
       } else {
@@ -163,6 +168,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       }
       session = null;
     } on Exception {
+      if (!_isCurrentGeneration(generation)) return;
       if (session != null) {
         try {
           await _collectorRouteCache?.clearForUser(session.userId);
@@ -171,12 +177,12 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         }
         session.clearRefreshOverride();
       }
-      await _sessionStore.clear();
+      await _persistSession(null, generation);
       sessionNotice =
           'SPINA could not restore your secure login session. Sign in again.';
       session = null;
     }
-    if (!mounted) {
+    if (!_isCurrentGeneration(generation)) {
       return;
     }
     setState(() {
@@ -189,6 +195,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<UserSession> _refreshStoredSession(UserSession current) async {
+    final generation = _sessionGeneration;
     final refresher = _authRepository;
     if (refresher is! SessionRefreshRepository) {
       throw const SpinaApiException(_expiredSessionNotice, statusCode: 401);
@@ -196,12 +203,15 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     final refreshed = await (refresher as SessionRefreshRepository).refresh(
       current,
     );
+    if (!_isCurrentGeneration(generation)) return current;
+    await _persistSession(refreshed, generation);
+    if (!_isCurrentGeneration(generation)) return current;
     current.applyRefresh(refreshed);
-    await _sessionStore.write(refreshed);
     return refreshed;
   }
 
   Future<UserSession> _validateStoredSession(UserSession current) async {
+    final generation = _sessionGeneration;
     final validator = _authRepository;
     if (validator is! SessionValidationRepository) {
       return current;
@@ -209,8 +219,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     try {
       final validated = await (validator as SessionValidationRepository)
           .validate(current);
+      if (!_isCurrentGeneration(generation)) return current;
+      await _persistSession(validated, generation);
+      if (!_isCurrentGeneration(generation)) return current;
       current.applyRefresh(validated);
-      await _sessionStore.write(validated);
       return validated;
     } on SpinaApiException catch (error) {
       if (_isTerminalSessionError(error) || error.statusCode == 426) {
@@ -223,6 +235,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<String?> _signIn(String username, String password) async {
+    final generation = ++_sessionGeneration;
+    _refreshingSession = false;
     if (mounted && _sessionNotice != null) {
       setState(() => _sessionNotice = null);
     }
@@ -231,9 +245,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         username: username,
         password: password,
       );
+      if (!_isCurrentGeneration(generation)) return null;
       session.clearRefreshOverride();
-      await _sessionStore.write(session);
-      if (!mounted) {
+      await _persistSession(session, generation);
+      if (!_isCurrentGeneration(generation)) {
         return null;
       }
       setState(() {
@@ -244,6 +259,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       _scheduleSessionRefresh(session);
       return null;
     } on SpinaApiException catch (error) {
+      if (!_isCurrentGeneration(generation)) return null;
       if (error.statusCode == 426) {
         await _showUpdateRequired(null, error.message);
         return null;
@@ -255,60 +271,71 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<void> _signOut() async {
-    _employeeOperations.attach(null);
-    _sessionRefreshTimer?.cancel();
     final session = _session;
+    final cleanup = _invalidateLocalSession(session);
     if (session != null) {
-      await _authRepository.signOut(session);
-      await _invalidateLocalSession(session);
-      return;
+      unawaited(_revokeRemoteSession(session));
     }
-    await _sessionStore.clear();
+    await cleanup;
+  }
+
+  Future<void> _revokeRemoteSession(UserSession session) async {
+    try {
+      await _authRepository
+          .signOut(session)
+          .timeout(const Duration(seconds: 5));
+    } on Object {
+      // Local sign-out is complete even if remote revocation is unavailable.
+    }
+  }
+
+  bool _isCurrentGeneration(int generation) =>
+      mounted && generation == _sessionGeneration;
+
+  Future<void> _persistSession(UserSession? session, int generation) {
+    final operation = _sessionStorageWork.then((_) async {
+      if (!_isCurrentGeneration(generation)) return;
+      if (session == null) {
+        await _sessionStore.clear();
+      } else {
+        await _sessionStore.write(session);
+      }
+    });
+    // Keep writes/clears ordered even when secure storage reports an error.
+    _sessionStorageWork = operation.catchError((Object _) {});
+    return operation;
   }
 
   Future<void> _invalidateLocalSession(
-    UserSession session, {
+    UserSession? session, {
     String? notice,
+    String? updateRequiredMessage,
   }) async {
+    final generation = ++_sessionGeneration;
+    _refreshingSession = false;
     _employeeOperations.attach(null);
     _sessionRefreshTimer?.cancel();
+    session?.clearRefreshOverride();
+    if (mounted) {
+      setState(() {
+        _session = null;
+        _sessionNotice = notice;
+        _updateRequiredMessage = updateRequiredMessage;
+        _loading = false;
+      });
+    }
+    await _persistSession(null, generation);
     try {
-      await _collectorRouteCache?.clearForUser(session.userId);
+      if (session != null) {
+        await _collectorRouteCache?.clearForUser(session.userId);
+      }
     } on Object {
       // Session removal must continue even if the local cache is unavailable.
     }
-    session.clearRefreshOverride();
-    await _sessionStore.clear();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _session = null;
-      _sessionNotice = notice;
-    });
   }
 
   Future<void> _showUpdateRequired(UserSession? session, String message) async {
-    _employeeOperations.attach(null);
-    _sessionRefreshTimer?.cancel();
-    if (session != null) {
-      try {
-        await _collectorRouteCache?.clearForUser(session.userId);
-      } on Object {
-        // Update enforcement must not depend on local cache cleanup succeeding.
-      }
-      session.clearRefreshOverride();
-    }
-    await _sessionStore.clear();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _session = null;
-      _sessionNotice = null;
-      _updateRequiredMessage = message;
-      _loading = false;
-    });
+    await _invalidateLocalSession(session, updateRequiredMessage: message);
   }
 
   bool _isTerminalSessionError(SpinaApiException error) {
@@ -374,6 +401,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<void> _validateCurrentSession() async {
+    final generation = _sessionGeneration;
     if (_refreshingSession) {
       return;
     }
@@ -387,14 +415,16 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     try {
       final validated = await (validator as SessionValidationRepository)
           .validate(current);
-      current.applyRefresh(validated);
-      await _sessionStore.write(validated);
-      if (!mounted) {
+      if (!_isCurrentGeneration(generation)) return;
+      await _persistSession(validated, generation);
+      if (!_isCurrentGeneration(generation)) {
         return;
       }
+      current.applyRefresh(validated);
       setState(() => _session = validated);
       _scheduleSessionRefresh(validated);
     } on SpinaApiException catch (error) {
+      if (!_isCurrentGeneration(generation)) return;
       if (error.statusCode == 426) {
         await _showUpdateRequired(current, error.message);
       } else if (_isTerminalSessionError(error)) {
@@ -406,11 +436,12 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     } on Exception {
       // A temporary network failure must not destroy a still-valid local session.
     } finally {
-      _refreshingSession = false;
+      if (_isCurrentGeneration(generation)) _refreshingSession = false;
     }
   }
 
   Future<void> _refreshSessionIfNeeded({bool force = false}) async {
+    final generation = _sessionGeneration;
     if (_refreshingSession) {
       return;
     }
@@ -437,14 +468,16 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       final refreshed = await (refresher as SessionRefreshRepository).refresh(
         current,
       );
-      current.applyRefresh(refreshed);
-      await _sessionStore.write(refreshed);
-      if (!mounted) {
+      if (!_isCurrentGeneration(generation)) return;
+      await _persistSession(refreshed, generation);
+      if (!_isCurrentGeneration(generation)) {
         return;
       }
+      current.applyRefresh(refreshed);
       setState(() => _session = refreshed);
       _scheduleSessionRefresh(refreshed);
     } on SpinaApiException catch (error) {
+      if (!_isCurrentGeneration(generation)) return;
       if (error.statusCode == 426) {
         await _showUpdateRequired(current, error.message);
       } else if (_isTerminalSessionError(error)) {
@@ -458,13 +491,14 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         _scheduleRefreshRetry();
       }
     } on Exception {
+      if (!_isCurrentGeneration(generation)) return;
       if (current.isExpired) {
         await _invalidateLocalSession(current, notice: _expiredSessionNotice);
       } else {
         _scheduleRefreshRetry();
       }
     } finally {
-      _refreshingSession = false;
+      if (_isCurrentGeneration(generation)) _refreshingSession = false;
     }
   }
 

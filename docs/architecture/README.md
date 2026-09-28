@@ -1,75 +1,11 @@
-# SPINA and Gilbic Architecture Hub
+# SPINA architecture hub
 
-This directory is the navigation center for understanding the whole lending platform, tracking delivery progress, and debugging problems without guessing which layer owns them.
+Use the [29 September implementation state](../release/2026-09-29-implementation-state.md) for audit fixes, configuration and acceptance. The [whole-system map](system-map.md) identifies code owners; the [debugging playbook](debugging-playbook.md) follows an action from interface to authoritative record.
 
-**Current implementation state:** [28 September 2026](../release/2026-09-28-implementation-state.md), Asia/Manila. Generated desktop maps keep their own source dates.
+The original standalone Tkinter desktop and its generated source maps are retired. Windows now refers to the shared company portal installed by `spina_pc/`. Historical wave/progress documents describe the old implementation and remain historical evidence only; they are not current run or deployment instructions.
 
-## Start here
+## Source and evidence
 
-| Need | Open |
-|---|---|
-| Understand the whole platform | [`system-map.md`](system-map.md) |
-| See implementation, configuration and acceptance gaps | [Dated current state](../release/2026-09-28-implementation-state.md) |
-| Read historical progress context | [`progress-map.md`](progress-map.md), archived |
-| Diagnose an error by symptom and layer | [`debugging-playbook.md`](debugging-playbook.md) |
-| See the generated desktop feature inventory | [`feature-map.md`](feature-map.md) |
-| Find a desktop Python function or method | [`function-index.md`](function-index.md) |
-| Trace desktop dependencies and callers | [`dependency-map.md`](dependency-map.md) |
-| Find desktop database access | [`database-access-map.md`](database-access-map.md) |
-| Review financial, authentication, write, and backup risks | [`risk-map.md`](risk-map.md) |
-| Use the complete machine-readable desktop map | [`../../architecture-map.json`](../../architecture-map.json) |
+Use merged source, numbered database migrations and protected regression tests to establish implementation. Use exact-revision CI and deployment records for delivery. Keep actual company/provider/device acceptance distinct from synthetic tests. [Issue 296](https://github.com/GILBIC/spina-lending-app/issues/296) preserves the roadmap and [issue 448](https://github.com/GILBIC/spina-lending-app/issues/448#issuecomment-5872009447) tracks all remaining priorities.
 
-## Two maps, one source of truth
-
-The repository intentionally keeps two complementary architecture views:
-
-1. **Generated desktop map** — `architecture-map.json` and the generated Markdown files. These are produced from Python source and should not be edited by hand.
-2. **Product ownership map** — `system-map.md` and `debugging-playbook.md` connect Desktop, Mobile, FastAPI, Supabase/PostgreSQL, CI, and legacy/external boundaries. The dated current state tracks implementation and acceptance; `progress-map.md` is an archive.
-
-The generated map answers **“where is this desktop symbol and what calls it?”** The living map answers **“which product layer owns this behavior, what is finished, and where do I start debugging?”**
-
-## Source-of-truth order
-
-When documents disagree, use this order:
-
-1. Merged code on `main`
-2. Database migrations and protected business-rule tests
-3. Merged pull-request descriptions and validation results
-4. This living architecture hub
-5. Older local copies, screenshots, notes, or unmerged experiments
-
-An open draft pull request is **in progress**, not completed production behavior.
-
-## Required update rule for future work
-
-A pull request should update this hub when it changes any of these:
-
-- a product boundary or component owner
-- an API endpoint or data flow
-- a database schema or authoritative record
-- a financial calculation or 7x7 rule
-- authentication, roles, permissions, or device enforcement
-- offline behavior, retries, idempotency, or synchronization
-- a milestone status, blocker, or next step
-- the recommended debugging path
-
-Python desktop changes must continue to regenerate and validate the static architecture map through the existing architecture-map tooling.
-
-## Status language
-
-- **Complete** — merged to `main` and validated.
-- **In progress** — implemented on an open branch or pull request.
-- **Blocked** — intentionally prevented until a prerequisite is verified.
-- **Planned** — accepted direction but not implemented.
-- **External / needs inventory** — known work exists outside the current GitHub-first source of truth.
-
-## Fast operating habit
-
-Before starting a new wave:
-
-1. Read the current [implementation and acceptance state](../release/2026-09-28-implementation-state.md) and its live GitHub checkpoints.
-2. Locate the owning component in `system-map.md`.
-3. Use `debugging-playbook.md` to identify the IDs and evidence the change must preserve.
-4. Open one focused branch and pull request.
-5. Run the relevant tests and the permanent architecture checks.
-6. Update progress and architecture status before merge.
+Update this map when a change affects an API/data owner, financial rule, permission, device/session boundary, offline or retry behavior, supported surface or release gate. An open branch is in progress; a successful build is not evidence of production deployment or final acceptance.

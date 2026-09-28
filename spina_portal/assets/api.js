@@ -52,6 +52,8 @@ export class SpinaApi {
     appVersion = '0.1.0',
     sessionStore,
     fetchImpl = globalThis.fetch?.bind(globalThis),
+    logoutTimeoutMs = 5000,
+    refreshTimeoutMs = 15000,
   }) {
     if (!sessionStore) {
       throw new TypeError('sessionStore is required.');
@@ -63,6 +65,8 @@ export class SpinaApi {
     this.appVersion = String(appVersion || '0.1.0');
     this.sessionStore = sessionStore;
     this.fetchImpl = fetchImpl;
+    this.logoutTimeoutMs = logoutTimeoutMs;
+    this.refreshTimeoutMs = refreshTimeoutMs;
   }
 
   async request(
@@ -79,6 +83,7 @@ export class SpinaApi {
     } = {},
   ) {
     const normalizedMethod = String(method).toUpperCase();
+    const sessionRevision = this.sessionStore.revision;
     if (body !== undefined && rawBody !== undefined) throw new TypeError('Choose JSON or raw request content.');
     const requestHeaders = {
       'X-App-Platform': 'web',
@@ -141,7 +146,7 @@ export class SpinaApi {
 
     if (!response.ok || payload?.success === false) {
       const detail = errorDetail(payload, `http_${response.status}`);
-      if (response.status === 401) {
+      if (authenticated && response.status === 401 && this.sessionStore.revision === sessionRevision) {
         this.sessionStore.clear();
         emitUnauthorized();
       }
@@ -160,6 +165,7 @@ export class SpinaApi {
 
   async login(identifier, password) {
     this.sessionStore.clear();
+    const revision = this.sessionStore.revision;
     const data = await this.request('/api/v1/auth/login', {
       method: 'POST',
       authenticated: false,
@@ -171,6 +177,7 @@ export class SpinaApi {
         app_version: this.appVersion,
       },
     });
+    this.assertSessionRevision(revision);
     this.sessionStore.save(data);
     return data;
   }
@@ -192,31 +199,70 @@ export class SpinaApi {
 
   async refresh() {
     const current = this.sessionStore.load();
+    const revision = this.sessionStore.revision;
     if (!current?.refresh_token) {
       throw new ApiError('There is no refresh session. Sign in again.', {
         status: 401,
         code: 'refresh_session_required',
       });
     }
-    const data = await this.request('/api/v1/auth/refresh', {
-      method: 'POST',
-      authenticated: false,
-      headers: {
-        'X-Device-Id': this.sessionStore.deviceId(),
-      },
-      body: { refresh_token: current.refresh_token },
-    });
+    let data;
+    const controller = new AbortController();
+    let timer;
+    try {
+      data = await Promise.race([
+        this.request('/api/v1/auth/refresh', {
+          method: 'POST',
+          authenticated: false,
+          signal: controller.signal,
+          headers: { 'X-Device-Id': this.sessionStore.deviceId() },
+          body: { refresh_token: current.refresh_token },
+        }),
+        new Promise((resolve, reject) => {
+          timer = setTimeout(() => {
+            controller.abort();
+            reject(new ApiError('Session renewal could not be confirmed. Try again while the current session is valid.', { code: 'refresh_timeout' }));
+          }, this.refreshTimeoutMs);
+        }),
+      ]);
+    } catch (error) {
+      if (this.sessionStore.revision === revision && [401, 403].includes(error.status)) {
+        this.sessionStore.clear();
+        emitUnauthorized();
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+    this.assertSessionRevision(revision);
     this.sessionStore.save(data);
     return data;
   }
 
+  assertSessionRevision(revision) {
+    if (this.sessionStore.revision !== revision) {
+      throw new ApiError('This request belongs to a session that has ended.', { code: 'session_changed' });
+    }
+  }
+
   async logout() {
+    const current = this.sessionStore.load();
+    this.sessionStore.clear();
+    if (!current) return;
+    const controller = new AbortController();
+    let timer;
     try {
-      if (this.sessionStore.load()) {
-        await this.request('/api/v1/auth/logout', { method: 'POST' });
-      }
+      await Promise.race([
+        this.request('/api/v1/auth/logout', {
+          method: 'POST', authenticated: false, signal: controller.signal,
+          headers: { Authorization: `Bearer ${current.access_token}`, 'X-Device-Id': this.sessionStore.deviceId() },
+        }),
+        new Promise((resolve) => { timer = setTimeout(() => { controller.abort(); resolve(); }, this.logoutTimeoutMs); }),
+      ]);
+    } catch {
+      // Remote revocation is best effort; local sign-out has already completed.
     } finally {
-      this.sessionStore.clear();
+      clearTimeout(timer);
     }
   }
 }

@@ -1,8 +1,8 @@
 # Whole-System Architecture Map
 
-**Scope:** SPINA Desktop, Gilbic Mobile, GitHub-first FastAPI, Supabase Auth, PostgreSQL, CI, and known legacy/external boundaries.
+**Scope:** shared Web/Windows portal, Gilbic Mobile, GitHub-first FastAPI, Supabase Auth, PostgreSQL, CI, and known legacy/external boundaries.
 
-**Current acceptance state:** [28 September 2026](../release/2026-09-28-implementation-state.md). This map identifies code ownership; its historical examples are not production or device acceptance evidence.
+**Current acceptance state:** [29 September 2026](../release/2026-09-29-implementation-state.md). This map identifies code ownership; its historical examples are not production or device acceptance evidence.
 
 ## Product at a glance
 
@@ -16,7 +16,6 @@ flowchart TB
     end
 
     subgraph SURFACES[User surfaces]
-        DESKTOP[SPINA Desktop\nPython + Tkinter]
         MOBILE[Gilbic Mobile\nFlutter Android / iOS]
         PORTAL[Company portal\nShared Web / Windows]
         LEGACY[Earlier local web portals\nExternal / needs inventory]
@@ -32,7 +31,6 @@ flowchart TB
     end
 
     subgraph DATA[Authoritative data]
-        SPINADB[(PostgreSQL spina_db\nDesktop operational records)]
         CORE[(core schema\nUsers, roles, permissions, devices, audit)]
         LENDING[(lending schema\nClients, loans, routes, collection state)]
         MOBILEDB[(mobile schema\nIdempotency and mobile support)]
@@ -48,9 +46,7 @@ flowchart TB
         CI[GitHub Actions CI\nBackend, platform, financial checks]
     end
 
-    MANAGEMENT --> DESKTOP
     MANAGEMENT --> MOBILE
-    EMPLOYEE --> DESKTOP
     EMPLOYEE --> MOBILE
     COLLECTOR --> MOBILE
     CLIENT --> MOBILE
@@ -67,8 +63,6 @@ flowchart TB
     FASTAPI --> MOBILEDB
     FASTAPI --> CONTRACT
 
-    DESKTOP --> SPINADB
-    DESKTOP -. reconciliation / migration .-> LENDING
 
     MOBILE --> SECURE
     MOBILE --> CACHE
@@ -83,7 +77,7 @@ flowchart TB
 
 | Area | Current implemented behavior | Intended platform direction |
 |---|---|---|
-| SPINA Desktop | Mature Python/Tkinter and local PostgreSQL office workflows remain operational, including legacy role labels and modules that have not yet moved behind the GitHub-first API. | The primary office platform for canonical Management and Employee work, reusing the same FastAPI contracts, server permissions, official records, maker-checker controls, and audit outcomes as mobile. This is a migration of the current project, not a copy or reconnection of an old portal/backend. |
+| Windows | `spina_pc/` installs the company portal in Edge/Chrome app mode. The original Tkinter application and separate account authority are retired. | Shared FastAPI roles, permissions, records, approvals and financial outcomes across Web and Windows. |
 | Gilbic Mobile | Collector and Client flows plus incremental protected Management/Employee modules. Management now has a read-only live overview backed by one permission-filtered PostgreSQL snapshot and existing protected destinations. | Functional capability parity for appropriate Management and Employee workflows. Mobile layouts remain task-focused; they do not redefine roles, financial rules, approvals, or official results. Collector stays mobile-first. |
 | Management and Employee access | Current source includes protected Employee Activity and employee-operation/payroll modules with portal/mobile workspaces. Canonical roles and granular permissions govern server-backed access; actual staff/company settings and acceptance remain separately tracked. | Accounting, HR/payroll, and client-relationship access remain separable; Management retains sensitive approvals. Activity is a permission-filtered projection of owning-domain evidence, without impersonation or maker-checker bypass. Legacy labels are not the new role model. |
 | Company portal | `spina_portal/` provides Client, Collector, Employee and Management workspaces through shared FastAPI authority. The dated state tracks remaining Collector parity and platform acceptance. | Web and shared Windows clients reuse the same permissions, financial owners and official outcomes. Earlier external portals are separate legacy inventory, not the current company portal. |
@@ -93,53 +87,24 @@ flowchart TB
 
 | Concern | Authoritative owner | Never owned by |
 |---|---|---|
-| Password hashing and authentication session | Supabase Auth | Flutter UI, Tkinter UI, browser JavaScript |
-| Application role and permission | Private `core.*` tables through FastAPI | Supabase user metadata, Flutter state, browser metadata, client-provided role, or legacy Desktop labels such as Admin/Encoder/Viewer/System |
+| Password hashing and authentication session | Supabase Auth | Flutter UI, browser JavaScript |
+| Application role and permission | Private `core.*` tables through FastAPI | Supabase user metadata, Flutter state, browser metadata or client-provided role |
 | Device approval and revocation | `core.devices` through FastAPI | A bearer token by itself |
 | Collector area assignment | Server-side route assignment tables | Mobile-selected area |
 | Official financial records, balance, receipt, and approval result | PostgreSQL transactions and protected server rules through FastAPI | Flutter, browser, or Desktop presentation totals; cached routes; manually typed dashboard totals |
 | Employee work evidence and workflow state | Owning PostgreSQL domain records plus allowlisted audit evidence through permission-filtered FastAPI reads | Activity-screen counters, free-form audit text alone, screenshots, keystrokes, or Management impersonation |
-| Regular and 7x7 business rules | Protected server/desktop calculation code and tests | Presentation widgets |
+| Regular and 7x7 business rules | Protected server calculation code and tests | Presentation widgets |
 | Offline route display | SQLCipher snapshot on the phone | Official current balance source |
 | Mobile retry identity | Original idempotency UUID plus device sequence | A newly generated UUID after uncertainty |
-| Desktop feature wiring | `spina_app/features/*` installers and final application shell | Reintroduced duplicate monkey-patch chains |
 | Progress status | Issue296, current PR heads/checks and the dated implementation/acceptance matrix | Archived progress notes, memory or an old local folder |
 
 ## Repository component map
 
-### 1. SPINA Desktop
+### 1. Company portal and Windows
 
-**Current responsibility:** mature office lending operations, financial rules, PostgreSQL-backed desktop workflows, reports, backups, and operational controls.
+**Locations:** `spina_portal/` and `spina_pc/`.
 
-**Intended responsibility:** the primary office surface for permission-separated Management and Employee lending, collection, cash custody, remittance, accounting, HR/payroll, client-relationship, reporting, approval, audit, backup, and administration work. New Desktop modules must belong to this current repository and converge on the GitHub-first FastAPI authority; they must not copy or reconnect an old portal as a second backend.
-
-Key locations:
-
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` — compatibility entry file and remaining shared runtime.
-- `spina_app/features/` — final idempotent feature installers and ownership boundaries.
-- `spina_app/repositories/` — database access by feature.
-- `spina_app/services/` — business transformations and financial rules.
-- `spina_app/tabs/` and presentation modules — Tkinter views.
-- `spina_app/calculation_rules.py` — protected Regular/7x7 calculation behavior.
-- `tools/test_architecture_map.py` and related wave tests — permanent architecture and regression protection.
-
-Major modularized feature owners:
-
-| Feature | Main owner paths |
-|---|---|
-| Application startup | `spina_app/features/application_shell.py`, `spina_app/features/startup_runtime.py` |
-| Accounts and login | `spina_app/features/accounts.py`, `spina_app/services/accounts.py`, login/header presentation modules |
-| Side navigation | `spina_app/features/side_navigation.py` |
-| Dashboard | `spina_app/features/dashboard.py`, `spina_app/repositories/dashboard.py`, `spina_app/services/loan_cycles.py`, `spina_app/tabs/dashboard.py` |
-| Data Bank | `spina_app/features/data_bank.py`, `spina_app/repositories/data_bank.py`, `spina_app/services/data_bank.py`, Data Bank controller/presentation modules |
-| Cash Control | `spina_app/features/cash_control.py`, `spina_app/repositories/cash_control.py`, `spina_app/services/cash_control.py` |
-| Clients | `spina_app/features/clients.py`, Clients repository/service/controller/application modules |
-| Client Info Logs | `spina_app/features/client_info_logs.py`, repository/service/tab modules |
-| Reports | `spina_app/features/reports.py`, Reports repository/service/controller/engine/generation modules |
-| Collector Route | `spina_app/features/collector_route.py`, repository/service/controller/report/presentation modules |
-| Backup history | `spina_app/backup_history_presentation.py` plus desktop backup services |
-
-Use the generated [`feature-map.md`](feature-map.md), [`dependency-map.md`](dependency-map.md), and [`function-index.md`](function-index.md) for symbol-level desktop tracing.
+The portal owns role-based presentation and calls the shared backend. The Windows installer opens that same site in browser app mode. Both use server-derived roles and permissions and never connect directly to PostgreSQL. The original Tkinter source, local login/account store, desktop-only tooling and generated maps have been removed. Existing historical business data and backups remain separate recovery/reconciliation evidence. The pure historical 7x7 calculation retained in `gilbic_backend/tests/reference_7x7_rules.py` is only an independent test oracle.
 
 ### 2. Gilbic Mobile
 
@@ -216,7 +181,7 @@ Private schemas introduced for Gilbic:
 | `lending` | clients, loan types, loans, collector assignments, collection state, collection transactions |
 | `mobile` | mobile idempotency and support records |
 
-The mature SPINA Desktop operational data remains in the existing PostgreSQL database. Legacy loans must be reconciled into authoritative `lending.loan_collection_state` before the backend exposes them as mobile-write ready.
+Historical standalone desktop data is retained; deleting its application does not migrate, reconcile or delete records. Legacy loans must be reconciled into authoritative `lending.loan_collection_state` before the backend exposes them as mobile-write ready.
 
 ### 6. Earlier local backend and portals
 
@@ -317,11 +282,11 @@ sequenceDiagram
     end
 ```
 
-### Desktop-to-mobile loan readiness
+### Historical loan reconciliation and readiness
 
 ```mermaid
 flowchart LR
-    D[SPINA Desktop loan and transaction state] --> R[Reconciliation process]
+    D[Preserved historical loan and transaction state] --> R[Reconciliation process]
     R --> S[lending.loan_collection_state]
     S --> C{Calculation mode approved?}
     C -->|Regular/direct balance safe| READY[Mobile collection enabled]
@@ -356,7 +321,7 @@ flowchart LR
     REVIEW --> MAIN[Merge to main]
 ```
 
-`spina-ci.yml` runs these three lanes on hosted Ubuntu. Some separately dispatched protected maintenance/live-verifier workflows still require a self-hosted Windows runner. Check the actual workflow and job before interpreting queued status; a queue is not a code failure. Main protection requires the three trusted CI checks and an up-to-date pull request. Green CI remains separate from actual release/device/business acceptance.
+`spina-ci.yml` runs these three lanes on hosted Ubuntu. Only explicitly dispatched, main-only protected maintenance may use a self-hosted Windows runner; obsolete PR/push runner workflows have been removed. Check the actual workflow and job before interpreting queued status; a queue is not a code failure. Main protection requires the three trusted CI checks and an up-to-date pull request. Green CI remains separate from actual release/device/business acceptance.
 
 ## Change-impact checklist
 
@@ -366,6 +331,6 @@ Before editing a component, answer:
 2. Which record is authoritative?
 3. Which IDs connect the request across layers?
 4. Which business rule or security gate must remain unchanged?
-5. Which unit, integration, widget, migration, architecture, and manual tests protect it?
-6. Does the progress map need a status change?
+5. Which unit, integration, widget, migration and manual tests protect it?
+6. Does the current implementation state need a status change?
 7. Is an earlier local portal/backend also affected, or should it remain untouched?
