@@ -34,6 +34,7 @@ const SHELL_ASSETS = [
   '/assets/office-privacy.js',
   '/assets/office-evidence-capture.js',
   '/assets/office-first-loan.js',
+  '/assets/first-loan-disclosure.js',
   '/assets/collector-onboarding-visit.js',
   '/assets/office-cif-review.js',
   '/assets/office-cif-correction.js',

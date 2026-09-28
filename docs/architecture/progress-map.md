@@ -4,6 +4,8 @@
 
 This file is retained only as a historical architecture/progress reference.
 
+For the current implementation/configuration/acceptance entry point, use the [28 September 2026 state](../release/2026-09-28-implementation-state.md) and its live GitHub links. The historical roadmap statements below are not current completion evidence.
+
 **Supersession notice — 2026-08-29:** the statement below that Client, Employee, and Management native mobile expansion was deferred to V1.1+ is historical release-scope context, not the current product architecture. The approved direction now requires functional Management/Employee capability parity across Desktop and mobile through shared FastAPI contracts and server-derived permissions. Release sequencing and completion still remain governed by Issue #296 and separately approved scope; this archived file is not a live tracker.
 
 ## Authoritative roadmap

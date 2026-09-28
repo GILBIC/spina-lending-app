@@ -15,7 +15,16 @@ class PrivateOfficeRoute(APIRoute):
             except RequestValidationError as error:
                 response = JSONResponse(
                     status_code=422,
-                    content=jsonable_encoder({"detail": error.errors()}),
+                    # Pydantic errors include the rejected input, sometimes the
+                    # entire private upload/review. Return field diagnostics only.
+                    content=jsonable_encoder(
+                        {
+                            "detail": [
+                                {key: item[key] for key in ("loc", "msg", "type")}
+                                for item in error.errors()
+                            ]
+                        }
+                    ),
                 )
             except HTTPException as error:
                 error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
