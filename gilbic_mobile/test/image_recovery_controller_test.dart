@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:gilbic_mobile/src/core/media/private_image_store.dart';
 
 const proof = ImagePickContext(
   purpose: 'client_payment_proof',
@@ -80,6 +81,7 @@ void main() {
     Future<LostDataResponse> Function()? lost,
     bool enabled = true,
   }) => ImageRecoveryController(
+    images: PrivateImageStore(directory: () async => Directory('${temp.path}/private')),
     store: store,
     retrieveLostData: lost ?? () async => LostDataResponse.empty(),
     enabled: enabled,
@@ -120,12 +122,12 @@ void main() {
             LostDataResponse(type: RetrieveType.image, files: [photo]),
       );
       await recovery.initialize(owner);
-      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(await recovery.recoveredFor(proof)?.readAsBytes(), await photo.readAsBytes());
       expect(recovery.recoveredFor(anotherLoan), isNull);
       expect(recovery.recoveredFor(anotherPurpose), isNull);
       expect(await recovery.takeRecovered(anotherLoan), isNull);
       expect(recovery.recovered?.context.label, 'Loan 42 payment proof');
-      expect(await recovery.takeRecovered(proof), photo);
+      expect(await (await recovery.takeRecovered(proof))!.readAsBytes(), await photo.readAsBytes());
       expect(recovery.recovered, isNull);
       expect(store.value, isNull);
     },
@@ -145,7 +147,7 @@ void main() {
       await first.initialize(owner);
       final second = controller();
       await second.initialize(owner);
-      expect(second.recoveredFor(proof)?.path, photo.path);
+      expect(second.recoveredFor(proof)?.path, first.recoveredFor(proof)?.path);
       expect(await second.takeRecovered(proof), isNotNull);
       final third = controller();
       await third.initialize(owner);
@@ -198,7 +200,7 @@ void main() {
       expect(store.value, durable);
       expect(retrievals, 1);
       await recovery.initialize(owner);
-      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(await recovery.recoveredFor(proof)?.readAsBytes(), await photo.readAsBytes());
       expect(retrievals, 1);
     },
   );
@@ -223,7 +225,7 @@ void main() {
       expect(recovery.pending?.target, 'loan-42');
       response = LostDataResponse(type: RetrieveType.image, files: [photo]);
       await recovery.recoverPending();
-      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(await recovery.recoveredFor(proof)?.readAsBytes(), await photo.readAsBytes());
       expect(recovery.pending, isNull);
       expect(reads, 3);
       await recovery.recoverPending();
@@ -248,7 +250,7 @@ void main() {
         throwsStateError,
       );
       expect(launches, 0);
-      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(await recovery.recoveredFor(proof)?.readAsBytes(), await photo.readAsBytes());
       expect(recovery.recoveredFor(anotherLoan), isNull);
     },
   );
@@ -305,6 +307,7 @@ void main() {
       var clock = now;
       var reads = 0;
       final recovery = ImageRecoveryController(
+    images: PrivateImageStore(directory: () async => Directory('${temp.path}/private')),
         store: store,
         enabled: true,
         now: () => clock,
@@ -326,6 +329,7 @@ void main() {
     var clock = now;
     store.value = journal(path: photo.path);
     final recovery = ImageRecoveryController(
+    images: PrivateImageStore(directory: () async => Directory('${temp.path}/private')),
       store: store,
       enabled: true,
       retrieveLostData: () async => LostDataResponse.empty(),
@@ -390,7 +394,7 @@ void main() {
   );
 
   test(
-    'discard preserves the image file but removes recovery metadata',
+    'discard preserves the source image but removes recovery metadata',
     () async {
       store.value = journal(path: photo.path);
       final recovery = controller();
@@ -415,7 +419,7 @@ void main() {
       throwsStateError,
     );
     expect(launches, 0);
-    expect(recovery.recoveredFor(proof)?.path, photo.path);
+    expect(await recovery.recoveredFor(proof)?.readAsBytes(), await photo.readAsBytes());
   });
 
   test('blocks unjournaled picker launch when secure storage fails', () async {
@@ -443,7 +447,7 @@ void main() {
       await recovery.initialize(owner);
       store.failDeletes = true;
       await expectLater(recovery.takeRecovered(proof), throwsStateError);
-      expect(recovery.recoveredFor(proof)?.path, photo.path);
+      expect(await recovery.recoveredFor(proof)?.readAsBytes(), await photo.readAsBytes());
     },
   );
 

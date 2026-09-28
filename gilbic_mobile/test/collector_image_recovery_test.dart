@@ -22,6 +22,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'support/memory_private_image_store.dart';
+
 const _session = UserSession(
   userId: 'collector',
   username: 'collector',
@@ -124,6 +126,7 @@ Future<ImageRecoveryController> _recovered(ImagePickContext context) async {
       'path': null,
     });
   final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
     store: store,
     enabled: true,
     retrieveLostData: () async => LostDataResponse(

@@ -66,7 +66,9 @@ Future<XFile?> pickRecoverableImage(
               ),
               if (matches) ...[
                 const SizedBox(height: 12),
-                _RecoveredPhotoPreview(file: recovered.file),
+                _RecoveredPhotoPreview(
+                  read: () => recovery.preview(recovered.file),
+                ),
               ],
             ],
           ),
@@ -97,18 +99,14 @@ Future<XFile?> pickRecoverableImage(
 }
 
 class _RecoveredPhotoPreview extends StatefulWidget {
-  const _RecoveredPhotoPreview({required this.file});
-  final XFile file;
+  const _RecoveredPhotoPreview({required this.read});
+  final Future<Uint8List?> Function() read;
   @override
   State<_RecoveredPhotoPreview> createState() => _RecoveredPhotoPreviewState();
 }
 
 class _RecoveredPhotoPreviewState extends State<_RecoveredPhotoPreview> {
-  late final Future<Uint8List?> bytes = _read();
-  Future<Uint8List?> _read() async {
-    if (await widget.file.length() > 10 * 1024 * 1024) return null;
-    return widget.file.readAsBytes();
-  }
+  late final Future<Uint8List?> bytes = widget.read();
 
   @override
   Widget build(BuildContext context) => FutureBuilder<Uint8List?>(

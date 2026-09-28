@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as paths;
+
+import 'private_image_store.dart';
 
 class ImagePickContext {
   const ImagePickContext({
@@ -52,14 +55,17 @@ class SecureImageRecoveryStore implements ImageRecoveryStore {
 
 /// Coordinates the Android plugin's single, destructively read lost-data slot.
 /// This holds a photo selection only; callers still validate it and ask the user
-/// to submit it. It never uploads, changes financial records, or deletes files.
+/// to submit it. Cleanup is restricted to copies owned by [PrivateImageStore].
+/// It never uploads or changes financial records.
 class ImageRecoveryController extends ChangeNotifier {
   ImageRecoveryController({
     ImageRecoveryStore? store,
+    PrivateImageStore? images,
     Future<LostDataResponse> Function()? retrieveLostData,
     bool? enabled,
     DateTime Function()? now,
   }) : _store = store ?? SecureImageRecoveryStore(),
+       _images = images ?? PrivateImageStore(),
        _retrieveLostData = retrieveLostData ?? ImagePicker().retrieveLostData,
        _enabled =
            enabled ??
@@ -67,6 +73,7 @@ class ImageRecoveryController extends ChangeNotifier {
        _now = now ?? DateTime.now;
 
   final ImageRecoveryStore _store;
+  final PrivateImageStore _images;
   final Future<LostDataResponse> Function() _retrieveLostData;
   final bool _enabled;
   final DateTime Function() _now;
@@ -108,6 +115,7 @@ class ImageRecoveryController extends ChangeNotifier {
         final journal = _ImagePickJournal.parse(raw, _now());
         if (journal == null || journal.owner != _owner) {
           if (raw != null) await _store.delete();
+          await _cleanup();
           if (_current(revision)) _pending = null;
           return;
         }
@@ -198,10 +206,12 @@ class ImageRecoveryController extends ChangeNotifier {
     final journal = _ImagePickJournal.parse(raw, _now());
     if (journal == null || owner == null || journal.owner != owner) {
       if (raw != null) await _store.delete();
+      await _cleanup();
       return;
     }
 
     await _accept(journal, lost, revision);
+    if (_current(revision)) await _cleanup(keepPath: _recovered?.file.path);
   }
 
   Future<void> _accept(
@@ -233,13 +243,15 @@ class ImageRecoveryController extends ChangeNotifier {
     if (file == null || !await _readable(file)) {
       if (_current(revision)) {
         await _store.delete();
+        await _cleanup();
         if (_current(revision)) _pending = null;
       }
       return;
     }
     if (!_current(revision)) return;
-    // Persist the recovered path before showing it: the plugin cache is already
-    // consumed, and another restart must not silently lose this selection.
+    // Copy into our own storage before journaling; picker paths never authorize
+    // deletion. The private path survives a second restart and cache eviction.
+    file = await _images.retain(file);
     await _store.write(journal.withPath(file.path).encode());
     if (_current(revision)) {
       _recovered = RecoveredImagePick(context: journal.context, file: file);
@@ -262,22 +274,33 @@ class ImageRecoveryController extends ChangeNotifier {
       if (!_current(revision)) return null;
       final file = recoveredFor(context);
       if (file == null) return null;
-      // A failed delete must not give the same photo to a second restart.
-      if (_enabled) await _store.delete();
-      if (!_current(revision)) return null;
       final createdAt = _recoveredCreatedAt;
       final now = _now();
       final fresh =
           createdAt != null &&
           !createdAt.isAfter(now) &&
           now.difference(createdAt) < const Duration(hours: 24);
+      // Forms already keep bytes for submission/retry. Detach them before the
+      // disk copy is removed, never while a preview read is still in progress.
+      XFile? accepted;
+      if (fresh) {
+        accepted = await _images.use(file, (image) async {
+          return XFile.fromData(await image.readAsBytes(),
+              path: image.name, name: image.name, mimeType: image.mimeType);
+        });
+      }
+      if (!_current(revision)) return null;
+      // Failed journal invalidation preserves the only private evidence.
+      if (_enabled) await _store.delete();
+      if (!_current(revision)) return null;
       _recovered = null;
       _recoveredCreatedAt = null;
+      await _cleanup();
       if (!fresh) {
         _error = 'The recovered photo has expired. Please choose it again.';
       }
       _changed();
-      return fresh ? file : null;
+      return _current(revision) ? accepted : null;
     });
   }
 
@@ -291,8 +314,23 @@ class ImageRecoveryController extends ChangeNotifier {
       _recoveredCreatedAt = null;
       _pending = null;
       _error = null;
+      await _cleanup();
       _changed();
     });
+  }
+
+  Future<Uint8List?> preview(XFile file) => _images.use(file, (image) async {
+    if (await image.length() > 10 * 1024 * 1024) return null;
+    return image.readAsBytes();
+  });
+
+  Future<void> _cleanup({String? keepPath}) async {
+    try {
+      await _images.cleanup(keepPath: keepPath);
+    } catch (_) {
+      _error = 'A temporary photo could not be removed. Spina will retry '
+          'cleanup when photo recovery starts again.';
+    }
   }
 
   Future<XFile?> pick(

@@ -8,6 +8,8 @@ import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/features/shared/image_recovery_scope.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'support/memory_private_image_store.dart';
+
 const target = ImagePickContext(
   purpose: 'proof',
   target: 'loan-a',
@@ -178,6 +180,7 @@ void main() {
           'path': null,
         });
       final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
         store: store,
         enabled: true,
         retrieveLostData: () async => LostDataResponse.empty(),
@@ -247,6 +250,7 @@ void main() {
         });
       var response = LostDataResponse.empty();
       final controller = ImageRecoveryController(
+    images: MemoryPrivateImageStore(),
         store: store,
         enabled: true,
         retrieveLostData: () async => response,
@@ -301,7 +305,7 @@ void main() {
       expect(accepted, isNull);
       await tester.tap(find.text('Use photo'));
       await tester.pumpAndSettle();
-      expect(accepted?.path, file.path);
+      expect(accepted?.name, file.name);
       expect(store.value, isNull);
     },
   );
@@ -348,7 +352,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Use photo'));
       await tester.pumpAndSettle();
-      expect(accepted?.path, file.path);
+      expect(accepted?.name, file.name);
       expect(recovery.taken, 1);
       expect(launches, 0);
     },
