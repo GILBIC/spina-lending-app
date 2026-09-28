@@ -11,7 +11,7 @@ const LOAN='44444444-4444-4444-8444-444444444444';
 const button=(root,text)=>root.querySelectorAll('button').find(item=>item.textContent===text);
 async function opened({role='employee',permissions=['lending.first_loan.release','client.credential.manage'],setup=true,deniedStatus=null,pending=false}={}) {
  const root=new Element(),controller=new AbortController();
- const review={client_id:CLIENT,application_id:APP,application_version_id:VERSION,application_reference:'Synthetic-Loan',version_number:1,information:{},missing_fields:[]};
+ const review={client_id:CLIENT,cif_version_id:CLIENT,application_id:APP,application_version_id:VERSION,application_reference:'Synthetic-Loan',version_number:1,information:{},missing_fields:[]};
  const loan={loan_id:LOAN,client_id:CLIENT,packet_id:VERSION,packet_hash:'a'.repeat(64),loan_number:'SYNTHETIC',status:'released',authorization:null,document:null,
   packet:{loan_id:LOAN,client_id:CLIENT,packet_id:VERSION,application:{application_id:APP},terms:{principal:'100.00'},net_cash:'100.00',borrower:{full_name:'Synthetic borrower'},schedule:[{installment_number:1,due_date:'2026-09-20',contractual_amount:'100.00',principal_component:'100.00',interest_component:'0.00'}]}};
  const api={async request(path,options={}) {
@@ -76,18 +76,21 @@ test('a pending old PDF is discarded when cancellation and a new approval replac
  globalThis.document={createElement(){return {click(){}};}};
  t.after(()=>{URL.createObjectURL=originalCreate;globalThis.document=originalDocument;h.controller.abort();});
  const originalRequest=h.api.request;let resolve;
+ const disclosure={id:LOAN,application_version_id:VERSION,cif_version_id:CLIENT,review_digest:'e'.repeat(64),approval_ready:true,blockers:[],financial_snapshot:{components:{principal:'100.00',contractual_interest:'0.00',dst_upfront:'0.00',grt_in_repayments:'0.00',renewal_offset:'0.00',other_upfront_deductions:'0.00',other_scheduled_charges:'0.00',total_upfront_deductions:'0.00',net_proceeds:'100.00',total_scheduled_payable:'100.00'},disclosure_values:{amount_financed:'100.00',finance_charge_total:'0.00',non_finance_charge_total:'0.00',effective_interest_rate:'0',rate_period:'Synthetic term',calculation_method:'Synthetic method'},charge_items:[]}};
  h.api.request=async(path,options={})=>{
+  if(path.includes('/disclosure-calculations/'))return disclosure;
   if(path.endsWith('/documents'))return new Promise(done=>{resolve=done;});
   if(path.endsWith('/cancel-approval')){h.loan.status='cancelled';return h.loan;}
   if(path.endsWith('/approve')){
    h.loan.status='approved_pending_release';h.loan.loan_id=APP;h.loan.packet_id=CLIENT;h.loan.packet_hash='c'.repeat(64);h.loan.loan_number='SYNTHETIC-NEW';
-   h.loan.packet={...h.loan.packet,loan_id:APP,packet_id:CLIENT};h.loan.document={id:CLIENT,content_sha256:'d'.repeat(64)};return h.loan;
+   h.loan.packet={...h.loan.packet,loan_id:APP,packet_id:CLIENT,tax_disclosure:{calculation_id:LOAN,review_digest:disclosure.review_digest,financial_snapshot:disclosure.financial_snapshot}};h.loan.document={id:CLIENT,content_sha256:'d'.repeat(64)};return h.loan;
   }
   return originalRequest(path,options);
  };
  fire(button(h.root,'Download locked PDF packet'),'click');
  h.root.querySelector('[name="revokeReason"]').value='Synthetic correction';fire(button(h.root,'Cancel unreleased approval'),'click');await setImmediate();
- h.root.querySelector('[name="product"]').value=APP;fire(h.root.querySelector('[data-approval]'),'submit');await setImmediate();
+ h.root.querySelector('[name="product"]').value=APP;h.root.querySelector('[name="disclosureReference"]').value=LOAN;
+ fire(button(h.root,'Load saved disclosure'),'click');await setImmediate();fire(h.root.querySelector('[data-approval]'),'submit');await setImmediate();
  assert.match(h.root.textContent,/SYNTHETIC-NEW/);
  resolve(new Blob(['old signed packet'],{type:'application/pdf'}));await setImmediate();
  assert.equal(downloads,0,'An old document must never download under a replacement loan filename');

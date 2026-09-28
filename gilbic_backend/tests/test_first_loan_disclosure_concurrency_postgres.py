@@ -623,3 +623,56 @@ def test_real_rule_lock_timeout_rolls_back_and_same_request_can_retry(
     after = binding_proof._state(seed_connection)
     assert action(**arguments) == original
     assert binding_proof._state(seed_connection) == after
+
+
+@pytest.mark.parametrize("stage", ("review", "approve", "release"))
+def test_real_rule_deadlock_rolls_back_and_same_request_can_retry(
+    seed_connection, isolated_r1_url, monkeypatch, stage
+):
+    case, action, arguments = _source_action(seed_connection, monkeypatch, stage)
+    before = binding_proof._state(seed_connection)
+    _independent_connections(monkeypatch, isolated_r1_url)
+    name = f"r1-deadlock-{uuid4().hex}"
+
+    def invoke():
+        token = SESSION_NAME.set(name)
+        try:
+            return action(**deepcopy(arguments))
+        finally:
+            SESSION_NAME.reset(token)
+
+    seed_connection.commit()
+    # Deliberately invert the real source lock order in a disposable writer.
+    # Its later rule insertion must wait for the consumer's SHARE lock while
+    # the consumer is already waiting for this application's row lock.
+    # Roll the test writer back so the same original request can then retry.
+    with (
+        ThreadPoolExecutor(max_workers=1) as pool,
+        seed_connection.transaction(force_rollback=True),
+    ):
+        seed_connection.execute("set local deadlock_timeout = '5s'")
+        seed_connection.execute(
+            "select id from lending.loan_applications where id=%s for update",
+            (case["app"].application_id,),
+        )
+        pending = pool.submit(invoke)
+        _wait_until_blocked(seed_connection, [name], time.monotonic() + 1.5)
+        locks = seed_connection.execute(
+            "select 1 from pg_locks l join pg_stat_activity a on a.pid=l.pid "
+            "where a.application_name=%s and l.mode='ShareLock' and l.granted "
+            "and l.relation='accounting.v1_tax_rule_evidence'::regclass",
+            (name,),
+        ).fetchall()
+        assert locks, "The actual consumer must hold its rule-table lock"
+        binding_proof._supersede_rule(seed_connection, case, "dst")
+        with pytest.raises(
+            owner.FirstLoanConflict, match="source is changing"
+        ) as failure:
+            pending.result(timeout=5)
+        # A lock timeout or injected exception cannot satisfy this proof.
+        assert isinstance(failure.value.__cause__, psycopg.errors.DeadlockDetected)
+    assert binding_proof._state(seed_connection) == before
+    original = action(**arguments)
+    after = binding_proof._state(seed_connection)
+    assert action(**arguments) == original
+    assert binding_proof._state(seed_connection) == after

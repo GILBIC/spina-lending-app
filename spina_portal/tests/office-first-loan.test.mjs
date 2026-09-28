@@ -10,6 +10,8 @@ const APP='22222222-2222-4222-8222-222222222222';
 const VERSION='33333333-3333-4333-8333-333333333333';
 const PRODUCT='44444444-4444-4444-8444-444444444444';
 const LOAN='55555555-5555-4555-8555-555555555555';
+const DISCLOSURE='66666666-6666-4666-8666-666666666666';
+function savedDisclosure() { return {id:DISCLOSURE,review_digest:'d'.repeat(64),application_version_id:VERSION,cif_version_id:CLIENT,version_number:1,approval_ready:true,blockers:[],financial_snapshot:{components:{principal:'1000.00',contractual_interest:'200.00',dst_upfront:'10.00',grt_in_repayments:'0.00',renewal_offset:'0.00',other_upfront_deductions:'0.00',other_scheduled_charges:'0.00',total_upfront_deductions:'10.00',net_proceeds:'990.00',total_scheduled_payable:'1200.00'},disclosure_values:{amount_financed:'980.00',finance_charge_total:'220.00',non_finance_charge_total:'0.00',effective_interest_rate:'0.23456789',rate_period:'per contractual term',calculation_method:'Synthetic reviewed method'},charge_items:[{item_id:'dst',kind:'dst',timing:'upfront',amount:'10.00'}]}}; }
 async function mount(){assert.ok(existsSync(url),'First-loan office workflow is not implemented');return (await import(url)).mountOfficeFirstLoan;}
 function harness(role='management'){
  const h={root:new Element(),controller:new AbortController(),calls:[],loans:[]};
@@ -17,7 +19,7 @@ function harness(role='management'){
  h.session={user:{role},permissions:['client_onboarding.requirement.review','lending.first_loan.approve','lending.first_loan.release','client.credential.manage']};
  h.review={client_id:CLIENT,application_id:APP,application_version_id:VERSION,application_reference:'Loan-Mixed',cif_version_id:CLIENT,version_number:1,missing_fields:[],information:{request:{requested_loan_type_id:PRODUCT,requested_amount:'1000.00'},repayment:{}}};
  h.context={server_business_date:'2026-09-19',products:[{id:PRODUCT,code:'regular',name:'Synthetic Regular',calculation_mode:'fixed_daily',daily_interest_per_1000:'0.00'}],templates:[{version:'SYNTHETIC',content_sha256:'a'.repeat(64),approved_for_execution:true}]};
- h.defaultRequest=(path)=>{if(path.endsWith('/cif-client'))return {client_id:CLIENT,application_reference:'Intake-Mixed'};if(path.endsWith('/review-summary'))return h.review;if(path.endsWith('/context'))return h.context;if(path.includes('/by-application/'))return {loans:h.loans};throw new Error('Unexpected request '+path);};
+ h.defaultRequest=(path)=>{if(path.includes('/disclosure-calculations/'))return savedDisclosure();if(path.endsWith('/cif-client'))return {client_id:CLIENT,application_reference:'Intake-Mixed'};if(path.endsWith('/review-summary'))return h.review;if(path.endsWith('/context'))return h.context;if(path.includes('/by-application/'))return {loans:h.loans};throw new Error('Unexpected request '+path);};
  h.api={async request(path,options={}){h.calls.push({path,options});if(h.request)return h.request(path,options);return h.defaultRequest(path);}};
  return h;
 }
@@ -96,13 +98,46 @@ test('uncertain mutation prevents duplicate actions until authoritative reload',
 });
 
 test('approval sends exact decimals and selected source version without creating a schedule in the browser',async()=>{
- const h=harness();h.request=(path,options)=>{if(options.method==='POST'){h.loans=[approved()];return h.loans[0];}return h.defaultRequest(path);};
+ const h=harness();h.request=(path,options)=>{if(options.method==='POST'){h.loans=[approved()];h.loans[0].packet.tax_disclosure={calculation_id:DISCLOSURE,review_digest:'d'.repeat(64),financial_snapshot:savedDisclosure().financial_snapshot};return h.loans[0];}return h.defaultRequest(path);};
  (await mount())(h);await open(h);
  for(const [name,value] of Object.entries({product:PRODUCT,principal:'1234.56',interest:'123.46',interestRate:'10.0000',installment:'113.17',count:'12',frequency:'daily',basisDate:'2026-09-19',firstDate:'2026-09-25',semiDays:'15,30',pricingReference:'SYNTHETIC-APPROVAL',accountEmail:'synthetic@example.invalid',template:'SYNTHETIC',deductions:'fee | 10.25 | SYNTHETIC-FEE'}))field(h,name).value=value;
+ field(h,'disclosureReference').value=DISCLOSURE;fire(button(h,'Load saved disclosure'),'click');await setImmediate();
  fire(h.root.querySelector('[data-approval]'),'submit');await setImmediate();
  const body=h.calls.find(x=>x.options.method==='POST').options.body;
  assert.equal(body.application_version_id,VERSION);assert.equal(body.terms.principal,'1234.56');assert.equal(body.terms.interest_rate_percent,'10.0000');assert.equal(body.terms.installment_count,12);assert.equal(body.terms.deductions[0].amount,'10.25');assert.equal(Object.hasOwn(body,'schedule'),false);
+ assert.equal(body.disclosure_calculation_id,DISCLOSURE);assert.equal(body.expected_disclosure_digest,'d'.repeat(64));
  assert.equal(button(h,'Approve exact terms'),undefined);
+});
+
+test('approval is blocked before sending when no saved disclosure was selected',async()=>{
+ const h=harness();(await mount())(h);await open(h);field(h,'product').value=PRODUCT;
+ fire(h.root.querySelector('[data-approval]'),'submit');await setImmediate();
+ assert.equal(h.calls.filter(x=>x.options.method==='POST').length,0);assert.match(h.root.textContent,/saved disclosure/i);
+});
+
+for(const invalid of ['foreign','changed-reference','changed-terms','blocked','late','private'])test(`disclosure selection handles ${invalid} without unsafe approval`,async()=>{
+ const h=harness();let resolve;
+ h.request=(path,options)=>{if(path.includes('/disclosure-calculations/')){
+   if(invalid==='late')return new Promise(r=>{resolve=r;});
+   const value=savedDisclosure();if(invalid==='foreign')value.application_version_id=LOAN;if(invalid==='blocked'){value.approval_ready=false;value.blockers=['component_integration_required'];}if(invalid==='private'){value.review_rationale='PRIVATE-REVIEW';value.financial_snapshot.components.support_storage_key='PRIVATE-PATH';}return value;
+ }return h.defaultRequest(path);};
+ (await mount())(h);await open(h);field(h,'product').value=PRODUCT;field(h,'disclosureReference').value=DISCLOSURE;fire(button(h,'Load saved disclosure'),'click');await setImmediate();
+ if(invalid==='late'){h.controller.abort();resolve(savedDisclosure());await setImmediate();assert.equal(h.root.innerHTML,'');return;}
+ if(invalid==='private'){assert.doesNotMatch(h.root.textContent,/PRIVATE/);assert.match(h.root.textContent,/980.00/);assert.match(h.root.textContent,/990.00/);return;}
+ if(invalid==='changed-reference'){field(h,'disclosureReference').value=LOAN;}
+ if(invalid==='changed-terms'){field(h,'principal').value='1000.01';}
+ fire(h.root.querySelector('[data-approval]'),'submit');await setImmediate();assert.equal(h.calls.filter(x=>x.options.method==='POST').length,0);
+});
+
+test('an approval response with a different disclosure cannot enable further financial actions',async()=>{
+ const h=harness();h.request=(path,options)=>{
+  if(options.method==='POST'){const value=approved();value.packet.tax_disclosure={calculation_id:LOAN,review_digest:'d'.repeat(64),financial_snapshot:savedDisclosure().financial_snapshot};return value;}
+  return h.defaultRequest(path);
+ };
+ (await mount())(h);await open(h);field(h,'product').value=PRODUCT;field(h,'disclosureReference').value=DISCLOSURE;
+ fire(button(h,'Load saved disclosure'),'click');await setImmediate();fire(h.root.querySelector('[data-approval]'),'submit');await setImmediate();
+ assert.match(h.root.textContent,/could not be verified/);assert.equal(button(h,'Approve exact terms').disabled,true);
+ assert.equal(button(h,'Generate locked PDF packet'),undefined);assert.equal(button(h,'Reload saved record').disabled,false);
 });
 
 test('contract upload requires witnessed signature and never implies borrower cash confirmation',async()=>{

@@ -1,4 +1,5 @@
 import { sessionHasRole } from './roles.js';
+import { disclosureBreakdown, savedDisclosureSelection } from './first-loan-disclosure.js';
 import { emptyState, errorCard, escapeHtml as esc, hasPermission, loadingPanel } from './ui.js';
 
 const mounts = new WeakMap();
@@ -37,6 +38,8 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   let loan = null;
   let decisions = [];
   let evidence = {};
+  let disclosure = null;
+  let disclosureTerms = null;
   let preserveStatus = false;
   let listeners = [];
   let actionListeners = [];
@@ -61,6 +64,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   function invalidate() {
     token = {};
     state = 'editing'; review = null; context = null; loan = null; evidence = {}; decisions = [];
+    disclosure = null; disclosureTerms = null;
     clearActions(); wipe(workspace); wipe(status); preserveStatus = false;
     if (workspace) workspace.innerHTML = '';
     if (status) status.innerHTML = '';
@@ -87,6 +91,8 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
     for (const control of [...workspace.querySelectorAll('button'), ...workspace.querySelectorAll('input'), ...workspace.querySelectorAll('select'), ...workspace.querySelectorAll('textarea')]) control.disabled = state !== 'editing';
     const reload = workspace.querySelector('[data-action="reload"]');
     if (reload) reload.disabled = state === 'saving';
+    const approve = workspace.querySelector('[data-approve-button]');
+    if (approve) approve.disabled = state !== 'editing' || !disclosure?.approval_ready;
   }
   function field(name) { return workspace.querySelector(`[name="${name}"]`); }
   function text(name) { return field(name)?.value.trim() || ''; }
@@ -171,18 +177,20 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
       ${input('pricingReference', 'Approved pricing review reference')}${input('accountEmail', 'Selected Client account email', 'email')}
       <label>Controlled contractual template<select name="template"><option value="">Choose template</option>${context.templates.map((t) => `<option value="${esc(t.version)}">${esc(t.version)}${t.approved_for_execution ? '' : ' — execution approval pending'}</option>`).join('')}</select></label>
       <p>7x7 uses the catalog daily-interest basis and authoritative generated maturity. Its exact compliance review remains required before signing.</p>
-      <button class="button button-primary" type="submit">Approve exact terms</button></form>
+      ${input('disclosureReference', 'Saved disclosure reference')}${button('load-disclosure', 'Load saved disclosure')}
+      <p>Choose the reviewed disclosure for this application. Complete or revise the review through Management before approval; changing the proposed terms requires rechecking its source.</p><div data-disclosure></div>
+      <button class="button button-primary" type="submit" data-approve-button disabled>Approve exact terms</button></form>
       <form data-reject class="entry-form">${input('decisionReason', 'Management rejection reason')}<button class="button button-outline" type="submit">Reject application</button></form>`;
   }
 
-  function termsBody() {
+  function termsBody(includeDisclosure = true) {
     const product = context.products.find((item) => item.id === text('product'));
     if (!product) throw Object.assign(new Error('Choose the approved product.'), { beforeWrite: true });
     const seven = product.calculation_mode === 'seven_by_seven';
     const lines = (name) => text(name).split('\n').filter((line) => line.trim()).map((line) => line.split('|').map((part) => part.trim()));
     const deductions = lines('deductions').map((row) => { if (row.length !== 3) throw Object.assign(new Error('Each deduction needs code, exact amount and authority reference.'), { beforeWrite: true }); return { code: row[0], amount: row[1], authority_reference: row[2] }; });
     const custom = lines('customRows').map((row) => { if (row.length !== 2) throw Object.assign(new Error('Each custom installment needs a date and exact amount.'), { beforeWrite: true }); return { due_date: row[0], amount: row[1] }; });
-    return { request_id: crypto.randomUUID(), application_version_id: review.application_version_id, template_version: text('template'), terms: {
+    const body = { request_id: crypto.randomUUID(), application_version_id: review.application_version_id, template_version: text('template'), terms: {
       loan_type_id: product.id, product_code: seven ? 'seven_by_seven' : 'regular', principal: text('principal'),
       contractual_interest: seven ? null : text('interest'), interest_rate_percent: seven ? null : text('interestRate'),
       daily_interest_per_1000: seven ? product.daily_interest_per_1000 : null, payment_frequency: text('frequency'),
@@ -190,6 +198,36 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
       installment_count: seven || !text('count') ? null : Number(text('count')), semi_monthly_days: text('semiDays').split(',').map(Number),
       custom_installments: custom, deductions, pricing_review_reference: text('pricingReference'), account_email: text('accountEmail'),
     } };
+    if (includeDisclosure) {
+      if (!disclosure?.approval_ready || disclosure.id !== text('disclosureReference') || disclosureTerms !== JSON.stringify(body.terms)) throw Object.assign(new Error('Load a ready saved disclosure for these exact terms before approving.'), { beforeWrite: true });
+      body.disclosure_calculation_id = disclosure.id;
+      body.expected_disclosure_digest = disclosure.review_digest;
+    }
+    return body;
+  }
+
+  async function loadDisclosure() {
+    if (state !== 'editing' || !manager) return;
+    const request = token;
+    disclosure = null; disclosureTerms = null;
+    const target = workspace.querySelector('[data-disclosure]');
+    target.innerHTML = '';
+    try {
+      const reference = text('disclosureReference');
+      if (!uid(reference)) throw new Error('Enter the saved disclosure reference supplied by Management.');
+      const terms = JSON.stringify(termsBody(false).terms);
+      state = 'loading-disclosure'; disableActions();
+      const value = await api.request(`${BASE}/disclosure-calculations/${encodeURIComponent(reference)}?application_version_id=${encodeURIComponent(review.application_version_id)}`, { signal });
+      if (!current(request) || reference !== text('disclosureReference') || terms !== JSON.stringify(termsBody(false).terms)) return;
+      disclosure = savedDisclosureSelection(value, review, reference);
+      disclosureTerms = terms;
+      target.innerHTML = `${disclosureBreakdown(disclosure.financial_snapshot)}<p>${disclosure.approval_ready ? 'Reviewed source is ready. The server rechecks the exact terms and current evidence at approval.' : 'This saved review is not ready for approval. Management must resolve its missing or changed source evidence.'}</p>`;
+      status.innerHTML = '';
+    } catch (error) {
+      if (!current(request)) return;
+      if ([401, 403].includes(error?.status)) { denyAccess(error); return; }
+      showError(error?.status === 404 ? new Error('Saved disclosure reviews are unavailable. Confirm the reference or update the backend before approval.') : error);
+    } finally { if (current(request)) { state = 'editing'; disableActions(); } }
   }
 
   function loanMarkup() {
@@ -197,6 +235,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
     return `<h4>${esc(loan.loan_number)} — ${esc(loan.status.replaceAll('_', ' '))}</h4>
       <p>${esc(packet.borrower.full_name)} · ${esc(packet.product_name || '')}</p>
       <div class="detail-grid"><div>Approved principal: PHP ${esc(packet.terms.principal)}</div><div>Authorized cash: PHP ${esc(packet.net_cash)}</div><div>Release-date basis: ${esc(packet.terms.schedule_basis_date)}</div><div>First contractual payment: ${esc(packet.schedule[0].due_date)}</div></div>
+      ${packet.tax_disclosure ? disclosureBreakdown(packet.tax_disclosure.financial_snapshot) : ''}
       <details><summary>Complete locked payment schedule (${packet.schedule.length} installments)</summary><div class="table-wrap"><table><thead><tr><th>No.</th><th>Date</th><th>Payment</th><th>Principal</th><th>Interest</th></tr></thead><tbody>${packet.schedule.map((r) => `<tr><td>${r.installment_number}</td><td>${esc(r.due_date)}</td><td>PHP ${esc(r.contractual_amount)}</td><td>PHP ${esc(r.principal_component)}</td><td>PHP ${esc(r.interest_component)}</td></tr>`).join('')}</tbody></table></div></details>
       <p>${loan.document ? 'Approved loan documents are ready to download.' : 'The exact populated PDF packet must be generated before signing or release.'}</p>
       ${manager && loan.status === 'approved_pending_release' && packet.terms.product_code === 'seven_by_seven' ? complianceMarkup() : ''}
@@ -258,6 +297,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   }
 
   function render() {
+    disclosure = null; disclosureTerms = null;
     clearActions(); wipe(workspace);
     workspace.innerHTML = `<h3>First loan · ${esc(review.application_reference)}</h3><p>Saved application version ${esc(review.version_number)}. CIF/application confirmation, loan signing and cash acknowledgment remain separate.</p>${button('reload', 'Reload saved record')}
       ${loan ? loanMarkup() : emptyState('No first-loan approval has been recorded for this application.')}
@@ -265,7 +305,18 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
       ${manager && (!loan || loan.status === 'cancelled') ? approvalMarkup() : ''}`;
     action('reload', () => { if (state === 'saving') return; open(); });
     const approval = workspace.querySelector('[data-approval]');
-    if (approval) on(approval, 'submit', (event) => { event.preventDefault(); mutate(`${BASE}/approve`, termsBody, (value) => validLoan(value, review)); }, true);
+    if (approval) on(approval, 'submit', (event) => {
+      event.preventDefault();
+      const selected = disclosure;
+      mutate(`${BASE}/approve`, termsBody, (value) => validLoan(value, review)
+        && value.packet.tax_disclosure?.calculation_id === selected?.id
+        && value.packet.tax_disclosure?.review_digest === selected?.review_digest);
+    }, true);
+    action('load-disclosure', loadDisclosure);
+    if (approval) for (const control of [...approval.querySelectorAll('input'), ...approval.querySelectorAll('select'), ...approval.querySelectorAll('textarea')]) {
+      const clearDisclosure = () => { disclosure = null; disclosureTerms = null; workspace.querySelector('[data-disclosure]').innerHTML = ''; disableActions(); };
+      on(control, 'input', clearDisclosure, true); on(control, 'change', clearDisclosure, true);
+    }
     const reject = workspace.querySelector('[data-reject]');
     if (reject) on(reject, 'submit', (event) => { event.preventDefault(); mutate(`${BASE}/reject`, () => ({ request_id: crypto.randomUUID(), application_version_id: review.application_version_id, reason: text('decisionReason') }), (value) => uid(value?.decision_id) && value.decision === 'rejected'); }, true);
     if (!loan) return;
