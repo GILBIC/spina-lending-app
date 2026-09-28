@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 from pathlib import Path
 
@@ -26,6 +28,114 @@ def run_helper(*arguments: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         check=False,
     )
+
+
+def verify_public_build_permissions() -> None:
+    """Build and unpack a synthetic portal using the workflow's real command."""
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    commands = [
+        line.strip() for line in workflow.splitlines() if "npm run build" in line
+    ]
+    require(len(commands) == 1, "deployment must have one public portal build")
+    command = commands[0]
+    require("umask 077" in workflow, "private deployment inputs must remain private")
+    if sys.platform != "linux":
+        require(
+            command == "(umask 022; npm run build)",
+            "scope the public build umask without changing private deployment files",
+        )
+        print(
+            "Portal archive permission behavior requires Linux; scoped command checked."
+        )
+        return
+
+    _verify_build_archive_permissions("npm run build", expect_public=False)
+    _verify_build_archive_permissions(command, expect_public=True)
+    print("Linux portal archive permissions passed; private inputs remain 0600.")
+
+
+def _verify_build_archive_permissions(command: str, *, expect_public: bool) -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        directory = Path(temporary)
+        (directory / "tools").mkdir()
+        portal = directory / "spina_portal"
+        (portal / "assets").mkdir(parents=True)
+        (portal / "index.html").write_text("synthetic portal", encoding="utf-8")
+        (portal / "assets" / "app.js").write_text("export {};", encoding="utf-8")
+        # A checked-out public source tree has these modes before workflow umask.
+        for path in (portal, portal / "assets"):
+            path.chmod(0o755)
+        for path in (portal / "index.html", portal / "assets" / "app.js"):
+            path.chmod(0o644)
+        shutil.copyfile(
+            ROOT / "tools" / "build_portal.mjs",
+            directory / "tools" / "build_portal.mjs",
+        )
+        (directory / "package.json").write_text(
+            json.dumps(
+                {"private": True, "scripts": {"build": "node tools/build_portal.mjs"}}
+            ),
+            encoding="utf-8",
+        )
+        # Root bootstrap extraction preserves modes by default; CI's
+        # unprivileged runner requests the same behavior explicitly.
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                (
+                    "set -Eeuo pipefail\n"
+                    "umask 077\n"
+                    "printf synthetic > runtime-before.env\n"
+                    f"{command}\n"
+                    "printf synthetic > runtime-after.env\n"
+                    "tar -czf release.tar.gz dist\n"
+                    "mkdir extracted\n"
+                    "tar --same-permissions -xzf release.tar.gz -C extracted\n"
+                ),
+            ],
+            cwd=directory,
+            text=True,
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+        require(
+            result.returncode == 0, result.stderr or "synthetic portal build failed"
+        )
+        with tarfile.open(directory / "release.tar.gz") as archive:
+            members = archive.getmembers()
+            require(
+                any(member.name == "dist" for member in members),
+                "portal archive root missing",
+            )
+            if not expect_public:
+                # Prove the original failure on Linux in the same CI run.
+                require(
+                    archive.getmember("dist").mode == 0o700,
+                    "private umask must reproduce the inaccessible portal root",
+                )
+                require(
+                    archive.getmember("dist/_build.json").mode == 0o600,
+                    "private umask must reproduce inaccessible generated metadata",
+                )
+            for member in members:
+                required = 0o055 if member.isdir() else 0o044
+                extracted = directory / "extracted" / member.name
+                require(
+                    extracted.stat().st_mode & 0o777 == member.mode & 0o777,
+                    f"archive extraction changed permissions for {member.name}",
+                )
+                if expect_public:
+                    require(
+                        member.mode & required == required,
+                        f"public archive member {member.name} is inaccessible to the service user: {member.mode:o}",
+                    )
+        for name in ("runtime-before.env", "runtime-after.env", "release.tar.gz"):
+            require(
+                (directory / name).stat().st_mode & 0o777 == 0o600,
+                f"private deployment file {name} must remain 0600",
+            )
 
 
 def verify_helper_contract() -> None:
@@ -341,6 +451,7 @@ def main() -> None:
         "ConnectionAttempts=3" in workflow, "SSH connection establishment must retry"
     )
 
+    verify_public_build_permissions()
     verify_helper_contract()
     print("DigitalOcean deployment contract passed.")
 
