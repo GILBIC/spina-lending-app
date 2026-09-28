@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-22-r1-pre-release-tax-disclosure-design.md`, approved by Management in this conversation on 22 September 2026 at commit `8f6659a788f94e5e84b28001b56495e02ac98f7f`.
 
-**Status:** Written specification approved; this implementation plan is submitted for review. No implementation step or new regression test has been executed. PR #449 stays Draft. Execution recommendation: continue inline in the owning chat; no autonomous background workers or automatic merges.
+**Current execution:** Management authorized implementation and requested completion of all priorities, then approved proceeding on 28 September 2026. Source-register and lifecycle foundations are published; protected disclosure routes and saved document binding are now implemented. See [the dated execution state](../../workstreams/2026-09-28-r1-execution-state.md) for exact evidence, remaining acceptance and dependent work. The unchecked steps below preserve the original plan until their complete acceptance is reconciled; the old planning-only status is superseded.
 
 ## Global Constraints
 
@@ -369,7 +369,7 @@ LOCK TABLE accounting.v1_tax_rule_evidence IN SHARE MODE;
 
 Plan self-review: checked the approved specification, task interfaces, exact file owners, money/input boundaries, actual-event timing, private evidence routing, old/new packet separation, lock behavior and the coverage table. No new executable product test was run while writing this plan. The container could not download the public source archive because GitHub DNS failed; connected GitHub reads succeeded. This is not a local checkout or full-suite verification claim.
 
-**Next action:** Management reviews this plan and selects execution. Recommended method is inline execution in the PR #449 chat, with the existing GitHub checks and explicit review of each finished slice. The design direction and written specification are already approved and must not be asked again. Plan approval permits starting Task 1's real RED-to-GREEN work; it is not permission to merge, deploy or activate company transactions.
+**Next action:** Continue the dated execution state's remaining checks and dependent clients. Management has already approved implementation and proceeding; do not restart plan approval. Retain exact-head checks and review before integration. Actual company/provider facts and production financial events require their own real evidence and are not established by a general approval.
 
 Do not request another permission round merely to run an already-approved task's test/fix cycle. Stop for an actual new business-rule decision, scope change, conflicting owner change, or operation outside this plan. Keep #448, Notion and Create State synchronized with exact source, executed evidence and the next unfinished task.
 
