@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -94,7 +95,7 @@ class _ManagementRenewalRequestsPageState
         if (draft.approvedPrincipal != null)
           ManagementReviewFact(
             label: 'Approved principal',
-            value: _money(draft.approvedPrincipal!),
+            value: '₱${requestMoney(draft.approvedPrincipal)}',
           ),
         if (draft.reviewNote.trim().isNotEmpty)
           ManagementReviewFact(
@@ -841,7 +842,7 @@ class _ManagementRenewalTermsDialogState
   void initState() {
     super.initState();
     _principalController = TextEditingController(
-      text: widget.item.request.requestedAmount.toStringAsFixed(2),
+      text: widget.item.request.requestedAmountInput ?? '',
     );
   }
 
@@ -879,8 +880,8 @@ class _ManagementRenewalTermsDialogState
   }
 
   void _submit() {
-    final principal = double.tryParse(_principalController.text.trim());
-    if (principal == null || principal <= 0) {
+    final principal = tryRequestMoney(_principalController.text);
+    if ((requestMoneyCents(principal) ?? BigInt.zero) <= BigInt.zero) {
       setState(() => _error = 'Enter the approved new principal.');
       return;
     }

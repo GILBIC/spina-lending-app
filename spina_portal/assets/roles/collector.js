@@ -68,9 +68,9 @@ function ledgerRow(entry, canCreate, online) {
   const canEnter = canCreate && online && entry.can_enter_payment === true && entry.processed_today !== true;
   const defaultAmount =
     numeric(entry.contract_today_unpaid_amount) > 0
-      ? Number(entry.contract_today_unpaid_amount).toFixed(2)
+      ? String(entry.contract_today_unpaid_amount)
       : numeric(entry.daily_amount) > 0
-        ? Number(entry.daily_amount).toFixed(2)
+        ? String(entry.daily_amount)
         : '';
   return `<div class="ledger-row ${entry.attention_required || !entry.processed_today ? 'needs-attention' : ''}" data-entry-row="${escapeHtml(entry.route_entry_id)}">
     <div class="ledger-cell"><strong class="ledger-client">${escapeHtml(entry.client_name || 'Client')}</strong><small>${escapeHtml(entry.note || entry.today_note || entry.collection_message || '')}</small></div>

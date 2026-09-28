@@ -19,16 +19,27 @@ function requiredText(value, label) {
   return normalized;
 }
 
-function normalizeMoney(value, label = 'Payment amount') {
+export function normalizeMoney(value, label = 'Payment amount') {
+  // At 2^46 a Number can no longer distinguish every adjacent cent.
+  if (typeof value === 'number' && (!Number.isFinite(value) || Math.abs(value) >= 2 ** 46)) {
+    throw new TypeError(`${label} must be provided as decimal text.`);
+  }
   const normalized = String(value ?? '').trim().replace(/,/g, '');
   if (!MONEY_PATTERN.test(normalized)) {
     throw new TypeError(`${label} must be a valid peso amount.`);
   }
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const [rawWhole, rawFraction = ''] = normalized.split('.');
+  const whole = rawWhole.replace(/^0+(?=\d)/, '');
+  const fraction = rawFraction.padEnd(2, '0');
+  // The collection contract stores numeric(18,2). Keep decimal text all the
+  // way to JSON; Number loses cents within that supported range.
+  if (whole.length > 16) {
+    throw new TypeError(`${label} exceeds the supported 16 whole digits.`);
+  }
+  if (!/[1-9]/.test(`${whole}${fraction}`)) {
     throw new TypeError(`${label} must be greater than zero.`);
   }
-  return amount.toFixed(2);
+  return `${whole}.${fraction}`;
 }
 
 function normalizeRecordedAt(value) {

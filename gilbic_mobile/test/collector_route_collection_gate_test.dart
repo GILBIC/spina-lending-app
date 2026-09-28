@@ -78,7 +78,7 @@ void main() {
     expect(find.text('Record Collection'), findsNothing);
     expect(repository.drafts, hasLength(1));
     expect(repository.drafts.single.entryType, CollectionEntryType.payment);
-    expect(repository.drafts.single.amount, 200);
+    expect(repository.drafts.single.toJson()['amount'], '200.00');
     expect(repository.drafts.single.coveredDates, hasLength(1));
   });
 
@@ -175,7 +175,7 @@ void main() {
 
     expect(find.text('Record Collection'), findsNothing);
     expect(repository.drafts, hasLength(1));
-    expect(repository.drafts.single.amount, 35);
+    expect(repository.drafts.single.toJson()['amount'], '35.00');
   });
 
   testWidgets(
@@ -235,7 +235,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.drafts, hasLength(1));
-      expect(repository.drafts.single.amount, 100);
+      expect(repository.drafts.single.toJson()['amount'], '100.00');
     },
   );
 
@@ -346,7 +346,10 @@ void main() {
 
       expect(find.byKey(const Key('combined-payment-total')), findsNothing);
       expect(repository.previews, hasLength(1));
-      expect(repository.previews.single.cashReceivedAmount, 150);
+      expect(
+        repository.previews.single.toJson()['cash_received_amount'],
+        '150.00',
+      );
       expect(
         repository.previews.single.legs.any(
           (leg) => leg.toJson().containsKey('amount'),
@@ -396,35 +399,31 @@ void main() {
     },
   );
 
-  testWidgets(
-    'combined Pay surfaces a server cash custody review in one tap',
-    (tester) async {
-      final repository = _CombinedCustodyReviewRepository();
-      await tester.binding.setSurfaceSize(const Size(430, 1100));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        MaterialApp(
-          home: CollectorRoutePage(
-            session: _session,
-            loader: _CombinedRouteLoader(),
-            combinedPaymentRepository: repository,
-            deviceIdentityProvider: _deviceIdentityProvider(),
-            deviceSequence: MemoryCollectionDeviceSequence(),
-          ),
+  testWidgets('combined Pay surfaces a server cash custody review in one tap', (
+    tester,
+  ) async {
+    final repository = _CombinedCustodyReviewRepository();
+    await tester.binding.setSurfaceSize(const Size(430, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectorRoutePage(
+          session: _session,
+          loader: _CombinedRouteLoader(),
+          combinedPaymentRepository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
         ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('record-client-client-combined')));
-      await _pumpCombinedSheet(tester);
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('record-client-client-combined')));
+    await _pumpCombinedSheet(tester);
 
-      expect(
-        find.textContaining('CASH CUSTODY REVIEW REQUIRED'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('10.00 remains unallocated'), findsOneWidget);
-      expect(find.textContaining('saved • Receipts'), findsNothing);
-    },
-  );
+    expect(find.textContaining('CASH CUSTODY REVIEW REQUIRED'), findsOneWidget);
+    expect(find.textContaining('10.00 remains unallocated'), findsOneWidget);
+    expect(find.textContaining('saved • Receipts'), findsNothing);
+  });
 
   testWidgets(
     'combined Pay leaves true-extra borrower choices to payment details',

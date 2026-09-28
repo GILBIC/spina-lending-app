@@ -2,8 +2,56 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_correction.dart';
+import 'package:gilbic_mobile/src/core/renewals/management_renewal_workflow.dart';
 
 void main() {
+  test('correction and renewal terms serialize exact decimal input', () {
+    final correction = CollectionCorrectionDraft(
+      transactionId: 'tx',
+      entryType: 'payment',
+      reason: 'Correct amount',
+      expectedRouteRevision: 'v1',
+      amount: '9999999999999999.99',
+      coveredDates: [DateTime(2026, 9, 28)],
+    );
+    expect(correction.validate(), isNull);
+    expect(correction.toJson()['amount'], '9999999999999999.99');
+    const terms = ManagementRenewalTermsDraft(
+      decision: 'approved',
+      approvedPrincipal: '1000000000000000.01',
+      reviewNote: '',
+      overrideReason: '',
+      officeProcessingRequired: true,
+      signers: [],
+    );
+    expect(terms.toJson()['approved_principal'], '1000000000000000.01');
+  });
+
+  test('payment serialization uses decimal text and rejects invalid money', () {
+    expect(
+      _draft(
+        entryType: CollectionEntryType.payment,
+        amount: 100.01,
+      ).toJson()['amount'],
+      '100.01',
+    );
+    for (final amount in [
+      double.nan,
+      double.infinity,
+      100.001,
+      1000000000000000.0,
+    ]) {
+      expect(
+        _draft(
+          entryType: CollectionEntryType.payment,
+          amount: amount,
+        ).validate(),
+        isNotNull,
+      );
+    }
+  });
+
   test('generates RFC 4122 version 4 idempotency keys', () {
     final generator = SecureIdempotencyKeyGenerator(random: Random(7));
 
@@ -35,7 +83,7 @@ void main() {
     );
     expect(draft.toJson(), containsPair('collection_date', '2026-07-31'));
     expect(draft.toJson(), containsPair('entry_type', 'payment'));
-    expect(draft.toJson(), containsPair('amount', 200));
+    expect(draft.toJson(), containsPair('amount', '200.00'));
     expect(
       draft.toJson(),
       containsPair('covered_dates', <String>['2026-07-31']),
@@ -57,10 +105,11 @@ void main() {
     );
 
     expect(draft.validate(), isNull);
-    expect(
-      draft.toJson()['covered_dates'],
-      <String>['2026-07-31', '2026-08-02', '2026-08-03'],
-    );
+    expect(draft.toJson()['covered_dates'], <String>[
+      '2026-07-31',
+      '2026-08-02',
+      '2026-08-03',
+    ]);
     expect(
       (draft.toJson()['covered_dates'] as List<Object?>).contains('2026-08-01'),
       isFalse,
@@ -77,10 +126,7 @@ void main() {
       amount: 400,
       advanceFrom: DateTime(2026, 8, 1),
       advanceUntil: DateTime(2026, 8, 3),
-      coveredDates: <DateTime>[
-        DateTime(2026, 8, 2),
-        DateTime(2026, 8, 3),
-      ],
+      coveredDates: <DateTime>[DateTime(2026, 8, 2), DateTime(2026, 8, 3)],
     );
 
     expect(missingCoverage.validate(), contains('Choose at least one'));
@@ -115,47 +161,44 @@ void main() {
     expect(passWithDate.validate(), contains('cannot contain'));
     expect(missingReason.validate(), contains('Past Due reason'));
     expect(validPass.validate(), isNull);
-    expect(
-      validPass.toJson()['past_due_followup'],
-      <String, Object?>{
-        'reason_code': 'no_cash',
-        'note': 'No cash available today',
-        'promised_payment_date': null,
-        'promised_amount': null,
-      },
-    );
+    expect(validPass.toJson()['past_due_followup'], <String, Object?>{
+      'reason_code': 'no_cash',
+      'note': 'No cash available today',
+      'promised_payment_date': null,
+      'promised_amount': null,
+    });
   });
 
-  test('promise follow-up requires date and supports a partial promised amount', () {
-    final missingDate = _draft(
-      entryType: CollectionEntryType.pass,
-      pastDueFollowup: const PastDueFollowupDraft(
-        reasonCode: PastDueReasonCode.promisedToPayLater,
-        promisedAmount: 100,
-      ),
-    );
-    final promised = _draft(
-      entryType: CollectionEntryType.pass,
-      pastDueFollowup: PastDueFollowupDraft(
-        reasonCode: PastDueReasonCode.promisedToPayLater,
-        note: 'After salary',
-        promisedPaymentDate: DateTime(2026, 8, 2),
-        promisedAmount: 100,
-      ),
-    );
+  test(
+    'promise follow-up requires date and supports a partial promised amount',
+    () {
+      final missingDate = _draft(
+        entryType: CollectionEntryType.pass,
+        pastDueFollowup: const PastDueFollowupDraft(
+          reasonCode: PastDueReasonCode.promisedToPayLater,
+          promisedAmount: 100,
+        ),
+      );
+      final promised = _draft(
+        entryType: CollectionEntryType.pass,
+        pastDueFollowup: PastDueFollowupDraft(
+          reasonCode: PastDueReasonCode.promisedToPayLater,
+          note: 'After salary',
+          promisedPaymentDate: DateTime(2026, 8, 2),
+          promisedAmount: 100,
+        ),
+      );
 
-    expect(missingDate.validate(), contains('promised payment date'));
-    expect(promised.validate(), isNull);
-    expect(
-      promised.toJson()['past_due_followup'],
-      <String, Object?>{
+      expect(missingDate.validate(), contains('promised payment date'));
+      expect(promised.validate(), isNull);
+      expect(promised.toJson()['past_due_followup'], <String, Object?>{
         'reason_code': 'promised_to_pay_later',
         'note': 'After salary',
         'promised_payment_date': '2026-08-02',
-        'promised_amount': 100,
-      },
-    );
-  });
+        'promised_amount': '100.00',
+      });
+    },
+  );
 
   test('parses duplicate server receipts as a final success', () {
     final result = PaymentSubmissionResult.fromPayload(

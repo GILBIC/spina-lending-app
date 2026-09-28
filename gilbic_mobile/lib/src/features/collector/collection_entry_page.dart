@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
+import 'package:gilbic_mobile/src/core/management/general_journal.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
@@ -63,17 +65,18 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     return widget.entry.dailyAmount;
   }
 
-  double? get _enteredAmount =>
-      double.tryParse(_amountController.text.replaceAll(',', '').trim());
+  String? get _enteredAmount => tryRequestMoney(_amountController.text);
+  BigInt get _suggestedRequiredCents =>
+      requestMoneyCents(widget.entry.suggestedPaymentAmount) ?? BigInt.zero;
 
   bool get _localPartialPayment {
-    final amount = _enteredAmount;
+    final amount = requestMoneyCents(_enteredAmount);
     return !_isUnableToPay &&
         !_isSevenBySeven &&
         amount != null &&
-        amount > 0 &&
-        _suggestedRequiredAmount > 0 &&
-        amount < _suggestedRequiredAmount;
+        amount > BigInt.zero &&
+        _suggestedRequiredCents > BigInt.zero &&
+        amount < _suggestedRequiredCents;
   }
 
   bool get _showPastDueFollowup =>
@@ -82,11 +85,16 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
 
   DateTime get _followupDate => _isUnableToPay ? _unableDate : _collectionDate;
 
-  double get _estimatedPastDueRemainder {
-    if (_isUnableToPay) return _suggestedRequiredAmount;
-    final amount = _enteredAmount ?? 0;
-    return (_suggestedRequiredAmount - amount).clamp(0, double.infinity);
+  BigInt get _estimatedPastDueCents {
+    if (_isUnableToPay) return _suggestedRequiredCents;
+    final remainder =
+        _suggestedRequiredCents -
+        (requestMoneyCents(_enteredAmount) ?? BigInt.zero);
+    return remainder > BigInt.zero ? remainder : BigInt.zero;
   }
+
+  double get _estimatedPastDueRemainder =>
+      _estimatedPastDueCents.toDouble() / 100;
 
   @override
   void initState() {
@@ -95,7 +103,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     _unableDate = _collectionDate;
     _amountController = TextEditingController(
       text: _suggestedRequiredAmount > 0
-          ? _suggestedRequiredAmount.toStringAsFixed(2)
+          ? widget.entry.suggestedPaymentAmount ?? ''
           : '',
     );
     _paymentNoteController = TextEditingController();
@@ -187,8 +195,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
         _promiseAmountController.clear();
       } else if (_promiseAmountController.text.trim().isEmpty &&
           _estimatedPastDueRemainder > 0) {
-        _promiseAmountController.text = _estimatedPastDueRemainder
-            .toStringAsFixed(2);
+        _promiseAmountController.text = journalAmountFromCents(
+          _estimatedPastDueCents,
+        );
       }
       _clearSubmissionState();
     });
@@ -259,8 +268,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     }
   }
 
-  String? _validateForm(double? amount) {
-    if (!_isUnableToPay && (amount == null || amount <= 0)) {
+  String? _validateForm(String? amount) {
+    if (!_isUnableToPay &&
+        ((requestMoneyCents(amount) ?? BigInt.zero) <= BigInt.zero)) {
       return 'Enter an amount greater than zero.';
     }
     if (_showPastDueFollowup && _selectedReason == null) {
@@ -279,14 +289,12 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       if (_promisedPaymentDate == null) {
         return 'Choose the promised payment date.';
       }
-      final promised = double.tryParse(
-        _promiseAmountController.text.replaceAll(',', '').trim(),
-      );
-      if (promised == null || promised <= 0) {
+      final promised = requestMoneyCents(_promiseAmountController.text);
+      if (promised == null || promised <= BigInt.zero) {
         return 'Enter the promised amount.';
       }
-      final estimated = _estimatedPastDueRemainder;
-      if (estimated > 0 && promised > estimated + 0.0001) {
+      final estimated = _estimatedPastDueCents;
+      if (estimated > BigInt.zero && promised > estimated) {
         return 'Promised amount cannot be more than the remaining Past Due amount.';
       }
     }
@@ -296,9 +304,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   PastDueFollowupDraft? _buildPastDueFollowup() {
     if (!_showPastDueFollowup || _selectedReason == null) return null;
     final promised = _selectedReason == PastDueReasonCode.promisedToPayLater
-        ? double.tryParse(
-            _promiseAmountController.text.replaceAll(',', '').trim(),
-          )
+        ? tryRequestMoney(_promiseAmountController.text)
         : null;
     return PastDueFollowupDraft(
       reasonCode: _selectedReason!,
@@ -311,7 +317,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     );
   }
 
-  Future<PaymentSubmissionDraft> _buildDraft(double? amount) async {
+  Future<PaymentSubmissionDraft> _buildDraft(String? amount) async {
     final identity = await widget.deviceIdentityProvider.load();
     final sequence = await widget.deviceSequence.next();
     return PaymentSubmissionDraft(

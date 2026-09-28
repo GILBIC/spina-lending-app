@@ -58,7 +58,7 @@ void main() {
 
       await tester.enterText(
         find.byKey(const Key('renewal-approved-principal')),
-        '7000',
+        '1000000000000000.01',
       );
       await tester.enterText(
         find.byKey(const Key('renewal-management-note')),
@@ -86,7 +86,10 @@ void main() {
       expect(repository.deviceId, 'management-device');
       expect(repository.submittedRequestId, 'request-1');
       expect(repository.submittedDraft?.decision, 'approved');
-      expect(repository.submittedDraft?.approvedPrincipal, 7000);
+      expect(
+        repository.submittedDraft?.toJson()['approved_principal'],
+        '1000000000000000.01',
+      );
       expect(
         repository.submittedDraft?.reviewNote,
         'Approved based on current capacity',
@@ -448,7 +451,7 @@ class _FakeManagementRenewalWorkflowRepository
     return _request(
       status: draft.decision,
       recommendation: recommendation,
-      approvedPrincipal: draft.approvedPrincipal,
+      approvedPrincipal: double.tryParse(draft.approvedPrincipal.toString()),
       reviewNote: draft.reviewNote,
       overrideReason: draft.overrideReason,
     );

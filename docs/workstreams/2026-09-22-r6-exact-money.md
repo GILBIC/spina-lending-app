@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-Workstream setup only, 22 September 2026, after Management approved the first four Draft PR tracks in [audit #448](https://github.com/GILBIC/spina-lending-app/issues/448#issuecomment-5770984236). This brief does not implement a money-format change or establish new product limits.
+Implemented 28 September 2026, following Management's authorization to complete the remaining work. Review remains tracked in [audit #448](https://github.com/GILBIC/spina-lending-app/issues/448).
 
 Starting main: `6a33ab481574bf702920760610f803b59ffbd3ac`.
 Starting tree: `1c88730791d89e2798faef0f5e76fd2a5f081543`.
@@ -25,7 +25,17 @@ R2 / PR #450 owns the backend renewal-summary query and business interpretation;
 
 Keep the first code slice Web-only if that is the smallest verifiable change; continue Android as a separate reviewed slice or split the PR if review size requires it. Do not claim the entire R6 gap closed after only Web completion. No SQL migration, allocator or broad unrelated formatting change is planned.
 
-## Next work
+## Implementation and verification
+
+Web collection and promise amounts now retain decimal text through normalization and submission; form defaults preserve the original server digits. The existing numeric(18,2) input capacity permits 16 whole digits, so larger text input and fractional cents are rejected. Legacy numeric inputs at or above 2^46 are rejected because adjacent cents cannot all be represented there.
+
+Android payment, promise, correction and Management renewal terms serialize decimal strings. Route cache round trips and editable defaults preserve authoritative strings. Combined payment totals use the existing journal minor-unit helpers, and automatic acceptance compares exact preview amounts. Existing display-only doubles remain; no allocator, schema or product limits changed. Correction and renewal APIs already accept Decimal fields.
+
+Verification: `npm test` passed 704 tests and module syntax checks; the full `flutter test --no-pub` suite passed 836 tests. Regression tests reproduce the former Web default and Android entered-amount precision loss, cover maximum supported cents and invalid inputs, and preserve retry/idempotency behavior. Local Flutter analysis did not complete because its SDK-cache permission request was interrupted; remote CI analysis remains required before integration. Evidence logs are in the parent workspace `checkpoints/r6-portal-tests.txt` and `checkpoints/r6-flutter-tests.txt`.
+
+R2's nullable contractual-total/paid-percent changes remain independent. R3 can import exported `normalizeMoney` for its new Web workflows. No production transaction, migration or deployment was performed.
+
+## Original design scope
 
 Trace current backend amount limits, rounding policy and exact helper behavior. Present the narrow Web normalization design and reproduce the precision boundary with a test of the actual imported builder, not a copied helper. Define reject/preserve behavior using existing supported limits before changing production code; an out-of-range value should fail rather than round silently.
 
@@ -38,7 +48,7 @@ Trace current backend amount limits, rounding policy and exact helper behavior. 
 - [ ] Keep exact values through Android parse/display/edit/serialize where they can reach a write; separate percentages and non-money measurements.
 - [ ] Verify focused Web/Android tests and required exact-head CI; reconcile any R2/R3 dependency before integration.
 
-No new tests or product changes have been made/run for R6 at setup. No production data, live payment, schema, merge or deployment is authorized.
+The remaining integration gate is remote CI on the published R6 head plus reconciliation with R2/R3.
 
 ## Resume protocol
 

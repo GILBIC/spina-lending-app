@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'dart:math';
 
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -62,7 +63,7 @@ class PastDueFollowupDraft {
   final PastDueReasonCode reasonCode;
   final String note;
   final DateTime? promisedPaymentDate;
-  final double? promisedAmount;
+  final Object? promisedAmount;
 
   String? validate({required DateTime collectionDate}) {
     if (reasonCode == PastDueReasonCode.other && note.trim().isEmpty) {
@@ -76,14 +77,12 @@ class PastDueFollowupDraft {
         promisedPaymentDate!.year,
         promisedPaymentDate!.month,
         promisedPaymentDate!.day,
-      ).isBefore(DateTime(
-        collectionDate.year,
-        collectionDate.month,
-        collectionDate.day,
-      ))) {
+      ).isBefore(
+        DateTime(collectionDate.year, collectionDate.month, collectionDate.day),
+      )) {
         return 'Promised payment date cannot be before the collection date.';
       }
-      if (promisedAmount == null || promisedAmount! <= 0) {
+      if ((requestMoneyCents(promisedAmount) ?? BigInt.zero) <= BigInt.zero) {
         return 'Enter the promised amount.';
       }
     } else if (promisedPaymentDate != null || promisedAmount != null) {
@@ -93,13 +92,15 @@ class PastDueFollowupDraft {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'reason_code': reasonCode.apiValue,
-        'note': note.trim(),
-        'promised_payment_date': promisedPaymentDate == null
-            ? null
-            : _date(promisedPaymentDate!),
-        'promised_amount': promisedAmount,
-      };
+    'reason_code': reasonCode.apiValue,
+    'note': note.trim(),
+    'promised_payment_date': promisedPaymentDate == null
+        ? null
+        : _date(promisedPaymentDate!),
+    'promised_amount': promisedAmount == null
+        ? null
+        : requestMoney(promisedAmount),
+  };
 }
 
 class PaymentSubmissionDraft {
@@ -132,7 +133,7 @@ class PaymentSubmissionDraft {
   final DateTime recordedAt;
   final String deviceId;
   final int deviceSequence;
-  final double? amount;
+  final Object? amount;
   final DateTime? advanceFrom;
   final DateTime? advanceUntil;
   final List<DateTime> coveredDates;
@@ -161,7 +162,7 @@ class PaymentSubmissionDraft {
 
     switch (entryType) {
       case CollectionEntryType.payment:
-        if (amount == null || amount! <= 0) {
+        if ((requestMoneyCents(amount) ?? BigInt.zero) <= BigInt.zero) {
           return 'A payment amount greater than zero is required.';
         }
         if (advanceFrom != null || advanceUntil != null) {
@@ -188,7 +189,7 @@ class PaymentSubmissionDraft {
         if (paymentAllocationIntent != PaymentAllocationIntent.scheduled) {
           return 'Legacy covered-date ADV cannot also contain a Regular extra allocation choice.';
         }
-        if (amount == null || amount! <= 0) {
+        if ((requestMoneyCents(amount) ?? BigInt.zero) <= BigInt.zero) {
           return 'A covered-date payment amount greater than zero is required.';
         }
         if (normalizedDates.isEmpty) {
@@ -208,7 +209,7 @@ class PaymentSubmissionDraft {
         if (paymentAllocationIntent != PaymentAllocationIntent.scheduled) {
           return 'Unable-to-pay cannot contain a payment allocation intent.';
         }
-        if (amount != null && amount != 0) {
+        if (amount != null && requestMoneyCents(amount) != BigInt.zero) {
           return 'An unable-to-pay entry cannot contain a payment amount.';
         }
         if (advanceFrom != null ||
@@ -239,7 +240,7 @@ class PaymentSubmissionDraft {
       'loan_id': loanId,
       'collection_date': _date(collectionDate),
       'entry_type': entryType.apiValue,
-      'amount': amount,
+      'amount': amount == null ? null : requestMoney(amount),
       'advance_from': advanceFrom == null ? null : _date(advanceFrom!),
       'advance_until': advanceUntil == null ? null : _date(advanceUntil!),
       'covered_dates': normalizedDates.map(_date).toList(growable: false),
@@ -256,12 +257,7 @@ class PaymentSubmissionDraft {
   }
 }
 
-enum PaymentSubmissionDisposition {
-  accepted,
-  duplicate,
-  conflict,
-  rejected,
-}
+enum PaymentSubmissionDisposition { accepted, duplicate, conflict, rejected }
 
 class PaymentSubmissionResult {
   const PaymentSubmissionResult({
@@ -308,7 +304,8 @@ class PaymentSubmissionResult {
       source['result'],
       source['status'],
     ]);
-    final duplicate = outer['duplicate'] == true ||
+    final duplicate =
+        outer['duplicate'] == true ||
         source['duplicate'] == true ||
         rawDisposition?.toLowerCase() == 'duplicate';
     final disposition = duplicate
@@ -317,17 +314,16 @@ class PaymentSubmissionResult {
 
     return PaymentSubmissionResult(
       disposition: disposition,
-      idempotencyKey: firstNonEmptyString(<Object?>[
+      idempotencyKey:
+          firstNonEmptyString(<Object?>[
             outer['client_transaction_id'],
             outer['idempotency_key'],
             source['client_transaction_id'],
             source['idempotency_key'],
           ]) ??
           idempotencyKey,
-      message: firstNonEmptyString(<Object?>[
-            outer['message'],
-            source['message'],
-          ]) ??
+      message:
+          firstNonEmptyString(<Object?>[outer['message'], source['message']]) ??
           _defaultMessage(disposition),
       serverTransactionId: firstNonEmptyString(<Object?>[
         source['transaction_id'],
@@ -375,7 +371,7 @@ abstract interface class IdempotencyKeyGenerator {
 
 class SecureIdempotencyKeyGenerator implements IdempotencyKeyGenerator {
   SecureIdempotencyKeyGenerator({Random? random})
-      : _random = random ?? Random.secure();
+    : _random = random ?? Random.secure();
 
   final Random _random;
 
@@ -384,7 +380,9 @@ class SecureIdempotencyKeyGenerator implements IdempotencyKeyGenerator {
     final bytes = List<int>.generate(16, (_) => _random.nextInt(256));
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    final hex = bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+    final hex = bytes
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
     return '${hex.substring(0, 8)}-'
         '${hex.substring(8, 12)}-'
         '${hex.substring(12, 16)}-'
@@ -395,12 +393,14 @@ class SecureIdempotencyKeyGenerator implements IdempotencyKeyGenerator {
 
 PaymentSubmissionDisposition? _dispositionFromValue(String? value) {
   return switch (value?.trim().toLowerCase()) {
-    'accepted' || 'success' || 'posted' =>
-      PaymentSubmissionDisposition.accepted,
+    'accepted' ||
+    'success' ||
+    'posted' => PaymentSubmissionDisposition.accepted,
     'duplicate' || 'replayed' => PaymentSubmissionDisposition.duplicate,
     'conflict' => PaymentSubmissionDisposition.conflict,
-    'rejected' || 'invalid' || 'failed' =>
-      PaymentSubmissionDisposition.rejected,
+    'rejected' ||
+    'invalid' ||
+    'failed' => PaymentSubmissionDisposition.rejected,
     _ => null,
   };
 }
