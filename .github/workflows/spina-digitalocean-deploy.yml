@@ -57,7 +57,7 @@ jobs:
 
           python tools/test_digitalocean_deployment_contract.py
           bash -n ops/digitalocean/bootstrap.sh
-          npm run build
+          (umask 022; npm run build)
 
           printf '%s\n' "$GITHUB_SHA" > /tmp/spina-git-sha
           tar -czf /tmp/spina-release.tar.gz \
