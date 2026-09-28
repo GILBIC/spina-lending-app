@@ -82,6 +82,7 @@ class CollectorRouteEntryRecord:
     today_transaction_id: UUID | None = None
     today_collector_user_id: UUID | None = None
     today_is_locked: bool = False
+    today_contract_controlled: bool = False
     can_edit_today: bool = False
     today_amount: Decimal = Decimal("0.00")
     today_note: str = ""
@@ -186,6 +187,11 @@ class CollectorRouteEntryRecord:
             if self.today_is_locked:
                 return self._with_active_promise(
                     "Today's collection is already included in a remittance and is locked."
+                )
+            if self.today_contract_controlled:
+                return self._with_active_promise(
+                    "This collection is tied to a repayment schedule and cannot be edited here. "
+                    "Ask Management to review the correction."
                 )
             return self._with_active_promise("Today's collection has already been recorded.")
         if not self.is_reconciled:
@@ -505,6 +511,7 @@ class PostgresCollectorRouteRepository:
                         today.assigned_collector_user_id as today_assigned_collector_user_id,
                         coalesce(today.collection_origin, '') as today_collection_origin,
                         coalesce(today.is_locked, false) as today_is_locked,
+                        coalesce(today.contract_controlled, false) as today_contract_controlled,
                         coalesce(today.amount, 0) as today_amount,
                         coalesce(today.note, '') as today_note,
                         coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
@@ -563,6 +570,17 @@ class PostgresCollectorRouteRepository:
                             t.assigned_collector_user_id,
                             t.collection_origin,
                             t.is_locked,
+                            (
+                                exists (
+                                    select 1
+                                    from lending.loan_installment_payment_allocations allocation
+                                    where allocation.transaction_id = t.id
+                                )
+                                or lower(coalesce(
+                                    t.details -> 'contract_schedule_allocation' ->> 'enabled',
+                                    ''
+                                )) in ('true', '1', 'yes', 'on')
+                            ) as contract_controlled,
                             coalesce(
                                 array(
                                     select cd.covered_date
@@ -804,9 +822,11 @@ class PostgresCollectorRouteRepository:
                     today_transaction_id=row["today_transaction_id"],
                     today_collector_user_id=row["today_collector_user_id"],
                     today_is_locked=bool(row["today_is_locked"]),
+                    today_contract_controlled=bool(row["today_contract_controlled"]),
                     can_edit_today=(
                         row["today_transaction_id"] is not None
                         and not bool(row["today_is_locked"])
+                        and not bool(row["today_contract_controlled"])
                         and (
                             row["today_collector_user_id"] == collector_user_id
                             or (

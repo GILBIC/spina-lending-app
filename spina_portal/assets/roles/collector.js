@@ -71,6 +71,7 @@ function entryForm(entry, defaultAmount) {
 function ledgerRow(entry, canCreate, online) {
   const type = classifyLoanType(entry.loan_type);
   const canEnter = canCreate && online && entry.can_enter_payment === true && entry.processed_today !== true;
+  const note = entry.note || entry.today_note || '';
   const defaultAmount =
     numeric(entry.contract_today_unpaid_amount) > 0
       ? String(entry.contract_today_unpaid_amount)
@@ -78,7 +79,7 @@ function ledgerRow(entry, canCreate, online) {
         ? String(entry.daily_amount)
         : '';
   return `<div class="ledger-row ${entry.attention_required || !entry.processed_today ? 'needs-attention' : ''}" data-entry-row="${escapeHtml(entry.route_entry_id)}">
-    <div class="ledger-cell"><strong class="ledger-client">${escapeHtml(entry.client_name || 'Client')}</strong><small>${escapeHtml(entry.note || entry.today_note || entry.collection_message || '')}</small></div>
+    <div class="ledger-cell"><strong class="ledger-client">${escapeHtml(entry.client_name || 'Client')}</strong>${note ? `<small>${escapeHtml(note)}</small>` : ''}${entry.collection_message && entry.collection_message !== note ? `<small>${escapeHtml(entry.collection_message)}</small>` : ''}</div>
     <div class="ledger-cell"><span class="badge ${type === 'seven-by-seven' ? 'info' : 'warning'}">${type === 'seven-by-seven' ? '7x7' : escapeHtml(entry.loan_type || 'Regular')}</span><small>${escapeHtml(entry.contract_payment_frequency || '')}</small></div>
     <div class="ledger-cell"><small>Daily / today</small><strong>${formatMoney(entry.contract_today_unpaid_amount || entry.daily_amount)}</strong><small>Balance ${formatMoney(entry.remaining_balance)}</small></div>
     <div class="ledger-cell">${entryStatus(entry)}${entry.pass_count ? `<small>Missed / PASS ${escapeHtml(entry.pass_count)}</small>` : ''}${entry.advance_until ? `<small>ADV to ${formatDate(entry.advance_until)}</small>` : ''}</div>

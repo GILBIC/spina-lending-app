@@ -12,9 +12,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from gilbic_backend.collection_api import collection_actor_dependency
+from gilbic_backend.collection_correction_repository import CollectionCorrectionInvalid
 from gilbic_backend.collector_route_renewal_repository import (
     PostgresCollectorRouteRenewalRepository,
 )
+from gilbic_backend.collector_route_repository import PostgresCollectorRouteRepository
 from gilbic_backend.combined_collection_api import (
     CombinedPaymentRequest,
     _hash,
@@ -26,6 +28,9 @@ from gilbic_backend.concurrent_receipt_collection_posting import (
 )
 from gilbic_backend.contract_collection_activation_repository import (
     PostgresContractCollectionActivationRepository,
+)
+from gilbic_backend.contract_collection_correction import (
+    ContractSafeCollectionCorrectionRepository,
 )
 from gilbic_backend.contract_collection_posting import CONTRACT_ALLOCATION_SETTING
 from gilbic_backend.contract_schedule_engine import generate_contract_installments
@@ -442,6 +447,117 @@ def test_combined_regular_plus_7x7_is_atomic_and_retry_safe() -> None:
             ).fetchone()[0]
             == 2
         )
+
+
+@pytest.mark.parametrize("evidence", ["allocation", "marker", "legacy"])
+def test_route_edit_availability_matches_contract_receipt_evidence(evidence: str) -> None:
+    case = _setup_combined_case(verified_regular_schedule=evidence != "legacy")
+    is_pass = evidence == "marker"
+    with _connect() as connection:
+        posted = ConcurrentReceiptSafeCollectionPostingBridge().post_collection(
+            connection,
+            case.actor,
+            CollectionCommand(
+                idempotency_key=uuid4(),
+                route_entry_id=str(case.regular_loan_id),
+                client_id=str(case.client_id),
+                loan_id=str(case.regular_loan_id),
+                collection_date=date(2097, 8, 2),
+                entry_type=(
+                    CollectionEntryType.PASS
+                    if is_pass
+                    else CollectionEntryType.PAYMENT
+                ),
+                amount=None if is_pass else Decimal("50.00"),
+                recorded_at=datetime(2097, 8, 2, 1, tzinfo=UTC),
+                device_id=case.installation_id,
+                device_sequence=1,
+                route_revision=f"loan:{case.regular_loan_id}:v0",
+                note="Synthetic correction availability check",
+                past_due_followup=(
+                    PastDueFollowupInput(
+                        reason_code=PastDueReasonCode.NO_CASH,
+                        note="Synthetic borrower has no cash today.",
+                    )
+                    if is_pass
+                    else None
+                ),
+            ),
+        )
+        transaction_id = UUID(posted.server_transaction_id)
+        if evidence == "legacy":
+            # This historical receipt predates signed-schedule registration.
+            # Registration alone must not retroactively disable its legacy edit.
+            with connection.cursor() as cursor:
+                register_verified_contract_schedule(
+                    cursor,
+                    loan_id=case.regular_loan_id,
+                    payment_frequency="daily",
+                    contract_reference=f"SIGNED-LEGACY-{transaction_id}",
+                    contract_signed_date=date(2097, 8, 1),
+                    effective_from=date(2097, 8, 1),
+                    grace_days=0,
+                    installments=generate_contract_installments(
+                        payment_frequency="daily",
+                        contractual_total=Decimal("5000.00"),
+                        first_due_date=date(2097, 8, 2),
+                        installment_count=100,
+                        regular_installment_amount=Decimal("50.00"),
+                    ),
+                    evidence_basis="signed_contract",
+                    evidence_reference=f"SIGNED-LEGACY-DOC-{transaction_id}",
+                    verification_note="Synthetic signed schedule registered after historical collection.",
+                    verified_by_user_id=case.collector_id,
+                    confirmed=True,
+                )
+        if evidence == "allocation":
+            # Isolate the allocation branch: even without the optional marker,
+            # the existing contractual allocation must prevent legacy editing.
+            connection.execute(
+                """
+                update lending.collection_transactions
+                set details = details - 'contract_schedule_allocation'
+                where id = %s
+                """,
+                (transaction_id,),
+            )
+        allocation_count = connection.execute(
+            """
+            select count(*) from lending.loan_installment_payment_allocations
+            where transaction_id = %s
+            """,
+            (transaction_id,),
+        ).fetchone()[0]
+        assert allocation_count == (1 if evidence == "allocation" else 0)
+
+    route = PostgresCollectorRouteRepository().get_today_route(
+        collector_user_id=case.collector_id,
+        collector_name="Synthetic Collector",
+        route_date=date(2097, 8, 2),
+    )
+    entry = next(
+        item for item in route.entries if item.loan_id == case.regular_loan_id
+    )
+    assert entry.contract_schedule_verified is True
+    assert entry.today_transaction_id == transaction_id
+    assert entry.today_is_locked is False
+    assert entry.can_edit_today is (evidence == "legacy")
+    if evidence != "legacy":
+        assert "cannot be edited" in entry.collection_message
+        assert "Management" in entry.collection_message
+        # Route availability is advisory; the existing mutation guard remains
+        # authoritative when a stale client still attempts the forbidden edit.
+        with pytest.raises(CollectionCorrectionInvalid):
+            ContractSafeCollectionCorrectionRepository().correct_own_unremitted(
+                actor_user_id=case.collector_id,
+                transaction_id=transaction_id,
+                entry_type="payment",
+                amount=Decimal("60.00"),
+                covered_dates=(date(2097, 8, 2),),
+                note="Synthetic correction attempt",
+                reason="Synthetic amount correction",
+                expected_route_revision=entry.route_revision,
+            )
 
 
 def test_combined_preview_derives_exact_split_from_one_cash_total() -> None:
