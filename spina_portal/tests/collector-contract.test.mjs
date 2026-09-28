@@ -197,3 +197,34 @@ test('collector form defaults preserve server cents before submission', async ()
     controller.abort();
   }
 });
+
+test('recorded receipt keeps the server correction explanation visible beside its note', async () => {
+  const controller = new AbortController();
+  const root = new Element();
+  root.dataset = {};
+  const calls = [];
+  const reason = 'This collection cannot be edited here. Ask Management to review the correction.';
+  try {
+    await mountCollectorWorkspace({
+      root, signal: controller.signal, setNavigation() {},
+      session: { user: { role: 'collector' }, permissions: ['route.view', 'collection.create', 'collection.correct.own_unremitted'] },
+      api: { async request(path, options) {
+        calls.push({path, options});
+        return path === '/api/v1/collector/routes/today' ? {
+          route_date: base.routeDate,
+          entries: [{ ...entry, processed_today: true, can_enter_payment: true, can_edit_today: false,
+            today_is_locked: false, today_transaction_id: 'receipt-1',
+            note: 'Cash counted', collection_message: reason }],
+        } : {};
+      } },
+    });
+    const row = root.querySelector('[data-entry-row="route-entry-1"]');
+    assert.ok(row.textContent.includes('Cash counted'));
+    assert.ok(row.textContent.includes(reason));
+    assert.equal(root.querySelector('[data-load-schedule]'), null);
+    assert.equal(root.querySelector('[data-dates-form]'), null);
+    assert.equal(calls.some(({options}) => options?.method === 'PATCH'), false);
+  } finally {
+    controller.abort();
+  }
+});

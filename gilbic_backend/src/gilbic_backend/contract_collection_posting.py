@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from psycopg import Connection
-from psycopg.rows import dict_row
+from psycopg.rows import dict_row, tuple_row
 from psycopg.types.json import Jsonb
 from spina_mobile_collections.contracts import (
     ActorContext,
@@ -332,11 +332,14 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
                     else ()
                 )
                 try:
-                    plan = allocate_collection_transaction(
-                        cursor,
-                        transaction_id=transaction_id,
-                        explicit_covered_dates=explicit_dates,
-                    )
+                    # The allocation service consumes positional rows; the
+                    # surrounding gate and audit readers consume dictionaries.
+                    with connection.cursor(row_factory=tuple_row) as allocation_cursor:
+                        plan = allocate_collection_transaction(
+                            allocation_cursor,
+                            transaction_id=transaction_id,
+                            explicit_covered_dates=explicit_dates,
+                        )
                 except ContractScheduleNotReady as error:
                     raise CollectionRejected(
                         str(error),

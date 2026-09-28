@@ -64,12 +64,18 @@ class CollectionPastDueCapture:
         with connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
                 """
-                select loan.daily_amount, loan_type.calculation_mode, loan_type.settings
+                select loan.daily_amount, loan_type.calculation_mode, loan_type.settings,
+                    receipt.details -> 'contract_schedule_allocation' ->> 'enabled'
+                        as contract_allocation_enabled
                 from lending.loans loan
                 join lending.loan_types loan_type on loan_type.id = loan.loan_type_id
+                join lending.collection_transactions receipt
+                  on receipt.id = %s
+                 and receipt.loan_id = loan.id
+                 and receipt.client_id = loan.client_id
                 where loan.id = %s and loan.client_id = %s
                 """,
-                (loan_id, client_id),
+                (transaction_id, loan_id, client_id),
             )
             loan = cursor.fetchone()
             if loan is None:
@@ -88,7 +94,11 @@ class CollectionPastDueCapture:
                 return
 
             settings = loan["settings"] if isinstance(loan["settings"], dict) else {}
-            contract_mode = self._enabled(settings.get(CONTRACT_ALLOCATION_SETTING))
+            # Per-loan activation is captured by protected posting on this receipt,
+            # including PASS entries with no allocation rows. Keep legacy fallback.
+            contract_mode = self._enabled(
+                loan.get("contract_allocation_enabled")
+            ) or self._enabled(settings.get(CONTRACT_ALLOCATION_SETTING))
             obligations = (
                 self._contract_new_past_due(
                     cursor,

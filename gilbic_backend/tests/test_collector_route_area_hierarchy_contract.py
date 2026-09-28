@@ -73,6 +73,7 @@ def _route_row(*, area_uid: UUID = MABINI_AREA_UID) -> dict[str, object]:
         "today_assigned_collector_user_id": None,
         "today_collection_origin": "",
         "today_is_locked": False,
+        "today_contract_controlled": False,
         "today_amount": Decimal("0.00"),
         "today_note": "",
         "today_covered_dates": (),

@@ -5,12 +5,12 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from gilbic_backend import collector_route_repository as module
 from gilbic_backend.collector_route_repository import (
     CollectorRouteEntryRecord,
     PostgresCollectorRouteRepository,
 )
 
+from gilbic_backend import collector_route_repository as module
 
 COLLECTOR_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_COLLECTOR_USER_ID = UUID("55555555-5555-4555-8555-555555555555")
@@ -87,6 +87,7 @@ class FakeConnection:
                     "today_assigned_collector_user_id": COLLECTOR_USER_ID,
                     "today_collection_origin": "assigned_route",
                     "today_is_locked": False,
+                    "today_contract_controlled": False,
                     "today_amount": Decimal("600.00"),
                     "today_note": "Selected dates only",
                     "today_covered_dates": (
@@ -233,6 +234,17 @@ def test_assigned_owner_cannot_edit_management_direct_receipt(monkeypatch) -> No
     route = _load_route(monkeypatch, connection)
 
     assert route.entries[0].can_edit_today is False
+
+
+def test_contract_controlled_receipt_is_not_offered_for_edit(monkeypatch) -> None:
+    connection = FakeConnection()
+    connection.entry_cursor.rows[0]["today_contract_controlled"] = True
+
+    entry = _load_route(monkeypatch, connection).entries[0]
+
+    assert entry.can_edit_today is False
+    assert "cannot be edited" in entry.collection_message
+    assert "Management" in entry.collection_message
 
 
 def test_contract_setting_blocks_pay_until_verified_gate_is_ready() -> None:
