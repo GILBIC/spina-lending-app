@@ -35,6 +35,9 @@ class _CollectorRenewalCashReleasePageState
   late final CollectorRenewalWorkflowRepository _repository;
   bool _busy = false;
 
+  bool get _canHandleCash =>
+      widget.session.hasPermission('renewal.cash_custody.assigned');
+
   @override
   void initState() {
     super.initState();
@@ -43,8 +46,11 @@ class _CollectorRenewalCashReleasePageState
   }
 
   Future<void> _confirmReceived() async {
-    if (_busy || !widget.request.canConfirmCashReceived) return;
-    final confirmed = await showDialog<bool>(
+    if (!_canHandleCash || _busy || !widget.request.canConfirmCashReceived) {
+      return;
+    }
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Confirm cash received?'),
@@ -82,9 +88,9 @@ class _CollectorRenewalCashReleasePageState
       Navigator.of(context).pop(true);
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
@@ -121,17 +127,16 @@ class _CollectorRenewalCashReleasePageState
                     _money(request.netReleaseAmount ?? 0),
                     key: const Key('cash-release-amount'),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: SpinaTheme.brandPinkDark,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      color: SpinaTheme.brandPinkDark,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     request.clientName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w900),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   Text('${request.clientCode} • ${request.area}'),
                   Text('${request.loanTypeName} • ${request.loanNumber}'),
@@ -147,7 +152,9 @@ class _CollectorRenewalCashReleasePageState
           FilledButton.icon(
             key: const Key('cash-release-confirm-received'),
             onPressed:
-                request.canConfirmCashReceived && !_busy ? _confirmReceived : null,
+                _canHandleCash && request.canConfirmCashReceived && !_busy
+                ? _confirmReceived
+                : null,
             icon: _busy
                 ? const SizedBox(
                     width: 18,

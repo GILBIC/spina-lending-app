@@ -582,9 +582,15 @@ def create_renewal_workflow_router() -> APIRouter:
             device_identifier=x_device_id,
             auth=auth,
             accounts=accounts,
-            permission="renewal.recommend.assigned",
-            permission_error="Assigned Collector renewal permission is required.",
         )
+        if not {
+            "renewal.recommend.assigned",
+            "renewal.cash_custody.assigned",
+        }.intersection(actor.permissions):
+            raise HTTPException(
+                status_code=403,
+                detail="Assigned Collector renewal permission is required.",
+            )
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(

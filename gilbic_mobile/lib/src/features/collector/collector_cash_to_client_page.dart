@@ -49,6 +49,9 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   bool _loading = true;
   final Set<String> _busy = <String>{};
 
+  bool get _canHandleCash =>
+      widget.session.hasPermission('renewal.cash_custody.assigned');
+
   @override
   void initState() {
     super.initState();
@@ -136,6 +139,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   }
 
   Future<void> _confirmCashGiven(CollectorRenewalRequest request) async {
+    if (!_canHandleCash) return;
     final confirmed =
         await showDialog<bool>(
           context: context,
@@ -197,6 +201,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   }
 
   Future<void> _captureProof(CollectorRenewalRequest request) async {
+    if (!_canHandleCash) return;
     final deviceId = _deviceId;
     if (deviceId == null || _busy.contains(request.requestId)) return;
     final source = await showModalBottomSheet<ImageSource>(
@@ -348,6 +353,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
                 _ClientHandoverCard(
                   request: request,
                   busy: _busy.contains(request.requestId),
+                  canHandleCash: _canHandleCash,
                   onCashGiven: () => _confirmCashGiven(request),
                   onProof: () => _captureProof(request),
                 ),
@@ -364,12 +370,14 @@ class _ClientHandoverCard extends StatelessWidget {
   const _ClientHandoverCard({
     required this.request,
     required this.busy,
+    required this.canHandleCash,
     required this.onCashGiven,
     required this.onProof,
   });
 
   final CollectorRenewalRequest request;
   final bool busy;
+  final bool canHandleCash;
   final VoidCallback onCashGiven;
   final VoidCallback onProof;
 
@@ -433,7 +441,7 @@ class _ClientHandoverCard extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   key: Key('cash-to-client-confirm-${request.requestId}'),
-                  onPressed: busy ? null : onCashGiven,
+                  onPressed: busy || !canHandleCash ? null : onCashGiven,
                   icon: const Icon(Icons.handshake_outlined),
                   label: const Text('Confirm Cash Given'),
                 ),
@@ -447,7 +455,7 @@ class _ClientHandoverCard extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   key: Key('cash-to-client-proof-${request.requestId}'),
-                  onPressed: busy ? null : onProof,
+                  onPressed: busy || !canHandleCash ? null : onProof,
                   icon: const Icon(Icons.add_a_photo_outlined),
                   label: Text(
                     request.handoverProofStatus == 'correction_required'

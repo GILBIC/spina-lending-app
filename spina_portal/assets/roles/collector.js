@@ -267,7 +267,7 @@ export async function mountCollectorWorkspace(context) {
   const canRecordVisit = hasPermission(session, 'client_onboarding.visit.record');
   const canCreate = hasPermission(session, 'collection.create');
   const canCorrect = hasPermission(session, 'collection.correct.own_unremitted');
-  const canRenew = hasPermission(session, 'renewal.recommend.assigned');
+  const canRenew = hasPermission(session, 'renewal.recommend.assigned') || hasPermission(session, 'renewal.cash_custody.assigned');
   const canCreateRemittance = hasPermission(session, 'remittance.create');
   const canViewRemittance = hasPermission(session, 'remittance.view') || canCreateRemittance;
   setNavigation([

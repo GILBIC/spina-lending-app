@@ -31,6 +31,7 @@ const _session = UserSession(
   role: AppRole.collector,
   rawRole: 'collector',
   accessToken: 'token',
+  permissions: <String>['renewal.cash_custody.assigned'],
 );
 final _png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',

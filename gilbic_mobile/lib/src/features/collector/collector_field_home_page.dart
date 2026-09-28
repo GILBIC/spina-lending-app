@@ -53,6 +53,11 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   String? _lastCashReleaseAlertRequestId;
   int _cashStatusEpoch = 0;
 
+  bool get _canReadRenewals => widget.session.hasAnyPermission(const <String>[
+    'renewal.recommend.assigned',
+    'renewal.cash_custody.assigned',
+  ]);
+
   Future<void> _open(Widget page) async {
     await Navigator.of(
       context,
@@ -97,8 +102,8 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   }
 
   Future<void> _openRenewals() async {
-    if (!widget.session.hasPermission('renewal.recommend.assigned')) {
-      _permissionMessage('assigned-client renewal recommendations');
+    if (!_canReadRenewals) {
+      _permissionMessage('assigned-client renewal requests');
       return;
     }
     await _open(
@@ -111,7 +116,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   }
 
   Future<void> _openCashToReceive() async {
-    if (!widget.session.hasPermission('renewal.recommend.assigned')) {
+    if (!_canReadRenewals) {
       _permissionMessage('assigned-client renewal cash releases');
       return;
     }
@@ -125,7 +130,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   }
 
   Future<void> _openCashToClient() async {
-    if (!widget.session.hasPermission('renewal.recommend.assigned')) {
+    if (!_canReadRenewals) {
       _permissionMessage('assigned-client renewal cash handovers');
       return;
     }
@@ -237,10 +242,16 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     key: const Key('collector-more-employee-operations'),
                     icon: Icons.badge_outlined,
                     title: 'My attendance, pay & requests',
-                    subtitle: 'Private employee records, breaks, tasks and salary advances',
+                    subtitle:
+                        'Private employee records, breaks, tasks and salary advances',
                     onTap: () {
                       Navigator.pop(sheetContext);
-                      _open(EmployeeOperationsPage(session: widget.session, deviceIdentityProvider: widget.deviceIdentityProvider));
+                      _open(
+                        EmployeeOperationsPage(
+                          session: widget.session,
+                          deviceIdentityProvider: widget.deviceIdentityProvider,
+                        ),
+                      );
                     },
                   ),
                   _CollectorToolTile(

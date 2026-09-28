@@ -3,9 +3,35 @@ import assert from 'node:assert/strict';
 import {setImmediate} from 'node:timers/promises';
 import {Element,fire} from './helpers/dom.mjs';
 import {createCollectorWriteGuard} from '../assets/collector-write-guard.js';
+import {mountCollectorWorkspace} from '../assets/roles/collector.js';
 const module=await import('../assets/collector-renewals.js').catch(()=>({}));
 const session={permissions:['renewal.recommend.assigned','renewal.cash_custody.assigned']};
 const record={request_id:'renewal',client_name:'Synthetic <client>',status:'approved',net_release_amount:'1250.01',cash_released_to_collector_at:'2026-09-28T02:00:00Z',handover_proof_status:'none'};
+
+test('custody-only Collector loads assigned handovers without recommendation controls',async()=>{
+  const root=new Element();const calls=[];let saved=0;
+  const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock:()=>{}});
+  const dispose=module.mountCollectorRenewals({root,session:{permissions:['renewal.cash_custody.assigned']},guard,onSaved:async()=>{saved++;},api:{request:async(path,options)=>{calls.push({path,options});return options ? {request:record} : {requests:[record,{...record,request_id:'pending',status:'pending'}]};}}});
+  try {
+    await setImmediate();
+    assert.equal(calls[0]?.path,'/api/v1/collector/renewals');
+    assert.equal(root.querySelector('[data-renewal-action="recommendation"]'),null);
+    const form=root.querySelector('[data-renewal-action="cash-received"]');assert.ok(form);
+    form.querySelector('[name="physicalConfirmation"]').checked=true;fire(form,'submit');await setImmediate();
+    assert.equal(calls[1].path,'/api/v1/collector/renewals/renewal/cash-received');assert.equal(saved,1);
+  } finally {dispose();guard.dispose();}
+});
+
+test('custody-only workspace exposes and loads Renewal handover navigation',async()=>{
+  const controller=new AbortController();const root=new Element();root.dataset={};const calls=[];let navigation=[];
+  const context={root,session:{user:{role:'collector',roles:['collector']},permissions:['renewal.cash_custody.assigned']},signal:controller.signal,setNavigation:items=>{navigation=items;},api:{request:async path=>{calls.push(path);return path==='/api/v1/collector/renewals'?{requests:[record]}:{};}}};
+  try {
+    await mountCollectorWorkspace(context);await setImmediate();
+    assert.ok(navigation.some(item=>item.id==='collector-renewals'));
+    assert.ok(root.querySelector('#collector-renewals')?.querySelector('[data-renewal-action="cash-received"]'));
+    assert.equal(calls.filter(path=>path==='/api/v1/collector/renewals').length,1);
+  } finally {controller.abort();}
+});
 test('cash controls follow authoritative handover stages and distinct permissions',()=>{
   assert.deepEqual(module.collectorRenewalActions(record,session),['cash-received']);
   assert.deepEqual(module.collectorRenewalActions({...record,collector_cash_received_at:'now'},session),['cash-given']);

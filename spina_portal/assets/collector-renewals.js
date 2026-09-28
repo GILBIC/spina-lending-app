@@ -58,7 +58,7 @@ export function mountCollectorRenewals({root,api,session,guard,onSaved,signal}) 
       guard.sync();
     } catch(error) {if(current()) root.textContent=error.message;}
   };
-  if(hasPermission(session,'renewal.recommend.assigned')) load();else root.textContent='Assigned renewal permission is required.';
+  if(hasPermission(session,'renewal.recommend.assigned') || hasPermission(session,'renewal.cash_custody.assigned')) load();else root.textContent='Assigned renewal permission is required.';
   function dispose(){disposed=true;signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});
   if(signal?.aborted) dispose();

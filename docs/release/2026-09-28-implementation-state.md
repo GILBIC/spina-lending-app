@@ -6,6 +6,8 @@ Management requested completion and approved proceeding. Implement the smallest 
 
 [PR #453](https://github.com/GILBIC/spina-lending-app/pull/453) is the combined integration candidate. It preserves the workstream histories below; its exact-head checks and latest issue #448 checkpoint govern merge readiness.
 
+The prior candidate d8e63ca2 passed all three CI lanes and Annex A. An unresolved review then exposed a custody-only Collector renewal access gap. The [bounded Web/Android/server correction](../workstreams/2026-09-28-r3-collector-web-parity.md) preserves separate write permissions and assignment/device boundaries; 48 backend, 746 Web and 46 focused Android tests passed, with clean Android analysis and Web build. Protected automatic merge waits for the corrected head's checks and resolved review. Old green results and retained artifacts do not establish the new head's acceptance.
+
 | Gap | Implementation evidence | Remaining acceptance/configuration |
 |---|---|---|
 | R1 Disclosure and accounting sources | [PR #449](https://github.com/GILBIC/spina-lending-app/pull/449): protected saved sources, approval/lifecycle/document binding and Web/Android source selection; [execution record](../workstreams/2026-09-28-r1-execution-state.md). | Combined-candidate CI and supported-platform acceptance; explicitly reviewed positive scheduled-component policy and supported accounting lifecycle; actual executable templates. Full R1 remains open. |
