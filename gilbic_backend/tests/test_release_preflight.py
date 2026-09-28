@@ -80,6 +80,23 @@ def test_missing_schema_or_exposed_private_tables_block_runtime(monkeypatch):
     assert result["checks"]["private_grants"] is False
 
 
+def test_missing_disclosure_guards_block_runtime(monkeypatch):
+    preflight = module()
+    monkeypatch.setattr(
+        preflight,
+        "probe_database",
+        lambda _: {
+            "schema": True,
+            "private_grants": True,
+            "disclosure_guards": False,
+        },
+    )
+    result = preflight.check_runtime(settings())
+    assert result["status"] == "blocked"
+    assert result["checks"]["disclosure_guards"] is False
+    assert result["activation_proven"] is False
+
+
 @pytest.mark.parametrize(
     "origin",
     [

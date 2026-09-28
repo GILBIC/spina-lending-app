@@ -1,5 +1,17 @@
 # SPINA implementation, configuration and acceptance state
 
+## Post-merge checkpoint — 28 September 2026
+
+PRs #449–#453 are merged at `07a66c9e8be33e5c3343446452e10d826b67e312`. [Exact-main CI](https://github.com/GILBIC/spina-lending-app/actions/runs/36410334480) passed all three required lanes. The [current all-20-priority inventory](https://github.com/GILBIC/spina-lending-app/issues/448#issuecomment-5872009447) supersedes the pre-merge status below and records remaining business, provider, configuration and acceptance requirements.
+
+The clean exact-main evidence packet passed source, CI, internal Android package, synthetic backup/restore, scanner regression and their provenance checks. It remains blocked on owner signing, performance evidence and human acceptance. A read-only live catalog check found the disclosure calculation table and both disclosure guard functions absent; HTTP health success does not establish schema compatibility or the active deployment revision. No production deployment, migration, real financial event or final-device acceptance was performed.
+
+This follow-up strengthens the existing read-only deployment preflight to reject missing disclosure schema or missing, disabled or incorrectly bound disclosure triggers. Its own PR checks must pass; the earlier green main evidence is not evidence for later code. Before deploying, establish the actual migration/recovery procedure and authorized host context. The existing DigitalOcean workflow writes rendezvous files to its dispatch branch, so protected main cannot be used for those direct writes; the existing deployment-branch approach also needs matching broker authorization and host configuration. Do not bypass main protection or blindly redeploy through historical provisioning assumptions.
+
+Create State returned an authentication error and requires reconnection. GitHub, the Notion gap review and Notion Current Project State carry the fresh handoff. The local current inventory is `checkpoints/SPINA-PRIORITIES-2026-09-28.md` in the Codex workspace. The earlier dated evidence below is retained as history.
+
+## Historical pre-merge checkpoint
+
 Checkpoint: 28 September 2026, Asia/Manila. This is the repository entry point for resuming current work. [Issue #296](https://github.com/GILBIC/spina-lending-app/issues/296) remains the frozen master roadmap. R1–R12 below are the separate [approved gap review](https://app.notion.com/p/3e35ade7bef48197be58f91c865a9d6f), coordinated in [issue #448](https://github.com/GILBIC/spina-lending-app/issues/448). Read the latest issue/PR checks before relying on a dated result.
 
 Management requested completion and approved proceeding. Implement the smallest effective changes, preserve current work, and keep GitHub/Notion checkpoints current. A code/test result does not substitute for actual company facts, device acceptance, provider contracts, legal approval or financial events.

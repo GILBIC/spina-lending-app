@@ -26,6 +26,7 @@ REQUIRED_TABLES = (
     "lending.clients",
     "lending.loans",
     "lending.client_payment_proofs",
+    "lending.first_loan_disclosure_calculations",
     "core.employee_profiles",
     "core.employee_profile_versions",
     "core.employee_action_receipts",
@@ -51,7 +52,7 @@ def _connect(settings: Settings):
 
 
 def probe_database(settings: Settings) -> dict[str, bool]:
-    checks = {"schema": False, "private_grants": False}
+    checks = {"schema": False, "private_grants": False, "disclosure_guards": False}
     try:
         with _connect(settings) as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -73,6 +74,39 @@ def probe_database(settings: Settings) -> dict[str, bool]:
             )
             row = cursor.fetchone()
             checks["private_grants"] = bool(row and row[0])
+            # Migration 0129 is required by the saved-source runtime. A table
+            # alone is insufficient: its guards must fire on the intended rows.
+            cursor.execute(
+                """WITH required(relation, trigger_name, function_name, trigger_type) AS (
+                    VALUES
+                    ('lending.first_loan_disclosure_calculations',
+                     'first_loan_disclosure_source_guard',
+                     'lending.guard_first_loan_disclosure_insert()', 7),
+                    ('lending.first_loan_disclosure_calculations',
+                     'first_loan_disclosure_immutable',
+                     'lending.reject_loan_application_history_mutation()', 27),
+                    ('lending.first_loan_disclosure_calculations',
+                     'first_loan_disclosure_no_truncate',
+                     'lending.reject_loan_application_history_mutation()', 34),
+                    ('lending.first_loan_approvals',
+                     'first_loan_disclosure_approval_guard',
+                     'lending.guard_first_loan_disclosure_approval()', 7)
+                )
+                SELECT bool_and(EXISTS (
+                    SELECT 1 FROM pg_trigger t
+                    WHERE t.tgrelid = to_regclass(required.relation)
+                      AND t.tgname = required.trigger_name
+                      AND t.tgfoid = to_regprocedure(required.function_name)
+                      AND t.tgtype = required.trigger_type
+                      AND t.tgenabled IN ('O', 'A')
+                      AND NOT t.tgisinternal
+                      AND t.tgqual IS NULL
+                      AND t.tgattr = ''::int2vector
+                      AND t.tgnargs = 0
+                )) FROM required"""
+            )
+            row = cursor.fetchone()
+            checks["disclosure_guards"] = bool(row and row[0])
     except (psycopg.Error, ValueError):
         # Driver errors may contain credentials, addresses or SQL; never serialize them.
         pass
@@ -171,7 +205,9 @@ def check_runtime(settings: Settings) -> PreflightReport:
     if all(checks.values()):
         checks.update(probe_database(settings))
     else:
-        checks.update({"schema": False, "private_grants": False})
+        checks.update(
+            {"schema": False, "private_grants": False, "disclosure_guards": False}
+        )
     return _report("runtime_configuration", checks)
 
 
