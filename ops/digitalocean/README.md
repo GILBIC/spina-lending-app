@@ -30,6 +30,16 @@ binds `run_id` itself. Production currently needs primary `spina.com.ph`, aliase
 sslip hostname. Enter the actual retained origin list and invite URL; they are not
 inferred from the primary domain.
 
+Optional `api_only_aliases` defaults to `[]` and must be a unique subset of
+`aliases`; the primary hostname cannot be excluded from portal verification.
+Set `"api_only_aliases": ["api.spina.com.ph"]` for the existing dedicated API
+alias, whose root intentionally returns 404. HTTPS liveness and database
+readiness remain required on every declared host. Portal HTML is checked on the
+primary host and all other aliases. Evidence records `portal: "not_applicable"`
+only for explicitly declared API-only aliases and rejects skipped portal checks
+for all other hosts. This setting changes verification only; it does not change
+Caddy routing or infer host behavior from a hostname.
+
 An upgrade copies the active Caddy configuration unchanged, including redirects
 and host-specific behavior. A first installation renders all declared hosts.
 Before activation Caddy validates/adapts the candidate, and the deployment helper

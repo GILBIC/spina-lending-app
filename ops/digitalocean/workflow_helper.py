@@ -54,6 +54,18 @@ def load_target(path: Path, *, expected_run_id: int | None = None) -> dict[str, 
     domains = [hostname, *aliases]
     if len(set(domains)) != len(domains):
         raise ValueError("target domain declarations must not repeat")
+    api_only_aliases = target.get("api_only_aliases", [])
+    if (
+        not isinstance(api_only_aliases, list)
+        or any(
+            not isinstance(value, str) or value not in aliases
+            for value in api_only_aliases
+        )
+        or len(set(api_only_aliases)) != len(api_only_aliases)
+    ):
+        raise ValueError(
+            "api_only_aliases must be a unique subset of aliases; the primary hostname always serves the portal"
+        )
     expected_hostname = f"spina.{host.replace('.', '-')}.sslip.io"
     if any(
         domain.endswith(".sslip.io") and domain != expected_hostname
@@ -89,6 +101,7 @@ def load_target(path: Path, *, expected_run_id: int | None = None) -> dict[str, 
         "host": host,
         "hostname": hostname,
         "aliases": aliases,
+        "api_only_aliases": api_only_aliases,
         "cors_origins": origins,
         "staff_invite_redirect_url": redirect,
     }
@@ -248,8 +261,14 @@ def verify_public(*, target_path: Path, output_path: Path) -> None:
     opener = build_opener(DeclaredHttpsRedirects(set(domains)))
     checks = {}
     for hostname in domains:
+        portal_required = hostname not in target["api_only_aliases"]
         responses = []
-        for path in ("/health/live", "/health/ready", "/"):
+        paths = (
+            ("/health/live", "/health/ready", "/")
+            if portal_required
+            else ("/health/live", "/health/ready")
+        )
+        for path in paths:
             with opener.open(f"https://{hostname}{path}", timeout=15) as response:
                 final = urlsplit(response.geturl())
                 if (
@@ -273,8 +292,13 @@ def verify_public(*, target_path: Path, output_path: Path) -> None:
             or not isinstance(ready, dict)
             or ready.get("status") != "ready"
             or ready.get("database") != "ok"
-            or "<title>Spina Lending Company</title>" not in responses[2]
-            or 'id="login-form"' not in responses[2]
+            or (
+                portal_required
+                and (
+                    "<title>Spina Lending Company</title>" not in responses[2]
+                    or 'id="login-form"' not in responses[2]
+                )
+            )
         ):
             raise ValueError(
                 f"Public health or portal verification failed for {hostname}"
@@ -283,7 +307,7 @@ def verify_public(*, target_path: Path, output_path: Path) -> None:
             "liveness": "ok",
             "readiness": "ready",
             "database": "ok",
-            "portal": "ok",
+            "portal": "ok" if portal_required else "not_applicable",
         }
     output_path.write_text(
         json.dumps({"run_id": target["run_id"], "domains": checks}, indent=2) + "\n",
@@ -317,9 +341,11 @@ def write_evidence(
                 "liveness": "ok",
                 "readiness": "ready",
                 "database": "ok",
-                "portal": "ok",
+                "portal": "not_applicable"
+                if hostname in target["api_only_aliases"]
+                else "ok",
             }
-            for value in public_domains.values()
+            for hostname, value in public_domains.items()
         )
     ):
         raise ValueError(

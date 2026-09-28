@@ -142,6 +142,102 @@ def mock_transport(monkeypatch, get):
     )
 
 
+def configure_api_aliases(target, value):
+    payload = json.loads(target.read_text())
+    payload["api_only_aliases"] = value
+    target.write_text(json.dumps(payload))
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        "api.spina.com.ph",
+        ["spina.com.ph"],
+        ["unlisted.example"],
+        [123],
+        ["api.spina.com.ph", "api.spina.com.ph"],
+    ],
+)
+def test_api_only_aliases_must_be_an_explicit_unique_subset_of_aliases(target, value):
+    configure_api_aliases(target, value)
+    with pytest.raises(ValueError, match="api_only_aliases"):
+        helper.load_target(target)
+
+
+def test_api_only_alias_still_requires_health_but_does_not_fetch_root(
+    monkeypatch, target, tmp_path
+):
+    configure_api_aliases(target, ["api.spina.com.ph"])
+    calls = []
+    mock_transport(monkeypatch, network(calls, fail="https://api.spina.com.ph/"))
+    output = tmp_path / "checks.json"
+    helper.verify_public(target_path=target, output_path=output)
+    urls = [url for url, _ in calls]
+    assert "https://api.spina.com.ph/" not in urls
+    assert "https://api.spina.com.ph/health/live" in urls
+    assert "https://api.spina.com.ph/health/ready" in urls
+    assert len(urls) == 14
+    domains = json.loads(output.read_text())["domains"]
+    assert domains["api.spina.com.ph"]["portal"] == "not_applicable"
+    assert all(
+        row["portal"] == "ok"
+        for host, row in domains.items()
+        if host != "api.spina.com.ph"
+    )
+    helper.write_evidence(
+        target_path=target,
+        public_checks_path=output,
+        output_path=tmp_path / "evidence.json",
+        git_sha="a" * 40,
+        verified_active_sha="a" * 40,
+    )
+
+
+def test_api_only_alias_with_failed_health_cannot_publish_checks(
+    monkeypatch, target, tmp_path
+):
+    configure_api_aliases(target, ["api.spina.com.ph"])
+    mock_transport(
+        monkeypatch, network([], fail="https://api.spina.com.ph/health/ready")
+    )
+    output = tmp_path / "checks.json"
+    with pytest.raises(OSError):
+        helper.verify_public(target_path=target, output_path=output)
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    "host,portal",
+    [
+        ("spina.com.ph", "not_applicable"),
+        ("app.spina.com.ph", "not_applicable"),
+        ("api.spina.com.ph", "not_applicable"),
+        ("app.spina.com.ph", None),
+    ],
+)
+def test_evidence_rejects_skipped_or_missing_portal_without_target_authority(
+    monkeypatch, target, tmp_path, host, portal
+):
+    mock_transport(monkeypatch, network([]))
+    checks = tmp_path / "checks.json"
+    helper.verify_public(target_path=target, output_path=checks)
+    payload = json.loads(checks.read_text())
+    if portal is None:
+        payload["domains"][host].pop("portal")
+    else:
+        payload["domains"][host]["portal"] = portal
+    checks.write_text(json.dumps(payload))
+    with pytest.raises(ValueError):
+        helper.write_evidence(
+            target_path=target,
+            public_checks_path=checks,
+            output_path=tmp_path / "evidence.json",
+            git_sha="a" * 40,
+            verified_active_sha="a" * 40,
+        )
+
+
 def test_every_declared_domain_gets_https_liveness_readiness_and_portal_checks(
     monkeypatch, target, tmp_path
 ):
