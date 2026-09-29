@@ -222,7 +222,7 @@ textarea {
   min-width: 0;
   min-height: 44px;
   padding: 0.72rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--ink-500);
   border-radius: var(--radius-sm);
   color: var(--ink-950);
   background: white;
@@ -274,7 +274,7 @@ textarea:focus {
 
 .button-primary {
   color: white;
-  background: linear-gradient(135deg, var(--pink-700), var(--pink-500));
+  background: linear-gradient(135deg, var(--pink-700), var(--pink-600));
   box-shadow: 0 10px 24px rgb(199 44 115 / 22%);
 }
 
