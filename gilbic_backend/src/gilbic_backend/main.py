@@ -116,6 +116,7 @@ from .renewal_treatment_decision_api import create_renewal_treatment_decision_ro
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
 from .renewal_workflow_api import create_renewal_workflow_router
 from .renewal_workflow_query_api import create_renewal_workflow_query_router
+from .request_body_limit import RequestBodyLimitMiddleware
 from .request_observability import RequestObservabilityMiddleware
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .seven_by_seven_journal_posting_api import (
@@ -148,6 +149,7 @@ _PORTAL_ALLOWED_HEADERS = [
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=__version__)
+    app.add_middleware(RequestBodyLimitMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

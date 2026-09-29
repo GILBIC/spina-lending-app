@@ -30,6 +30,16 @@ for request versions, idempotency and permissions.
 - atomic and idempotent payment, ADV, and PASS collection writes
 - exact decimal balance and receipt responses
 
+## Request size limit
+
+Incoming HTTP bodies have a 16 MiB wire-size ceiling, including JSON metadata and
+base64 encoding. Oversized declared lengths are rejected before route handling;
+streamed bodies are counted as the application reads them, including requests
+without a length header. Rejections use HTTP 413. This leaves room for the
+supported single 10 MiB base64 support file. Upload routes retain their smaller
+file limits. Unread bodies are not buffered just to measure them, and this guard
+does not impose request-rate or concurrency limits.
+
 ## Local installation
 
 The collection contract is a shared package in this monorepo. Install it before
