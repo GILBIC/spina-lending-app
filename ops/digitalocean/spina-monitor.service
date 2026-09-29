@@ -1,0 +1,15 @@
+[Unit]
+Description=Spina host health and backup monitor
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+EnvironmentFile=/etc/spina/monitor.env
+ExecStart=/usr/bin/python3 /opt/spina-operations/check_operational_health.py
+TimeoutStartSec=90
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/spina-monitor

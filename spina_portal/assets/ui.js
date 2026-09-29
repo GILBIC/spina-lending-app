@@ -171,6 +171,8 @@ export function bindNavigation(navRoot, contentRoot) {
     for (const item of navRoot.querySelectorAll('.nav-button')) {
       item.classList.toggle('active', item === button);
     }
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }

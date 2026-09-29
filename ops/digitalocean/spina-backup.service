@@ -1,0 +1,19 @@
+[Unit]
+Description=Spina encrypted database and private-file backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+EnvironmentFile=/etc/spina/backup.env
+ExecStart=/bin/bash /opt/spina-operations/backup.sh
+ExecStopPost=/bin/bash /opt/spina-operations/backup.sh --resume
+TimeoutStartSec=30min
+TimeoutStopSec=90
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

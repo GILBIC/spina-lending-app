@@ -1,0 +1,11 @@
+[Unit]
+Description=Proposed weekly full-data Spina backup integrity check
+
+[Timer]
+OnCalendar=Sun *-*-* 20:00:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+Unit=spina-backup-check.service
+
+[Install]
+WantedBy=timers.target

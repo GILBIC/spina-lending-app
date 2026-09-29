@@ -219,6 +219,7 @@ input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 0.72rem 0.8rem;
   border: 1px solid var(--line);
@@ -485,6 +486,7 @@ textarea:focus {
 
 .role-content {
   min-width: 0;
+  overflow-wrap: anywhere;
   width: min(1480px, 100%);
   padding: clamp(1rem, 2.6vw, 2.4rem);
   outline: none;
@@ -718,6 +720,7 @@ tr:last-child td {
 
 .ledger-area-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.8rem;
@@ -980,6 +983,14 @@ details > :not(summary) {
   .role-content {
     padding-bottom: 6rem;
   }
+
+  .ledger-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .ledger-row .ledger-actions {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 680px) {
@@ -1001,7 +1012,13 @@ details > :not(summary) {
   }
 
   .topbar {
+    display: flex;
+    flex-wrap: wrap;
     padding: 0.65rem 0.75rem;
+  }
+
+  .topbar-context {
+    flex-basis: 100%;
   }
 
   .signed-in-name,
@@ -1018,14 +1035,6 @@ details > :not(summary) {
   .workspace-header {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .ledger-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .ledger-row .ledger-actions {
-    grid-column: 1 / -1;
   }
 
   .loan-meta {

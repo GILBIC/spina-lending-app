@@ -1,0 +1,11 @@
+[Unit]
+Description=Proposed daily Spina backup at 03:00 Manila
+
+[Timer]
+OnCalendar=*-*-* 19:00:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+Unit=spina-backup.service
+
+[Install]
+WantedBy=timers.target

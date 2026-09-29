@@ -105,7 +105,8 @@ class PostgresCrossRemittanceRepository:
                         """
                         select distinct
                             user_account.id as recipient_user_id,
-                            user_account.full_name as recipient_name
+                            user_account.full_name as recipient_name,
+                            lower(user_account.full_name) as recipient_sort_name
                         from core.users user_account
                         join core.user_roles user_role
                           on user_role.user_id = user_account.id

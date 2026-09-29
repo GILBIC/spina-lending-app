@@ -1,0 +1,15 @@
+[Unit]
+Description=Spina encrypted backup full-data integrity check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+EnvironmentFile=/etc/spina/backup.env
+ExecStart=/usr/bin/restic check --read-data
+TimeoutStartSec=30min
+Nice=10
+PrivateTmp=true
+NoNewPrivileges=true

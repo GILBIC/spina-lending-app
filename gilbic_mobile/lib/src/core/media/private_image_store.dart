@@ -16,7 +16,10 @@ class PrivateImageStore {
 
   static Future<Directory> _defaultDirectory() async => Directory(
     paths.join(
-      (await getApplicationSupportDirectory()).path,
+      // Android may expose its app directory through /data/user/0 while Dart
+      // resolves it to /data/data. Canonicalize this trusted platform parent;
+      // the recovery root itself must still pass the no-links check below.
+      await (await getApplicationSupportDirectory()).resolveSymbolicLinks(),
       'spina_recovered_images_v1',
     ),
   );

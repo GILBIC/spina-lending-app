@@ -41,8 +41,10 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
   }
   function message(text) { const region = root.querySelector('[data-accounting-message]'); if (region) region.textContent = text; }
   function frame(content) {
+    const restoreFocus = root.contains?.(globalThis.document?.activeElement);
     clearListeners();
-    root.innerHTML = `<nav aria-label="Accounting workflows">${Object.entries(tabs).map(([key, label]) => `<button type="button" class="button button-outline" data-accounting-tab="${key}"${busy || blocked ? ' disabled' : ''}>${label}</button>`).join('')}</nav><h3>${tabs[selected]}</h3>${button('data-accounting-refresh', 'Reload authoritative records')}<div data-accounting-message role="status"></div>${content}`;
+    root.innerHTML = `<nav aria-label="Accounting workflows">${Object.entries(tabs).map(([key, label]) => `<button type="button" class="button button-outline" data-accounting-tab="${key}"${busy || blocked ? ' disabled' : ''}>${label}</button>`).join('')}</nav><h3 data-accounting-heading tabindex="-1">${tabs[selected]}</h3>${button('data-accounting-refresh', 'Reload authoritative records')}<div data-accounting-message role="status"></div>${content}`;
+    if (restoreFocus) root.querySelector('[data-accounting-heading]')?.focus({ preventScroll: true });
     listen(root.querySelector('[data-accounting-refresh]'), 'click', () => load());
     for (const tab of root.querySelectorAll('[data-accounting-tab]')) listen(tab, 'click', () => { if (blocked) return; selected = tab.getAttribute('data-accounting-tab'); page = 0; void load(); });
   }
@@ -54,7 +56,8 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     requireThat(!blocked, 'Reload authoritative records before preparing another action.');
     requireThat(globalThis.navigator?.onLine !== false, 'Reconnect before preparing an accounting action.');
     const capturedEpoch = ++epoch;
-    frame(`<article class="notice-card"><h4>${h(title)}</h4><div class="detail-grid">${facts.map(([key, value]) => fact(key, value)).join('')}</div><p>${h(consequence)}</p>${button('data-accounting-confirm', `Confirm: ${title}`)} ${button('data-accounting-cancel', 'Cancel')}</article>`);
+    frame(`<article class="notice-card"><h4 data-accounting-review-heading tabindex="-1">${h(title)}</h4><div class="detail-grid">${facts.map(([key, value]) => fact(key, value)).join('')}</div><p>${h(consequence)}</p>${button('data-accounting-confirm', `Confirm: ${title}`)} ${button('data-accounting-cancel', 'Cancel')}</article>`);
+    root.querySelector('[data-accounting-review-heading]')?.focus({ preventScroll: true });
     listen(root.querySelector('[data-accounting-cancel]'), 'click', () => render());
     listen(root.querySelector('[data-accounting-confirm]'), 'click', async () => {
       if (!active(capturedEpoch) || blocked || busy) return;
