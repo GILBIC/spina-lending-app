@@ -74,7 +74,7 @@ run tar --force-local -cpf "$WORK/configuration.tar" -C "$SPINA_BACKUP_CONFIG_RO
 if [[ -n "${SPINA_BACKUP_RELEASE_ROOT:-}" ]]; then
   run tar --force-local -rpf "$WORK/configuration.tar" -C "$SPINA_BACKUP_RELEASE_ROOT" runtime.env git-sha
 fi
-for name in SPINA_BACKUP_CADDY_FILE SPINA_BACKUP_UNIT_FILE; do
+for name in SPINA_BACKUP_CADDY_FILE SPINA_BACKUP_UNIT_FILE PGSSLROOTCERT; do
   if [[ -n "${!name:-}" ]]; then
     run tar --force-local -rpf "$WORK/configuration.tar" -C "$(dirname "${!name}")" "$(basename "${!name}")"
   fi

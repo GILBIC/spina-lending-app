@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -19,9 +20,12 @@ def run_backup(tmp_path: Path, failure: str = ""):
     assert SCRIPT.exists(), "Operational backup lifecycle is missing"
     fixture = r"""
 set -eu
-mkdir -p state private config repo
+mkdir -p state private config repo tls
 printf 'SYNTHETIC PRIVATE EVIDENCE' > private/proof.pdf
 printf 'SYNTHETIC PRIVATE CONFIG' > config/operator.env
+printf 'SYNTHETIC PUBLIC CA CERTIFICATE' > tls/root-ca.pem
+printf 'UNRELATED FILE' > tls/not-selected.txt
+export PGSSLROOTCERT="$PWD/tls/root-ca.pem"
 export SPINA_BACKUP_STATE="$PWD/state"
 export SPINA_BACKUP_PRIVATE_ROOT="$PWD/private"
 export SPINA_BACKUP_CONFIG_ROOT="$PWD/config"
@@ -94,6 +98,16 @@ def test_dump_private_files_and_configuration_share_verified_snapshot(tmp_path):
         "configuration.tar",
         "SHA256SUMS",
     }
+
+
+def test_configuration_archive_includes_only_selected_external_ca(tmp_path):
+    result, _ = run_backup(tmp_path)
+    assert result.returncode == 0, result.stderr
+    with tarfile.open(tmp_path / "repo/configuration.tar") as archive:
+        certificate = archive.extractfile("root-ca.pem")
+        assert certificate is not None
+        assert certificate.read() == (tmp_path / "tls/root-ca.pem").read_bytes()
+        assert "not-selected.txt" not in archive.getnames()
 
 
 @pytest.mark.parametrize("failure", ["dump", "restic", "check"])

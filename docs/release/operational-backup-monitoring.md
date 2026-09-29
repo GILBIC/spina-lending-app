@@ -160,6 +160,7 @@ operator environment. Run `restic check --read-data`, then `restic restore` with
 the exact reviewed snapshot ID, a fresh private `--target` directory and `--verify`.
 Restic restores the four files `database.dump`, `private-evidence.tar`,
 `configuration.tar` and `SHA256SUMS`. Verify every SHA256 before proceeding.
+The configuration archive also includes the configured `PGSSLROOTCERT` public CA file by basename; restore it at the configured certificate path before using the captured `verify-full` database connection.
 
 Run `pg_restore --list` first. Create an isolated empty database, recreate only
 the reviewed roles/extensions/prerequisites, and use the existing actual recovery
