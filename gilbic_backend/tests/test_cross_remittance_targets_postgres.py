@@ -7,11 +7,12 @@ from uuid import uuid4
 
 import psycopg
 import pytest
-from gilbic_backend import cross_remittance_repository
 from test_contract_schedule_registration_postgres import (
     _create_fixture,
     _create_payment,
 )
+
+from gilbic_backend import cross_remittance_repository
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="Disposable database required")

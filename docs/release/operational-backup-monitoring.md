@@ -45,8 +45,8 @@ actual notification still depends on an activated recipient/channel.
 
 Use `pc-backup.example.json` as the schema. Runtime, binaries, pinned key/known
 hosts, configuration, DPAPI passwords and state belong under
-`C:/Users/pc/AppData/Local/SpinaOperations`, restricted to the current `pc` account,
-SYSTEM and Administrators. Store two independently generated passwords with
+`C:/Users/pc/SpinaBackups/operations`, restricted to the current `pc` account,
+and SYSTEM. Store two independently generated passwords with
 Windows `ConvertFrom-SecureString` under that account: `PasswordDpapiFile` for
 the PC repository and `SourcePasswordDpapiFile` for server staging. The script
 uses the dedicated `restic-password.ps1` provider through restic's private
@@ -54,7 +54,10 @@ password-command pipe; no plaintext password file is created. Never invoke that
 provider directly in a terminal or diagnostic capture: its stdout is a password.
 The server's source password is `/root/spina-backup-source-password`, mode `0600`,
 outside every captured path. DPAPI protection is tied to this Windows identity;
-an independently usable recovery-key copy is still required.
+an independently usable recovery-key copy is still required. Keep this runtime
+outside AppData: packaged Windows apps can redirect AppData writes into their
+private package cache, making the apparent path invisible to Task Scheduler.
+Verify the actual scheduled process can read its files under the intended user.
 
 Before the first run, explicitly initialize both dedicated repositories. Create
 `repository/spina-pc-backup.json` with `kind: "spina-pc-restic-v1"` and a fresh
@@ -67,7 +70,7 @@ the PC task invokes it, so a duplicate server backup timer is unnecessary.
 After an actual end-to-end run and isolated restore, register a Windows Task
 Scheduler task at 03:00 Manila for the current `pc` user, interactive logon,
 `StartWhenAvailable`, and no concurrent instances. Run PowerShell with
-`-NoProfile -NonInteractive -File <private-runtime>/pull-backup.ps1 -ConfigPath
+`-NoProfile -NonInteractive -WindowStyle Hidden -File <private-runtime>/pull-backup.ps1 -ConfigPath
 <private-runtime>/pc-backup.json`. Confirm the machine timezone used by the
 trigger. Retain the task's next run, last result and PC success marker. A locked
 screen is fine while that account is logged in; a powered-off, disconnected or
