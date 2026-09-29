@@ -25,9 +25,11 @@ class RequestBodyLimitMiddleware:
             if key.lower() == b"content-length"
         ]
         if len(lengths) > 1 or (lengths and not lengths[0].isdigit()):
-            await JSONResponse({"detail": "Invalid Content-Length."}, status_code=400)(
-                scope, receive, send
-            )
+            await JSONResponse(
+                {"detail": "Invalid Content-Length."},
+                status_code=400,
+                headers={"Cache-Control": "no-store"},
+            )(scope, receive, send)
             return
         if lengths:
             length = lengths[0].lstrip(b"0") or b"0"
@@ -36,9 +38,11 @@ class RequestBodyLimitMiddleware:
             if len(length) > len(ceiling) or (
                 len(length) == len(ceiling) and length > ceiling
             ):
-                await JSONResponse({"detail": TOO_LARGE}, status_code=413)(
-                    scope, receive, send
-                )
+                await JSONResponse(
+                    {"detail": TOO_LARGE},
+                    status_code=413,
+                    headers={"Cache-Control": "no-store"},
+                )(scope, receive, send)
                 return
             # Keep existing route-specific integer parsing bounded as well.
             if length != lengths[0]:
@@ -57,7 +61,11 @@ class RequestBodyLimitMiddleware:
                 if received > MAX_REQUEST_BYTES:
                     # FastAPI preserves HTTPException raised while reading JSON;
                     # a generic exception would instead become a misleading 400.
-                    raise HTTPException(status_code=413, detail=TOO_LARGE)
+                    raise HTTPException(
+                        status_code=413,
+                        detail=TOO_LARGE,
+                        headers={"Cache-Control": "no-store"},
+                    )
             return message
 
         await self.app(scope, limited_receive, send)
