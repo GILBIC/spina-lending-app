@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import smtplib
+import ssl
 from collections.abc import Callable
 from dataclasses import dataclass
 from email.message import EmailMessage
@@ -63,8 +64,10 @@ class SmtpCredentialMailer:
                     f"Username: {username}",
                     f"Password: {password}",
                     "",
-                    "Keep these credentials private. This password remains valid until "
-                    "SPINA changes it for your account.",
+                    (
+                        "Keep these credentials private. This password remains valid until "
+                        "SPINA changes it for your account."
+                    ),
                     "If you cannot sign in, contact SPINA Lending Company for assistance.",
                 )
             )
@@ -76,7 +79,7 @@ class SmtpCredentialMailer:
                 self._settings.credential_smtp_port,
                 self._settings.credential_smtp_timeout_seconds,
             ) as smtp:
-                smtp.starttls()
+                smtp.starttls(context=ssl.create_default_context())
                 smtp.login(
                     self._settings.credential_smtp_username.strip(),
                     self._settings.credential_smtp_password,

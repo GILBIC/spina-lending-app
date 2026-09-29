@@ -1,0 +1,10 @@
+[Unit]
+Description=Spina health checks every two minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2min
+Unit=spina-monitor.service
+
+[Install]
+WantedBy=timers.target

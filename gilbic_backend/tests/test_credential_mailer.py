@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ssl
 from email.message import EmailMessage
 
 from gilbic_backend.config import Settings
@@ -11,6 +12,7 @@ class FakeSmtp:
         self.port = port
         self.timeout = timeout
         self.started_tls = False
+        self.tls_context: ssl.SSLContext | None = None
         self.login_args: tuple[str, str] | None = None
         self.message: EmailMessage | None = None
 
@@ -20,8 +22,9 @@ class FakeSmtp:
     def __exit__(self, exc_type, exc, tb) -> None:
         return None
 
-    def starttls(self) -> None:
+    def starttls(self, *, context: ssl.SSLContext | None = None) -> None:
         self.started_tls = True
+        self.tls_context = context
 
     def login(self, username: str, password: str) -> None:
         self.login_args = (username, password)
@@ -95,6 +98,9 @@ def test_mailer_sends_branded_username_and_password_without_financial_data() -> 
     assert smtp.host == "smtp.gmail.com"
     assert smtp.port == 587
     assert smtp.started_tls is True
+    assert smtp.tls_context is not None
+    assert smtp.tls_context.verify_mode == ssl.CERT_REQUIRED
+    assert smtp.tls_context.check_hostname is True
     assert smtp.login_args == (
         "spinalendingcompany@gmail.com",
         "gmail-app-password",
@@ -133,3 +139,29 @@ def test_mailer_failure_does_not_echo_password_or_smtp_secret() -> None:
     assert result.sent is False
     assert "Generated@Pass9" not in result.detail
     assert "gmail-app-password" not in result.detail
+
+
+def test_mailer_does_not_authenticate_or_send_after_certificate_failure() -> None:
+    from gilbic_backend.credential_mailer import SmtpCredentialMailer
+
+    class UntrustedSmtp(FakeSmtp):
+        def starttls(self, *, context: ssl.SSLContext | None = None) -> None:
+            super().starttls(context=context)
+            raise ssl.SSLCertVerificationError("untrusted certificate")
+
+    smtp = UntrustedSmtp("", 0, 0)
+    mailer = SmtpCredentialMailer(
+        settings=_settings(), smtp_factory=lambda host, port, timeout: smtp
+    )
+    result = mailer.send_client_credentials(
+        email="client@example.com",
+        full_name="Test Client",
+        username="test.client",
+        password="Generated@Pass9",
+    )
+
+    assert result.sent is False
+    assert smtp.login_args is None
+    assert smtp.message is None
+    assert "untrusted certificate" not in result.detail
+    assert "Generated@Pass9" not in result.detail

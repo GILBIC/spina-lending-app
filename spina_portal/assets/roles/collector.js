@@ -44,7 +44,7 @@ function withAttention(route) {
         attention_required: entry.attention_required === true || attentionRequired,
         attention_reason:
           entry.attention_reason ||
-          (attentionRequired ? `Short ${formatMoney(remainingToday)}` : ''),
+          (attentionRequired ? `Short ${formatMoney(entry.contract_today_unpaid_amount)}` : ''),
       };
     }),
   };
@@ -162,12 +162,15 @@ function bindRouteActions(context, entryMap) {
       form.elements.amount.required = !isPass;
       form.elements.reasonCode.required = isPass;
       form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (isPass ? form.elements.reasonCode : form.elements.amount)?.focus({ preventScroll: true });
     });
   }
   for (const form of context.root.querySelectorAll('.collector-entry-form')) {
     form.querySelector('.cancel-entry')?.addEventListener('click', () => {
+      const action = form.elements.entryType.value === 'pass' ? 'pass' : 'payment';
       form.reset();
       form.hidden = true;
+      form.closest('[data-entry-row]')?.querySelector(`[data-entry-action="${action}"]`)?.focus({ preventScroll: true });
     });
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
