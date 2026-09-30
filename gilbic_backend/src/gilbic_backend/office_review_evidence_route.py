@@ -6,6 +6,8 @@ from fastapi.routing import APIRoute
 
 
 class PrivateOfficeRoute(APIRoute):
+    pragma_no_cache = False
+
     def get_route_handler(self):
         handler = super().get_route_handler()
 
@@ -28,8 +30,12 @@ class PrivateOfficeRoute(APIRoute):
                 )
             except HTTPException as error:
                 error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
+                if self.pragma_no_cache:
+                    error.headers["Pragma"] = "no-cache"
                 raise
             response.headers["Cache-Control"] = "no-store"
+            if self.pragma_no_cache:
+                response.headers["Pragma"] = "no-cache"
             return response
 
         return protected

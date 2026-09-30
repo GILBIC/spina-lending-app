@@ -4,10 +4,12 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-
 from gilbic_backend.account_repository import AccountConflict, AccountContext
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
-from gilbic_backend.auth_client import AuthSession
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
+from gilbic_backend.auth_client import AuthSession, SupabaseAuthError
 from gilbic_backend.client_account_api import (
     client_account_repository_dependency,
     client_credential_mailer_dependency,
@@ -20,7 +22,6 @@ from gilbic_backend.management_api import (
     management_auth_client_dependency,
 )
 from gilbic_backend.management_repository import AccountAdminRecord
-
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 ACTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -374,3 +375,82 @@ def test_email_failure_does_not_roll_back_valid_client_account_or_hide_one_time_
     assert management.created_client is not None
     assert admin.deleted_user is None
     assert mailer.calls
+
+
+def test_client_creation_credential_response_prevents_storage() -> None:
+    client, _, _, _, _, _ = _client_with_fakes()
+    response = client.post(
+        "/api/v1/management/client-accounts",
+        headers=_management_headers(),
+        json={"client_id": str(CLIENT_ID), "email": "client@example.com"},
+    )
+    assert response.status_code == 201
+    assert response.json()["data"]["credentials"]["password"]
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_client_creation_validation_omits_rejected_input() -> None:
+    client, _, _, _, _, _ = _client_with_fakes()
+    secret = "rejected-secret-" + "x" * 300
+    response = client.post(
+        "/api/v1/management/client-accounts",
+        headers=_management_headers(),
+        json={"client_id": str(CLIENT_ID), "email": secret},
+    )
+    assert response.status_code == 422
+    assert response.headers["cache-control"] == "no-store"
+    assert secret not in response.text
+
+
+def test_client_creation_handled_denial_prevents_storage() -> None:
+    client, _, accounts, _, _, _ = _client_with_fakes()
+    accounts.context = _actor_context(role="employee")
+    response = client.post(
+        "/api/v1/management/client-accounts",
+        headers=_management_headers(),
+        json={"client_id": str(CLIENT_ID), "email": "client@example.com"},
+    )
+    assert response.status_code == 403
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_password_reset_credential_response_prevents_storage() -> None:
+    client, _, _, admin, management, _ = _client_with_fakes()
+    target = AccountAdminRecord(
+        id=TARGET_USER_ID,
+        auth_user_id=TARGET_AUTH_ID,
+        username="spina.c.001",
+        email="client@example.com",
+        full_name="Maria Santos",
+        status="active",
+        roles=("client",),
+        device_count=0,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    management.get_account = lambda *, target_user_id: target
+    management.record_password_reset_requested = lambda **kwargs: None
+    management.record_password_reset = lambda **kwargs: None
+    admin.update_user_password = lambda **kwargs: None
+    response = client.post(
+        f"/api/v1/management/accounts/{TARGET_USER_ID}/password/reset",
+        headers=_management_headers(),
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["credentials"]["password"]
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_client_creation_provider_error_prevents_storage() -> None:
+    client, _, _, admin, _, _ = _client_with_fakes()
+    def unavailable(**kwargs):
+        raise SupabaseAuthError("provider-private-detail", status_code=503)
+    admin.create_user = unavailable
+    response = client.post(
+        "/api/v1/management/client-accounts",
+        headers=_management_headers(),
+        json={"client_id": str(CLIENT_ID), "email": "client@example.com"},
+    )
+    assert response.status_code == 503
+    assert response.headers["cache-control"] == "no-store"
+    assert "provider-private-detail" not in response.text

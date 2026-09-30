@@ -153,6 +153,26 @@ not place the encryption key under `/etc/spina` or the private evidence root.
    sanitized evidence; review the first scheduled run. Never copy example blank
    credentials directly into an enabled service.
 
+## Updating an installed monitor
+
+The application release archive does not install operations scripts. When a
+release changes `tools/check_operational_health.py`, update its separately
+installed copy in `/opt/spina-operations` as an explicit release step. An
+application revision check alone does not verify the running monitor version.
+
+Read the reviewed file from the exact green source commit and compute its SHA256
+with LF line endings. Check the existing installed hash against the expected
+previous revision before changing it. Preserve that exact previous file privately
+for rollback, compile and check the replacement's journal parser without external
+calls, then atomically replace only the script as root with mode `0644`. Preserve
+the environment, state, service and timer. A running invocation may finish using
+the old code; the next timer invocation loads the replacement.
+
+Record the source revision, installed hash, rollback copy and next successful
+monitor run with sanitized health results. If verification fails, restore the
+verified previous script atomically and investigate. This update does not require
+a new backup, test email, API restart or recreation of existing schedules.
+
 ## Isolated restore and integrity check
 
 Use the separately held key and approved repository credentials from an isolated

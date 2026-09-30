@@ -22,6 +22,7 @@ from .mobile_version_policy import (
     UnsupportedMobileAppVersion,
     enforce_mobile_app_version,
 )
+from .office_review_evidence_route import PrivateOfficeRoute
 from .request_auth import (
     active_device_context,
     authenticated_device_context,
@@ -134,8 +135,12 @@ def _enforce_mobile_auth_version(
         ) from exc
 
 
+class PrivateAuthRoute(PrivateOfficeRoute):
+    pragma_no_cache = True
+
+
 def create_auth_router() -> APIRouter:
-    router = APIRouter(tags=["authentication"])
+    router = APIRouter(tags=["authentication"], route_class=PrivateAuthRoute)
 
     @router.post("/api/v1/auth/register", status_code=status.HTTP_410_GONE)
     @router.post(

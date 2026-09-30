@@ -5,7 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .account_repository import AccountConflict, AccountNotFound, PostgresAccountRepository
+from .account_repository import (
+    AccountConflict,
+    AccountNotFound,
+    PostgresAccountRepository,
+)
 from .auth_admin_client import SupabaseAuthAdminClient
 from .auth_client import SupabaseAuthClient, SupabaseAuthError
 from .client_account_repository import PostgresClientAccountRepository
@@ -20,6 +24,7 @@ from .management_api import (
     management_auth_admin_dependency,
     management_auth_client_dependency,
 )
+from .office_review_evidence_route import PrivateOfficeRoute
 
 
 class StrictClientAccountRequest(BaseModel):
@@ -75,7 +80,7 @@ def _auth_admin_exception(exc: SupabaseAuthError, *, action: str) -> HTTPExcepti
 
 
 def create_client_account_router() -> APIRouter:
-    router = APIRouter(prefix="/api/v1/management", tags=["management"])
+    router = APIRouter(prefix="/api/v1/management", tags=["management"], route_class=PrivateOfficeRoute)
 
     @router.get("/client-accounts")
     def list_client_accounts(

@@ -39,14 +39,21 @@ class UserSession {
   static final Map<String, _SessionTokenOverride> _tokenOverrides =
       <String, _SessionTokenOverride>{};
 
+  _SessionTokenOverride? get _tokenOverride {
+    final override = _tokenOverrides[userId];
+    return override?.supersededAccessTokens.contains(_accessToken) == true
+        ? override
+        : null;
+  }
+
   String get accessToken =>
-      _tokenOverrides[userId]?.accessToken ?? _accessToken;
+      _tokenOverride?.accessToken ?? _accessToken;
 
   String? get refreshToken =>
-      _tokenOverrides[userId]?.refreshToken ?? _refreshToken;
+      _tokenOverride?.refreshToken ?? _refreshToken;
 
   DateTime? get expiresAt =>
-      _tokenOverrides[userId]?.expiresAt ?? _expiresAt;
+      _tokenOverride?.expiresAt ?? _expiresAt;
 
   bool get isExpired {
     final expiry = expiresAt;
@@ -78,9 +85,15 @@ class UserSession {
       throw ArgumentError('The refreshed session belongs to another user.');
     }
     _tokenOverrides[userId] = _SessionTokenOverride(
-      accessToken: refreshed.accessToken,
-      refreshToken: refreshed.refreshToken,
-      expiresAt: refreshed.expiresAt,
+      // Fresh server responses must keep their own credentials even when old
+      // mounted screens have an override from an earlier refresh.
+      supersededAccessTokens: {
+        ...?_tokenOverrides[userId]?.supersededAccessTokens,
+        _accessToken,
+      },
+      accessToken: refreshed._accessToken,
+      refreshToken: refreshed._refreshToken,
+      expiresAt: refreshed._expiresAt,
     );
   }
 
@@ -146,11 +159,13 @@ class UserSession {
 
 class _SessionTokenOverride {
   const _SessionTokenOverride({
+    required this.supersededAccessTokens,
     required this.accessToken,
     required this.refreshToken,
     required this.expiresAt,
   });
 
+  final Set<String> supersededAccessTokens;
   final String accessToken;
   final String? refreshToken;
   final DateTime? expiresAt;

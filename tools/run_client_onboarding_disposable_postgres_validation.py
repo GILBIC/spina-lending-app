@@ -96,10 +96,12 @@ CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0130_guard_period_close_unfiltered_balances.sql",
     ROOT / "gilbic_backend" / "sql" / "0131_allow_reviewed_journal_reversal_post.sql",
     ROOT / "gilbic_backend" / "sql" / "0132_fix_private_function_search_paths.sql",
+    ROOT / "gilbic_backend" / "sql" / "0133_allow_pass_replacement_after_void.sql",
 )
 FULL_FLOW_TESTS = tuple(
     ROOT / "gilbic_backend" / "tests" / name
     for name in (
+        "test_workflow_transition_postgres.py",
         "test_client_onboarding_case_postgres.py",
         "test_loan_application_extended_postgres.py",
         "test_office_review_evidence_postgres.py",
@@ -140,7 +142,7 @@ def _test_environment(database_url: str) -> dict[str, str]:
         env.pop(key, None)
     env["GILBIC_DATABASE_URL"] = database_url
     env["GILBIC_TEST_DATABASE_URL"] = database_url
-    roots = [str(ROOT), str(BACKEND_SRC)]
+    roots = [str(ROOT), str(BACKEND_SRC), str(ROOT / "spina_backend_mobile" / "src")]
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = os.pathsep.join(roots + ([existing] if existing else []))
     return env

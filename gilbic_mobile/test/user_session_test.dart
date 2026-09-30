@@ -3,6 +3,33 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 
 void main() {
+  test(
+    'fresh refresh responses keep new credentials after prior validation and rotation',
+    () {
+      UserSession session(String token) => UserSession(
+        userId: 'repeated-refresh',
+        username: 'collector',
+        displayName: 'Collector',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        accessToken: token,
+        refreshToken: '$token-refresh',
+      );
+      final original = session('original');
+      addTearDown(original.clearRefreshOverride);
+      original.applyRefresh(original); // Initial /auth/me validation.
+      final first = session('first');
+      expect(first.toJson()['access_token'], 'first');
+      original.applyRefresh(first);
+      final second = session('second');
+      expect(second.toJson()['access_token'], 'second');
+      first.applyRefresh(second);
+      expect(original.accessToken, 'second');
+      expect(first.accessToken, 'second');
+      expect(second.accessToken, 'second');
+      expect(original.refreshToken, 'second-refresh');
+    },
+  );
   test('serializes and restores an authenticated session', () {
     final expiry = DateTime.utc(2030, 1, 2, 3, 4, 5);
     final original = UserSession(

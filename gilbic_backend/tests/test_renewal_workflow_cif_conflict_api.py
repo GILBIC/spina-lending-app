@@ -40,6 +40,8 @@ class WorkflowDatabase:
         self.state = {
             "row": {
                 "request_id": REQUEST_ID,
+                "status": "approved",
+                "client_decision": "accepted",
                 "client_id": CLIENT_ID,
                 "loan_id": LOAN_ID,
                 "handover_proof_status": "approved",

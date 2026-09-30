@@ -54,6 +54,10 @@ class SpinaAuthRepository
         _deviceIdentityProvider =
             deviceIdentityProvider ?? DeviceIdentityProvider();
 
+  // Bound response waits so the app can reach its existing retry and offline
+  // recovery paths. Late transport completions cannot complete this future again.
+  static const _requestDeadline = Duration(seconds: 15);
+
   final http.Client _client;
   final Uri _registerUri;
   final Uri _loginUri;
@@ -163,7 +167,7 @@ class SpinaAuthRepository
           'platform': deviceIdentity.platform,
           'app_version': deviceIdentity.appVersion,
         }),
-      );
+      ).timeout(_requestDeadline);
     } on Exception {
       throw const SpinaApiException(
         'Gilbic could not reach the SPINA server. Check the API address and connection.',
@@ -203,7 +207,7 @@ class SpinaAuthRepository
         body: jsonEncode(<String, Object?>{
           'refresh_token': refreshToken,
         }),
-      );
+      ).timeout(_requestDeadline);
     } on Exception {
       throw const SpinaApiException(
         'Gilbic could not renew the login session. Check the connection and try again.',
@@ -233,7 +237,7 @@ class SpinaAuthRepository
           'X-App-Platform': deviceIdentity.platform,
           'X-App-Version': deviceIdentity.appVersion,
         },
-      );
+      ).timeout(_requestDeadline);
     } on Exception {
       throw const SpinaApiException(
         'Gilbic could not verify the login session. Check the connection and try again.',

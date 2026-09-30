@@ -24,7 +24,7 @@ function Resolve-SafePortalUri {
     }
 
     $LocalHosts = @("localhost", "127.0.0.1", "::1")
-    if ($Uri.Scheme -ne "https" -and $LocalHosts -notcontains $Uri.Host) {
+    if ($Uri.Scheme -ne "https" -and ($Uri.Scheme -ne "http" -or $LocalHosts -notcontains $Uri.IdnHost)) {
         throw "Spina requires an HTTPS portal URL. HTTP is allowed only for localhost development."
     }
 

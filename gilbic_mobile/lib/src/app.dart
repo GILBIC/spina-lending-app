@@ -149,6 +149,11 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         } else {
           session = await _validateStoredSession(session);
         }
+        // Validation may fail temporarily after the stored token has expired.
+        // Only a still-valid session may enter the offline fallback shell.
+        if (session.isExpired) {
+          throw const SpinaApiException(_expiredSessionNotice, statusCode: 401);
+        }
       }
     } on SpinaApiException catch (error) {
       if (!_isCurrentGeneration(generation)) return;
@@ -432,9 +437,19 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           current,
           notice: _sessionNoticeForError(error),
         );
+      } else if (current.isExpired) {
+        await _invalidateLocalSession(current, notice: _expiredSessionNotice);
+      } else {
+        // The refresh timer may have fired while validation held the guard.
+        _scheduleSessionRefresh(current);
       }
     } on Exception {
-      // A temporary network failure must not destroy a still-valid local session.
+      if (!_isCurrentGeneration(generation)) return;
+      if (current.isExpired) {
+        await _invalidateLocalSession(current, notice: _expiredSessionNotice);
+      } else {
+        _scheduleSessionRefresh(current);
+      }
     } finally {
       if (_isCurrentGeneration(generation)) _refreshingSession = false;
     }

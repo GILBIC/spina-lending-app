@@ -534,6 +534,8 @@ def _authoritative_execution(cursor, *, row):
 
 
 def _try_activate(cursor, *, row, actor_user_id: UUID) -> tuple[bool, str]:
+    if row["status"] != "approved" or row["client_decision"] != "accepted":
+        return False, "The approved renewal must be accepted by the client first."
     if row["handover_proof_status"] != "approved":
         return False, "Management must approve the handover proof first."
     if row["client_cash_confirmed_at"] is None:
@@ -991,6 +993,23 @@ def create_renewal_workflow_router() -> APIRouter:
                             "message": (
                                 "Management must approve terms before client consent."
                             ),
+                        },
+                    )
+                # _renewal_row holds the same request lock as cash release. A
+                # retry preserves consent evidence; release freezes changes.
+                if row["client_decision"] == body.decision:
+                    return {"success": True, "data": {"request": _payload(cursor, row)}}
+                if (
+                    row["amount_locked_at"] is not None
+                    or row["cash_released_to_collector_at"] is not None
+                    or row["activation_status"]
+                    in ("released_pending_management", "active")
+                ):
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "code": "renewal_decision_locked",
+                            "message": "The client decision is locked once cash release begins.",
                         },
                     )
                 cursor.execute(
