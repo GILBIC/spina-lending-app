@@ -28,6 +28,10 @@ def error_counts(journal: str) -> tuple[int, int]:
     for line in journal.splitlines():
         try:
             message = json.loads(line)["MESSAGE"]
+            # journalctl JSON elides long fields as null; binary/repeated fields
+            # can be arrays. Only text can contain a structured request event.
+            if not isinstance(message, str):
+                continue
             event = json.loads(message[message.index("{") :])
             if (
                 isinstance(event, dict)
