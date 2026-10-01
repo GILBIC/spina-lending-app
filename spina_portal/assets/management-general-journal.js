@@ -179,7 +179,7 @@ function journalEntriesMarkup(entries) {
   }
   return `<div class="list-stack">${items
     .map(
-      (entry) => `<article class="data-card">
+      (entry) => `<article class="data-card journal-evidence-card" data-journal-entry-id="${escapeHtml(entry.entry_id || '')}">
         <div class="section-heading">
           <div>
             <h3>${escapeHtml(entry.entry_number || 'Unnumbered journal')}</h3>
@@ -201,6 +201,7 @@ function journalEntriesMarkup(entries) {
           <thead><tr><th>Account</th><th>Name</th><th>Description</th><th>Debit</th><th>Credit</th></tr></thead>
           <tbody>${journalLineRows(entry.lines)}</tbody>
         </table></div>
+        <div class="inline-actions journal-evidence-actions" data-journal-actions-for="${escapeHtml(entry.entry_id || '')}"></div>
       </article>`,
     )
     .join('')}</div>`;
