@@ -59,15 +59,67 @@ import {
   titleCase,
 } from '../ui.js';
 
-function metricValue(metric) {
-  if (metric.amount != null) return formatMoney(metric.amount);
-  if (metric.count != null) return escapeHtml(metric.count);
-  return '—';
+const MANAGEMENT_METRIC_PRESENTATION = Object.freeze({
+  'portfolio.active_clients': { label: 'Active clients', group: 'portfolio' },
+  'portfolio.active_loans': { label: 'Active loans', group: 'portfolio' },
+  'portfolio.overdue_loans': { label: 'Overdue loans', group: 'attention' },
+  'portfolio.outstanding_balance': { label: 'Outstanding balance', group: 'portfolio' },
+  'collections.latest_day': { label: 'Latest collections', group: 'collections', countNoun: 'payment' },
+  'collections.unremitted': { label: 'Unremitted collections', group: 'collections', countNoun: 'collection' },
+  'queues.remittances_assigned': { label: 'Assigned remittances', group: 'collections', countNoun: 'remittance' },
+  'queues.renewals_protected': { label: 'Renewal requests', group: 'attention' },
+  'queues.staff_registrations': { label: 'Staff registrations', group: 'attention' },
+  'queues.client_registrations': { label: 'Client registrations', group: 'attention' },
+  'queues.collector_mobile_devices': { label: 'Collector devices', group: 'attention' },
+  'queues.borrower_support': { label: 'Client support', group: 'attention' },
+  'activity.unread': { label: 'Unread updates', group: 'attention' },
+});
+
+const MANAGEMENT_METRIC_GROUPS = Object.freeze([
+  ['portfolio', 'Portfolio'],
+  ['collections', 'Collections'],
+  ['attention', 'Needs attention'],
+]);
+
+function pluralizedCount(metric, noun) {
+  if (metric.count == null || !noun) return '';
+  const count = Number(metric.count);
+  return `${escapeHtml(metric.count)} ${escapeHtml(noun)}${count === 1 ? '' : 's'}`;
+}
+
+function managementMetricCard(metric) {
+  const presentation = MANAGEMENT_METRIC_PRESENTATION[metric.key];
+  if (!presentation) return '';
+  const value = metric.amount != null
+    ? formatMoney(metric.amount)
+    : metric.count != null
+      ? escapeHtml(metric.count)
+      : '—';
+  const details = [];
+  const countDetail = metric.amount != null ? pluralizedCount(metric, presentation.countNoun) : '';
+  if (countDetail) details.push(countDetail);
+  if (metric.as_of_date) details.push(formatDate(metric.as_of_date));
+  return `<article class="metric-card management-metric-card">
+    <span class="metric-label">${escapeHtml(presentation.label)}</span>
+    <strong class="metric-value">${value}</strong>
+    ${details.length ? `<span class="meta">${details.join(' · ')}</span>` : ''}
+  </article>`;
 }
 
 function overviewMetrics(metrics) {
-  if (!metrics.length) return emptyState('No Management metric is currently available.');
-  return `<div class="metric-grid">${metrics.map((metric) => metricCard(titleCase(metric.key), metricValue(metric), metric.as_of_date ? `As of ${formatDate(metric.as_of_date)}` : '')).join('')}</div>`;
+  const known = asArray(metrics).filter((metric) => MANAGEMENT_METRIC_PRESENTATION[metric?.key]);
+  if (!known.length) return emptyState('No Management metric is currently available.');
+  return MANAGEMENT_METRIC_GROUPS.map(([group, title]) => {
+    const cards = known
+      .filter((metric) => MANAGEMENT_METRIC_PRESENTATION[metric.key].group === group)
+      .map(managementMetricCard)
+      .join('');
+    if (!cards) return '';
+    return `<section class="management-overview-group" data-management-metric-group="${group}">
+      <div class="section-heading"><div><h2>${escapeHtml(title)}</h2></div></div>
+      <div class="metric-grid">${cards}</div>
+    </section>`;
+  }).join('');
 }
 
 function loanTable(data) {
@@ -458,11 +510,11 @@ export async function mountManagementWorkspace(context) {
       : []),
   ];
 
-  root.innerHTML = `<section class="section-card" id="management-overview" data-workspace-section><header class="workspace-header"><div><p class="eyebrow">Management</p><h1>Today's work</h1><p>Choose a task to open its official records and decisions.</p></div>${model.generatedAt ? `<span class="meta">Updated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
+  root.innerHTML = `<section class="section-card management-today" id="management-overview" data-workspace-section><header class="workspace-header"><div><p class="eyebrow">Management</p><h1>Today</h1><p>Today's portfolio, collections, and work requiring attention.</p></div>${model.generatedAt ? `<span class="meta">Updated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${renewals.error || support.error ? '<div class="notice-card warning">Some work queues could not load. Open the task or refresh before deciding there is no pending work.</div>' : ''}
-  <div class="section-heading"><div><h2>Work queues</h2><p>Only tasks allowed for your account appear here.</p></div></div>
-  ${dailyLinks.length ? `<div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>` : emptyState('No review queue is assigned to this account.')}
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
+  <div class="section-heading management-work-queues-heading"><div><h2>Work queues</h2><p>Open the area you need to work on.</p></div></div>
+  ${dailyLinks.length ? `<div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>` : emptyState('No review queue is assigned to this account.')}
   </section>
   <section class="workspace-group" id="management-clients-loans" data-workspace-section>
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Clients & loans</h1><p>Review borrowers, applications, loans, renewals, and payment evidence.</p></div></header>
