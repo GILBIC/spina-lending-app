@@ -9,6 +9,7 @@ const SHELL_ASSETS = [
   '/assets/config.js',
   '/assets/session.js',
   '/assets/session-refresh.js',
+  '/assets/screen-sharing.js',
   '/assets/roles.js',
   '/assets/ui.js',
   '/assets/presenters.js',

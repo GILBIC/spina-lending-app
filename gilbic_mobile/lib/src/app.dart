@@ -1,3 +1,8 @@
+import 'package:gilbic_mobile/src/core/mirror/mirror_controller.dart';
+import 'package:gilbic_mobile/src/core/mirror/mirror_repository.dart';
+import 'package:gilbic_mobile/src/features/mirror/mirror_host.dart';
+import 'package:gilbic_mobile/src/features/mirror/mirror_viewer_page.dart';
+import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -33,6 +38,7 @@ class GilbicApp extends StatefulWidget {
     this.clientLoanRepository,
     this.employeeOperationsService,
     this.imageRecoveryController,
+    this.mirrorController,
     super.key,
   });
 
@@ -47,6 +53,7 @@ class GilbicApp extends StatefulWidget {
   final ClientLoanRepository? clientLoanRepository;
   final EmployeeOperationsService? employeeOperationsService;
   final ImageRecoveryController? imageRecoveryController;
+  final MirrorController? mirrorController;
 
   @override
   State<GilbicApp> createState() => _GilbicAppState();
@@ -69,6 +76,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   late final CollectionDeviceSequence _collectionDeviceSequence;
   late final EmployeeOperationsService _employeeOperations;
   late final ImageRecoveryController _imageRecovery;
+  late final MirrorController _mirror;
+  late final MirrorNavigationObserver _mirrorNavigation;
+  final _navigator = GlobalKey<NavigatorState>();
   CollectorRouteCache? _collectorRouteCache;
   UserSession? _session;
   Timer? _sessionRefreshTimer;
@@ -100,6 +110,23 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           deviceIdentityProvider: _deviceIdentityProvider,
         );
 
+    _mirror =
+        widget.mirrorController ??
+        MirrorController(
+          SpinaMirrorRepository(
+            session: () => _session,
+            deviceId: () async {
+              final identity = await _deviceIdentityProvider.load();
+              if (!_mirror.deviceChanged(identity.installationId)) {
+                throw const SpinaApiException(
+                  'Device changed. Request consent again.',
+                );
+              }
+              return identity.installationId;
+            },
+          ),
+        );
+    _mirrorNavigation = MirrorNavigationObserver(_mirror);
     final suppliedLoader = widget.collectorRouteLoader;
     if (suppliedLoader != null) {
       _collectorRouteLoader = suppliedLoader;
@@ -120,6 +147,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _sessionGeneration++;
+    _mirror.attach(null);
+    if (widget.mirrorController == null) _mirror.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _sessionRefreshTimer?.cancel();
     _employeeOperations.attach(null);
@@ -130,6 +159,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _mirror.foreground(state == AppLifecycleState.resumed);
     _employeeOperations.foreground(state == AppLifecycleState.resumed);
     if (state == AppLifecycleState.resumed) {
       unawaited(_revalidateSessionOnResume());
@@ -318,6 +348,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }) async {
     final generation = ++_sessionGeneration;
     _refreshingSession = false;
+    _mirror.attach(null);
     _employeeOperations.attach(null);
     _sessionRefreshTimer?.cancel();
     session?.clearRefreshOverride();
@@ -361,6 +392,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   void _scheduleSessionRefresh(UserSession? session) {
+    _mirror.attach(session);
     _employeeOperations.attach(session);
     _sessionRefreshTimer?.cancel();
     final refresher = _authRepository;
@@ -538,17 +570,27 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MaterialApp(
       key: ValueKey<String>(_authorizationScopeKey(_session)),
+      navigatorKey: _navigator,
+      navigatorObservers: [_mirrorNavigation],
       title: 'SPINA',
       debugShowCheckedModeBanner: false,
       theme: SpinaTheme.light,
-      builder: (context, child) => ImageRecoveryHost(
-        controller: _imageRecovery,
-        session: _session,
-        sessionRestored: !_loading,
-        deviceIdentityProvider: _deviceIdentityProvider,
-        child: EmployeeOperationsScope(
-          service: _employeeOperations,
-          child: child!,
+      builder: (context, child) => MirrorHost(
+        controller: _mirror,
+        onOpenViewer: () => _navigator.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => MirrorViewerPage(controller: _mirror),
+          ),
+        ),
+        child: ImageRecoveryHost(
+          controller: _imageRecovery,
+          session: _session,
+          sessionRestored: !_loading,
+          deviceIdentityProvider: _deviceIdentityProvider,
+          child: EmployeeOperationsScope(
+            service: _employeeOperations,
+            child: child!,
+          ),
         ),
       ),
       home: _loading
