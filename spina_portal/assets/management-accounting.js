@@ -6,7 +6,13 @@ const WORKBOOK = `${BASE}/opening-balance-workbook`;
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const DIGEST = /^[0-9a-f]{64}$/i;
 const mounts = new WeakMap();
-const tabs = { periods: 'Overview & periods', close: 'Period close', capital: 'Initial capital', workbook: 'Opening workbook', opening: 'Opening journal', measurement: 'Loan measurement', outcomes: 'Historical outcomes', tax: 'Tax & ECL' };
+const tabs = { periods: 'Overview', close: 'Period close', capital: 'Initial capital', workbook: 'Opening workbook', opening: 'Opening journal', measurement: 'Loan measurement', outcomes: 'Historical outcomes', tax: 'Tax & ECL' };
+const accountingGroups = [
+  ['overview', 'Overview', [['periods', 'Overview']]],
+  ['periods', 'Periods & close', [['close', 'Period close']]],
+  ['opening', 'Opening & cutover', [['capital', 'Initial capital'], ['workbook', 'Opening workbook'], ['opening', 'Opening journal'], ['measurement', 'Loan measurement']]],
+  ['ecl', 'ECL & tax', [['outcomes', 'Historical outcomes'], ['tax', 'Tax & ECL']]],
+];
 const fact = (name, value) => `<div class="detail-item"><span>${h(name)}</span><strong>${h(value ?? 'Not available')}</strong></div>`;
 const input = (name, label, { type = 'text', value = '', max = 500, required = true } = {}) => `<label>${h(label)}<input name="${name}" type="${type}" value="${h(value)}" maxlength="${max}"${required ? ' required' : ''} /></label>`;
 const select = (name, label, choices, selected = '') => `<label>${h(label)}<select name="${name}" required><option value="">Choose…</option>${choices.map(([value, text]) => `<option value="${h(value)}"${value === selected ? ' selected' : ''}>${h(text)}</option>`).join('')}</select></label>`;
@@ -43,7 +49,13 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
   function frame(content) {
     const restoreFocus = root.contains?.(globalThis.document?.activeElement);
     clearListeners();
-    root.innerHTML = `<nav aria-label="Accounting workflows">${Object.entries(tabs).map(([key, label]) => `<button type="button" class="button button-outline" data-accounting-tab="${key}"${busy || blocked ? ' disabled' : ''}>${label}</button>`).join('')}</nav><h3 data-accounting-heading tabindex="-1">${tabs[selected]}</h3>${button('data-accounting-refresh', 'Reload authoritative records')}<div data-accounting-message role="status"></div>${content}`;
+    const workflowNavigation = accountingGroups.map(([groupId, groupLabel, workflows]) => `<section class="accounting-nav-group" data-accounting-group="${groupId}">
+      <span class="accounting-nav-label">${h(groupLabel)}</span>
+      <div class="accounting-nav-actions">${workflows.map(([key, label]) => `<button type="button" class="button button-outline accounting-nav-button${selected===key?' active':''}" data-accounting-tab="${key}"${busy || blocked ? ' disabled' : ''}>${h(label)}</button>`).join('')}</div>
+    </section>`).join('');
+    root.innerHTML = `<nav class="accounting-navigation" aria-label="Accounting workflows">${workflowNavigation}</nav>
+      <div class="section-heading accounting-workflow-heading"><div><h3 data-accounting-heading tabindex="-1">${tabs[selected]}</h3></div>${button('data-accounting-refresh', 'Refresh')}</div>
+      <div data-accounting-message role="status"></div>${content}`;
     if (restoreFocus) root.querySelector('[data-accounting-heading]')?.focus({ preventScroll: true });
     listen(root.querySelector('[data-accounting-refresh]'), 'click', () => load());
     for (const tab of root.querySelectorAll('[data-accounting-tab]')) listen(tab, 'click', () => { if (blocked) return; selected = tab.getAttribute('data-accounting-tab'); page = 0; void load(); });
@@ -100,11 +112,22 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     requireThat(Array.isArray(data.fiscal_periods) && Array.isArray(data.accounts), 'The accounting overview is incomplete.');
     const manage = can('accounting.period.manage') && data.period_management_enabled === true;
     const summary = data.summary ?? {}, foundation = data.foundation ?? {};
-    frame(`<p>${h(data.notice)}</p><h4>Operational source summary</h4><div class="detail-grid">${fact('Active loans', summary.active_loan_count)}${fact('Active principal', formatMoney(summary.active_principal))}${fact('Operational outstanding', formatMoney(summary.operational_outstanding))}${fact('Unremitted cash', formatMoney(summary.unremitted_cash))}${fact('Received remittances', formatMoney(summary.received_remittance_total))}${fact('Posted journals', foundation.posted_journal_count)}${fact('Draft journals', foundation.draft_journal_count)}</div><h4>Fiscal periods</h4>${data.fiscal_periods.map((row, index) => `<article class="sub-card"><h4>${h(row.label)}</h4><p>${formatDate(row.start_date)} – ${formatDate(row.end_date)} · ${h(titleCase(row.status))}</p><p>Posted journals: ${h(row.posted_journal_count ?? '—')} · Draft journals: ${h(row.draft_journal_count ?? '—')}</p>${manage && ['open', 'review'].includes(row.status) ? button(`data-period-status="${index}"`, row.status === 'open' ? 'Move to review' : 'Return to open') : ''}</article>`).join('')}
-      ${manage ? form('data-period-create', input('label', 'Period label', { max: 80 }) + input('start_date', 'Start date', { type: 'date' }) + input('end_date', 'End date', { type: 'date' }), 'Review new fiscal period') : ''}
+    const cutoverStatus = String(data.cutover?.summary?.overall_status || '').trim();
+    const cutoverBlocked = cutoverStatus && !['ready','complete','completed','ok'].includes(cutoverStatus.toLowerCase());
+    const cutoverAlert = cutoverBlocked ? `<div class="notice-card warning accounting-cutover-alert" data-accounting-cutover-alert>
+      <strong>Accounting readiness needs attention</strong>
+      <p>Loan cutover readiness: ${h(titleCase(cutoverStatus))}</p>
+      <details><summary>Review blockers</summary>${asArray(data.cutover?.loans).map((row) => `<article class="sub-card"><h4>${h(row.loan_number)} · ${h(row.client_name)}</h4><p>${h(titleCase(row.readiness_status))}</p><p>${h(asArray(row.blockers).join('; '))}</p></article>`).join('')}</details>
+    </div>` : '';
+    frame(`<p class="meta accounting-overview-note">Review balances, fiscal periods, journals, and items that need attention.</p>
+      ${cutoverAlert}
+      <h4>Current financial position</h4>
+      <div class="detail-grid accounting-position-grid">${fact('Active loans', summary.active_loan_count)}${fact('Active principal', formatMoney(summary.active_principal))}${fact('Outstanding balance', formatMoney(summary.operational_outstanding))}${fact('Unremitted cash', formatMoney(summary.unremitted_cash))}${fact('Received remittances', formatMoney(summary.received_remittance_total))}${fact('Posted journals', foundation.posted_journal_count)}${fact('Draft journals', foundation.draft_journal_count)}</div>
+      <h4>Fiscal periods</h4>${data.fiscal_periods.map((row, index) => `<article class="sub-card"><h4>${h(row.label)}</h4><p>${formatDate(row.start_date)} – ${formatDate(row.end_date)} · ${h(titleCase(row.status))}</p><p>Posted journals: ${h(row.posted_journal_count ?? '—')} · Draft journals: ${h(row.draft_journal_count ?? '—')}</p>${manage && ['open', 'review'].includes(row.status) ? button(`data-period-status="${index}"`, row.status === 'open' ? 'Send period for review' : 'Return period to open') : ''}</article>`).join('')}
+      ${manage ? form('data-period-create', input('label', 'Period label', { max: 80 }) + input('start_date', 'Start date', { type: 'date' }) + input('end_date', 'End date', { type: 'date' }), 'Create fiscal period') : ''}
       <details><summary>Chart of accounts</summary>${data.accounts.map((row) => `<article class="sub-card"><h4>${h(row.code)} · ${h(row.name)}</h4><p>${h(titleCase(row.account_type))} · Normal balance ${h(row.normal_balance)} · ${row.is_posting === true ? 'Posting' : 'Summary'} · ${row.is_active === true ? 'Active' : 'Inactive'}</p></article>`).join('')}</details>
       <details><summary>Loan accounting policies</summary>${asArray(data.policies).map((row) => `<article class="sub-card"><h4>${h(row.name)}</h4><p>${h(row.operational_rule)}</p><p>${h(row.accounting_rule)}</p><p>${h(row.renewal_rule)}</p></article>`).join('')}</details>
-      <details><summary>Loan cutover readiness · ${h(titleCase(data.cutover?.summary?.overall_status))}</summary>${asArray(data.cutover?.loans).map((row) => `<article class="sub-card"><h4>${h(row.loan_number)} · ${h(row.client_name)}</h4><p>${h(titleCase(row.readiness_status))}</p><p>${h(asArray(row.blockers).join('; '))}</p></article>`).join('')}</details>`);
+      ${!cutoverBlocked ? `<details><summary>Loan cutover readiness · ${h(titleCase(cutoverStatus || 'not available'))}</summary>${asArray(data.cutover?.loans).map((row) => `<article class="sub-card"><h4>${h(row.loan_number)} · ${h(row.client_name)}</h4><p>${h(titleCase(row.readiness_status))}</p><p>${h(asArray(row.blockers).join('; '))}</p></article>`).join('')}</details>` : ''}`);
     bindForm('[data-period-create]', (element) => {
       permission('accounting.period.manage'); const body = { label: text(element, 'label', 3, 80), start_date: date(field(element, 'start_date')), end_date: date(field(element, 'end_date')) };
       requireThat(body.end_date >= body.start_date, 'End date must follow the start date.');
