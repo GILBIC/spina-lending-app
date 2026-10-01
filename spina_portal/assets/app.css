@@ -712,6 +712,87 @@ textarea:focus {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
 
+.client-loan-groups {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.client-loan-group {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.client-loan-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--pink-50);
+}
+
+.client-loan-group-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.client-loan-group-header p {
+  margin: 0.25rem 0 0;
+}
+
+.client-loan-items {
+  display: grid;
+}
+
+.client-loan-item {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.client-loan-item:last-child {
+  border-bottom: 0;
+}
+
+.client-loan-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.client-loan-detail-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.management-loan-summary {
+  margin-top: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .client-loan-group-header,
+  .client-loan-item-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .client-loan-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .client-loan-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .metric-card,
 .data-card,
 .section-card,
