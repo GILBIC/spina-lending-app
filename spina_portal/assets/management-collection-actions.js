@@ -13,7 +13,7 @@ const readinessLabel=loan=>loan.is_active?'Active':loan.can_activate?'Ready':'Bl
 const readinessTone=loan=>loan.is_active?'success':loan.can_activate?'warning':'danger';
 function plainBlocker(reason) {
   const text=String(reason||'').trim();
-  if(text==='Signed-contract schedule has not been registered.')return 'verified signed repayment schedule';
+  if(text==='Signed-contract schedule has not been registered.')return 'a verified signed repayment schedule';
   if(text==='Current schedule is not backed by verified signed-contract evidence.')return 'verified signed-contract evidence';
   if(text.startsWith('Contract schedule/payment allocation is not DPD-ready'))return 'schedule/payment allocation setup';
   if(text==='Loan type is not using direct remaining-balance collection mode.')return 'supported collection mode';
