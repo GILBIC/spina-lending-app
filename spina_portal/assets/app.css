@@ -1788,6 +1788,88 @@ details > :not(summary) {
 #workspace-choice-label { min-width: 140px; }
 #workspace-choice-label[hidden] { display: none; }
 
+
+.accounting-navigation {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.accounting-nav-group {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.accounting-nav-label {
+  color: var(--ink-600);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.accounting-nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.accounting-nav-button {
+  min-height: 40px;
+  padding: 0.45rem 0.65rem;
+}
+
+.accounting-nav-button.active {
+  color: var(--pink-900);
+  border-color: var(--pink-500);
+  background: var(--pink-100);
+}
+
+.accounting-workflow-heading {
+  align-items: flex-start;
+  margin-bottom: 0.9rem;
+}
+
+.accounting-overview-note {
+  margin-top: 0;
+}
+
+.accounting-cutover-alert {
+  margin-bottom: 1rem;
+}
+
+.accounting-cutover-alert details {
+  margin-top: 0.45rem;
+}
+
+.accounting-cutover-alert summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.accounting-position-grid {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+  .accounting-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .accounting-navigation {
+    grid-template-columns: 1fr;
+  }
+}
+
 .accounting-actions { flex-wrap: wrap; }
 .accounting-details > div { min-width: 0; }
 .accounting-details dt { color: var(--ink-600); font-size: 0.8rem; }
