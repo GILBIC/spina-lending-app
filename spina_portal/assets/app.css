@@ -2043,6 +2043,59 @@ details > :not(summary) {
   }
 }
 
+
+.past-due-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.past-due-filter-grid label {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  color: var(--ink-700);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.past-due-filter-grid input,
+.past-due-filter-grid select {
+  width: 100%;
+}
+
+.past-due-zero-state {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--ink-700);
+  background: var(--surface-soft);
+}
+
+.past-due-readonly-notice {
+  margin-bottom: 0;
+}
+
+.past-due-summary-grid {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1050px) {
+  .past-due-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .past-due-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .accounting-actions { flex-wrap: wrap; }
 .accounting-details > div { min-width: 0; }
 .accounting-details dt { color: var(--ink-600); font-size: 0.8rem; }
