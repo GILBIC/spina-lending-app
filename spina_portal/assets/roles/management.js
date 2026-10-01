@@ -336,22 +336,12 @@ export async function mountManagementWorkspace(context) {
     'area.retire',
   ].some((permission) => hasPermission(session, permission));
   setNavigation([
-    { id: 'management-overview', label: 'Today', group: 'Daily work' },
-    ...(canReviewCif ? [{ id: 'management-onboarding', label: 'Office intake', group: 'Daily work' }, { id: 'management-cif-review', label: 'CIF review', group: 'Daily work' }, { id: 'management-application-review', label: 'Application review', group: 'Daily work' }, { id: 'management-first-loan', label: 'First-loan work', group: 'Daily work' }] : []),
-    ...(canRenewals ? [{ id: 'management-renewals', label: 'Renewal decisions', group: 'Daily work' }] : []),
-    ...(canSupport ? [{ id: 'management-support', label: 'Client support', group: 'Daily work' }] : []),
-    ...(canReviewPaymentProof ? [{ id: 'management-payment-proofs', label: 'Payment evidence', group: 'Daily work' }] : []),
-    ...(canCollectionActions ? [{ id: 'management-collection-actions', label: 'Collection actions', group: 'Daily work' }] : []),
-    { id: 'management-loans', label: 'Clients & loans', group: 'Records' },
-    { id: 'management-loan-operations', label: 'Collection history', group: 'Records' },
-    ...(canDashboard ? [{ id: 'management-past-due-report', label: 'Past-due reasons', group: 'Records' }, { id: 'management-alerts', label: 'Alerts & audit', group: 'Records' }] : []),
-    ...(canViewFinancialStatements ? [{ id: 'management-accounting', label: 'Financial accounting', group: 'Records' }, { id: 'management-financial-statements', label: 'Financial statements', group: 'Records' }] : []),
-    ...(canViewGeneralJournal ? [{ id: 'management-general-journal', label: 'Journal & trial balance', group: 'Records' }] : []),
-    ...(canUseAreaManagement ? [{ id: 'management-area-management', label: 'Area Management', group: 'Administration' }] : []),
-    ...(canManageAccounts ? [{ id: 'management-client-accounts', label: 'Client accounts', group: 'Administration' }] : []),
-    ...(canViewStaff ? [{ id: 'management-staff', label: 'Staff & devices', group: 'Administration' }] : []),
-    { id: 'management-employee-operations', label: 'Employee work & pay', group: 'Administration' },
-    { id: 'management-account', label: 'My account', group: 'Administration' },
+    { id: 'management-overview', label: 'Today' },
+    { id: 'management-clients-loans', label: 'Clients & loans' },
+    { id: 'management-collections', label: 'Collections' },
+    { id: 'management-accounting-hub', label: 'Accounting' },
+    { id: 'management-operations', label: 'People & operations' },
+    { id: 'management-account', label: 'Account' },
   ]);
   root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
 
