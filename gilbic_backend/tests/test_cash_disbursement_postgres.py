@@ -1,5 +1,6 @@
 """Synthetic transactional cash preparation; guarded local DB fixture only."""
 
+import os
 from decimal import Decimal
 from uuid import uuid4
 
@@ -9,6 +10,11 @@ from gilbic_backend.employee_authorization import EmployeeAccessDenied
 from gilbic_backend.employee_operations import EmployeeConflict
 from test_cash_disbursement_contract import command
 from test_employee_operations_postgres import database  # noqa: F401
+
+URL = os.getenv("GILBIC_TEST_DATABASE_URL")
+pytestmark = pytest.mark.skipif(
+    not URL, reason="Guarded disposable PostgreSQL is not configured"
+)
 
 
 @pytest.fixture
