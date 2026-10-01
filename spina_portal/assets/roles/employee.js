@@ -19,6 +19,7 @@ import {
   metricCard,
   settledRequest,
   setButtonBusy,
+  clearButtonBusyFocus,
   showToast,
 } from '../ui.js';
 
@@ -46,12 +47,12 @@ function supportQueue(items) {
             <strong>${escapeHtml(request.client_name || request.client_code || 'Client')}</strong>
             <div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div>
           </div>
-          ${badge(request.status)}
+          <span data-support-status tabindex="-1">${badge(request.status)}</span>
         </div>
         <p>${escapeHtml(request.message || '')}</p>
         ${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}
-        ${request.management_response ? `<div class="notice-card"><strong>Current response:</strong> ${escapeHtml(request.management_response)}</div>` : ''}
-        <form class="entry-form employee-support-review" data-request-id="${escapeHtml(request.request_id)}">
+        <div data-support-response>${request.management_response ? `<div class="notice-card"><strong>Current response:</strong> ${escapeHtml(request.management_response)}</div>` : ''}</div>
+        <form class="entry-form employee-support-review" data-request-id="${escapeHtml(request.request_id)}" data-support-state="${escapeHtml(request.status)}">
           <label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label>
           <label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label>
           <button class="button button-primary" type="submit">Save response</button>
@@ -76,25 +77,47 @@ function accountSection(account) {
 }
 
 function bindActions(context) {
+  const signal = context.signal;
   for (const form of context.root.querySelectorAll('.employee-support-review')) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const button = form.querySelector('button[type="submit"]');
+      if (button.disabled || form.hidden || signal?.aborted) return;
+      const current = () => !signal?.aborted && form.isConnected;
       setButtonBusy(button, true, 'Saving…');
       const data = new FormData(form);
+      const response = String(data.get('response') || '').trim();
+      let completed = false;
       try {
-        await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, {
+        const result = await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, {
           method: 'POST',
           body: {
             action: data.get('action'),
-            response: String(data.get('response') || '').trim(),
+            response,
           },
         });
+        if (!current()) return;
+        const record = result?.request;
+        if (record?.request_id !== form.dataset.requestId || !['answered', 'resolved'].includes(record.status) || typeof record.management_response !== 'string') throw new Error('The saved response could not be confirmed. Refresh the support queue before trying again.');
+        const card = form.parentElement;
+        card.querySelector('[data-support-status]').innerHTML = badge(record.status);
+        card.querySelector('[data-support-response]').innerHTML = `<div class="notice-card"><strong>Current response:</strong> ${escapeHtml(record.management_response)}</div>`;
+        const responseInput = form.querySelector('[name="response"]');
+        if (responseInput.value.trim() === response) responseInput.value = '';
+        form.setAttribute('data-support-state', record.status);
+        const openCount = [...context.root.querySelectorAll('[data-support-state]')].filter(item => item.getAttribute('data-support-state') === 'open').length;
+        for (const count of context.root.querySelectorAll('[data-support-count]')) count.textContent = String(openCount);
+        completed = true;
         showToast('Client support response saved.', 'success');
-        await mountEmployeeWorkspace(context);
       } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
+        if (current()) showToast(error.message, 'error');
+      } finally {
+        if (current()) setButtonBusy(button, false);
+        else clearButtonBusyFocus(button);
+      }
+      if (completed && current()) {
+        if (button.ownerDocument.activeElement === button && !form.closest('[hidden]')) form.parentElement.querySelector('[data-support-status]').focus({ preventScroll: true });
+        form.hidden = true;
       }
     });
   }
@@ -127,16 +150,14 @@ export async function mountEmployeeWorkspace(context) {
     'area.retire',
   ].some((permission) => hasPermission(session, permission));
   setNavigation([
-    { id: 'employee-overview', label: 'My workday' },
-    { id: 'employee-operations', label: 'Attendance, tasks & pay' },
-    ...(canReviewCif ? [{ id: 'employee-onboarding', label: 'Office intake' }] : []),
-    ...(canReviewCif ? [{ id: 'employee-cif-review', label: 'CIF review' }] : []),
-    ...(canReviewCif ? [{ id: 'employee-application-review', label: 'Application review' }, { id: 'employee-first-loan', label: 'First loan' }] : []),
-    ...(canUseAreaManagement ? [{ id: 'employee-area-management', label: 'Area Management' }] : []),
-    ...(canViewRemittance ? [{ id: 'employee-remittance', label: 'Remittance' }] : []),
-    ...(canManageSupport ? [{ id: 'employee-support', label: 'Client support' }] : []),
-    { id: 'employee-updates', label: 'Updates' },
-    { id: 'employee-account', label: 'Account' },
+    { id: 'employee-overview', label: 'Today', group: 'Daily work' },
+    { id: 'employee-operations', label: 'My tasks & attendance', group: 'Daily work' },
+    ...(canReviewCif ? [{ id: 'employee-onboarding', label: 'Office intake', group: 'Daily work' }, { id: 'employee-cif-review', label: 'CIF review', group: 'Daily work' }, { id: 'employee-application-review', label: 'Application review', group: 'Daily work' }, { id: 'employee-first-loan', label: 'First-loan work', group: 'Daily work' }] : []),
+    ...(canViewRemittance ? [{ id: 'employee-remittance', label: 'Remittance notices', group: 'Daily work' }] : []),
+    ...(canManageSupport ? [{ id: 'employee-support', label: 'Client support', group: 'Daily work' }] : []),
+    { id: 'employee-updates', label: 'Updates', group: 'Records' },
+    ...(canUseAreaManagement ? [{ id: 'employee-area-management', label: 'Area Management', group: 'Administration' }] : []),
+    { id: 'employee-account', label: 'My account', group: 'Administration' },
   ]);
   root.innerHTML = loadingPanel('Loading permitted Employee work…');
 
@@ -159,30 +180,37 @@ export async function mountEmployeeWorkspace(context) {
     support: support.data,
   });
 
-  root.innerHTML = `<header class="workspace-header" id="employee-overview">
-    <div><p class="eyebrow">Employee workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Your visible work comes from exact SPINA permissions. Collector collection and Management approval authority are never inherited by a generic Employee account.</p></div>
+  const dailyLinks = [
+    ['employee-operations', 'My tasks & attendance', 'Review assigned work and your time record.'],
+    ...(canReviewCif ? [['employee-onboarding', 'Office intake', 'Check new client requirements.'], ['employee-cif-review', 'Review client information', 'Continue an intake review.'], ['employee-application-review', 'Review applications', 'Check submitted loan details.'], ['employee-first-loan', 'First-loan work', 'Complete authorized office steps.']] : []),
+    ...(canViewRemittance ? [['employee-remittance', 'Review remittance', remittances.error ? 'Notices unavailable — refresh.' : `${model.remittances.length} notices`]] : []),
+    ...(canManageSupport ? [['employee-support', 'Answer clients', support.error ? 'Queue unavailable — refresh.' : `${model.openSupportCount} open`]] : []),
+  ];
+  root.innerHTML = `<section class="section-card" id="employee-overview" data-workspace-section><header class="workspace-header">
+    <div><p class="eyebrow">Employee</p><h1>Today's work</h1><p>Choose a task assigned to your account.</p></div>
   </header>
+  ${support.error || remittances.error || activity.error ? '<div class="notice-card warning">Some work counts could not load. Open the task or refresh before deciding there is no pending work.</div>' : ''}
+  <div class="section-heading"><div><h2>Open a task</h2><p>Only work allowed for your account appears here.</p></div></div>
+  <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${target === 'employee-support' && !support.error ? `<span data-support-count>${model.openSupportCount}</span> open` : escapeHtml(detail)}</span></button>`).join('')}</div>
   <section class="metric-grid">
     ${metricCard('Connected functions', escapeHtml(model.connectedActions.length))}
-    ${metricCard('Open support', escapeHtml(model.openSupportCount))}
-    ${metricCard('Remittance notices', escapeHtml(model.remittances.length))}
-    ${metricCard('Account updates', escapeHtml(model.notifications.length))}
+    ${metricCard('Open support', support.error ? 'Unavailable' : `<span data-support-count>${model.openSupportCount}</span>`)}
+    ${metricCard('Remittance notices', remittances.error ? 'Unavailable' : escapeHtml(model.remittances.length))}
+    ${metricCard('Account updates', activity.error ? 'Unavailable' : escapeHtml(model.notifications.length))}
   </section>
-  <section class="section-card">
-    <div class="section-heading"><div><h2>Available today</h2><p>Only implemented functions allowed by your server session are active.</p></div></div>
-    <div class="card-grid">${model.connectedActions.map((action) => `<article class="data-card"><h3>${escapeHtml(action.label)}</h3><p class="meta">${escapeHtml(action.section || 'Employee')}</p>${badge('available', 'success')}</article>`).join('')}</div>
   </section>
-  <section class="section-card" id="employee-operations"><div data-employee-operations></div></section>
-  ${canReviewCif ? '<section class="section-card" id="employee-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
-  ${canReviewCif ? `<section class="section-card" id="employee-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
-  ${canReviewCif ? '<section class="section-card" id="employee-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
-  ${canReviewCif ? '<section class="section-card" id="employee-first-loan"><h2>First-loan approval and office release</h2><div data-office-first-loan></div></section>' : ''}
-  ${canUseAreaManagement ? '<section class="section-card" id="employee-area-management"></section>' : ''}
-  ${canViewRemittance ? `<section class="section-card" id="employee-remittance"><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : '<div data-remittance-review></div>'}</section>` : ''}
-  ${canManageSupport ? `<section class="section-card" id="employee-support"><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
-  <section class="section-card" id="employee-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
-  <section class="section-card" id="employee-account"><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}<div data-account-credentials></div></section>`;
+  <section class="section-card" id="employee-operations" data-workspace-section><div data-employee-operations></div></section>
+  ${canReviewCif ? '<section class="section-card" id="employee-onboarding" data-workspace-section><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
+  ${canReviewCif ? `<section class="section-card" id="employee-cif-review" data-workspace-section><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
+  ${canReviewCif ? '<section class="section-card" id="employee-application-review" data-workspace-section><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
+  ${canReviewCif ? '<section class="section-card" id="employee-first-loan" data-workspace-section><h2>First-loan approval and office release</h2><div data-office-first-loan></div></section>' : ''}
+  ${canUseAreaManagement ? '<section class="section-card" id="employee-area-management" data-workspace-section></section>' : ''}
+  ${canViewRemittance ? `<section class="section-card" id="employee-remittance" data-workspace-section><div class="section-heading"><div><h2>Remittance custody</h2><p>Accept only after item review and physical cash receipt.</p></div></div>${remittances.error ? errorCard(remittances.error) : '<div data-remittance-review></div>'}</section>` : ''}
+  ${canManageSupport ? `<section class="section-card" id="employee-support" data-workspace-section><div class="section-heading"><div><h2>Client support queue</h2><p>Responses do not change loans, balances, or receipts.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.supportRequests)}</section>` : ''}
+  <section class="section-card" id="employee-updates" data-workspace-section><div class="section-heading"><div><h2>Updates</h2><p>Activity intended for this signed-in account.</p></div></div>${activity.error ? errorCard(activity.error) : activityRows(model.notifications)}</section>
+  <section class="section-card" id="employee-account" data-workspace-section><div class="section-heading"><div><h2>Account and devices</h2><p>Review your active SPINA identity and sessions.</p></div></div>${account.error ? errorCard(account.error) : accountSection(model.account)}<div data-account-credentials></div></section>`;
 
+  context.activateNavigation?.();
   context.remittanceReviewCleanup = mountRemittanceReview({
     root: root.querySelector('[data-remittance-review]'), api, session, notifications: model.remittances, signal: context.signal,
   });

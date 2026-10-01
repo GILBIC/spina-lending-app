@@ -15,6 +15,7 @@ abstract final class SpinaTheme {
   static const Color ink = Color(0xFF2E242A);
   static const Color inkMuted = Color(0xFF74636C);
   static const Color line = Color(0xFFEAD8E0);
+  static const Color fieldOutline = Color(0xFF9B8892);
   static const Color success = Color(0xFF2F7D62);
   static const Color warning = Color(0xFFA86518);
 
@@ -25,7 +26,7 @@ abstract final class SpinaTheme {
           seedColor: brandPink,
           brightness: Brightness.light,
         ).copyWith(
-          primary: brandPink,
+          primary: brandPinkDark,
           onPrimary: Colors.white,
           primaryContainer: brandPinkSoft,
           onPrimaryContainer: brandPinkDark,
@@ -117,7 +118,7 @@ abstract final class SpinaTheme {
           vertical: 16,
         ),
         labelStyle: const TextStyle(color: inkMuted),
-        hintStyle: const TextStyle(color: Color(0xFF9B8892)),
+        hintStyle: const TextStyle(color: inkMuted),
         prefixIconColor: brandPinkDark,
         suffixIconColor: inkMuted,
         border: OutlineInputBorder(
@@ -126,7 +127,7 @@ abstract final class SpinaTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: line),
+          borderSide: const BorderSide(color: fieldOutline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -144,7 +145,7 @@ abstract final class SpinaTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          backgroundColor: brandPink,
+          backgroundColor: brandPinkDark,
           foregroundColor: Colors.white,
           disabledBackgroundColor: const Color(0xFFF1D5E1),
           disabledForegroundColor: const Color(0xFF9B7D8A),
@@ -176,11 +177,11 @@ abstract final class SpinaTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: brandPinkDark,
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: brandPink,
+        backgroundColor: brandPinkDark,
         foregroundColor: Colors.white,
         elevation: 2,
         focusElevation: 2,

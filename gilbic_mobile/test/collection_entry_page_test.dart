@@ -11,6 +11,46 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 
 void main() {
+  testWidgets(
+    'collection form keeps choices and save reachable with large text and keyboard',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = _CaptureRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(2),
+              viewInsets: const EdgeInsets.only(bottom: 220),
+            ),
+            child: child!,
+          ),
+          home: CollectionEntryPage(
+            session: _session,
+            entry: _regularEntry,
+            repository: repository,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+            collectionDate: DateTime(2026, 8, 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('submit-collection-entry')),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byKey(const Key('submit-collection-entry')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(repository.drafts, isEmpty);
+    },
+  );
+
   testWidgets('cached route amounts keep exact cents in payment defaults', (
     tester,
   ) async {

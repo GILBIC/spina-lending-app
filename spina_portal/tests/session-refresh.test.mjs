@@ -15,6 +15,30 @@ function setup() {
   return { store, alice, controller, received, calls: () => calls, timer: () => timer, setNow: (value) => now = value, complete: (status, data) => complete(new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })) };
 }
 
+test('default browser timers retain the global receiver when starting and stopping refresh', (t) => {
+  const originalSet = globalThis.setTimeout;
+  const originalClear = globalThis.clearTimeout;
+  t.after(() => { globalThis.setTimeout = originalSet; globalThis.clearTimeout = originalClear; });
+  const scheduled = []; const cleared = [];
+  globalThis.setTimeout = function (callback, delay) {
+    if (this !== globalThis) throw new TypeError('Illegal invocation');
+    scheduled.push({ callback, delay }); return scheduled.length;
+  };
+  globalThis.clearTimeout = function (timer) {
+    if (this !== globalThis) throw new TypeError('Illegal invocation');
+    cleared.push(timer);
+  };
+  const f = setup();
+  const controller = new SessionRefreshController({ api: {}, sessionStore: f.store, now: () => Date.parse('2026-09-29T00:00:00Z') });
+  controller.start();
+  assert.equal(scheduled[0].delay, 180000);
+  controller.start();
+  assert.deepEqual(cleared, [1]);
+  controller.stop();
+  assert.deepEqual(cleared, [1, 2]);
+  assert.equal(controller.timer, null);
+});
+
 test('refresh runs before expiry, persists new credentials, and schedules the next expiry', async () => {
   const f = setup(); f.controller.start();
   assert.equal(f.timer().delay, 180000);

@@ -53,9 +53,9 @@ void main() {
       expect(find.text('Exact payoff'), findsNothing);
       expect(find.text('Management review required'), findsNothing);
 
-      expect(find.byKey(const Key('open-account-settings')), findsOneWidget);
+      expect(find.byTooltip('Account & tools'), findsOneWidget);
       expect(find.byKey(const Key('open-notification-center')), findsOneWidget);
-      expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
+      expect(find.byKey(const Key('open-offline-policy')), findsNothing);
       expect(find.text('Daily Route'), findsNothing);
       expect(find.text('Financial Accounting'), findsNothing);
 

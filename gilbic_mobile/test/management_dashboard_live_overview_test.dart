@@ -109,8 +109,8 @@ void main() {
     final renewalRect = tester.getRect(renewals);
     expect((remittanceRect.top - renewalRect.top).abs(), lessThan(1));
     expect(renewalRect.left, greaterThan(remittanceRect.left));
-    expect(remittanceRect.width, lessThanOrEqualTo(96));
-    expect(remittanceRect.height, lessThanOrEqualTo(96));
+    expect(remittanceRect.width, greaterThan(150));
+    expect(remittanceRect.height, greaterThanOrEqualTo(48));
   });
 
   testWidgets(
@@ -470,7 +470,7 @@ void main() {
     expect(find.byType(RemittanceNotificationsPage), findsNothing);
     expect(
       find.textContaining(
-        'current server permissions do not allow Remittance requests',
+        'account does not have access to Remittance requests',
       ),
       findsOneWidget,
     );

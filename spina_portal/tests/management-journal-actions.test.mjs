@@ -17,6 +17,22 @@ async function harness(t,request,permissions=['accounting.view','accounting.jour
  t.after(dispose);await tick();return {root,calls,controller};
 }
 function fill(root){set(root,'posting_date','2026-09-29');set(root,'description','Owner capital');for(let i=0;i<2;i++)for(const key of ['account_code','description','debit','credit'])set(root,`${key}_${i}`,lines[i][key]);}
+for(const removed of [1,2])test(`removing journal line ${removed+1} focuses a surviving field and preserves the draft`,async t=>{
+ const h=await harness(t,()=>({entries:[],can_manage:true}));
+ await click(h.root,'[data-journal-create]');fill(h.root);
+ await click(h.root,'[data-journal-add-line]');
+ for(const [key,value] of Object.entries({account_code:'5100',description:'Third line',debit:'0.00',credit:'12.34'}))set(h.root,`${key}_2`,value);
+ const remove=h.root.querySelector(`[data-journal-remove-line="${removed}"]`);remove.focus();
+ await click(h.root,`[data-journal-remove-line="${removed}"]`);
+ assert.equal(h.root.querySelector('[name="account_code_1"]').focused,true);
+ assert.equal(h.root.querySelector(`[data-journal-remove-line="${removed}"]`),null);
+ assert.equal(h.root.querySelector('[name="posting_date"]').value,'2026-09-29');
+ assert.equal(h.root.querySelector('[name="description"]').value,'Owner capital');
+ assert.equal(h.root.querySelector('[name="debit_0"]').value,'1234567890123456.78');
+ assert.equal(h.root.querySelector('[name="account_code_1"]').value,removed===1?'5100':'3100');
+ assert.equal(h.root.querySelector('[name="credit_1"]').value,removed===1?'12.34':'1234567890123456.78');
+ assert.equal(h.calls.filter(call=>call.options.method).length,0);
+});
 test('manual journal creation preserves exact amounts and saves an unposted draft',async t=>{
  const h=await harness(t,(_path,options)=>options.method?{entry}:{entries:[],can_manage:true});
  await click(h.root,'[data-journal-create]');fill(h.root);await submit(h.root);

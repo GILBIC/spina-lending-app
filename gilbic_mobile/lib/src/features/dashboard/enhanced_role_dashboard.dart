@@ -267,7 +267,7 @@ class _DashboardPermissionDenied extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Your current server permissions do not allow this '
+                'Your account does not have access to this '
                 '${session.role.label} dashboard. You can still review your notifications, '
                 'offline policy, profile, session, and registered devices or sign out.',
                 textAlign: TextAlign.center,

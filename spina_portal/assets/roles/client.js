@@ -12,6 +12,7 @@ import {
   metricCard,
   settledRequest,
   setButtonBusy,
+  clearButtonBusyFocus,
   showToast,
 } from '../ui.js';
 import { classifyLoanType } from '../collector-contract.js';
@@ -151,6 +152,22 @@ export function clientRenewalRows(requests) {
     .join('')}</div>`;
 }
 
+function clientRenewalActions(request, borrowerSigner) {
+  const requestId = String(request.request_id || '').trim();
+  const status = String(request.status || '').trim().toLowerCase();
+  const clientDecision = String(request.client_decision || '').trim().toLowerCase();
+  return {
+    canDecide: Boolean(requestId && status === 'approved' && !clientDecision),
+    canSign: Boolean(
+      requestId && status === 'approved' && clientDecision === 'accepted'
+      && request.office_processing_required !== true && borrowerSigner?.signer_id
+      && borrowerSigner.signed !== true && borrowerSigner.government_id_verified === true
+      && borrowerSigner.selfie_verified === true,
+    ),
+    canConfirmCash: Boolean(requestId && request.cash_given_to_client_at && !request.client_cash_confirmed_at),
+  };
+}
+
 export function clientRenewalWorkflowRows(requests) {
   if (!requests.length) return emptyState('No renewal workflow is awaiting your action.');
   return `<div class="list-stack">${requests
@@ -165,20 +182,7 @@ export function clientRenewalWorkflowRows(requests) {
       const otherSigners = signers.filter(
         (signer) => String(signer.party_role || '').trim().toLowerCase() !== 'borrower',
       );
-      const canDecide = Boolean(requestId && status === 'approved' && !clientDecision);
-      const canSign = Boolean(
-        requestId &&
-        status === 'approved' &&
-        clientDecision === 'accepted' &&
-        request.office_processing_required !== true &&
-        borrowerSigner?.signer_id &&
-        borrowerSigner.signed !== true &&
-        borrowerSigner.government_id_verified === true &&
-        borrowerSigner.selfie_verified === true,
-      );
-      const canConfirmCash = Boolean(
-        requestId && request.cash_given_to_client_at && !request.client_cash_confirmed_at,
-      );
+      const { canDecide, canSign, canConfirmCash } = clientRenewalActions(request, borrowerSigner);
       const requestedAmount = formatAuthoritativeMoney(request.requested_amount);
       const approvedPrincipal = formatAuthoritativeMoney(request.approved_principal);
       const offsetAmount = formatAuthoritativeMoney(request.renewal_offset_amount);
@@ -254,7 +258,7 @@ export function clientNotificationRows(items) {
       return `<article class="timeline-item">
         <div class="section-heading">
           <strong>${escapeHtml(item.title || item.notification_type || 'SPINA update')}</strong>
-          ${badge(isRead ? 'Read' : 'Unread', isRead ? 'success' : 'warning')}
+          <span data-client-notification-status tabindex="-1">${badge(isRead ? 'Read' : 'Unread', isRead ? 'success' : 'warning')}</span>
         </div>
         <span>${escapeHtml(item.message || '')}</span>
         <span class="meta">${formatDateTime(item.created_at)}</span>
@@ -415,35 +419,52 @@ function renderWorkspace(root, model, raw, errors) {
   const renewalLoans = asArray(raw.renewals.loans).filter((loan) => loan.eligible === true && !loan.pending_request_id);
   const homeSchedules = raw.homeObligationSchedules ?? {};
   const renderLoan = (loan) => loanCard(loan, homeSchedules[loan.loan_id] ?? null);
-  root.innerHTML = `<header class="workspace-header" id="client-overview">
-    <div><p class="eyebrow">Client workspace</p><h1>Hello, ${escapeHtml(model.displayName)}</h1><p>Review your own official loans, payments, receipts, requests, and account security. Values come directly from SPINA.</p></div>
+  const renewalsUnavailable = Boolean(errors.renewals || errors.renewalWorkflow);
+  const clientActionCount = asArray(raw.renewalWorkflow.requests).filter((request) => {
+    const borrowerSigner = asArray(request.signers).find(
+      (signer) => String(signer.party_role || '').trim().toLowerCase() === 'borrower',
+    );
+    return Object.values(clientRenewalActions(request, borrowerSigner)).some(Boolean);
+  }).length;
+  const dailyLinks = [
+    ['client-loans', 'Check my loans', errors.loans ? 'Loans unavailable — refresh.' : 'See what is due and open your official schedule.'],
+    ...(renewalsUnavailable || model.pendingRenewalCount || clientActionCount ? [['client-renewals', 'Continue a renewal', renewalsUnavailable ? 'Renewals unavailable — refresh.' : clientActionCount ? `${clientActionCount} action${clientActionCount === 1 ? '' : 's'} for you` : `${model.pendingRenewalCount} pending`]] : []),
+    ['client-payments', 'View receipts', errors.payments ? 'Payments unavailable — refresh.' : latestPayment ? 'Review your payment history.' : 'No official receipt yet.'],
+    ['client-payment-instructions', 'Payment options', 'See the available provider instructions.'],
+    ['client-support', 'Ask for help', errors.support ? 'Support unavailable — refresh.' : model.openSupportCount ? `${model.openSupportCount} open requests` : 'Send a question to the office.'],
+  ];
+  root.innerHTML = `<section class="section-card" id="client-overview" data-workspace-section><header class="workspace-header">
+    <div><p class="eyebrow">My account</p><h1>Today</h1><p>Start with your loan and any request that needs your attention.</p></div>
   </header>
+  ${errors.loans || errors.payments || renewalsUnavailable || errors.support ? '<div class="notice-card warning">Some records could not load. Open the task or refresh before deciding there is no action needed.</div>' : ''}
+  <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>
   <section class="metric-grid">
-    ${metricCard('Active loans', escapeHtml(model.activeLoanCount))}
-    ${metricCard('Pending renewals', escapeHtml(model.pendingRenewalCount))}
-    ${metricCard('Open support', escapeHtml(model.openSupportCount))}
-    ${metricCard('Latest receipt', latestPayment ? escapeHtml(latestPayment.receipt_number || 'Recorded') : 'None')}
+    ${metricCard('Active loans', errors.loans ? 'Unavailable' : escapeHtml(model.activeLoanCount))}
+    ${metricCard('Pending renewals', renewalsUnavailable ? 'Unavailable' : escapeHtml(model.pendingRenewalCount))}
+    ${metricCard('Open support', errors.support ? 'Unavailable' : escapeHtml(model.openSupportCount))}
+    ${metricCard('Latest receipt', errors.payments ? 'Unavailable' : latestPayment ? escapeHtml(latestPayment.receipt_number || 'Recorded') : 'None')}
+  </section>
   </section>
 
-  <section class="section-card" id="client-loans">
+  <section class="section-card" id="client-loans" data-workspace-section>
     <div class="section-heading"><div><h2>My loans</h2><p>Regular and 7x7 obligations are always shown separately.</p></div></div>
     ${errors.loans ? errorCard(errors.loans) : model.allLoans.length ? `<div class="loan-grid">${model.regularLoans.map(renderLoan).join('')}${model.sevenBySevenLoans.map(renderLoan).join('')}${model.otherLoans.map(renderLoan).join('')}</div>` : emptyState('No linked loan is available on this account.')}
   </section>
 
-  <section class="section-card" id="client-payments">
+  <section class="section-card" id="client-payments" data-workspace-section>
     <div class="section-heading"><div><h2>Payments and official receipts</h2><p>A receipt appears only after SPINA accepts an official collection.</p></div></div>
     ${errors.payments ? errorCard(errors.payments) : paymentRows(model.payments)}
   </section>
 
-  <section class="section-card" id="client-statement">
+  <section class="section-card" id="client-statement" data-workspace-section>
     <div class="section-heading"><div><h2>Statement</h2><p>Read-only loan and official payment records from the protected SPINA server.</p></div></div>
     ${errors.statement ? errorCard(errors.statement) : renderClientStatement(raw.statement)}
   </section>
 
-  <section class="section-card" id="client-documents"><h2>Documents and record copies</h2><div data-client-documents></div></section>
-  <section class="section-card" id="client-payment-proofs"><h2>Payment proof</h2><div data-client-payment-proofs></div></section>
+  <section class="section-card" id="client-documents" data-workspace-section><h2>Documents and record copies</h2><div data-client-documents></div></section>
+  <section class="section-card" id="client-payment-proofs" data-workspace-section><h2>Payment proof</h2><div data-client-payment-proofs></div></section>
 
-  <section class="section-card" id="client-renewals">
+  <section class="section-card" id="client-renewals" data-workspace-section>
     <div class="section-heading"><div><h2>Renewal requests</h2><p>After you submit, your permanently assigned Collector must recommend the request before Management reviews and decides it. A request never creates or releases a new loan. If approved, complete only your own signer step; any other required signer must use their own SPINA account.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : clientRenewalRows(model.renewals)}
     ${errors.renewals ? '' : clientRenewalEligibilityRows(asArray(raw.renewals.loans))}
@@ -460,7 +481,7 @@ function renderWorkspace(root, model, raw, errors) {
     ${errors.renewalWorkflow ? errorCard(errors.renewalWorkflow) : clientRenewalWorkflowRows(asArray(raw.renewalWorkflow.requests))}
   </section>
 
-  <section class="section-card" id="client-support">
+  <section class="section-card" id="client-support" data-workspace-section>
     <div class="section-heading"><div><h2>Support</h2><p>Ask about a payment, loan, renewal, or account. Support messages do not change financial records.</p></div></div>
     ${errors.support ? errorCard(errors.support) : supportRows(model.supportRequests)}
     <details>
@@ -475,17 +496,17 @@ function renderWorkspace(root, model, raw, errors) {
     </details>
   </section>
 
-  <section class="section-card" id="client-payment-instructions">
+  <section class="section-card" id="client-payment-instructions" data-workspace-section>
     <div class="section-heading"><div><h2>Payment instructions</h2><p>Opening a payment provider page does not itself create an official SPINA payment.</p></div></div>
     ${errors.gcash ? errorCard(errors.gcash) : renderClientGcashPanel({ capability: raw.gcash, loans: asArray(raw.loans.loans) })}
   </section>
 
-  <section class="section-card" id="client-updates">
+  <section class="section-card" id="client-updates" data-workspace-section>
     <div class="section-heading"><div><h2>Updates</h2><p>Notices intended for your account only.</p></div></div>
     ${errors.notifications ? errorCard(errors.notifications) : clientNotificationRows(model.notifications)}
   </section>
 
-  <section class="section-card" id="client-account">
+  <section class="section-card" id="client-account" data-workspace-section>
     <div class="section-heading"><div><h2>Account and devices</h2><p>Review your SPINA profile and registered sessions.</p></div></div>
     ${errors.account ? errorCard(errors.account) : clientAccountCard(model.account)}
   </section>`;
@@ -560,20 +581,36 @@ function bindClientAccountDeviceSecurity(context) {
 }
 
 function bindClientNotificationReadActions(context) {
+  const signal = context.signal;
+  const generation = context.clientWorkspaceGeneration;
   for (const button of context.root.querySelectorAll('[data-client-notification-read]')) {
     button.addEventListener('click', async () => {
+      if (button.disabled || button.hidden || signal?.aborted) return;
       const notificationId = button.dataset.clientNotificationRead;
+      const current = () => !signal?.aborted && button.isConnected && context.clientWorkspaceGeneration === generation;
+      let saved = false;
       setButtonBusy(button, true, 'Marking…');
       try {
-        await requestClientNotificationRead({
+        const result = await requestClientNotificationRead({
           api: context.api,
           notificationId,
         });
+        if (!current()) return;
+        if (result?.notification_id !== notificationId || result.is_read !== true) throw new Error('The update could not be confirmed as read. Refresh Updates before trying again.');
+        saved = true;
+        button.parentElement.querySelector('[data-client-notification-status]').innerHTML = badge('Read', 'success');
         showToast('Update marked as read.', 'success');
-        await mountClientWorkspace(context);
       } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
+        if (current()) showToast(error.message, 'error');
+      } finally {
+        if (current()) setButtonBusy(button, false);
+        else clearButtonBusyFocus(button);
+      }
+      if (saved && current()) {
+        if (button.ownerDocument.activeElement === button && !button.closest('[hidden]')) {
+          button.parentElement.querySelector('[data-client-notification-status]').focus({ preventScroll: true });
+        }
+        button.hidden = true;
       }
     });
   }
@@ -678,17 +715,17 @@ export async function mountClientWorkspace(context) {
   context.clientWorkspaceGeneration = generation;
   const { root, api, setNavigation } = context;
   setNavigation([
-    { id: 'client-overview', label: 'Overview' },
-    { id: 'client-loans', label: 'My loans' },
-    { id: 'client-payments', label: 'Payments' },
-    { id: 'client-statement', label: 'Statement' },
-    { id: 'client-documents', label: 'Documents' },
-    { id: 'client-payment-proofs', label: 'Payment proof' },
-    { id: 'client-renewals', label: 'Renewals' },
-    { id: 'client-support', label: 'Support' },
-    { id: 'client-payment-instructions', label: 'Payment instructions' },
-    { id: 'client-updates', label: 'Updates' },
-    { id: 'client-account', label: 'Account' },
+    { id: 'client-overview', label: 'Today', group: 'Daily work' },
+    { id: 'client-loans', label: 'My loans', group: 'Daily work' },
+    { id: 'client-renewals', label: 'Renewal requests', group: 'Daily work' },
+    { id: 'client-payment-instructions', label: 'Payment options', group: 'Daily work' },
+    { id: 'client-payment-proofs', label: 'Payment proof', group: 'Daily work' },
+    { id: 'client-support', label: 'Ask for help', group: 'Daily work' },
+    { id: 'client-payments', label: 'Payments & receipts', group: 'Records' },
+    { id: 'client-statement', label: 'Statement', group: 'Records' },
+    { id: 'client-documents', label: 'Documents', group: 'Records' },
+    { id: 'client-updates', label: 'Updates', group: 'Records' },
+    { id: 'client-account', label: 'Account & devices', group: 'Administration' },
   ]);
   root.innerHTML = loadingPanel('Loading your official Client records…');
 
@@ -731,6 +768,7 @@ export async function mountClientWorkspace(context) {
     gcash: gcash.error,
     notifications: notifications.error,
   });
+  context.activateNavigation?.();
   bindForms(context, raw);
   const documentRoot = root.querySelector('[data-client-documents]');
   const proofRoot = root.querySelector('[data-client-payment-proofs]');

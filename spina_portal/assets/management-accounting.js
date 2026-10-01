@@ -29,7 +29,7 @@ function token() { return Array.from(globalThis.crypto.getRandomValues(new Uint8
 export async function mountManagementAccounting({ root, api, session, signal }) {
   mounts.get(root)?.();
   let disposed = false, epoch = 0, busy = false, blocked = false, selected = 'periods', page = 0;
-  let data, listeners = [], childCleanup, childController;
+  let data, listeners = [], childCleanup, childController, reviewOrigin = null;
   const can = (permission) => sessionHasRole(session, 'management') && hasPermission(session, permission);
   const active = (value = epoch) => !disposed && !signal?.aborted && value === epoch;
   function clearListeners() { for (const remove of listeners) remove(); listeners = []; childController?.abort(); childController = null; childCleanup?.(); childCleanup = null; }
@@ -48,17 +48,33 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     listen(root.querySelector('[data-accounting-refresh]'), 'click', () => load());
     for (const tab of root.querySelectorAll('[data-accounting-tab]')) listen(tab, 'click', () => { if (blocked) return; selected = tab.getAttribute('data-accounting-tab'); page = 0; void load(); });
   }
-  function bindForm(selector, action) { for (const element of root.querySelectorAll(selector)) listen(element, 'submit', () => { if (!blocked) action(element); }); }
+  function bindForm(selector, action) { for (const element of root.querySelectorAll(selector)) listen(element, 'submit', () => {
+    if (blocked) return;
+    reviewOrigin = { index: [...root.querySelectorAll('form')].indexOf(element), fields: [...element.querySelectorAll('[name]')].map((control) => [control.getAttribute('name'), control.value]) };
+    try { action(element); } finally { reviewOrigin = null; }
+  }); }
+  function returnToDraft(draft, errorMessage) {
+    render();
+    if (draft) {
+      const form = root.querySelectorAll('form')[draft.index];
+      const controls = [...(form?.querySelectorAll('[name]') || [])];
+      draft.fields.forEach(([name, value], index) => { if (controls[index]?.getAttribute('name') === name) controls[index].value = value; });
+      controls[0]?.focus({ preventScroll: true });
+      controls[0]?.scrollIntoView?.({ block: 'nearest' });
+    }
+    if (errorMessage) message(errorMessage);
+  }
   const field = (element, name) => String(element.querySelector(`[name="${name}"]`)?.value ?? '').trim();
   function text(element, name, min = 1, max = 500) { const value = field(element, name); requireThat(value.length >= min && value.length <= max, `Complete ${titleCase(name)} within ${min}–${max} characters.`); return value; }
   function permission(value) { requireThat(can(value), 'This accounting permission is no longer available.'); }
   function review(title, facts, consequence, { path, method = 'POST', body, validate }) {
     requireThat(!blocked, 'Reload authoritative records before preparing another action.');
     requireThat(globalThis.navigator?.onLine !== false, 'Reconnect before preparing an accounting action.');
+    const draft = reviewOrigin;
     const capturedEpoch = ++epoch;
     frame(`<article class="notice-card"><h4 data-accounting-review-heading tabindex="-1">${h(title)}</h4><div class="detail-grid">${facts.map(([key, value]) => fact(key, value)).join('')}</div><p>${h(consequence)}</p>${button('data-accounting-confirm', `Confirm: ${title}`)} ${button('data-accounting-cancel', 'Cancel')}</article>`);
     root.querySelector('[data-accounting-review-heading]')?.focus({ preventScroll: true });
-    listen(root.querySelector('[data-accounting-cancel]'), 'click', () => render());
+    listen(root.querySelector('[data-accounting-cancel]'), 'click', () => returnToDraft(draft));
     listen(root.querySelector('[data-accounting-confirm]'), 'click', async () => {
       if (!active(capturedEpoch) || blocked || busy) return;
       busy = true;
@@ -73,6 +89,7 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
         if (!active(capturedEpoch)) return;
         busy = false;
         if ([401, 403, 426].includes(error.status)) { dispose(); root.innerHTML = '<p role="alert">Accounting access is unavailable. Sign in again or refresh your permissions.</p>'; return; }
+        if (error.status === 422) { returnToDraft(draft, error.message); return; }
         blocked = true;
         frame('<p role="alert">The action outcome is uncertain or the record changed. Reload authoritative records before preparing another action. No request will be retried automatically.</p>');
         message(error.message);

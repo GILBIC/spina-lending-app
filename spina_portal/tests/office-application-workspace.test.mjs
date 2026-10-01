@@ -59,7 +59,7 @@ for (const role of ['employee', 'management']) {
     t.after(() => h.controller.abort());
     await mounts[role](h.context);
     assert.deepEqual(h.navigation.find((item) => item.id === `${role}-application-review`), {
-      id: `${role}-application-review`, label: 'Application review',
+      id: `${role}-application-review`, label: 'Application review', group: 'Daily work',
     });
     const cif = h.root.querySelector('[data-office-cif-selection]');
     const area = h.root.querySelector(`#${role}-area-management`);

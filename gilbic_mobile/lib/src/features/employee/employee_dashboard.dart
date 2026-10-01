@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -36,7 +37,7 @@ class EmployeeDashboard extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Your current server permissions do not allow ${module.title}.',
+            'Your account does not have access to ${module.title}.',
           ),
         ),
       );
@@ -92,7 +93,8 @@ class EmployeeDashboard extends StatelessWidget {
       _EmployeeAction.tasks ||
       _EmployeeAction.leaveRequests ||
       _EmployeeAction.accounting => EmployeeOperationsPage(
-        session: session, deviceIdentityProvider: deviceIdentityProvider,
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
         initialSection: switch (module.action) {
           _EmployeeAction.payroll => EmployeeSection.payroll,
           _EmployeeAction.tasks => EmployeeSection.tasks,
@@ -114,36 +116,38 @@ class EmployeeDashboard extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Employee Dashboard'),
         actions: [
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: onSignOut,
-            icon: const Icon(Icons.logout),
+          WorkspaceAccountMenu(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+            onSignOut: onSignOut,
           ),
         ],
       ),
       body: SafeArea(
-        child: ListView(
-          key: const Key('employee-dashboard-list'),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-          children: [
-            Text(
-              'Welcome, ${session.displayName}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Your personal records and office tools stay separate. Office functions appear only when the server assigns their exact permission.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 22),
-            for (var index = 0; index < sections.length; index++) ...[
-              _EmployeeSectionCard(
-                section: sections[index],
-                onOpen: (module) => _openModule(context, module),
+        child: WorkspaceBody(
+          child: ListView(
+            key: const Key('employee-dashboard-list'),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            children: [
+              Text(
+                'Welcome, ${session.displayName}',
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-              if (index != sections.length - 1) const SizedBox(height: 20),
+              const SizedBox(height: 6),
+              Text(
+                "Start with today's work, then manage your pay and requests.",
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 22),
+              for (var index = 0; index < sections.length; index++) ...[
+                _EmployeeSectionCard(
+                  section: sections[index],
+                  onOpen: (module) => _openModule(context, module),
+                ),
+                if (index != sections.length - 1) const SizedBox(height: 20),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -260,14 +264,16 @@ class _EmployeeModuleRow extends StatelessWidget {
                         module.description,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        module.statusLabel,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
+                      if (!available) const SizedBox(height: 4),
+                      if (!available)
+                        Text(
+                          module.statusLabel,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -416,10 +422,9 @@ const _employeeSections = <_EmployeeSection>[
   _EmployeeSection(
     keyName: 'employee-section-office',
     title: 'Office functions',
-    description:
-        'Operational tools appear only when your current server permissions assign them.',
+    description: 'Tools assigned to your account appear here.',
     emptyMessage:
-        'No office functions are assigned by your current server permissions.',
+        'No office tasks are assigned to you. Contact your manager if you need access.',
     modules: <_EmployeeModule>[
       _EmployeeModule(
         'Office onboarding & release',
@@ -464,7 +469,11 @@ const _employeeSections = <_EmployeeSection>[
         Icons.menu_book_outlined,
         action: _EmployeeAction.accounting,
         availability: _EmployeeModuleAvailability.available,
-        anyPermissions: ['accounting.view', 'accounting.journal.prepare', 'employee_operations.manage'],
+        anyPermissions: [
+          'accounting.view',
+          'accounting.journal.prepare',
+          'employee_operations.manage',
+        ],
       ),
     ],
   ),

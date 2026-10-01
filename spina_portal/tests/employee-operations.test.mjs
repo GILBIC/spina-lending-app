@@ -216,3 +216,69 @@ for(const role of ['employee','collector','management'])test(`${role} mounts pri
  assert.ok(calls.includes('/api/v1/employee-operations/workspace'));assert.ok(navigation.some(item=>item.id.includes('employee-operations')||item.id==='employee-operations'));assert.match(root.textContent,/My attendance/);
  controller.abort();assert.equal(root.querySelector('[data-employee-operations]').innerHTML,'');
 });
+
+test('validation rejection preserves edited fields and focuses associated feedback',async()=>{
+ const h=await harness(workspace(),async(path,options,h)=>{if(options.method==='POST')throw Object.assign(new Error('Choose a permitted work date.'),{status:422});return h.value;});
+ await open(h,'leave_request');
+ for(const [name,value] of Object.entries({work_date:'2026-10-01',minutes:'240',leave_kind:'ordinary',reason:'Keep this entered explanation'}))set(h,name,value);
+ const form=h.root.querySelector('[data-employee-form]');await submit(h);
+ assert.equal(h.root.querySelector('[data-employee-form]'),form,'keep the actual edited form');
+ assert.equal(h.root.querySelector('[name="reason"]').value,'Keep this entered explanation');
+ const feedback=h.root.querySelector('[data-employee-status]');assert.match(feedback.textContent,/permitted work date/);
+ assert.equal(form.getAttribute('aria-describedby'),feedback.getAttribute('id'));assert.equal(feedback.focused,true);
+ assert.equal(h.root.querySelector('[name="work_date"]').disabled,false);
+ set(h,'work_date','2026-10-02');await submit(h);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,2);
+});
+
+test('editor focus enters first field and cancel restores its recreated opener',async()=>{
+ const h=await harness();await open(h,'leave_request');
+ assert.equal(h.root.querySelector('[data-employee-form]').querySelector('[name]').focused,true);
+ click(h,'[data-employee-cancel]');assert.equal(h.root.querySelector('[data-employee-create="leave_request"]').focused,true);
+});
+
+test('save restores the recreated action only after the refreshed workspace unlocks',async()=>{
+ const h=await harness(workspace(),async(path,options,h)=>options.method==='POST'?{request_id:options.body.request_id,id:options.body.id,version:1,status:'pending_review',message:'Saved for review'}:h.value);
+ await open(h,'leave_request');for(const [name,value] of Object.entries({work_date:'2026-10-01',minutes:'240',leave_kind:'ordinary',reason:'Synthetic leave request'}))set(h,name,value);
+ await submit(h);const opener=h.root.querySelector('[data-employee-create="leave_request"]');assert.equal(opener.disabled,false);assert.equal(opener.focused,true);assert.equal(h.root.querySelector('[data-employee-form]'),null);
+});
+
+test('version conflict discards stale editor and focuses refresh without permitting another write',async()=>{
+ const h=await harness(workspace(),async(path,options,h)=>{if(options.method==='POST')throw Object.assign(new Error('Refresh the changed record.'),{status:409});return h.value;});
+ await open(h,'leave_request');for(const [name,value] of Object.entries({work_date:'2026-10-01',minutes:'240',leave_kind:'ordinary',reason:'Stale draft'}))set(h,name,value);
+ await submit(h);assert.equal(h.root.querySelector('[data-employee-form]'),null);assert.equal(h.root.querySelector('[data-employee-create="leave_request"]').disabled,true);assert.equal(h.root.querySelector('[data-employee-refresh]').focused,true);
+});
+
+test('local validation retains the draft and focuses its associated feedback without a request',async()=>{
+ const h=await harness();await open(h,'leave_request');set(h,'reason','Keep this explanation');await submit(h);
+ assert.equal(h.calls.some(c=>c.options.method==='POST'),false);
+ assert.equal(h.root.querySelector('[name="reason"]').value,'Keep this explanation');
+ assert.equal(h.root.querySelector('[data-employee-status]').focused,true);
+});
+
+test('record action focus follows the same record after refresh reorders rows',async()=>{
+ const other={...record({description:'Other synthetic task'},['task_progress']),id:OTHER};
+ const original=record({description:'Selected synthetic task'},['task_progress']);
+ const h=await harness(workspace({tasks:[original,other]}),async(path,options,h)=>{
+  if(options.method==='POST'){h.value={...h.value,tasks:[other,original]};return {request_id:options.body.request_id,id:options.body.id,version:4,status:'accepted',message:'Task saved'};}return h.value;
+ });
+ click(h,'[data-employee-action="task_progress"]');set(h,'status','done');set(h,'reason','Synthetic completed task');await submit(h);
+ const actions=h.root.querySelectorAll('[data-employee-action="task_progress"]');assert.equal(actions[1].focused,true);assert.notEqual(actions[0].focused,true);
+});
+
+test('completed record action falls back to refresh when the server removes that action',async()=>{
+ const h=await harness(workspace({tasks:[record({description:'Synthetic task'},['task_progress'])]}),async(path,options,h)=>{
+  if(options.method==='POST'){h.value={...h.value,tasks:[record({description:'Synthetic task'},[])]};return {request_id:options.body.request_id,id:options.body.id,version:4,status:'accepted',message:'Task saved'};}return h.value;
+ });
+ click(h,'[data-employee-action="task_progress"]');set(h,'status','done');set(h,'reason','Synthetic completed task');await submit(h);
+ assert.equal(h.root.querySelector('[data-employee-action="task_progress"]'),null);assert.equal(h.root.querySelector('[data-employee-refresh]').focused,true);
+});
+
+test('supporting records start collapsed while daily actions and feedback stay outside them',async()=>{
+ const h=await harness(workspace({tasks:[record({description:'Synthetic task'},['task_progress'])]}));
+ const groups=h.root.querySelectorAll('.employee-record-section');assert.ok(groups.length>0);
+ for(const group of groups){assert.equal(group.getAttribute('open'),null);assert.equal(group.querySelector('[data-employee-attendance]'),null);assert.equal(group.querySelector('[data-employee-status]'),null);}
+ assert.ok(h.root.querySelector('[data-employee-attendance="clock_in"]'));
+ click(h,'[data-employee-action="task_progress"]');assert.ok(h.root.querySelector('[data-employee-form]'));
+ click(h,'[data-employee-cancel]');assert.notEqual(h.root.querySelector('[data-employee-collection="tasks"]').getAttribute('open'),null);
+ assert.equal(h.root.querySelector('[data-employee-action="task_progress"]').focused,true);
+});
