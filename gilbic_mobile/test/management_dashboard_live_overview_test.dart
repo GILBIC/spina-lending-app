@@ -470,7 +470,7 @@ void main() {
     expect(find.byType(RemittanceNotificationsPage), findsNothing);
     expect(
       find.textContaining(
-        'current server permissions do not allow Remittance requests',
+        'account does not have access to Remittance requests',
       ),
       findsOneWidget,
     );
