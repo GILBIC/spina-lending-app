@@ -108,13 +108,13 @@ function paymentRows(payments) {
     <tbody>${payments
       .map(
         (payment) => `<tr>
-          <td>${formatDate(payment.collection_date)}</td>
-          <td><strong>${escapeHtml(payment.loan_number || '—')}</strong><br><span class="meta">${escapeHtml(payment.loan_type_name || '')}</span></td>
-          <td>${escapeHtml(payment.entry_type || 'payment')}</td>
-          <td>${formatAuthoritativeMoney(payment.amount)}</td>
-          <td>${escapeHtml(payment.receipt_number || '—')}</td>
-          <td>${formatAuthoritativeMoney(payment.official_balance)}</td>
-          <td>${payment.is_voided ? badge('voided', 'danger') : badge(payment.status || 'accepted')}</td>
+          <td data-label="Date">${formatDate(payment.collection_date)}</td>
+          <td data-label="Loan"><strong>${escapeHtml(payment.loan_number || '—')}</strong><br><span class="meta">${escapeHtml(payment.loan_type_name || '')}</span></td>
+          <td data-label="Type">${escapeHtml(payment.entry_type || 'payment')}</td>
+          <td data-label="Amount">${formatAuthoritativeMoney(payment.amount)}</td>
+          <td data-label="Receipt">${escapeHtml(payment.receipt_number || '—')}</td>
+          <td data-label="Balance">${formatAuthoritativeMoney(payment.official_balance)}</td>
+          <td data-label="Status">${payment.is_voided ? badge('voided', 'danger') : badge(payment.status || 'accepted')}</td>
         </tr>`,
       )
       .join('')}</tbody>
@@ -427,14 +427,14 @@ function renderWorkspace(root, model, raw, errors) {
     return Object.values(clientRenewalActions(request, borrowerSigner)).some(Boolean);
   }).length;
   const dailyLinks = [
-    ['client-loans', 'Check my loans', errors.loans ? 'Loans unavailable — refresh.' : 'See what is due and open your official schedule.'],
+    ['client-loans', 'My loans', errors.loans ? 'Loans unavailable — refresh.' : 'See your balance, amount due, and schedule.'],
     ...(renewalsUnavailable || model.pendingRenewalCount || clientActionCount ? [['client-renewals', 'Continue a renewal', renewalsUnavailable ? 'Renewals unavailable — refresh.' : clientActionCount ? `${clientActionCount} action${clientActionCount === 1 ? '' : 's'} for you` : `${model.pendingRenewalCount} pending`]] : []),
     ['client-payments', 'View receipts', errors.payments ? 'Payments unavailable — refresh.' : latestPayment ? 'Review your payment history.' : 'No official receipt yet.'],
-    ['client-payment-instructions', 'Payment options', 'See the available provider instructions.'],
+    ['client-payment-instructions', 'Payment options', 'See how you can pay.'],
     ['client-support', 'Ask for help', errors.support ? 'Support unavailable — refresh.' : model.openSupportCount ? `${model.openSupportCount} open requests` : 'Send a question to the office.'],
   ];
   root.innerHTML = `<section class="section-card" id="client-overview" data-workspace-section><header class="workspace-header">
-    <div><p class="eyebrow">My account</p><h1>Today</h1><p>Start with your loan and any request that needs your attention.</p></div>
+    <div><p class="eyebrow">My account</p><h1>Today</h1><p>See your loans, payment records, and requests that need your attention.</p></div>
   </header>
   ${errors.loans || errors.payments || renewalsUnavailable || errors.support ? '<div class="notice-card warning">Some records could not load. Open the task or refresh before deciding there is no action needed.</div>' : ''}
   <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>
@@ -447,7 +447,7 @@ function renderWorkspace(root, model, raw, errors) {
   </section>
 
   <section class="section-card" id="client-loans" data-workspace-section>
-    <div class="section-heading"><div><h2>My loans</h2><p>Regular and 7x7 obligations are always shown separately.</p></div></div>
+    <div class="section-heading"><div><h2>My loans</h2><p>See your balance, amount due, and schedule for each loan. Regular and 7x7 loans stay separate.</p></div></div>
     ${errors.loans ? errorCard(errors.loans) : model.allLoans.length ? `<div class="loan-grid">${model.regularLoans.map(renderLoan).join('')}${model.sevenBySevenLoans.map(renderLoan).join('')}${model.otherLoans.map(renderLoan).join('')}</div>` : emptyState('No linked loan is available on this account.')}
   </section>
 
@@ -457,7 +457,7 @@ function renderWorkspace(root, model, raw, errors) {
   </section>
 
   <section class="section-card" id="client-statement" data-workspace-section>
-    <div class="section-heading"><div><h2>Statement</h2><p>Read-only loan and official payment records from the protected SPINA server.</p></div></div>
+    <div class="section-heading"><div><h2>Statement</h2><p>Your official loan and payment history.</p></div></div>
     ${errors.statement ? errorCard(errors.statement) : renderClientStatement(raw.statement)}
   </section>
 
@@ -465,7 +465,7 @@ function renderWorkspace(root, model, raw, errors) {
   <section class="section-card" id="client-payment-proofs" data-workspace-section><h2>Payment proof</h2><div data-client-payment-proofs></div></section>
 
   <section class="section-card" id="client-renewals" data-workspace-section>
-    <div class="section-heading"><div><h2>Renewal requests</h2><p>After you submit, your permanently assigned Collector must recommend the request before Management reviews and decides it. A request never creates or releases a new loan. If approved, complete only your own signer step; any other required signer must use their own SPINA account.</p></div></div>
+    <div class="section-heading"><div><h2>Renewal requests</h2><p>Submit a request for review. Your assigned Collector recommends it, then Management decides. Approval does not release cash until the required steps are complete.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : clientRenewalRows(model.renewals)}
     ${errors.renewals ? '' : clientRenewalEligibilityRows(asArray(raw.renewals.loans))}
     <details ${renewalLoans.length ? '' : 'hidden'}>
@@ -497,7 +497,7 @@ function renderWorkspace(root, model, raw, errors) {
   </section>
 
   <section class="section-card" id="client-payment-instructions" data-workspace-section>
-    <div class="section-heading"><div><h2>Payment instructions</h2><p>Opening a payment provider page does not itself create an official SPINA payment.</p></div></div>
+    <div class="section-heading"><div><h2>Payment instructions</h2><p>Choose an available payment option. Your payment becomes official after SPINA records it.</p></div></div>
     ${errors.gcash ? errorCard(errors.gcash) : renderClientGcashPanel({ capability: raw.gcash, loans: asArray(raw.loans.loans) })}
   </section>
 
