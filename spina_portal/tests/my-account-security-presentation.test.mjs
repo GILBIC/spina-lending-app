@@ -47,8 +47,10 @@ test('Management password controls separate own-password and administrator reset
   assert.match(markup, />Reset another account's password</);
   assert.match(markup, /higher-risk administrator action/i);
   assert.match(markup, /Find an existing Client or staff account/i);
-  assert.match(markup, /class="button button-quiet"[^>]*data-credential-clear-password>Clear</);
-  assert.doesNotMatch(markup, />Clear password</);
+  assert.match(
+    markup,
+    /class="button button-quiet"[^>]*data-credential-clear-password>Clear password</,
+  );
 });
 
 test('Employee reset wording remains Client-only while Collector gets no reset surface', () => {
