@@ -215,7 +215,7 @@ void main() {
       expect(find.byType(ManagementFinancialAccountingPage), findsNothing);
       expect(
         find.text(
-          'Your current permissions do not allow this Management view.',
+          'Your account does not have access to this Management view.',
         ),
         findsOneWidget,
       );
