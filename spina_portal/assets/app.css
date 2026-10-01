@@ -1639,6 +1639,117 @@ details > :not(summary) {
   }
 }
 
+.collection-actions-heading {
+  align-items: flex-start;
+}
+
+.collection-action-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-block: 0.8rem 1rem;
+}
+
+.collection-action-tab {
+  min-height: 42px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--pink-200);
+  border-radius: var(--radius-sm);
+  color: var(--ink-800);
+  background: white;
+  font-weight: 750;
+}
+
+.collection-action-tab[aria-selected="true"] {
+  color: var(--pink-900);
+  border-color: var(--pink-500);
+  background: var(--pink-100);
+}
+
+.collection-action-panel[hidden] {
+  display: none;
+}
+
+.contract-readiness-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
+.contract-readiness-summary span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.contract-readiness-summary strong {
+  font-size: 1.05rem;
+}
+
+.contract-common-blockers {
+  margin-bottom: 0.8rem;
+}
+
+.contract-common-blockers ul {
+  margin-bottom: 0;
+}
+
+.contract-loan-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.contract-loan-row {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: white;
+}
+
+.contract-loan-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.contract-loan-heading > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.contract-technical-details summary {
+  cursor: pointer;
+  color: var(--pink-900);
+  font-weight: 750;
+}
+
+.contract-technical-details ul {
+  margin-bottom: 0;
+}
+
+.contract-activation-form {
+  margin-top: 0;
+}
+
+.danger-panel {
+  border-color: rgb(222 93 74 / 35%);
+}
+
+@media (max-width: 680px) {
+  .contract-loan-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .employee-command-groups .inline-actions,
 .employee-time .inline-actions,
 .employee-record .inline-actions {
