@@ -55,6 +55,20 @@ export function bindManagementAccountingExport({ root, api, signal }) {
   let disposed = false;
   let pending = false;
   let accessDenied = false;
+  const tabs = Array.from(root.querySelectorAll?.('[data-accounting-book-tab]') ?? []);
+  const panels = Array.from(root.querySelectorAll?.('[data-accounting-book-panel]') ?? []);
+  const tabHandlers = new Map();
+
+  function activateBookView(id) {
+    for (const panel of panels) {
+      if (panel.getAttribute('data-accounting-book-panel') === id) panel.removeAttribute('hidden');
+      else panel.setAttribute('hidden', '');
+    }
+    for (const tab of tabs) {
+      const selected = tab.getAttribute('data-accounting-book-tab') === id;
+      tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+    }
+  }
 
   function disable(disabled) {
     for (const element of [start, end, button]) element.disabled = disabled;
@@ -70,6 +84,7 @@ export function bindManagementAccountingExport({ root, api, signal }) {
     disposed = true;
     controller.abort();
     form.removeEventListener('submit', download);
+    for (const [tab, handler] of tabHandlers) tab.removeEventListener('click', handler);
     signal?.removeEventListener('abort', dispose);
     disable(true);
     for (const url of urls.keys()) revoke(url);
@@ -124,6 +139,15 @@ export function bindManagementAccountingExport({ root, api, signal }) {
 
   exportMounts.set(root, dispose);
   disable(false);
+  for (const tab of tabs) {
+    const handler = (event) => {
+      event?.preventDefault?.();
+      if (disposed) return;
+      activateBookView(tab.getAttribute('data-accounting-book-tab'));
+    };
+    tabHandlers.set(tab, handler);
+    tab.addEventListener('click', handler);
+  }
   form.addEventListener('submit', download);
   signal?.addEventListener('abort', dispose, { once: true });
   if (signal?.aborted) dispose();
@@ -182,24 +206,44 @@ function journalEntriesMarkup(entries) {
     .join('')}</div>`;
 }
 
+function isZeroMoney(value) {
+  const text = String(value ?? '0').trim();
+  return /^[+-]?0+(?:\.0+)?$/.test(text);
+}
+
+function trialBalanceLineHasActivity(line) {
+  return ['total_debit', 'total_credit', 'debit_balance', 'credit_balance']
+    .some((key) => !isZeroMoney(line?.[key]));
+}
+
+function trialBalanceEndingBalance(line) {
+  return !isZeroMoney(line?.debit_balance)
+    ? formatMoney(line.debit_balance)
+    : formatMoney(line?.credit_balance);
+}
+
 function trialBalanceRows(lines) {
   const items = asArray(lines);
   if (!items.length) {
-    return '<tr><td colspan="7">No Trial Balance line is currently available.</td></tr>';
+    return '<tr><td colspan="4">No Trial Balance line is currently available.</td></tr>';
   }
   return items
     .map(
       (line) => `<tr>
-        <td>${escapeHtml(line.account_code || '—')}</td>
-        <td>${escapeHtml(line.account_name || '—')}</td>
-        <td>${escapeHtml(titleCase(line.account_type || '—'))}</td>
-        <td>${escapeHtml(titleCase(line.normal_balance || '—'))}</td>
-        <td>${formatMoney(line.total_debit)}</td>
-        <td>${formatMoney(line.total_credit)}</td>
-        <td>${line.debit_balance && Number(line.debit_balance) !== 0 ? formatMoney(line.debit_balance) : formatMoney(line.credit_balance)}</td>
+        <td data-label="Account"><strong>${escapeHtml(line.account_code || '—')} · ${escapeHtml(line.account_name || '—')}</strong><br><span class="meta">${escapeHtml(titleCase(line.account_type || '—'))} · ${escapeHtml(titleCase(line.normal_balance || '—'))} normal</span></td>
+        <td data-label="Debit">${formatMoney(line.total_debit)}</td>
+        <td data-label="Credit">${formatMoney(line.total_credit)}</td>
+        <td data-label="Ending balance">${trialBalanceEndingBalance(line)}</td>
       </tr>`,
     )
     .join('');
+}
+
+function trialBalanceTable(lines) {
+  return `<div class="table-wrap"><table class="mobile-card-table trial-balance-table">
+    <thead><tr><th>Account</th><th>Debit</th><th>Credit</th><th>Ending balance</th></tr></thead>
+    <tbody>${trialBalanceRows(lines)}</tbody>
+  </table></div>`;
 }
 
 function trialBalanceMarkup(payload) {
@@ -207,48 +251,67 @@ function trialBalanceMarkup(payload) {
   if (!trial || typeof trial !== 'object') {
     return emptyState('No Trial Balance is currently available.');
   }
-  return `<article class="data-card">
+  const lines = asArray(trial.lines);
+  const activeLines = lines.filter(trialBalanceLineHasActivity);
+  const noPostedActivity = activeLines.length === 0
+    && isZeroMoney(trial.total_debits)
+    && isZeroMoney(trial.total_credits);
+  const balanceState = trial.balanced === true
+    ? (noPostedActivity ? '<span class="badge info">Balanced · no posted activity</span>' : badge('balanced', 'success'))
+    : badge('not balanced', 'danger');
+  const allAccountsDisclosure = lines.length
+    ? `<details data-trial-balance-all-accounts><summary>Show all accounts</summary>${trialBalanceTable(lines)}</details>`
+    : '';
+
+  return `<article class="data-card trial-balance-card">
     <div class="section-heading">
       <div>
         <h3>Trial Balance</h3>
-        <p>${escapeHtml(trial.period_label || 'All posted periods')}</p>
+        <p>${escapeHtml(trial.period_label || 'All posted activity')}</p>
       </div>
-      ${trial.balanced === true ? badge('balanced', 'success') : badge('not balanced', 'danger')}
+      ${balanceState}
     </div>
-    <div class="detail-grid">
+    <div class="detail-grid trial-balance-totals">
       <div class="detail-item"><span>Total debits</span><strong>${formatMoney(trial.total_debits)}</strong></div>
       <div class="detail-item"><span>Total credits</span><strong>${formatMoney(trial.total_credits)}</strong></div>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Account</th><th>Name</th><th>Type</th><th>Normal</th><th>Total debit</th><th>Total credit</th><th>Ending balance</th></tr></thead>
-      <tbody>${trialBalanceRows(trial.lines)}</tbody>
-    </table></div>
+    ${noPostedActivity
+      ? `<div class="trial-balance-zero" data-trial-balance-zero><strong>No posted journal activity yet.</strong><span class="meta">The authoritative Trial Balance is currently zero.</span></div>${allAccountsDisclosure}`
+      : `${trialBalanceTable(activeLines.length ? activeLines : lines)}${activeLines.length < lines.length ? allAccountsDisclosure : ''}`}
   </article>`;
 }
 
 export function managementGeneralJournalMarkup({ journals = {}, trialBalance = {} } = {}) {
-  const managementNotice = journals.can_manage === true
-    ? 'Authorized journal actions are available below. Review each draft before posting.'
-    : 'Journal changes are unavailable for this account.';
-  const automaticPostingNotice = journals.automatic_loan_posting_enabled === true
-    ? 'Automatic loan posting is enabled by the authoritative server.'
-    : 'Automatic loan posting is not enabled.';
+  const automaticPosting = journals.automatic_loan_posting_enabled === true ? 'on' : 'off';
+  const reviewNotice = journals.can_manage === true
+    ? `Review drafts before posting. Automatic posting is ${automaticPosting}.`
+    : `Read-only accounting evidence. Automatic posting is ${automaticPosting}.`;
 
-  return `<div class="list-stack">
-    <div class="notice-card"><strong>Accounting evidence</strong><br>${escapeHtml(managementNotice)} ${escapeHtml(automaticPostingNotice)}</div>
-    <article class="data-card">
-      <h3>Download accounting books</h3>
-      <p>Download posted journal entries, ledger, trial balance and accounting audit records for an inclusive date range of up to 366 days. Opening balances are included.</p>
-      <p class="meta">Accounting review copy. BIR registration and SAF acceptance require separate review and approval.</p>
-      <form class="entry-form" data-accounting-export>
-        <label>Start date<input type="date" name="start_date" min="0001-01-01" max="9999-12-31" required /></label>
-        <label>End date<input type="date" name="end_date" min="0001-01-01" max="9999-12-31" required /></label>
-        <button class="button button-secondary" type="submit">Download accounting review copy (ZIP)</button>
-      </form>
-      <div data-accounting-export-status role="status" aria-live="polite"></div>
-    </article>
-    ${trialBalanceMarkup(trialBalance)}
-    <div class="section-heading"><div><h3>General Journal</h3><p>Server-returned journal entries and lines only.</p></div></div>
-    ${journalEntriesMarkup(journals.entries)}
+  return `<div class="list-stack general-journal-workspace">
+    <div class="notice-card"><strong>Accounting evidence</strong><br>${escapeHtml(reviewNotice)}</div>
+    <div class="accounting-book-tabs" role="tablist" aria-label="Accounting books">
+      <button type="button" class="accounting-book-tab active" data-accounting-book-tab="journal" aria-selected="true">General Journal</button>
+      <button type="button" class="accounting-book-tab" data-accounting-book-tab="trial-balance" aria-selected="false">Trial Balance</button>
+    </div>
+    <section data-accounting-book-panel="journal">
+      <div class="section-heading"><div><h3>General Journal</h3><p>Posted and draft journal evidence returned by SPINA.</p></div></div>
+      ${journalEntriesMarkup(journals.entries)}
+    </section>
+    <section data-accounting-book-panel="trial-balance" hidden>
+      ${trialBalanceMarkup(trialBalance)}
+    </section>
+    <details class="accounting-export-details" data-accounting-export-details>
+      <summary>Export accounting books</summary>
+      <div class="data-card">
+        <p>Download posted journal entries, ledger, trial balance and accounting audit records for an inclusive date range of up to 366 days. Opening balances are included.</p>
+        <p class="meta">Accounting review copy. BIR registration and SAF acceptance require separate review and approval.</p>
+        <form class="entry-form" data-accounting-export>
+          <label>Start date<input type="date" name="start_date" min="0001-01-01" max="9999-12-31" required /></label>
+          <label>End date<input type="date" name="end_date" min="0001-01-01" max="9999-12-31" required /></label>
+          <button class="button button-secondary" type="submit">Download accounting review copy (ZIP)</button>
+        </form>
+        <div data-accounting-export-status role="status" aria-live="polite"></div>
+      </div>
+    </details>
   </div>`;
 }
