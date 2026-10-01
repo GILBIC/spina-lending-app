@@ -381,11 +381,18 @@ export async function mountManagementWorkspace(context) {
   const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data });
   const staffAccounts = asArray(staff.data.accounts);
   const dailyLinks = [
-    ...(canReviewCif ? [['management-onboarding', 'Office intake', 'Record and check new requirements.'], ['management-cif-review', 'Review client information', 'Continue an intake review.'], ['management-application-review', 'Review applications', 'Check submitted loan details.'], ['management-first-loan', 'First-loan work', 'Check the next authorized step.']] : []),
-    ...(canRenewals ? [['management-renewals', 'Decide renewals', renewals.error ? 'Queue unavailable — refresh.' : `${model.pendingRenewals.length} waiting`]] : []),
-    ...(canSupport ? [['management-support', 'Answer clients', support.error ? 'Queue unavailable — refresh.' : `${model.openSupport.length} open`]] : []),
-    ...(canReviewPaymentProof ? [['management-payment-proofs', 'Review payment evidence', 'Check submitted proof.']] : []),
-    ...(canCollectionActions ? [['management-collection-actions', 'Collection actions', 'Open protected workflows.']] : []),
+    ...(canReviewCif || canRenewals || canReviewPaymentProof
+      ? [['management-clients-loans', 'Clients & loan decisions', renewals.error ? 'Renewal queue unavailable — refresh.' : String(model.pendingRenewals.length) + ' renewals waiting']]
+      : []),
+    ...(canCollectionActions
+      ? [['management-collections', 'Collections', 'Review collection activity, corrections, and past-due work.']]
+      : []),
+    ...(canSupport || canViewStaff || canUseAreaManagement
+      ? [['management-operations', 'People & operations', support.error ? 'Support queue unavailable — refresh.' : String(model.openSupport.length) + ' client support requests open']]
+      : []),
+    ...(canViewFinancialStatements || canViewGeneralJournal
+      ? [['management-accounting-hub', 'Accounting', 'Open accounting, statements, journals, and trial balance.']]
+      : []),
   ];
 
   root.innerHTML = `<section class="section-card" id="management-overview" data-workspace-section><header class="workspace-header"><div><p class="eyebrow">Management</p><h1>Today's work</h1><p>Choose a task to open its official records and decisions.</p></div>${model.generatedAt ? `<span class="meta">Updated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
