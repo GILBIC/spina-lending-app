@@ -276,7 +276,13 @@ function staffRows(accounts, canManageDevices) {
 
 function accountCard(account) {
   const profile = account.profile ?? {};
-  return `<div class="data-card"><div class="kv-list"><div class="kv-row"><span>Name</span><strong>${escapeHtml(profile.full_name || '—')}</strong></div><div class="kv-row"><span>Username</span><strong>${escapeHtml(profile.username || '—')}</strong></div><div class="kv-row"><span>Email</span><strong>${escapeHtml(profile.email || '—')}</strong></div><div class="kv-row"><span>Roles</span><strong>${escapeHtml(asArray(profile.roles).join(', ') || profile.role || 'Management')}</strong></div><div class="kv-row"><span>Status</span>${badge(profile.status || 'unknown')}</div></div></div>`;
+  const roles = asArray(profile.roles)
+    .map((role) => String(role).trim())
+    .filter(Boolean);
+  const additionalAccess = roles
+    .filter((role) => role.toLowerCase() !== 'management')
+    .map((role) => titleCase(String(role).toLowerCase()));
+  return `<div class="data-card"><div class="kv-list"><div class="kv-row"><span>Name</span><strong>${escapeHtml(profile.full_name || '—')}</strong></div><div class="kv-row"><span>Username</span><strong>${escapeHtml(profile.username || '—')}</strong></div><div class="kv-row"><span>Email</span><strong>${escapeHtml(profile.email || '—')}</strong></div><div class="kv-row"><span>Workspace</span><strong>Management</strong></div>${additionalAccess.length ? `<div class="kv-row"><span>Additional access</span><strong>${escapeHtml(additionalAccess.join(', '))}</strong></div>` : ''}<div class="kv-row"><span>Status</span>${badge(profile.status || 'unknown')}</div></div></div>`;
 }
 
 function bindStaffInvite(context) {
