@@ -58,6 +58,12 @@ class EnhancedRoleDashboard extends StatelessWidget {
         deviceIdentityProvider: deviceIdentityProvider,
       );
     }
+    // Management is one complete authorized workspace. Other memberships do
+    // not create a role switch above it; server permissions still control
+    // every Management destination.
+    if (roles.contains(AppRole.management)) {
+      return _workspace(AppRole.management);
+    }
     if (roles.length == 1) return _workspace(roles.single);
     return _CombinedWorkerWorkspace(
       key: ValueKey(session.userId),

@@ -59,7 +59,7 @@ Owner: root with cross-review by agents.
 - [x] Reconcile exact contract across all clients and server; review dangerous races and privacy failures with synthetic fixtures.
 - [ ] Run targeted integration/load/privacy checks, then appropriate branch CI; no repeat of unrelated unchanged acceptance suites.
 - [ ] Update completion checkpoint, GitHub and Notion with verified progress and unresolved acceptance, preserving dated evidence.
-- [ ] Create and attach PR; address review/CI findings. Only ship a build proven against the reviewed contract and protected release process. Do not call partial platform acceptance complete.
+- [x] Create and attach PR465; address initial review/CI findings. Subsequent integration checks and the protected release process remain required. Do not call partial platform acceptance complete.
 
 ## Rulings / execution ledger
 
@@ -71,3 +71,7 @@ Owner: root with cross-review by agents.
 - A small memory-only cache diagnostic held two512KiB frames,400 reads,8 replacements and40 rejected over-cap writes, peaking at1MiB and evicting to zero after idle expiry. This is not representative API/production capacity or SLA evidence.
 
 - Final local portal verification: 914 tests passed,139 modules syntax-checked, and production portal build succeeded. The first full run exposed11 obsolete test-fixture expectations (new control DOM and shell v20); fixtures were updated without weakening lifecycle assertions. Web overlap/deadline/cadence regressions pass. Physical browser capture remains owner-deferred; no capture or production rollout is claimed.
+
+- CI36846377761 passed all three jobs on fab64f41:3173 backend tests passed with1087 skipped, zero scanner regressions, financial/PostgreSQL validation and synthetic recovery passed, and Portal/Flutter/Android passed. Retained evidence is in the parent checkpoint ci-fab64f41; this is not yet the combined-head result.
+- Integrated upstream PR464 from b2ac2944 while preserving its older Management layout and single workspace. The only Management runtime additions relative to upstream are the mirror import and named safe portfolio wrapper.69 focused integration tests and1 real synthetic PNG subtree-capture test pass; the latter proves the private outside control is excluded and the720-edge/512KiB bounds hold. Narrow analysis of both resolved runtime files and the new test passes. A full local analyzer was stopped by the available-memory guard; combined-head CI must supply full analysis.
+- The owner's browser-test deferral is limited to manual acceptance. Continue technical integration and protected release preparation under the standing authorization; label actual browser/Windows/physical-device capture acceptance untested until observed.

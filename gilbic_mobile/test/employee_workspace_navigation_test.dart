@@ -14,8 +14,6 @@ import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.d
 
 void main() {
   for (final roles in [
-    ['Management', 'Collector'],
-    ['Management', 'Employee', 'Collector'],
     ['Collector'],
     ['Collector', 'Employee'],
   ]) {
@@ -144,6 +142,50 @@ void main() {
       },
     );
   }
+  testWidgets(
+    'Management membership opens one Management workspace without a role switch',
+    (tester) async {
+      const session = UserSession(
+        userId: 'manager',
+        username: 'manager',
+        displayName: 'Manager',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        roles: ['Collector', 'Employee', 'Management'],
+        accessToken: 'token',
+        permissions: [
+          'route.view',
+          'employee.portal.view',
+          'management.dashboard.view',
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EnhancedRoleDashboard(
+            session: session,
+            onSignOut: () async {},
+            collectorRouteLoader: _RouteLoader(),
+            paymentSubmissionRepository: SpinaPaymentSubmissionRepository(),
+            deviceIdentityProvider: DeviceIdentityProvider(
+              store: MemoryDeviceIdentityStore(),
+              platformResolver: () => 'android',
+              appVersionResolver: () async => 'test',
+            ),
+            collectionDeviceSequence: MemoryCollectionDeviceSequence(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ManagementDashboard), findsOneWidget);
+      expect(
+        find.byKey(const Key('employee-collector-workspace-switch')),
+        findsNothing,
+      );
+      expect(find.byType(CollectorFieldHomePage), findsNothing);
+      expect(find.byType(EmployeeDashboard), findsNothing);
+    },
+  );
   testWidgets(
     'combined worker switches actual assigned workspaces with one unchanged session',
     (tester) async {

@@ -6,7 +6,7 @@ Status: implementation authorized by the owner's request to continue technical w
 
 Management chooses another account's registered device and requests to view its Spina screen. The named account holder explicitly accepts. Both see that sharing is active and can stop. Accounts and existing roles remain separate. No capture starts merely because Management requests it. This is near-live viewing (at most one image per second), without remote input, audio, recording, history or download controls.
 
-Keep the existing UI except the small request, consent, viewer and Stop controls. The separate unshipped Management layout restoration is outside this change. Deferred business/legal/tax/GCash work stays excluded.
+Keep the existing UI except the small request, consent, viewer and Stop controls. Preserve the older Android Management layout and single Management workspace restored by upstream PR464; this feature does not introduce another workspace switch. Deferred business/legal/tax/GCash work stays excluded.
 
 ## Privacy and boundaries
 
