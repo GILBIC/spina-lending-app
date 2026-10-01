@@ -5,7 +5,6 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-
 from gilbic_backend.account_repository import (
     AccountContext,
     AccountDisabled,
@@ -14,10 +13,12 @@ from gilbic_backend.account_repository import (
     DeviceNotRegistered,
     DeviceRevoked,
 )
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
-from gilbic_backend.auth_client import AuthSession
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
+from gilbic_backend.auth_client import AuthSession, SupabaseAuthError
 from gilbic_backend.main import create_app
-
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 GILBIC_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -509,3 +510,65 @@ def test_logout_revokes_supabase_session() -> None:
     assert response.status_code == 200
     assert response.json() == {"success": True}
     assert auth.logout_token == "access-token"
+
+
+@pytest.mark.parametrize("prefix", ["/api/v1", "/api/mobile/v1"])
+@pytest.mark.parametrize(
+    ("endpoint", "payload", "headers"),
+    [
+        ("login", {"username": "collector.one", "password": "correct-password"}, {}),
+        ("refresh", {"refresh_token": "refresh-token-12345"}, {"X-Device-Id": DEVICE_ID}),
+    ],
+)
+def test_token_responses_for_both_aliases_prevent_storage(
+    prefix: str, endpoint: str, payload: dict[str, str], headers: dict[str, str]
+) -> None:
+    client, _, _ = client_with_fakes()
+    response = client.post(f"{prefix}/auth/{endpoint}", json=payload, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["data"]["access_token"] == "access-token"
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["pragma"] == "no-cache"
+
+
+@pytest.mark.parametrize("prefix", ["/api/v1", "/api/mobile/v1"])
+@pytest.mark.parametrize(
+    ("endpoint", "payload", "secret"),
+    [
+        ("login", {"username": "collector.one", "password": "S" * 201}, "S" * 201),
+        ("refresh", {"refresh_token": "T" * 4097}, "T" * 4097),
+    ],
+)
+def test_auth_validation_omits_rejected_secrets(
+    prefix: str, endpoint: str, payload: dict[str, str], secret: str
+) -> None:
+    client, _, _ = client_with_fakes()
+    response = client.post(f"{prefix}/auth/{endpoint}", json=payload)
+    assert response.status_code == 422
+    assert response.headers["cache-control"] == "no-store"
+    assert secret not in response.text
+    assert all(set(item) == {"loc", "msg", "type"} for item in response.json()["detail"])
+
+
+@pytest.mark.parametrize("prefix", ["/api/v1", "/api/mobile/v1"])
+def test_auth_handled_denial_prevents_storage(prefix: str) -> None:
+    client, _, _ = client_with_fakes()
+    response = client.post(
+        f"{prefix}/auth/login", json={"username": "missing", "password": "anything"}
+    )
+    assert response.status_code == 401
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize("prefix", ["/api/v1", "/api/mobile/v1"])
+def test_auth_provider_error_prevents_storage_without_echoing_provider_detail(prefix: str) -> None:
+    client, auth, _ = client_with_fakes()
+    def unavailable(**kwargs):
+        raise SupabaseAuthError("provider-private-detail", status_code=503)
+    auth.sign_in = unavailable
+    response = client.post(
+        f"{prefix}/auth/login", json={"username": "collector.one", "password": "correct-password"}
+    )
+    assert response.status_code == 503
+    assert response.headers["cache-control"] == "no-store"
+    assert "provider-private-detail" not in response.text

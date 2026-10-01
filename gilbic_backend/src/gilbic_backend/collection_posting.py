@@ -770,6 +770,7 @@ class PostgresCollectionPostingBridge:
             where loan_id = %s
               and collection_date = %s
               and entry_type = 'pass'
+              and is_voided = false
             limit 1
             """,
             (loan_id, collection_date),

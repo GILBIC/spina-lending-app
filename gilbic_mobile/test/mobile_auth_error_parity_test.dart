@@ -107,7 +107,7 @@ void main() {
       });
     });
 
-    testWidgets('$platformName permission removal fails closed before navigation',
+    testWidgets('$platformName route-view permission removal fails closed before navigation',
         (tester) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
@@ -118,7 +118,7 @@ void main() {
           role: AppRole.collector,
           rawRole: 'Collector',
           accessToken: 'restricted-token',
-          permissions: const <String>['route.view'],
+          permissions: const <String>['collection.create'],
         );
         await store.write(restricted);
         final repository = _ParityAuthRepository(
