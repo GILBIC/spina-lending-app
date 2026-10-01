@@ -122,7 +122,7 @@ function remittanceHistory(items) {
 }
 
 function remittanceSection(routeDate, preview, recipients, history, errors, canCreate) {
-  return `<section class="section-card" id="collector-remittance">
+  return `<section class="section-card" id="collector-remittance" data-workspace-section>
     <div class="section-heading"><div><h2>Remittance</h2><p>Submit only after reviewing the complete server-calculated collection summary.</p></div></div>
     ${errors.preview ? errorCard(errors.preview) : `<div class="metric-grid">${metricCard('Cash total', formatMoney(preview.total_amount || 0))}${metricCard('Transactions', escapeHtml(preview.transaction_count ?? 0))}${metricCard('Clients', escapeHtml(preview.client_count ?? 0))}${metricCard('Unable to pay', escapeHtml(preview.unable_to_pay_count ?? 0))}</div>`}
     ${canCreate && recipients.length ? `<form id="collector-remittance-form" class="entry-form"><label>Recipient<select name="recipientUserId" required>${recipients.map((recipient) => `<option value="${escapeHtml(recipient.user_id)}">${escapeHtml(recipient.full_name)} · ${escapeHtml(recipient.role_name)}</option>`).join('')}</select></label><label>Collection date<input name="collectionDate" type="date" value="${escapeHtml(routeDate || '')}" readonly /></label><label>Note<textarea name="note" maxlength="500"></textarea></label><button class="button button-primary" type="submit" ${numeric(preview.total_amount) <= 0 ? 'disabled' : ''}>Submit remittance</button></form>` : canCreate ? emptyState('No eligible remittance recipient is available.') : `<div class="notice-card warning">Your account can view remittance history but cannot create a remittance.</div>`}
@@ -275,16 +275,17 @@ export async function mountCollectorWorkspace(context) {
   const canCreateRemittance = hasPermission(session, 'remittance.create');
   const canViewRemittance = hasPermission(session, 'remittance.view') || canCreateRemittance;
   setNavigation([
-    { id: 'collector-overview', label: "Today's route" },
-    { id: 'collector-employee-operations', label: 'My attendance, tasks & pay' },
-    { id: 'collector-master-review', label: 'Master Review' },
-    ...(canCreate || canCorrect ? [{ id: 'collector-workflows', label: 'Combined Pay, ADV & corrections' }] : []),
-    ...(canCreate ? [{ id: 'collector-other-area', label: 'Other-area collection' }] : []),
-    ...(canRenew ? [{ id: 'collector-renewals', label: 'Renewal handover' }] : []),
-    ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit' }] : []),
-    ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance' }] : []),
-    { id: 'collector-updates', label: 'Updates' },
-    { id: 'collector-account', label: 'Account' },
+    { id: 'collector-overview', label: 'Today', group: 'Daily work' },
+    { id: 'collector-master-review', label: 'Needs attention', group: 'Daily work' },
+    { id: 'collector-route', label: "Today's route", group: 'Daily work' },
+    ...(canCreate || canCorrect ? [{ id: 'collector-workflows', label: 'Collections & corrections', group: 'Daily work' }] : []),
+    ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance', group: 'Daily work' }] : []),
+    ...(canCreate ? [{ id: 'collector-other-area', label: 'Other-area collection', group: 'Daily work' }] : []),
+    ...(canRenew ? [{ id: 'collector-renewals', label: 'Renewal handover', group: 'Daily work' }] : []),
+    ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit', group: 'Daily work' }] : []),
+    { id: 'collector-updates', label: 'Updates', group: 'Records' },
+    { id: 'collector-employee-operations', label: 'My tasks & attendance', group: 'Administration' },
+    { id: 'collector-account', label: 'My account', group: 'Administration' },
   ]);
   root.innerHTML = loadingPanel('Loading the authoritative Collector route…');
   root.dataset.financialLocked = 'false';
@@ -316,35 +317,47 @@ export async function mountCollectorWorkspace(context) {
   if (context.signal?.aborted || !writeGuard.current) return;
   const entryMap = new Map(model.entries.map((entry) => [String(entry.route_entry_id), entry]));
   const profile = account.data?.profile ?? {};
+  const routeUnavailable = Boolean(routeResult.error);
 
-  root.innerHTML = `<header class="workspace-header" id="collector-overview">
-    <div><p class="eyebrow">Collector workspace</p><h1>${escapeHtml(model.collectorName || profile.full_name || 'Collector')}</h1><p>${formatDate(model.routeDate)} · Ledger-first assigned route. Official payments are accepted online by SPINA only.</p></div>
+  const dailyLinks = [
+    ['collector-master-review', 'Needs attention', routeUnavailable ? 'Route unavailable — refresh.' : `${model.unresolved.length} route entries`],
+    ['collector-route', "Open today's route", routeUnavailable ? 'Route unavailable — refresh.' : `${model.totalCount} client loans`],
+    ...(canCreate || canCorrect ? [['collector-workflows', 'Collections & corrections', 'Combined payments, advances and corrections.']] : []),
+    ...(canViewRemittance ? [['collector-remittance', 'Review remittance', preview.error ? 'Summary unavailable — refresh.' : 'Check the server-calculated cash summary.']] : []),
+    ...(canRenew ? [['collector-renewals', 'Renewal handover', 'Continue assigned requests.']] : []),
+  ];
+  root.innerHTML = `${!online ? `<div class="notice-card danger"><strong>No payment is accepted or queued while offline.</strong><br>Reconnect and refresh the route before collecting.</div>` : ''}<section class="section-card" id="collector-overview" data-workspace-section><header class="workspace-header">
+    <div><p class="eyebrow">Collector</p><h1>Today's route</h1><p>${formatDate(model.routeDate)} · Open an assigned task below.</p></div>
     ${online ? `<span class="status-chip online">Online collection enabled</span>` : `<span class="status-chip offline">Offline copy — read only</span>`}
   </header>
-  ${!online ? `<div class="notice-card danger"><strong>No payment is accepted or queued while offline.</strong><br>Reconnect and refresh the route before collecting.</div>` : ''}
+  ${routeUnavailable ? '<div class="notice-card warning">The route could not load. Refresh before collecting or deciding there is no work.</div>' : ''}
+  <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>
   <section class="metric-grid">
-    ${metricCard('Expected today', formatMoney(model.expectedTotal))}
-    ${metricCard('Route clients / loans', escapeHtml(model.totalCount))}
-    ${metricCard('Processed', escapeHtml(model.processedCount))}
-    ${metricCard('Needs action', escapeHtml(model.unresolved.length))}
+    ${metricCard('Expected today', routeUnavailable ? 'Unavailable' : formatMoney(model.expectedTotal))}
+    ${metricCard('Route clients / loans', routeUnavailable ? 'Unavailable' : escapeHtml(model.totalCount))}
+    ${metricCard('Processed', routeUnavailable ? 'Unavailable' : escapeHtml(model.processedCount))}
+    ${metricCard('Needs action', routeUnavailable ? 'Unavailable' : escapeHtml(model.unresolved.length))}
   </section>
-  <section class="section-card">
+  </section>
+  <section class="section-card" id="collector-route" data-workspace-section>
     <div class="section-heading"><div><h2>Assigned area ledger</h2><p>Regular and 7x7 rows stay separate under the same Client context.</p></div></div>
     ${routeResult.error ? errorCard(routeResult.error) : routeMarkup(model, canCreate, online)}
   </section>
-  <section class="section-card" id="collector-master-review">
+  <section class="section-card" id="collector-master-review" data-workspace-section>
     <div class="section-heading"><div><h2>Master Review</h2><p>Every assigned-area row still requiring action before route completion.</p></div></div>
-    ${unresolvedMarkup(model.unresolved)}
+    ${routeResult.error ? errorCard(routeResult.error) : unresolvedMarkup(model.unresolved)}
+    ${!routeResult.error && model.unresolved.length ? '<div class="action-row"><button class="button button-secondary" type="button" data-nav-target="collector-route">Open today\'s route</button></div>' : ''}
   </section>
-  <section class="section-card" id="collector-employee-operations"><div data-employee-operations></div></section>
-  ${canCreate || canCorrect ? '<section class="section-card" id="collector-workflows" data-collector-financial><div data-collector-workflows></div></section>' : ''}
-  ${canCreate ? '<section class="section-card" id="collector-other-area" data-collector-financial><div data-collector-other-area></div></section>' : ''}
-  ${canRenew ? '<section class="section-card" id="collector-renewals" data-collector-financial><div data-collector-renewals></div></section>' : ''}
+  <section class="section-card" id="collector-employee-operations" data-workspace-section><div data-employee-operations></div></section>
+  ${canCreate || canCorrect ? '<section class="section-card" id="collector-workflows" data-workspace-section data-collector-financial><div data-collector-workflows></div></section>' : ''}
+  ${canCreate ? '<section class="section-card" id="collector-other-area" data-workspace-section data-collector-financial><div data-collector-other-area></div></section>' : ''}
+  ${canRenew ? '<section class="section-card" id="collector-renewals" data-workspace-section data-collector-financial><div data-collector-renewals></div></section>' : ''}
   ${canViewRemittance ? remittanceSection(route.route_date, preview.data, recipients.data, history.data, { preview: preview.error, history: history.error }, canCreateRemittance) : ''}
-  ${canRecordVisit ? '<section class="section-card" id="collector-onboarding"><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
-  <section class="section-card" id="collector-updates"><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>
-  <section class="section-card" id="collector-account"><div class="section-heading"><div><h2>My account</h2></div></div><div data-account-credentials></div></section>`;
+  ${canRecordVisit ? '<section class="section-card" id="collector-onboarding" data-workspace-section><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
+  <section class="section-card" id="collector-updates" data-workspace-section><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>
+  <section class="section-card" id="collector-account" data-workspace-section><div class="section-heading"><div><h2>My account</h2></div></div><div data-account-credentials></div></section>`;
 
+  context.activateNavigation?.();
   context.accountCredentialsCleanup = mountAccountCredentials({
     root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
   });

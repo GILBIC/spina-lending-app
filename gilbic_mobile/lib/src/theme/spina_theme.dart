@@ -25,7 +25,7 @@ abstract final class SpinaTheme {
           seedColor: brandPink,
           brightness: Brightness.light,
         ).copyWith(
-          primary: brandPink,
+          primary: brandPinkDark,
           onPrimary: Colors.white,
           primaryContainer: brandPinkSoft,
           onPrimaryContainer: brandPinkDark,
@@ -144,7 +144,7 @@ abstract final class SpinaTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          backgroundColor: brandPink,
+          backgroundColor: brandPinkDark,
           foregroundColor: Colors.white,
           disabledBackgroundColor: const Color(0xFFF1D5E1),
           disabledForegroundColor: const Color(0xFF9B7D8A),
@@ -176,11 +176,11 @@ abstract final class SpinaTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: brandPinkDark,
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: brandPink,
+        backgroundColor: brandPinkDark,
         foregroundColor: Colors.white,
         elevation: 2,
         focusElevation: 2,

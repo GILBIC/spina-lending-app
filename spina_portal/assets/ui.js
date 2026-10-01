@@ -102,12 +102,11 @@ export function emptyState(message) {
 
 export function errorCard(error, fallback = 'This section is temporarily unavailable.') {
   const message = error?.message || fallback;
-  const code = error?.code && error.code !== 'request_failed' ? ` (${escapeHtml(error.code)})` : '';
-  return `<div class="error-card"><strong>Could not load this section${code}.</strong><br>${escapeHtml(message)}</div>`;
+  return `<div class="error-card"><strong>We couldn’t complete this request.</strong><br>${escapeHtml(message)}</div>`;
 }
 
-export function loadingPanel(message = 'Loading authoritative SPINA records…') {
-  return `<div class="loading-panel"><div><div class="spinner" aria-hidden="true"></div><strong>${escapeHtml(message)}</strong></div></div>`;
+export function loadingPanel(message = 'Loading your records…') {
+  return `<div class="loading-panel" role="status"><div><div class="spinner" aria-hidden="true"></div><strong>${escapeHtml(message)}</strong></div></div>`;
 }
 
 export function sessionPermissions(session) {
@@ -152,29 +151,54 @@ export function showToast(message, type = 'info', duration = 5200) {
 }
 
 export function navigationMarkup(items) {
-  return asArray(items)
-    .map(
-      (item, index) => `<button class="nav-button${index === 0 ? ' active' : ''}" type="button" data-nav-target="${escapeHtml(item.id)}">
+  let group;
+  return asArray(items).map((item, index) => {
+    const heading = item.group && item.group !== group
+      ? `<p class="nav-group-label">${escapeHtml(item.group)}</p>` : '';
+    group = item.group;
+    return `${heading}<button class="nav-button${index === 0 ? ' active' : ''}" type="button" data-nav-target="${escapeHtml(item.id)}" data-nav-label="${escapeHtml(item.label)}"${index === 0 ? ' aria-current="page"' : ''}>
         <span>${escapeHtml(item.label)}</span>
         ${item.count != null ? `<span class="nav-count">${escapeHtml(item.count)}</span>` : ''}
-      </button>`,
-    )
-    .join('');
+      </button>`;
+  }).join('');
 }
 
-export function bindNavigation(navRoot, contentRoot) {
-  navRoot?.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-nav-target]');
-    if (!button) return;
-    const target = contentRoot?.querySelector(`#${CSS.escape(button.dataset.navTarget)}`);
-    if (!target) return;
-    for (const item of navRoot.querySelectorAll('.nav-button')) {
-      item.classList.toggle('active', item === button);
+export function bindNavigation(navRoot, contentRoot, { onNavigate = () => {} } = {}) {
+  let selectedId = null;
+  function activate(requestedId = selectedId, { focus = false } = {}) {
+    const buttons = Array.from(navRoot?.querySelectorAll('[data-nav-target]') || []);
+    const sections = Array.from(contentRoot?.querySelectorAll('[data-workspace-section]') || []);
+    const available = buttons.filter(button => sections.some(section => section.getAttribute('id') === button.getAttribute('data-nav-target')));
+    const selected = available.find(button => button.getAttribute('data-nav-target') === requestedId) || available[0];
+    if (!selected) return false;
+    selectedId = selected.getAttribute('data-nav-target');
+    const target = sections.find(section => section.getAttribute('id') === selectedId);
+    // Keep mounted forms and their unsaved values while showing one task at a time.
+    for (const section of sections) section.hidden = section !== target;
+    for (const button of buttons) {
+      button.classList.toggle('active', button === selected);
+      if (button === selected) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
     }
-    target.setAttribute('tabindex', '-1');
-    target.focus({ preventScroll: true });
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+    if (focus) {
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+    onNavigate({ id: selectedId, label: selected.getAttribute('data-nav-label') || selected.textContent, userInitiated: focus });
+    return true;
+  }
+  function navigate(event) {
+    const button = event.target.closest?.('[data-nav-target]');
+    if (!button) return;
+    const id = button.getAttribute('data-nav-target');
+    if (!Array.from(navRoot?.querySelectorAll('[data-nav-target]') || []).some(item => item.getAttribute('data-nav-target') === id)) return;
+    event.preventDefault();
+    activate(id, { focus: true });
+  }
+  navRoot?.addEventListener('click', navigate);
+  contentRoot?.addEventListener('click', navigate);
+  return { activate, reset: () => { selectedId = null; } };
 }
 
 export function localBusinessDate(value = new Date()) {

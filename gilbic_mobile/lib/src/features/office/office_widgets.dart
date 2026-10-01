@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
@@ -61,34 +62,48 @@ abstract class OfficeScreenState<T extends StatefulWidget> extends State<T> {
       ],
     ),
     body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (operation.busy) const LinearProgressIndicator(),
-          if (operation.error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                operation.error!,
-                key: const Key('office-error'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+      child: WorkspaceBody(
+        maxWidth: 720,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          children: [
+            if (operation.busy)
+              Semantics(
+                liveRegion: true,
+                label: 'Saving or loading record',
+                child: const LinearProgressIndicator(),
               ),
-            ),
-          if (operation.denied)
-            const Text(
-              'Office access is no longer available. Sign in again before continuing.',
-            )
-          else ...[
-            if (operation.blocked)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'The outcome may already be recorded. Reload the saved record before another action.',
+            if (operation.error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    operation.error!,
+                    key: const Key('office-error'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ),
               ),
-            ...children,
+            if (operation.denied)
+              const Text(
+                'Office access is no longer available. Sign in again before continuing.',
+              )
+            else ...[
+              if (operation.blocked)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'The outcome may already be recorded. Reload the saved record before another action.',
+                  ),
+                ),
+              ...children,
+            ],
           ],
-        ],
+        ),
       ),
     ),
   );
@@ -168,7 +183,7 @@ Widget officeField(
     autocorrect: false,
     enableSuggestions: false,
     decoration: InputDecoration(
-      labelText: label,
+      labelText: required ? '$label (required)' : label,
       border: const OutlineInputBorder(),
     ),
     onChanged: onChanged,

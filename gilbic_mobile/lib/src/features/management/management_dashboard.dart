@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -184,7 +185,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Your current permissions do not allow this Management view.',
+            'Your account does not have access to this Management view.',
           ),
         ),
       );
@@ -233,7 +234,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Your current server permissions do not allow ${module.title}.',
+            'Your account does not have access to ${module.title}.',
           ),
         ),
       );
@@ -398,43 +399,46 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       appBar: AppBar(
         title: const Text('Management'),
         actions: [
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: onSignOut,
-            icon: const Icon(Icons.logout),
+          WorkspaceAccountMenu(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+            onSignOut: onSignOut,
           ),
         ],
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => _loadOverview(refresh: true),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ManagementWelcomeCard(session: session),
-                const SizedBox(height: 16),
-                _ManagementLiveOverview(
-                  overview: _overview,
-                  loading: _loadingOverview,
-                  error: _overviewError,
-                  statusCode: _overviewStatusCode,
-                  onRefresh: () => unawaited(_loadOverview(refresh: true)),
-                  onRetry: () => unawaited(_loadOverview()),
-                  onSignInAgain: () => unawaited(onSignOut()),
-                  onOpenMetric: (key) => _openOverviewMetric(context, key),
-                ),
-                const SizedBox(height: 20),
-                for (var index = 0; index < sections.length; index++) ...[
-                  _ManagementSectionCard(
-                    section: sections[index],
-                    onOpen: (module) => _openModule(context, module),
+        child: WorkspaceBody(
+          child: RefreshIndicator(
+            onRefresh: () => _loadOverview(refresh: true),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ManagementWelcomeCard(session: session),
+                  const SizedBox(height: 16),
+                  _ManagementLiveOverview(
+                    overview: _overview,
+                    loading: _loadingOverview,
+                    error: _overviewError,
+                    statusCode: _overviewStatusCode,
+                    onRefresh: () => unawaited(_loadOverview(refresh: true)),
+                    onRetry: () => unawaited(_loadOverview()),
+                    onSignInAgain: () => unawaited(onSignOut()),
+                    onOpenMetric: (key) => _openOverviewMetric(context, key),
                   ),
-                  if (index != sections.length - 1) const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  for (var index = 0; index < sections.length; index++) ...[
+                    _ManagementSectionCard(
+                      section: sections[index],
+                      onOpen: (module) => _openModule(context, module),
+                    ),
+                    if (index != sections.length - 1)
+                      const SizedBox(height: 16),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -567,20 +571,6 @@ class _ManagementLiveOverview extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 14),
-        Text(
-          'Today & portfolio',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        KeyedSubtree(
-          key: const Key('management-overview-facts'),
-          child: _ManagementKpiGrid(
-            key: const Key('management-kpi-grid'),
-            metrics: facts,
-            onOpenMetric: onOpenMetric,
-          ),
-        ),
-        const SizedBox(height: 16),
         Text('Needs attention', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         if (attention.isEmpty)
@@ -598,6 +588,20 @@ class _ManagementLiveOverview extends StatelessWidget {
             metrics: attention,
             onOpenMetric: onOpenMetric,
           ),
+        const SizedBox(height: 16),
+        Text(
+          'Today & portfolio',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        KeyedSubtree(
+          key: const Key('management-overview-facts'),
+          child: _ManagementKpiGrid(
+            key: const Key('management-kpi-grid'),
+            metrics: facts,
+            onOpenMetric: onOpenMetric,
+          ),
+        ),
       ],
     );
   }
@@ -711,11 +715,13 @@ class _ManagementAttentionGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
-        final columnCount = constraints.maxWidth >= 900
-            ? 6
-            : constraints.maxWidth >= 600
-            ? 5
-            : 4;
+        final scaledWidth =
+            constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1);
+        final columnCount = scaledWidth >= 720
+            ? 3
+            : scaledWidth >= 360
+            ? 2
+            : 1;
         final itemWidth =
             (constraints.maxWidth - (spacing * (columnCount - 1))) /
             columnCount;
@@ -753,7 +759,13 @@ class _ManagementKpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 10.0;
-        final columnCount = constraints.maxWidth >= 900 ? 3 : 2;
+        final scaledWidth =
+            constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1);
+        final columnCount = scaledWidth >= 720
+            ? 3
+            : scaledWidth >= 360
+            ? 2
+            : 1;
         final cardWidth =
             (constraints.maxWidth - (spacing * (columnCount - 1))) /
             columnCount;
@@ -785,8 +797,8 @@ class _ManagementKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = _kpiContent(context, metric);
-    return SizedBox(
-      height: 104,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 104),
       child: Card(
         key: Key('management-overview-metric-${metric.key.name}'),
         margin: EdgeInsets.zero,
@@ -804,27 +816,19 @@ class _ManagementKpiCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      content.$1,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                  Text(
+                    content.$1,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     content.$2,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                   if (content.$3 != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       content.$3!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -848,9 +852,9 @@ class _ManagementAttentionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = _attentionContent(metric);
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
+    return ConstrainedBox(
       key: Key('management-overview-metric-${metric.key.name}'),
-      height: 92,
+      constraints: const BoxConstraints(minHeight: 92),
       child: Semantics(
         button: true,
         label:
@@ -899,10 +903,8 @@ class _ManagementAttentionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       content.$1,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall,
+                      style: Theme.of(context).textTheme.labelLarge,
                     ),
                   ],
                 ),
@@ -1147,11 +1149,13 @@ class _ManagementModuleGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
-        final columnCount = constraints.maxWidth >= 900
-            ? 6
-            : constraints.maxWidth >= 600
-            ? 5
-            : 4;
+        final scaledWidth =
+            constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1);
+        final columnCount = scaledWidth >= 720
+            ? 3
+            : scaledWidth >= 360
+            ? 2
+            : 1;
         final itemWidth =
             (constraints.maxWidth - (spacing * (columnCount - 1))) /
             columnCount;
@@ -1183,9 +1187,9 @@ class _ManagementModuleShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
+    return ConstrainedBox(
       key: Key(module.action.keyName),
-      height: 92,
+      constraints: const BoxConstraints(minHeight: 92),
       child: Semantics(
         button: true,
         label: '${module.title}. ${module.description}',
@@ -1217,10 +1221,8 @@ class _ManagementModuleShortcut extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       module.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall,
+                      style: Theme.of(context).textTheme.labelLarge,
                     ),
                   ],
                 ),

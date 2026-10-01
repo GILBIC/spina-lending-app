@@ -87,7 +87,7 @@ for (const role of ['employee', 'management']) {
     await mounts[role](h.context);
 
     assert.deepEqual(h.navigation.find(({ id }) => id === `${role}-cif-review`), {
-      id: `${role}-cif-review`, label: 'CIF review',
+      id: `${role}-cif-review`, label: 'CIF review', group: 'Daily work',
     }, `${role} CIF review navigation is not connected`);
     const root = officeSelection(h, role);
     assert.match(root.querySelector('label').textContent, /Office intake reference/);

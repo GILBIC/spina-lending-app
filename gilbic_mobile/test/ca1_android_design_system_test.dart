@@ -8,7 +8,7 @@ void main() {
   test('SPINA theme keeps the approved pink and white visual anchors', () {
     final theme = SpinaTheme.light;
 
-    expect(theme.colorScheme.primary, SpinaTheme.brandPink);
+    expect(theme.colorScheme.primary, SpinaTheme.brandPinkDark);
     expect(theme.colorScheme.surface, Colors.white);
     expect(theme.scaffoldBackgroundColor, SpinaTheme.canvas);
     expect(theme.useMaterial3, isTrue);
@@ -22,9 +22,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: SpinaTheme.light,
-          home: LoginPage(
-            onSignIn: (username, password) async => null,
-          ),
+          home: LoginPage(onSignIn: (username, password) async => null),
         ),
       );
       await tester.pumpAndSettle();
@@ -44,7 +42,10 @@ void main() {
         findsNothing,
       );
       expect(find.byKey(const Key('open-ca1-design-preview')), findsNothing);
-      expect(find.text('Review-only preview for the Android CA1 design pass.'), findsNothing);
+      expect(
+        find.text('Review-only preview for the Android CA1 design pass.'),
+        findsNothing,
+      );
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.binding.setSurfaceSize(null);

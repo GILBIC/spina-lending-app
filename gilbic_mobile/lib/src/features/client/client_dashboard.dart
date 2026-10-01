@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -6,14 +7,12 @@ import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
-import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_renewal_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_support_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
-import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
 class ClientDashboard extends StatefulWidget {
   const ClientDashboard({
@@ -110,7 +109,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Your current server permissions do not allow $title. Sign in again or contact Management.',
+          'Your account does not have access to $title. Sign in again or contact Management.',
         ),
       ),
     );
@@ -168,16 +167,6 @@ class _ClientDashboardState extends State<ClientDashboard> {
     );
   }
 
-  void _openAccount() {
-    _push(
-      AccountSettingsPage(
-        session: widget.session,
-        onSignOut: widget.onSignOut,
-        deviceIdentityProvider: widget.deviceIdentityProvider,
-      ),
-    );
-  }
-
   void _openNotifications() {
     _push(
       NotificationCenterPage(
@@ -187,117 +176,103 @@ class _ClientDashboardState extends State<ClientDashboard> {
     );
   }
 
-  void _openOfflinePolicy() {
-    _push(MobileOfflinePolicyPage(session: widget.session));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SPINA'),
+        title: const Text('My day'),
         actions: [
-          IconButton(
-            key: const Key('open-offline-policy'),
-            tooltip: 'Offline & sync',
-            onPressed: _openOfflinePolicy,
-            icon: const Icon(Icons.cloud_off_outlined),
-          ),
           IconButton(
             key: const Key('open-notification-center'),
             tooltip: 'Notifications',
             onPressed: _openNotifications,
             icon: const Icon(Icons.notifications_outlined),
           ),
-          IconButton(
-            key: const Key('open-account-settings'),
-            tooltip: 'Profile & security',
-            onPressed: _openAccount,
-            icon: const Icon(Icons.account_circle_outlined),
-          ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: widget.onSignOut,
-            icon: const Icon(Icons.logout),
+          WorkspaceAccountMenu(
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            onSignOut: widget.onSignOut,
           ),
         ],
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadPortfolio,
-          child: ListView(
-            key: const Key('client-dashboard-list'),
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            children: [
-              Text(
-                'Welcome, ${widget.session.displayName}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 5),
-              Text(
-                'Review your official SPINA records and choose what you need next.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              _CurrentLoansSection(
-                portfolio: _portfolio,
-                homeObligationSchedules: _homeObligationSchedules,
-                loading: _loading,
-                errorMessage: _errorMessage,
-                onRetry: _loadPortfolio,
-                onOpenLoans: _openLoans,
-              ),
-              const SizedBox(height: 22),
-              Text(
-                'Next actions',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'These pages are view-only unless a protected client action is clearly offered.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-              _ClientActionRow(
-                key: const Key('client-home-loans'),
-                title: 'My loans',
-                description: 'Balances, schedules, and loan history',
-                icon: Icons.account_balance_wallet_outlined,
-                onTap: _openLoans,
-              ),
-              _ClientActionRow(
-                key: const Key('client-home-payments'),
-                title: 'Payments & official receipts',
-                description:
-                    'Timeline, statement, receipts, and direct-payment status',
-                icon: Icons.receipt_long_outlined,
-                onTap: _openPayments,
-              ),
-              _ClientActionRow(
-                key: const Key('client-home-payment-updates'),
-                title: 'Payment updates',
-                description:
-                    'See recorded, remitted, accepted, or corrected activity',
-                icon: Icons.notifications_active_outlined,
-                onTap: _openPaymentUpdates,
-              ),
-              _ClientActionRow(
-                key: const Key('client-home-renewal'),
-                title: 'Renewal status',
-                description: 'Request renewal and follow its review status',
-                icon: Icons.autorenew,
-                onTap: _openRenewal,
-              ),
-              _ClientActionRow(
-                key: const Key('client-home-support'),
-                title: 'Support',
-                description:
-                    'Questions, concerns, follow-ups, and communication history',
-                icon: Icons.support_agent_outlined,
-                onTap: _openSupport,
-              ),
-            ],
+        child: WorkspaceBody(
+          child: RefreshIndicator(
+            onRefresh: _loadPortfolio,
+            child: ListView(
+              key: const Key('client-dashboard-list'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+              children: [
+                Text(
+                  'Welcome, ${widget.session.displayName}',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Your loans and payments, in one place.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                _CurrentLoansSection(
+                  portfolio: _portfolio,
+                  homeObligationSchedules: _homeObligationSchedules,
+                  loading: _loading,
+                  errorMessage: _errorMessage,
+                  onRetry: _loadPortfolio,
+                  onOpenLoans: _openLoans,
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Next actions',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Choose a task to continue.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 8),
+                _ClientActionRow(
+                  key: const Key('client-home-loans'),
+                  title: 'My loans',
+                  description: 'Balances, schedules, and loan history',
+                  icon: Icons.account_balance_wallet_outlined,
+                  onTap: _openLoans,
+                ),
+                _ClientActionRow(
+                  key: const Key('client-home-payments'),
+                  title: 'Payments & official receipts',
+                  description:
+                      'Timeline, statement, receipts, and direct-payment status',
+                  icon: Icons.receipt_long_outlined,
+                  onTap: _openPayments,
+                ),
+                _ClientActionRow(
+                  key: const Key('client-home-payment-updates'),
+                  title: 'Payment status',
+                  description:
+                      'See recorded, remitted, accepted, or corrected activity',
+                  icon: Icons.notifications_active_outlined,
+                  onTap: _openPaymentUpdates,
+                ),
+                _ClientActionRow(
+                  key: const Key('client-home-renewal'),
+                  title: 'Renewal status',
+                  description: 'Request renewal and follow its review status',
+                  icon: Icons.autorenew,
+                  onTap: _openRenewal,
+                ),
+                _ClientActionRow(
+                  key: const Key('client-home-support'),
+                  title: 'Support',
+                  description:
+                      'Questions, concerns, follow-ups, and communication history',
+                  icon: Icons.support_agent_outlined,
+                  onTap: _openSupport,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -409,12 +384,18 @@ class _ClientLoanSummaryRow extends StatelessWidget {
     final schedule = loan.isSevenBySeven ? obligationSchedule : null;
     final reviewReason = schedule?.managementReviewRequiredReason.trim() ?? '';
     final penaltyStatus = schedule?.penaltyStatus.trim().toLowerCase() ?? '';
-    final managementReviewRequired = schedule != null &&
-        (penaltyStatus == 'management_review_required' || reviewReason.isNotEmpty);
-    final showExactPayoff = schedule != null &&
+    final managementReviewRequired =
+        schedule != null &&
+        (penaltyStatus == 'management_review_required' ||
+            reviewReason.isNotEmpty);
+    final showExactPayoff =
+        schedule != null &&
         !managementReviewRequired &&
-        const <String>{'projected', 'penalty_outstanding', 'cap_exhausted'}
-            .contains(penaltyStatus);
+        const <String>{
+          'projected',
+          'penalty_outstanding',
+          'cap_exhausted',
+        }.contains(penaltyStatus);
 
     return Card(
       key: Key('client-home-loan-${loan.loanId}'),

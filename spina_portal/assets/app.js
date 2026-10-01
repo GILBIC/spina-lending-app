@@ -36,6 +36,21 @@ const logoutButton = document.getElementById('logout-button');
 const loginForm = document.getElementById('login-form');
 const workspaceChoice = document.getElementById('workspace-choice');
 const workspaceChoiceLabel = document.getElementById('workspace-choice-label');
+const navigationToggle = document.getElementById('navigation-toggle');
+const workspaceSidebar = document.getElementById('workspace-sidebar');
+const currentScreen = document.getElementById('current-screen');
+const loginFeedback = document.getElementById('login-feedback');
+const accountMenu = document.getElementById('account-menu');
+function closeNavigation() {
+  workspaceSidebar?.classList.toggle('is-open', false);
+  navigationToggle?.setAttribute('aria-expanded', 'false');
+}
+const workspaceNavigation = bindNavigation(roleNavigation, roleContent, {
+  onNavigate: ({ label, userInitiated }) => {
+    if (currentScreen) currentScreen.textContent = label || 'Today';
+    if (userInitiated) closeNavigation();
+  },
+});
 
 let currentMount = null;
 let currentContext = null;
@@ -74,6 +89,9 @@ function clearWorkspace() {
   workspaceController = null;
   currentMount = null;
   currentContext = null;
+  workspaceNavigation.reset();
+  closeNavigation();
+  if (accountMenu) accountMenu.open = false;
   roleNavigation.innerHTML = '';
   roleContent.innerHTML = '';
   signedInName.textContent = '';
@@ -99,6 +117,7 @@ async function mountCurrentWorkspace() {
   refreshButton.disabled = true;
   try {
     await mount(context);
+    if (!controller.signal.aborted) workspaceNavigation.activate();
   } catch (error) {
     if (controller.signal.aborted) return;
     roleContent.innerHTML = `<div class="error-card"><strong>The ${escapeHtml(context.role)} workspace could not start.</strong><br>${escapeHtml(error.message || 'Unexpected error')}</div>`;
@@ -145,6 +164,7 @@ async function showAuthenticated(session, requestedRole) {
     sessionStore,
     role,
     setNavigation,
+    activateNavigation: () => { if (!workspaceController?.signal.aborted) workspaceNavigation.activate(); },
     uncertainCollection: null,
   };
   refreshController.start();
@@ -154,19 +174,24 @@ async function showAuthenticated(session, requestedRole) {
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (loginForm.reportValidity && !loginForm.reportValidity()) return;
+  if (loginFeedback) { loginFeedback.hidden = true; loginFeedback.textContent = ''; }
   const button = loginForm.querySelector('button[type="submit"]');
   const data = new FormData(loginForm);
   setButtonBusy(button, true, 'Signing in…');
   try {
     const session = await api.login(data.get('username'), data.get('password'));
     loginForm.reset();
-    showToast('Secure sign-in completed.', 'success');
     await showAuthenticated(session);
   } catch (error) {
     const message = error.code === 'device_approval_required'
       ? 'This device is registered as pending. Management must approve it before Collector access is activated.'
       : error.message;
-    showToast(message, 'error', 7600);
+    if (loginFeedback) {
+      loginFeedback.textContent = message || 'Sign-in failed. Check your details and try again.';
+      loginFeedback.hidden = false;
+      loginFeedback.focus();
+    } else showToast(message, 'error', 7600);
   } finally {
     setButtonBusy(button, false);
   }
@@ -176,6 +201,8 @@ refreshButton.addEventListener('click', () => mountCurrentWorkspace());
 workspaceChoice?.addEventListener('change', () => {
   const session = currentContext?.session;
   if (session && sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
+    if (accountMenu) accountMenu.open = false;
+    workspaceNavigation.reset();
     void showAuthenticated(session, workspaceChoice.value);
   }
 });
@@ -205,7 +232,18 @@ globalThis.addEventListener('offline', () => {
   showToast('Connection lost. Financial entry is unavailable while offline.', 'error');
 });
 
-bindNavigation(roleNavigation, roleContent);
+navigationToggle?.addEventListener('click', () => {
+  const open = navigationToggle.getAttribute('aria-expanded') !== 'true';
+  navigationToggle.setAttribute('aria-expanded', String(open));
+  workspaceSidebar?.classList.toggle('is-open', open);
+});
+workspaceSidebar?.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    const wasOpen = navigationToggle?.getAttribute('aria-expanded') === 'true';
+    closeNavigation();
+    if (wasOpen) navigationToggle?.focus();
+  }
+});
 
 if ('serviceWorker' in navigator) {
   globalThis.addEventListener('load', () => {

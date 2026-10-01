@@ -63,7 +63,7 @@ function assertAreaLoaded(h, role) {
   assert.match(area.querySelector('.area-tree-row').textContent, /Synthetic City/);
   assert.deepEqual(areaRequests(h).map(({ path }) => path), ['/api/v1/areas']);
   assert.deepEqual(h.navigation.filter(({ id }) => id === `${role}-area-management`), [
-    { id: `${role}-area-management`, label: 'Area Management' },
+    { id: `${role}-area-management`, label: 'Area Management', group: 'Administration' },
   ]);
   return area;
 }
@@ -73,7 +73,7 @@ async function openCif(h, role) {
   const selection = section?.querySelector('[data-office-cif-selection]');
   assert.ok(selection?.querySelector('form'), 'office CIF selection must be mounted');
   assert.deepEqual(h.navigation.filter(({ id }) => id === `${role}-cif-review`), [
-    { id: `${role}-cif-review`, label: 'CIF review' },
+    { id: `${role}-cif-review`, label: 'CIF review', group: 'Daily work' },
   ]);
   const input = selection.querySelector('input');
   input.value = REFERENCE;

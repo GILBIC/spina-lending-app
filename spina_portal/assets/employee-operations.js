@@ -64,7 +64,7 @@ const COLLECTIONS = {
 const CAPABILITIES = ['can_self_service','can_manage_staff','can_configure','can_prepare_payroll','can_approve_payroll','can_record_payments','can_assign_tasks','can_review_requests','can_review_shortages','can_prepare_accounting','can_view_statutory','can_report_shortage','can_record_advances'];
 const MONEY_FIELDS = new Set(['daily_rate','amount','expected_cash','accounted_cash','shortage_amount','disbursed_amount','repaid_amount','outstanding_amount','gross_pay','deductions','net_pay','paid_amount','balance_due','statement_balance','ledger_balance','sss_employee','sss_employer','philhealth_employee','philhealth_employer','pagibig_employee','pagibig_employer','employer_other','maximum_authorized_recovery','basic_earned','taxable_earned','tax_withheld','thirteenth_paid','other_benefits_paid','debit','credit']);
 const LABELS = Object.fromEntries(Object.values(FORMS).flatMap(form=>form.fields.map(item=>[item.name,item.label])));
-Object.assign(LABELS,{full_name:'Employee',status:'Status',working_minutes:'Accepted working minutes',unpaid_break_minutes:'Unpaid break minutes',event_type:'Event',captured_at:'Captured at',received_at:'Received by server',decision_reason:'Review decision reason',request_kind:'Request category',disbursed_amount:'Principal disbursed',repaid_amount:'Principal repaid',outstanding_amount:'Outstanding principal',shortage_amount:'Recorded shortage',gross_pay:'Gross pay',deductions:'Deductions',net_pay:'Net pay',paid_amount:'Completed payments',balance_due:'Still due',period_end:'Period ends',journal_entry_id:'General Journal draft reference',explanation:'Employee explanation',approved_by:'Approved by',decided_by:'Decision by',recorded_by:'Payment recorded by',disbursed_at:'Disbursed at',original_payroll_id:'Original payroll reference',approval_reason:'Approval reason',original_history_id:'Original history reference',original_expected_version:'Original history revision'});
+Object.assign(LABELS,{full_name:'Employee',status:'Status',working_minutes:'Accepted working minutes',unpaid_break_minutes:'Unpaid break minutes',event_type:'Event',captured_at:'Captured at',received_at:'Received',decision_reason:'Review decision reason',request_kind:'Request category',disbursed_amount:'Principal disbursed',repaid_amount:'Principal repaid',outstanding_amount:'Outstanding principal',shortage_amount:'Recorded shortage',gross_pay:'Gross pay',deductions:'Deductions',net_pay:'Net pay',paid_amount:'Completed payments',balance_due:'Still due',period_end:'Period ends',journal_entry_id:'General Journal draft reference',explanation:'Employee explanation',approved_by:'Approved by',decided_by:'Decision by',recorded_by:'Payment recorded by',disbursed_at:'Disbursed at',original_payroll_id:'Original payroll reference',approval_reason:'Approval reason',original_history_id:'Original history reference',original_expected_version:'Original history revision'});
 Object.assign(LABELS,{minutes:'Minutes',amount:'Amount (PHP)',work_date:'Work date',as_of:'As of',description:'Description',reason:'Reason',source:'Reviewed source',reference:'Reference',evidence:'Supporting evidence',employee_acknowledgment:'Employee acknowledgment',settlement_evidence:'Verified settlement evidence',paid_minutes:'Reviewed payable minutes'});
 
 function currency(value) {
@@ -94,7 +94,7 @@ function validateWorkspace(value,session) {
     if(!object(record)||!UUID.test(record.id)||!Number.isSafeInteger(record.version)||record.version<1
       ||!(record.employee_id===null||UUID.test(record.employee_id))||!object(record.payload)
       ||!Array.isArray(record.allowed_actions)||!record.allowed_actions.every(action=>typeof action==='string')) {
-      throw new Error('The server returned incomplete employee records. Refresh to try again.');
+      throw new Error('Some employee records are incomplete. Refresh to try again.');
     }
   }
   return value;
@@ -195,7 +195,7 @@ function recordMarkup(workspace,record,index) {
     <dl class="employee-details">${scalar.map(([key,value])=>`<div><dt>${esc(LABELS[key])}</dt><dd>${display(key,value)}</dd></div>`).join('')}</dl>
     ${Array.isArray(data.work_days)?`<p>Working days: ${data.work_days.map(day=>['','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][day]||'Unknown').map(esc).join(', ')}</p>`:''}
     ${Array.isArray(data.duties)?`<p>Authorized duties: ${data.duties.map(value=>esc(titleCase(value))).join(', ')}</p>`:''}
-    ${components.length?`<h4>Server-calculated salary components</h4><table><tbody>${components.map(component=>`<tr><th>${esc(component.label)}</th><td>${currency(component.amount)}</td></tr>`).join('')}</tbody></table>`:''}
+    ${components.length?`<h4>Pay breakdown</h4><table><tbody>${components.map(component=>`<tr><th>${esc(component.label)}</th><td>${currency(component.amount)}</td></tr>`).join('')}</tbody></table>`:''}
     ${original}${rows('installments','Current agreed principal repayment schedule',['due_date','amount'])}${proposed}${rows('repayment_history','Recorded repayments',['amount','occurred_at','reference','source'])}${rows('lines','Journal draft lines',['account_code','debit','credit'])}
     ${history.length?`<details><summary>Record history (${history.length})</summary>${history.map(item=>`<article><p>${esc(item.created_at)} · ${esc(titleCase(item.action))} · ${esc(titleCase(item.status))} · Revision ${esc(item.version)}</p><dl class="employee-details">${Object.entries(object(item.payload)?item.payload:{}).filter(([key,value])=>LABELS[key]&&['string','number','boolean'].includes(typeof value)).map(([key,value])=>`<div><dt>${esc(LABELS[key])}</dt><dd>${display(key,value)}</dd></div>`).join('')}</dl></article>`).join('')}</details>`:''}
     ${asArray(data.issues).length?`<div class="notice-card warning"><strong>Review required</strong><ul>${data.issues.map(issue=>`<li>${esc(issue)}</li>`).join('')}</ul></div>`:''}
@@ -207,10 +207,26 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   if(!root)return ()=>{};
   mounts.get(root)?.();
   const controller=new AbortController();let disposed=false;let busy=false;let stale=false;let workspace=null;let selected=null;let removers=[];let pending=pendingBySession.get(session)||null;
+  const feedbackId=`employee-feedback-${crypto.randomUUID()}`;let opener=null;
   const listen=(element,event,handler)=>{if(element){element.addEventListener(event,handler);removers.push(()=>element.removeEventListener(event,handler));}};
   function clear(){for(const remove of removers)remove();removers=[];for(const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')])input.value='';root.innerHTML='';}
   function dispose(){if(disposed)return;disposed=true;controller.abort();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
   function message(text,error=false){const element=root.querySelector('[data-employee-status]');if(element){if(error)element.innerHTML=errorCard(text);else element.textContent=text;}}
+  function focusFeedback(){root.querySelector('[data-employee-status]')?.focus();}
+  function restoreFocus(){
+    let target=null;
+    if(opener?.recordId){
+      target=[...root.querySelectorAll('[data-employee-action]')].find(button=>{
+        const [key,index]=button.getAttribute('data-employee-record').split(':');
+        return button.getAttribute('data-employee-action')===opener.action&&workspace?.[key]?.[Number(index)]?.id===opener.recordId;
+      });
+    }else if(opener)target=root.querySelector(`[data-employee-create="${opener.action}"]`);
+    const recordGroup=target?.getAttribute('data-employee-record')?.split(':')[0];
+    if(recordGroup)root.querySelector(`[data-employee-collection="${recordGroup}"]`)?.setAttribute('open','');
+    if(!target||target.disabled)target=root.querySelector('[data-employee-refresh]');
+    if(target&&!target.disabled)target.focus();
+    opener=null;
+  }
   function denied(error){if([401,403].includes(error?.status)){pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);return true;}return false;}
   function connection(){if(disposed)return;lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
   function lock(){
@@ -230,11 +246,11 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       render();if(successMessage)message(successMessage);
       else if(pending)message('The result is not confirmed. Check the saved result, or retry the same unchanged request. Do not start another payment.');
     } catch(error){if(disposed)return;stale=true;if(!denied(error)){if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else message(error,true);}}
-    finally{busy=false;if(!disposed)lock();}
+    finally{busy=false;if(!disposed){lock();if(successMessage)restoreFocus();}}
   }
   async function execute(command) {
     if(disposed||busy||globalThis.navigator?.onLine===false)return;
-    setPending(command);busy=true;lock();message('Saving employee record…');let accepted='';let uncertain=false;
+    setPending(command);busy=true;lock();message('Saving employee record…');let accepted='';let uncertain=false;let rejected=false;
     try {
       const result=await api.request(`${BASE}/actions`,{method:'POST',body:command,financial:true,signal:controller.signal});
       if(disposed)return;if(!matchesResult(result,command))throw Object.assign(new Error('The saved response could not be confirmed.'),{code:'network_uncertain'});
@@ -242,15 +258,15 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     } catch(error){
       if(disposed)return;if(denied(error))return;
       uncertain=error?.code==='network_uncertain'||!error?.status||error.status>=500;
-      if(!uncertain){setPending(null);if(error.status===409){selected=null;stale=true;}render();message(error,true);}
-    } finally{busy=false;if(!disposed)lock();}
+      if(!uncertain){setPending(null);rejected=true;if(error.status===409){selected=null;stale=true;render();}message(error,true);}
+    } finally{busy=false;if(!disposed){lock();if(rejected){if(stale)root.querySelector('[data-employee-refresh]')?.focus();else focusFeedback();}}}
     if(disposed||!workspace)return;
     if(accepted){render();await load({recover:false,successMessage:accepted});}
     else if(uncertain){render();await load({recover:true});}
   }
   function editor(action,record=null) {
     if(busy||pending||stale||disposed||!(record?recordAllowed(workspace,record,action):createAllowed(workspace,action)))return;
-    selected={action,record};render();root.querySelector('[data-employee-editor]')?.scrollIntoView?.({block:'nearest'});
+    opener={action,recordId:record?.id};selected={action,record};render();root.querySelector('[data-employee-editor]')?.scrollIntoView?.({block:'nearest'});root.querySelector('[data-employee-form]')?.querySelector('[name]')?.focus();
   }
   function editorMarkup(){
     if(!selected)return '';
@@ -266,7 +282,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       ${action==='payroll_history_correct'?`<p>The original history is preserved. Enter the complete corrected totals for payroll year ${esc(record.payload.year)} and a reason for this replacement.</p>`:''}
       ${action==='accounting_prepare'?'<p>Preparation creates a draft for authorized review. It does not post a journal or confirm settlement.</p>':''}
       ${fields.some(spec=>spec.type==='integer'&&/minutes/.test(spec.name))?'<p class="meta">For an eight-hour schedule, a full day is 480 minutes and half a day is 240 minutes. Enter the actual applicable time.</p>':''}
-      <form class="entry-form" data-employee-form="${action}">${!record&&form.subject&&form.subject!=='self'?target:''}${fields.map(spec=>inputMarkup(spec,values,workspace.account_candidates)).join('')}<div class="inline-actions"><button type="submit" class="button button-primary">${esc(form.label)}</button><button type="button" class="button button-outline" data-employee-cancel>Cancel editing</button></div></form></section>`;
+      <form class="entry-form" data-employee-form="${action}" aria-describedby="${feedbackId}">${!record&&form.subject&&form.subject!=='self'?target:''}${fields.map(spec=>inputMarkup(spec,values,workspace.account_candidates)).join('')}<div class="inline-actions"><button type="submit" class="button button-primary">${esc(form.label)}</button><button type="button" class="button button-outline" data-employee-cancel>Cancel editing</button></div></form></section>`;
   }
   function buildCommand(form){
     const {action,record}=selected;const definition=FORMS[action];
@@ -300,26 +316,26 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     clear();if(!workspace)return;
     const available=Object.entries(FORMS).filter(([action])=>createAllowed(workspace,action));
     const groups=[...new Set(available.map(([,form])=>form.group))];
-    root.innerHTML=`<div class="section-heading"><div><h2>Employee work and pay</h2><p>Private records and actions authorized for this account. Salary figures are calculated by the server.</p></div><button type="button" class="button button-outline" data-employee-refresh>Refresh employee records</button></div>
+    root.innerHTML=`<div class="section-heading"><div><h2>Employee work and pay</h2><p>Record attendance, request time off and review your work and pay. Open a record group below for details and available actions.</p></div><button type="button" class="button button-outline" data-employee-refresh>Refresh employee records</button></div>
       <p class="meta" data-employee-connection></p>
       ${workspace.setup_missing.length?`<div class="notice-card warning"><h3>Setup or review needed</h3><ul>${workspace.setup_missing.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><p>Missing inputs do not mean zero pay.</p></div>`:''}
       ${workspace.capabilities.can_self_service?`<section class="employee-time"><h3>My attendance</h3><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
       <div class="employee-command-groups">${groups.map(group=>`<section><h3>${esc(group)}</h3><div class="inline-actions">${available.filter(([,form])=>form.group===group).map(([action,form])=>`<button type="button" class="button button-outline" data-employee-create="${action}">${esc(form.label)}</button>`).join('')}</div></section>`).join('')}</div>
-      <div data-employee-status role="status" aria-live="polite"></div>
+      <div id="${feedbackId}" data-employee-status role="status" aria-live="polite" tabindex="-1"></div>
       ${pending?'<div class="notice-card warning"><h3>Confirm previous submission</h3><p>The same request identity is retained. Check its result before creating any other change.</p><button type="button" class="button button-secondary" data-employee-check>Check saved result</button><button type="button" class="button button-outline" data-employee-retry>Retry same unchanged request</button></div>':''}
       ${editorMarkup()}
       <section><h3>Attendance day review</h3>${workspace.attendance_days.length?workspace.attendance_days.map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join(''):emptyState('No attendance day has been recorded.')}</section>
       <section><h3>Leave balances</h3>${workspace.leave_balances.length?workspace.leave_balances.map(balance=>`<article class="data-card"><strong>${esc(employeeName(workspace,balance.employee_id))}</strong><p>As of ${esc(balance.as_of)} · ${balance.eligible?'Eligible':'Not yet eligible'}</p><p>Available: ${esc(balance.available_minutes)} minutes · Used: ${esc(balance.used_minutes)} · Reserved: ${esc(balance.reserved_minutes)} · Accrued: ${esc(balance.accrued_minutes)} · Verified opening: ${esc(balance.opening_minutes)}</p></article>`).join(''):emptyState('No verified leave balance is available.')}</section>
-      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length||['requests','tasks','advances','shortages','payroll'].includes(key)).map(([key,label])=>`<details class="employee-record-section" open><summary>${esc(label)} (${workspace[key].length})</summary><div class="employee-record-grid">${workspace[key].length?workspace[key].map((record,index)=>recordMarkup(workspace,record,`${key}:${index}`)).join(''):emptyState(`No ${label.toLowerCase()} are available in your authorized scope.`)}</div></details>`).join('')}`;
+      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length||['requests','tasks','advances','shortages','payroll'].includes(key)).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length})</summary><div class="employee-record-grid">${workspace[key].length?workspace[key].map((record,index)=>recordMarkup(workspace,record,`${key}:${index}`)).join(''):emptyState(`No ${label.toLowerCase()} are available for your account.`)}</div></details>`).join('')}`;
     listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());
     listen(root.querySelector('[data-employee-check]'),'click',()=>load({recover:true}));
     listen(root.querySelector('[data-employee-retry]'),'click',()=>{if(pending)void execute(pending);});
     for(const button of root.querySelectorAll('[data-employee-create]'))listen(button,'click',()=>editor(button.getAttribute('data-employee-create')));
     for(const button of root.querySelectorAll('[data-employee-action]'))listen(button,'click',()=>{const [key,index]=button.getAttribute('data-employee-record').split(':');editor(button.getAttribute('data-employee-action'),workspace[key][Number(index)]);});
     for(const button of root.querySelectorAll('[data-employee-attendance]'))listen(button,'click',()=>attendance(button.getAttribute('data-employee-attendance')));
-    listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;render();});
+    listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;render();restoreFocus();});
     const form=root.querySelector('[data-employee-form]');
-    listen(form,'submit',event=>{event.preventDefault();if(busy||pending||stale||disposed)return;try{void execute(buildCommand(form));}catch(error){message(error,true);}});
+    listen(form,'submit',event=>{event.preventDefault();if(busy||pending||stale||disposed)return;try{void execute(buildCommand(form));}catch(error){message(error,true);focusFeedback();}});
     if(selected)for(const button of root.querySelectorAll('[data-employee-add-row]'))listen(button,'click',()=>{
       if(busy||pending)return;const spec=FORMS[selected.action].fields.find(item=>item.name===button.getAttribute('data-employee-add-row'));
       const parent=form.querySelector(`[data-employee-rows="${spec.name}"]`);const rows=[...parent.querySelectorAll('[data-employee-row]')].map(row=>readFields(row,spec.fields,false));

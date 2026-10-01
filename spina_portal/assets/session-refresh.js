@@ -1,7 +1,7 @@
 // Refresh only authentication. Never replay an interrupted financial request.
 export class SessionRefreshController {
   constructor({ api, sessionStore, onRefreshed = () => {}, onExpired = () => {}, now = Date.now,
-    setTimer = setTimeout, clearTimer = clearTimeout }) {
+    setTimer = (callback, delay) => globalThis.setTimeout(callback, delay), clearTimer = (timer) => globalThis.clearTimeout(timer) }) {
     Object.assign(this, { api, sessionStore, onRefreshed, onExpired, now, setTimer, clearTimer });
     this.generation = 0;
     this.timer = null;

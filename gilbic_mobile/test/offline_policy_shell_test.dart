@@ -58,12 +58,12 @@ void main() {
 
             final theme = Theme.of(tester.element(find.byType(Scaffold).first));
             expect(theme.platform, platform);
-            expect(theme.colorScheme.primary, SpinaTheme.brandPink);
+            expect(theme.colorScheme.primary, SpinaTheme.brandPinkDark);
             final roleHeading = switch (role) {
               AppRole.management => 'Management',
               AppRole.employee => 'Employee Dashboard',
               AppRole.collector => 'Daily Collection',
-              AppRole.client => 'SPINA',
+              AppRole.client => 'My day',
             };
             expect(find.text(roleHeading), findsOneWidget);
 
@@ -100,17 +100,22 @@ void main() {
               return;
             }
 
+            if (role == AppRole.client) {
+              await tester.tap(find.byTooltip('Account & tools'));
+              await tester.pumpAndSettle();
+            }
             final policyLauncher = switch (role) {
               AppRole.management => find.byKey(
                 const Key('management-offline-policy'),
               ),
               AppRole.employee => find.byKey(const Key('employee-offline')),
-              AppRole.client => find.byKey(const Key('open-offline-policy')),
+              AppRole.client => find.text('Offline & sync'),
               AppRole.collector => throw StateError(
                 'Collector returned above.',
               ),
             };
             expect(policyLauncher, findsOneWidget);
+            await tester.ensureVisible(policyLauncher);
             await tester.tap(policyLauncher);
             await tester.pumpAndSettle();
 
@@ -125,49 +130,50 @@ void main() {
     }
   }
 
-  testWidgets('collector without route view still exposes offline safety policy', (
-    tester,
-  ) async {
-    final session = UserSession(
-      userId: 'restricted-collector',
-      username: 'collector.restricted',
-      displayName: 'Restricted Collector',
-      role: AppRole.collector,
-      rawRole: 'Collector',
-      accessToken: 'token',
-      // Write permission alone must never grant route viewing.
-      permissions: const <String>['collection.create'],
-    );
+  testWidgets(
+    'collector without route view still exposes offline safety policy',
+    (tester) async {
+      final session = UserSession(
+        userId: 'restricted-collector',
+        username: 'collector.restricted',
+        displayName: 'Restricted Collector',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        accessToken: 'token',
+        // Write permission alone must never grant route viewing.
+        permissions: const <String>['collection.create'],
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: EnhancedRoleDashboard(
-          session: session,
-          onSignOut: () async {},
-          collectorRouteLoader: _UnusedRouteLoader(),
-          paymentSubmissionRepository: _UnusedPaymentRepository(),
-          deviceIdentityProvider: DeviceIdentityProvider(
-            store: MemoryDeviceIdentityStore(),
-            platformResolver: () => 'android',
-            appVersionResolver: () async => '1.0.0',
-            randomByteGenerator: (length) => List<int>.filled(length, 7),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EnhancedRoleDashboard(
+            session: session,
+            onSignOut: () async {},
+            collectorRouteLoader: _UnusedRouteLoader(),
+            paymentSubmissionRepository: _UnusedPaymentRepository(),
+            deviceIdentityProvider: DeviceIdentityProvider(
+              store: MemoryDeviceIdentityStore(),
+              platformResolver: () => 'android',
+              appVersionResolver: () async => '1.0.0',
+              randomByteGenerator: (length) => List<int>.filled(length, 7),
+            ),
+            collectionDeviceSequence: MemoryCollectionDeviceSequence(),
           ),
-          collectionDeviceSequence: MemoryCollectionDeviceSequence(),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('dashboard-permission-denied')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('open-offline-policy')));
-    await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('dashboard-permission-denied')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('open-offline-policy')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
-  });
+      expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
+    },
+  );
 }
 
 Future<void> _runForPlatform(

@@ -22,14 +22,14 @@
         </header>
 
         <div class="auth-grid">
-          <article class="auth-card" style="grid-column: 1 / -1; width: min(520px, 100%); justify-self: center;">
+          <article class="auth-card auth-sign-in">
             <div class="card-heading">
-              <span class="icon-chip" aria-hidden="true">↗</span>
               <div>
                 <p class="eyebrow">Welcome back</p>
                 <h2>Sign in</h2>
               </div>
             </div>
+            <p class="auth-help">Use the username provided by your office.</p>
             <form id="login-form" class="form-stack" novalidate>
               <label>
                 Username
@@ -39,6 +39,7 @@
                 Password
                 <input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Enter your password" />
               </label>
+              <p id="login-feedback" class="form-feedback" role="alert" tabindex="-1" hidden></p>
               <button class="button button-primary" type="submit">Sign in</button>
             </form>
           </article>
@@ -46,6 +47,7 @@
       </section>
 
       <section id="authenticated-app" class="authenticated-app" hidden>
+        <a class="skip-link" href="#role-content">Skip to workspace</a>
         <header class="topbar">
           <div class="brand-lockup">
             <img src="/assets/spina-icon.svg" alt="" width="40" height="40" />
@@ -57,25 +59,31 @@
           <div class="topbar-context">
             <span id="connection-status" class="status-chip" role="status">Checking connection</span>
             <span id="signed-in-role" class="role-chip"></span>
-            <span id="signed-in-name" class="signed-in-name"></span>
           </div>
           <div class="topbar-actions">
-            <label id="workspace-choice-label" hidden>Workspace <select id="workspace-choice" aria-label="Choose authorized workspace"></select></label>
             <button id="refresh-workspace" class="button button-quiet" type="button">Refresh</button>
-            <button id="logout-button" class="button button-outline" type="button">Sign out</button>
+            <details id="account-menu" class="account-menu">
+              <summary>Account</summary>
+              <div class="account-menu-panel">
+                <strong id="signed-in-name" class="signed-in-name"></strong>
+                <label id="workspace-choice-label" hidden>Switch workspace <select id="workspace-choice" aria-label="Choose authorized workspace"></select></label>
+                <button id="logout-button" class="button button-outline" type="button">Sign out</button>
+              </div>
+            </details>
           </div>
         </header>
 
         <div class="app-layout">
-          <aside class="sidebar">
+          <aside id="workspace-sidebar" class="sidebar">
             <div class="sidebar-title">
               <p class="eyebrow">Workspace</p>
               <h2 id="workspace-title">Spina</h2>
             </div>
+            <button id="navigation-toggle" class="navigation-toggle" type="button" aria-controls="role-navigation" aria-expanded="false"><span>Go to</span><strong id="current-screen">Today</strong><span aria-hidden="true">⌄</span></button>
             <nav id="role-navigation" aria-label="Role workspace navigation"></nav>
             <div class="sidebar-note">
-              <strong>Official records stay on the server.</strong>
-              <span>Cached pages and browser totals never replace Spina receipts or balances.</span>
+              <span>Need the latest records?</span>
+              <strong>Use Refresh when online.</strong>
             </div>
           </aside>
           <main id="role-content" class="role-content" tabindex="-1"></main>

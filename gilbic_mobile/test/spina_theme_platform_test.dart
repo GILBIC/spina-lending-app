@@ -28,7 +28,7 @@ void main() {
       final title = find.text('SPINA');
       final theme = Theme.of(tester.element(title));
       expect(theme.platform, TargetPlatform.iOS);
-      expect(theme.colorScheme.primary, SpinaTheme.brandPink);
+      expect(theme.colorScheme.primary, SpinaTheme.brandPinkDark);
       expect(tester.getCenter(title).dx, closeTo(215, 1));
     } finally {
       debugDefaultTargetPlatformOverride = previousPlatform;

@@ -58,7 +58,7 @@ void main() {
     expect(find.byKey(const Key('employee-section-office')), findsOneWidget);
     expect(
       find.text(
-        'No office functions are assigned by your current server permissions.',
+        'No office tasks are assigned to you. Contact your manager if you need access.',
       ),
       findsOneWidget,
     );
@@ -102,7 +102,7 @@ void main() {
         of: find.byKey(const Key('employee-remittance')),
         matching: find.text('Available now'),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('Employee workflow not connected yet'), findsNothing);
 
@@ -154,9 +154,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
-        'Your current server permissions do not allow Remittance requests.',
-      ),
+      find.text('Your account does not have access to Remittance requests.'),
       findsOneWidget,
     );
     expect(find.text('No remittance notifications yet.'), findsNothing);

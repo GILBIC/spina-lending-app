@@ -79,7 +79,41 @@ const _managementDestinations = <(String, Type)>[
 ];
 
 void main() {
-  testWidgets('number boxes are the first dashboard cards below the header', (
+  testWidgets(
+    'daily dashboard keeps full labels at narrow width and large text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SpinaTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: _dashboard(_managementSession),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(FittedBox), findsNothing);
+      expect(find.byTooltip('Account & tools'), findsOneWidget);
+      final label = tester.widget<Text>(find.text('Active clients'));
+      expect(label.maxLines, isNull);
+    },
+  );
+
+  test('primary action text meets normal text contrast', () {
+    final colors = SpinaTheme.light.colorScheme;
+    final ratio =
+        (colors.onPrimary.computeLuminance() + .05) /
+        (colors.primary.computeLuminance() + .05);
+    expect(ratio, greaterThanOrEqualTo(4.5));
+  });
+
+  testWidgets('daily attention appears before portfolio totals', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(430, 1800));
@@ -94,8 +128,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      tester.widget<Card>(find.byType(Card).first).key,
-      const Key('management-overview-metric-activeClients'),
+      tester.getTopLeft(find.text('Needs attention')).dy,
+      lessThan(tester.getTopLeft(find.text('Today & portfolio')).dy),
     );
   });
 
@@ -128,12 +162,12 @@ void main() {
       expect((clientRect.top - loanRect.top).abs(), lessThan(1));
       expect(loanRect.left, greaterThan(clientRect.left));
       expect(clientRect.width, lessThan(210));
-      expect(clientRect.height, lessThanOrEqualTo(110));
+      expect(clientRect.height, greaterThanOrEqualTo(104));
     },
   );
 
   testWidgets(
-    'management workflow launchers use a compact four-column icon menu',
+    'management workflow launchers use readable two-column task cards',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(430, 1800));
       addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -163,8 +197,8 @@ void main() {
         lessThan(1),
       );
       expect(contractShortcutRect.left, greaterThan(loanShortcutRect.left));
-      expect(loanShortcutRect.width, lessThanOrEqualTo(96));
-      expect(loanShortcutRect.height, lessThanOrEqualTo(96));
+      expect(loanShortcutRect.width, greaterThan(150));
+      expect(loanShortcutRect.height, greaterThanOrEqualTo(48));
     },
   );
 
@@ -214,9 +248,7 @@ void main() {
 
       expect(find.byType(ManagementFinancialAccountingPage), findsNothing);
       expect(
-        find.text(
-          'Your current permissions do not allow this Management view.',
-        ),
+        find.text('Your account does not have access to this Management view.'),
         findsOneWidget,
       );
     },
@@ -279,8 +311,8 @@ void main() {
       final renewalRequests = find.byKey(const Key('management-renewals'));
       expect(staffDevices, findsOneWidget);
       expect(
-        tester.getTopLeft(staffDevices).dx,
-        lessThan(tester.getTopLeft(renewalRequests).dx),
+        tester.getTopLeft(staffDevices).dy,
+        lessThanOrEqualTo(tester.getTopLeft(renewalRequests).dy),
       );
 
       expect(
