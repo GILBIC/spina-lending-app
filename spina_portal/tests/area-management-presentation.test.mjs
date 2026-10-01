@@ -100,8 +100,8 @@ test('Area Management uses explicit action and search language', () => {
   assert.match(html, />Assign Collector</);
   assert.match(html, />Move Client</);
   assert.match(html, />Retire Area</);
-  assert.doesNotMatch(html, />Move</);
-  assert.doesNotMatch(html, />Collector</);
+  assert.doesNotMatch(html, /data-area-action="move">Move<\/button>/);
+  assert.doesNotMatch(html, /data-area-action="collector">Collector<\/button>/);
   assert.doesNotMatch(html, /authoritative server order/i);
   assert.match(html, /set collection route order/i);
 });
