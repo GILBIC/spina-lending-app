@@ -73,17 +73,17 @@ function overviewMetrics(metrics) {
 function loanTable(data) {
   const loans = asArray(data.loans);
   if (!loans.length) return emptyState('No loan matches the current search.');
-  return `<div class="table-wrap"><table>
+  return `<div class="table-wrap"><table class="mobile-card-table management-loan-table">
     <thead><tr><th>Client</th><th>Loan</th><th>Type</th><th>Principal</th><th>Official balance</th><th>Daily</th><th>Due</th><th>Status</th></tr></thead>
     <tbody>${loans.map((loan) => `<tr>
-      <td><strong>${escapeHtml(loan.client_name || 'Client')}</strong><br><span class="meta">${escapeHtml(loan.client_code || '')} · ${escapeHtml(loan.client_area || '')}</span></td>
-      <td>${escapeHtml(loan.loan_number || '—')}</td>
-      <td>${escapeHtml(loan.loan_type_name || '—')}</td>
-      <td>${formatMoney(loan.principal)}</td>
-      <td>${formatMoney(loan.remaining_balance)}</td>
-      <td>${formatMoney(loan.daily_amount)}</td>
-      <td>${formatDate(loan.due_date)}</td>
-      <td>${badge(loan.loan_status || 'unknown')}${loan.is_overdue ? '<br><span class="badge danger">Overdue</span>' : ''}</td>
+      <td data-label="Client"><strong>${escapeHtml(loan.client_name || 'Client')}</strong><br><span class="meta">${escapeHtml(loan.client_code || '')} · ${escapeHtml(loan.client_area || '')}</span></td>
+      <td data-label="Loan">${escapeHtml(loan.loan_number || '—')}</td>
+      <td data-label="Type">${escapeHtml(loan.loan_type_name || '—')}</td>
+      <td data-label="Principal">${formatMoney(loan.principal)}</td>
+      <td data-label="Official balance">${formatMoney(loan.remaining_balance)}</td>
+      <td data-label="Daily">${formatMoney(loan.daily_amount)}</td>
+      <td data-label="Due">${formatDate(loan.due_date)}</td>
+      <td data-label="Status">${badge(loan.loan_status || 'unknown')}${loan.is_overdue ? '<br><span class="badge danger">Overdue</span>' : ''}</td>
     </tr>`).join('')}</tbody>
   </table></div>`;
 }
