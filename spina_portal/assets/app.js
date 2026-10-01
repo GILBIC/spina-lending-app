@@ -129,7 +129,12 @@ async function mountCurrentWorkspace() {
 
 async function showAuthenticated(session, requestedRole) {
   const roles = sessionWorkspaceRoles(session);
-  const role = roles.includes(normalizeRole(requestedRole)) ? normalizeRole(requestedRole) : roles[0] || 'unknown';
+  const hasManagementWorkspace = roles.includes('management');
+  const role = hasManagementWorkspace
+    ? 'management'
+    : roles.includes(normalizeRole(requestedRole))
+      ? normalizeRole(requestedRole)
+      : roles[0] || 'unknown';
   if (role === 'unknown') {
     sessionStore.clear();
     showAuthentication();
@@ -144,10 +149,12 @@ async function showAuthenticated(session, requestedRole) {
   signedInName.textContent = session.user.full_name || session.user.username || 'Signed in';
   workspaceTitle.textContent = `${roleDisplayName(role)} workspace`;
   if (workspaceChoice) {
-    workspaceChoice.innerHTML = roles.map((value) => `<option value="${value}">${roleDisplayName(value)}</option>`).join('');
-    workspaceChoice.value = role;
+    workspaceChoice.innerHTML = hasManagementWorkspace
+      ? ''
+      : roles.map((value) => `<option value="${value}">${roleDisplayName(value)}</option>`).join('');
+    workspaceChoice.value = hasManagementWorkspace ? '' : role;
   }
-  if (workspaceChoiceLabel) workspaceChoiceLabel.hidden = roles.length < 2;
+  if (workspaceChoiceLabel) workspaceChoiceLabel.hidden = hasManagementWorkspace || roles.length < 2;
   updateConnectionStatus();
 
   const mounts = {
@@ -200,7 +207,8 @@ loginForm.addEventListener('submit', async (event) => {
 refreshButton.addEventListener('click', () => mountCurrentWorkspace());
 workspaceChoice?.addEventListener('change', () => {
   const session = currentContext?.session;
-  if (session && sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
+  if (!session || sessionWorkspaceRoles(session).includes('management')) return;
+  if (sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
     if (accountMenu) accountMenu.open = false;
     workspaceNavigation.reset();
     void showAuthenticated(session, workspaceChoice.value);
