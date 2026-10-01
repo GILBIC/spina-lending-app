@@ -57,7 +57,7 @@ function summaryMarkup(summary = {}) {
       <div class="loan-ops-summary-items">
         ${summaryItem('Collected', formatMoney(summary.latest_day_amount), date)}
         ${summaryItem('Payments', escapeHtml(summary.latest_day_payment_count ?? 0), plural(summary.latest_day_payment_count ?? 0, 'payment'))}
-        ${summaryItem('Unable to pay', escapeHtml(summary.latest_day_unable_to_pay_count ?? 0), plural(summary.latest_day_unable_to_pay_count ?? 0, 'unable to pay'))}
+        ${summaryItem('Unable to pay', escapeHtml(summary.latest_day_unable_to_pay_count ?? 0), `${escapeHtml(summary.latest_day_unable_to_pay_count ?? 0)} unable to pay`)}
       </div>
     </section>
     <section class="loan-ops-summary-group" data-loan-ops-summary-group="remittance">
