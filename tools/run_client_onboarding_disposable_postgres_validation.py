@@ -97,11 +97,13 @@ CIF_MIGRATIONS = (
     ROOT / "gilbic_backend" / "sql" / "0131_allow_reviewed_journal_reversal_post.sql",
     ROOT / "gilbic_backend" / "sql" / "0132_fix_private_function_search_paths.sql",
     ROOT / "gilbic_backend" / "sql" / "0133_allow_pass_replacement_after_void.sql",
+    ROOT / "gilbic_backend" / "sql" / "0134_add_consented_screen_sharing.sql",
 )
 FULL_FLOW_TESTS = tuple(
     ROOT / "gilbic_backend" / "tests" / name
     for name in (
         "test_workflow_transition_postgres.py",
+        "test_screen_share_postgres.py",
         "test_client_onboarding_case_postgres.py",
         "test_loan_application_extended_postgres.py",
         "test_office_review_evidence_postgres.py",
@@ -237,7 +239,7 @@ def validate(base_database_url: str) -> None:
 
     print(
         "Onboarding/CIF disposable PostgreSQL validation passed: schema through 0112 "
-        "plus Area/CIF/application/release/Client/employee/disclosure/close/security migrations 0113 through 0132 was replayed in a fresh loopback database; "
+        "plus Area/CIF/application/release/Client/employee/disclosure/close/security migrations 0113 through 0134 was replayed in a fresh loopback database; "
         "confirmation/application-history integrity, immutability and rerun tests passed; normal/bypass promotion "
         "proved exactly-one inactive Client identity, idempotency, preserved bypass "
         "requirement states, and zero new Auth-user or loan side effects."

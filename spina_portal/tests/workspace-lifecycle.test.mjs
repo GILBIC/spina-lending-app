@@ -30,9 +30,11 @@ class Element {
   querySelector(selector) {
     if (selector === 'input[name="username"]') return { focus() {} };
     if (selector === '#management-loan-search') return new Element();
+    if (selector === '[data-screen-panel]') return this.screenPanel ??= { open: false };
     return null;
   }
   querySelectorAll() { return []; }
+  replaceChildren() { this.innerHTML = ''; }
   focus() {}
 }
 
@@ -48,7 +50,7 @@ async function harness(t, role, roles = [role]) {
     'auth-view', 'authenticated-app', 'role-content', 'role-navigation',
     'workspace-title', 'signed-in-role', 'signed-in-name', 'connection-status',
     'environment-label', 'refresh-workspace', 'logout-button', 'login-form',
-    'workspace-choice', 'workspace-choice-label',
+    'workspace-choice', 'workspace-choice-label', 'screen-sharing-controls',
   ]) elements.set(id, new Element());
   const events = new EventTarget();
   const sessionStorage = new MemoryStorage();
@@ -61,7 +63,12 @@ async function harness(t, role, roles = [role]) {
   const accounts = [];
   const logoutResponse = deferred();
   const values = {
-    document: { getElementById: (id) => elements.get(id) ?? null },
+    document: {
+      hidden: false,
+      getElementById: (id) => elements.get(id) ?? null,
+      addEventListener: events.addEventListener.bind(events),
+      removeEventListener: events.removeEventListener.bind(events),
+    },
     navigator: { onLine: true }, sessionStorage, localStorage,
     addEventListener: events.addEventListener.bind(events),
     dispatchEvent: events.dispatchEvent.bind(events),
@@ -81,6 +88,8 @@ async function harness(t, role, roles = [role]) {
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
   }
   t.after(() => {
+    events.dispatchEvent(new Event('spina:unauthorized'));
+    logoutResponse.resolve(json({}));
     for (const [key, descriptor] of Object.entries(previous)) {
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
       else delete globalThis[key];

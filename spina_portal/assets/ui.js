@@ -189,7 +189,7 @@ export function navigationMarkup(items) {
   }).join('');
 }
 
-export function bindNavigation(navRoot, contentRoot, { onNavigate = () => {} } = {}) {
+export function bindNavigation(navRoot, contentRoot, { onNavigate = () => {}, onBeforeNavigate = () => {} } = {}) {
   let selectedId = null;
   function activate(requestedId = selectedId, { focus = false } = {}) {
     const buttons = Array.from(navRoot?.querySelectorAll('[data-nav-target]') || []);
@@ -197,7 +197,9 @@ export function bindNavigation(navRoot, contentRoot, { onNavigate = () => {} } =
     const available = buttons.filter(button => sections.some(section => section.getAttribute('id') === button.getAttribute('data-nav-target')));
     const selected = available.find(button => button.getAttribute('data-nav-target') === requestedId) || available[0];
     if (!selected) return false;
-    selectedId = selected.getAttribute('data-nav-target');
+    const nextId = selected.getAttribute('data-nav-target');
+    if (nextId !== selectedId) onBeforeNavigate({ from: selectedId, to: nextId });
+    selectedId = nextId;
     const target = sections.find(section => section.getAttribute('id') === selectedId);
     // Keep mounted forms and their unsaved values while showing one task at a time.
     for (const section of sections) section.hidden = section !== target;

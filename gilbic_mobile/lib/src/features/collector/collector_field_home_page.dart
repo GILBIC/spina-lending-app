@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
@@ -60,9 +61,16 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   ]);
 
   Future<void> _open(Widget page) async {
-    await Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute<void>(builder: (_) => page));
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        settings: page is CollectorMasterReviewPage
+            ? const RouteSettings(name: '/mirror-safe/collector-review')
+            : null,
+        builder: (_) => page is CollectorMasterReviewPage
+            ? SafeMirrorSurface(child: page)
+            : page,
+      ),
+    );
   }
 
   void _permissionMessage(String feature) {

@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -74,37 +75,40 @@ class EnhancedRoleDashboard extends StatelessWidget {
 
   // Workspace selection is presentation only: every destination receives the
   // original authenticated session and its unchanged server permissions.
-  Widget _workspace(AppRole role) => switch (role) {
-    AppRole.collector => CollectorFieldHomePage(
-      session: session,
-      onSignOut: onSignOut,
-      collectorRouteLoader: collectorRouteLoader,
-      paymentSubmissionRepository: paymentSubmissionRepository,
-      deviceIdentityProvider: deviceIdentityProvider,
-      collectionDeviceSequence: collectionDeviceSequence,
-    ),
-    AppRole.employee => EmployeeDashboard(
-      session: session,
-      onSignOut: onSignOut,
-      deviceIdentityProvider: deviceIdentityProvider,
-    ),
-    AppRole.management => ManagementDashboard(
-      session: session,
-      onSignOut: onSignOut,
-      paymentSubmissionRepository: paymentSubmissionRepository,
-      deviceIdentityProvider: deviceIdentityProvider,
-      collectionDeviceSequence: collectionDeviceSequence,
-      overviewRepository: managementDashboardOverviewRepository,
-      alertsAuditRepository: managementAlertsAuditRepository,
-      employeeActivityRepository: managementEmployeeActivityRepository,
-    ),
-    AppRole.client => ClientDashboard(
-      session: session,
-      onSignOut: onSignOut,
-      deviceIdentityProvider: deviceIdentityProvider,
-      loanRepository: clientLoanRepository,
-    ),
-  };
+  Widget _workspace(AppRole role) => SafeMirrorSurface(
+    key: ValueKey(role),
+    child: switch (role) {
+      AppRole.collector => CollectorFieldHomePage(
+        session: session,
+        onSignOut: onSignOut,
+        collectorRouteLoader: collectorRouteLoader,
+        paymentSubmissionRepository: paymentSubmissionRepository,
+        deviceIdentityProvider: deviceIdentityProvider,
+        collectionDeviceSequence: collectionDeviceSequence,
+      ),
+      AppRole.employee => EmployeeDashboard(
+        session: session,
+        onSignOut: onSignOut,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      AppRole.management => ManagementDashboard(
+        session: session,
+        onSignOut: onSignOut,
+        paymentSubmissionRepository: paymentSubmissionRepository,
+        deviceIdentityProvider: deviceIdentityProvider,
+        collectionDeviceSequence: collectionDeviceSequence,
+        overviewRepository: managementDashboardOverviewRepository,
+        alertsAuditRepository: managementAlertsAuditRepository,
+        employeeActivityRepository: managementEmployeeActivityRepository,
+      ),
+      AppRole.client => ClientDashboard(
+        session: session,
+        onSignOut: onSignOut,
+        deviceIdentityProvider: deviceIdentityProvider,
+        loanRepository: clientLoanRepository,
+      ),
+    },
+  );
 }
 
 class _CombinedWorkerWorkspace extends StatefulWidget {
@@ -164,8 +168,10 @@ class _CombinedWorkerWorkspaceState extends State<_CombinedWorkerWorkspace> {
                     ),
                 ],
                 selected: {_selected},
-                onSelectionChanged: (selection) =>
-                    setState(() => _selected = selection.single),
+                onSelectionChanged: (selection) {
+                  MirrorScope.maybeOf(context)?.navigating(eligible: true);
+                  setState(() => _selected = selection.single);
+                },
               ),
             ),
           ),
