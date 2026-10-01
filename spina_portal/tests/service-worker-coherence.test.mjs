@@ -5,7 +5,9 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 
-function loadWorker({ cachedIndex = { source: 'cache' }, networkIndex = { source: 'network', ok: true } } = {}) {
+function loadWorker({ cachedIndex = { source: 'cache' }, networkIndex } = {}) {
+  networkIndex ??= { source: 'network', ok: true };
+  networkIndex.clone ??= () => networkIndex;
   const handlers = new Map();
   let fetchCalls = 0;
   const cacheWrites = [];
