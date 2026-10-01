@@ -21,7 +21,7 @@ function workspace() {
   const today = node({ id: 'today', 'data-workspace-section': '' });
   const records = node({ id: 'records', 'data-workspace-section': '' });
   records.draft = 'Unsaved correction';
-  const buttons = ['today', 'records'].map(id => node({ 'data-nav-target': id }));
+  const buttons = ['today', 'records'].map(id => node({ 'data-nav-target': id, 'data-nav-label': id === 'today' ? 'Today' : 'Records' }));
   const nav = node();
   const content = node();
   let sections = [today, records];
@@ -42,10 +42,21 @@ test('daily work opens alone and task navigation preserves the hidden form draft
   assert.equal(h.today.hidden, true);
   assert.equal(h.records.hidden, false);
   assert.equal(h.records.focused, true);
+  assert.equal(h.records.getAttribute('aria-label'), 'Records');
   assert.equal(h.buttons[1].getAttribute('aria-current'), 'page');
   assert.equal(h.buttons[0].getAttribute('aria-current'), null);
   h.nav.click(h.buttons[0]);
   assert.equal(h.records.draft, 'Unsaved correction');
+});
+
+test('phone menu closes before the selected section is scrolled into view', () => {
+  const h = workspace();
+  const order = [];
+  h.records.focus = () => order.push('focus');
+  h.records.scrollIntoView = () => order.push('scroll');
+  const control = bindNavigation(h.nav, h.content, { onNavigate: () => order.push('collapse-menu') });
+  control.activate('records', { focus: true });
+  assert.deepEqual(order, ['collapse-menu', 'focus', 'scroll']);
 });
 
 test('home task shortcuts navigate through the same control and unknown targets do nothing', () => {

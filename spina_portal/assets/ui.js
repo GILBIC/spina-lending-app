@@ -180,12 +180,15 @@ export function bindNavigation(navRoot, contentRoot, { onNavigate = () => {} } =
       if (button === selected) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     }
+    const label = selected.getAttribute('data-nav-label') || selected.textContent;
+    if (label && !target.getAttribute('aria-label') && !target.getAttribute('aria-labelledby')) target.setAttribute('aria-label', label);
+    // Collapse the phone menu before measuring the destination's scroll position.
+    onNavigate({ id: selectedId, label, userInitiated: focus });
     if (focus) {
       target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
       target.scrollIntoView({ behavior: 'auto', block: 'start' });
     }
-    onNavigate({ id: selectedId, label: selected.getAttribute('data-nav-label') || selected.textContent, userInitiated: focus });
     return true;
   }
   function navigate(event) {

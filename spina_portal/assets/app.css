@@ -1134,7 +1134,13 @@ details > :not(summary) {
     display: grid;
     grid-template-columns: 1fr auto;
     padding: 0.65rem 0.75rem;
+    gap: 0.5rem;
   }
+
+  .brand-lockup { gap: 0.5rem; }
+  .brand-lockup img { width: 32px; height: 32px; }
+  .account-menu > summary { padding-inline: 0.6rem; }
+  [data-workspace-section] { scroll-margin-top: 9rem; }
 
   .topbar-context {
     flex-basis: 100%;
