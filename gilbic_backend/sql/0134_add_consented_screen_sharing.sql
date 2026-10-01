@@ -1,6 +1,6 @@
 BEGIN;
 INSERT INTO core.permissions(code,description) VALUES
- ('screen_share.view','Request and view an explicitly consenting Spina device screen')
+ ('screen_share.view','View an eligible Spina work screen with a visible Management viewing indicator')
 ON CONFLICT(code) DO NOTHING;
 INSERT INTO core.role_permissions(role_id,permission_code)
  SELECT id,'screen_share.view' FROM core.roles WHERE code='management'

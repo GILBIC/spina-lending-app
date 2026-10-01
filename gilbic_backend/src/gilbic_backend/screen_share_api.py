@@ -1,4 +1,4 @@
-"""Authenticated app-only consent and ephemeral PNG transport; no remote control."""
+"""Authenticated app-only device readiness and ephemeral PNG transport; no remote control."""
 
 from collections.abc import Callable, Iterator
 from typing import Annotated, ParamSpec, TypeVar
@@ -99,14 +99,14 @@ def create_screen_share_router() -> APIRouter:
     ):
         return invoke(repo.status, actor, session_id)
 
-    @router.post("/{session_id}/accept")
-    def accept(
+    @router.post("/{session_id}/ready")
+    def ready(
         session_id: UUID,
         body: GenerationBody,
         actor: Actor,
         repo: Repository,
     ):
-        return invoke(repo.accept, actor, session_id, body.generation)
+        return invoke(repo.ready, actor, session_id, body.generation)
 
     @router.post("/{session_id}/decline")
     def decline(

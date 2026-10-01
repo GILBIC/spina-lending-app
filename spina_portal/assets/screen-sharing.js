@@ -81,6 +81,11 @@ export class ScreenSharingController {
     this.sectionId = null;
     this.track = null;
     this.pendingTrack = null;
+    this.preparedTrack = null;
+    this.preparedStream = null;
+    this.preparedUntil = 0;
+    this.pendingRequests = [];
+    this.suppressedPending = new Map();
     this.captureToken = 0;
     this.captureInFlight = false;
     this.video = null;
@@ -90,7 +95,9 @@ export class ScreenSharingController {
     this.listAbort = null;
     this.mountEpoch = 0;
     this.requestInFlight = false;
-    this.acceptInFlight = false;
+    this.prepareInFlight = false;
+    this.readyInFlight = false;
+    this.readyItem = null;
     this.requestAbort = null;
     this.uploadAbort = null;
     this.controlAbort = new Set();
@@ -104,12 +111,13 @@ export class ScreenSharingController {
   }
 
   captureUnavailableReason() {
-    if (this.acceptInFlight) return 'Screen sharing is being prepared. Stop it before accepting another request.';
-    if (this.requestInFlight) return 'A screen request is being sent. Cancel it before accepting another.';
-    if (this.session) return 'This device already has a screen request or active share. Stop it before accepting another.';
+    if (this.prepareInFlight || this.readyInFlight) return 'This Spina tab is being prepared for live viewing.';
+    if (this.preparedTrack) return 'Live view is ready for one Management request. Browser sharing controls remain available.';
+    if (this.requestInFlight) return 'A screen request is being sent. Cancel it before enabling this tab.';
+    if (this.session) return 'This device already has a screen request or active share. Stop it before enabling this tab again.';
     if (this.browser?.onLine === false) return 'Reconnect to Spina before sharing this screen.';
     if (!this.supported() || !this.handle) return 'This browser cannot safely share only this Spina tab. Open Spina in a supported browser to start sharing. Viewing remains available.';
-    if (!isEligibleScreen(this.role, this.sectionId)) return 'This screen is excluded from sharing. Open an eligible daily-work screen before accepting.';
+    if (!isEligibleScreen(this.role, this.sectionId)) return 'This screen is excluded from sharing. Open an eligible daily-work screen before enabling.';
     if (!this.safeToCapture()) return 'This screen contains private controls or is not visible. Close them before sharing.';
     return '';
   }
@@ -118,11 +126,8 @@ export class ScreenSharingController {
     const reason = this.captureUnavailableReason();
     const message = this.root.querySelector('[data-screen-unavailable]');
     if (message) { message.textContent = reason; message.hidden = !reason; }
-    for (const button of this.root.querySelectorAll('[data-screen-accept]')) button.disabled = Boolean(reason || this.acceptInFlight);
-    for (const message of this.root.querySelectorAll('[data-screen-accept-reason]')) {
-      message.textContent = reason;
-      message.hidden = !reason;
-    }
+    const button = this.root.querySelector('[data-screen-prepare]');
+    if (button) button.disabled = Boolean(reason);
   }
 
   later(action, delay) {
@@ -152,6 +157,31 @@ export class ScreenSharingController {
 
   safeToCapture() {
     return isEligibleScreen(this.role, this.sectionId) && !visibleSensitive(this.activeSection()) && !this.doc.hidden && this.browser?.onLine !== false;
+  }
+
+  pendingKey(item) {
+    return `${item?.id || ''}:${item?.generation || ''}`;
+  }
+
+  suppressPending(item) {
+    if (!item?.id || !Number.isSafeInteger(item.generation)) return;
+    this.pruneSuppressed();
+    const expires = Date.parse(item.expires_at);
+    this.suppressedPending.set(this.pendingKey(item), Number.isFinite(expires) ? Math.min(expires, this.now() + 600000) : this.now() + 60000);
+  }
+
+  pruneSuppressed() {
+    for (const [key, expires] of this.suppressedPending) if (expires <= this.now()) this.suppressedPending.delete(key);
+  }
+
+  validPending(item) {
+    this.pruneSuppressed();
+    return item?.state === 'pending'
+      && /^[a-f0-9-]{36}$/i.test(item.id || '')
+      && Number.isSafeInteger(item.generation) && item.generation > 0
+      && item.holder_user_id === this.account?.user?.id
+      && Date.parse(item.expires_at) > this.now()
+      && !this.suppressedPending.has(this.pendingKey(item));
   }
 
   async apiFrameGet(id) {
@@ -199,7 +229,9 @@ export class ScreenSharingController {
     this.listInFlight = false;
     this.listRefreshNeeded = false;
     this.requestInFlight = false;
-    this.acceptInFlight = false;
+    this.prepareInFlight = false;
+    this.readyInFlight = false;
+    this.readyItem = null;
     this.uploadAbort?.abort();
     this.uploadAbort = null;
     this.captureToken += 1;
@@ -217,6 +249,12 @@ export class ScreenSharingController {
     const pendingTrack = this.pendingTrack;
     this.pendingTrack = null;
     if (pendingTrack !== track) pendingTrack?.stop();
+    const preparedTrack = this.preparedTrack;
+    this.preparedTrack = null;
+    if (preparedTrack !== track && preparedTrack !== pendingTrack) preparedTrack?.stop();
+    this.preparedStream = null;
+    this.preparedUntil = 0;
+    this.pendingRequests = [];
     if (this.video) { this.video.pause(); this.video.srcObject = null; this.video.remove(); }
     this.video = null;
     const img = this.root.querySelector('[data-screen-view-image]');
@@ -227,6 +265,9 @@ export class ScreenSharingController {
   async stop({ notify = true, reason = '' } = {}) {
     const active = this.session;
     const requestWasPending = this.requestInFlight;
+    for (const pending of this.pendingRequests) this.suppressPending(pending);
+    this.suppressPending(this.readyItem);
+    if (active) this.suppressPending(active);
     this.stopLocal();
     if (!this.disposed) this.lifecycle.restart();
     this.session = null;
@@ -246,6 +287,7 @@ export class ScreenSharingController {
     if (image) { image.removeAttribute('src'); image.hidden = true; }
     this.sectionId = id;
     if (!this.session) this.listRefreshNeeded = true;
+    if (this.preparedTrack || this.prepareInFlight || this.readyInFlight) { void this.stop({ reason: 'Live view setup stopped because the Spina screen changed. Enable this tab again when ready.' }); return; }
     if (this.track && !isEligibleScreen(this.role, id)) { void this.stop({ reason: 'Sharing stopped because this screen is excluded.' }); return; }
     if (this.track) {
       this.uploadAbort?.abort();
@@ -260,7 +302,7 @@ export class ScreenSharingController {
   }
 
   afterNavigate() {
-    if (this.track && !this.safeToCapture()) void this.stop({ reason: 'Sharing stopped because this screen contains private controls or is hidden.' });
+    if ((this.track || this.preparedTrack || this.prepareInFlight || this.readyInFlight) && !this.safeToCapture()) void this.stop({ reason: 'Sharing stopped because this screen contains private controls or is hidden.' });
     this.updateCaptureAvailability();
     if (!this.session && !this.listInFlight) void this.refreshLists();
   }
@@ -269,7 +311,7 @@ export class ScreenSharingController {
     this.observer?.disconnect();
     if (!globalThis.MutationObserver) return;
     this.observer = new MutationObserver(() => {
-      if (this.track && !this.safeToCapture()) void this.stop({ reason: 'Sharing stopped because a private control appeared.' });
+      if ((this.track || this.preparedTrack || this.prepareInFlight || this.readyInFlight) && !this.safeToCapture()) void this.stop({ reason: 'Sharing stopped because a private control appeared.' });
     });
     this.observer.observe(this.contentRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'type', 'open'] });
   }
@@ -287,6 +329,7 @@ export class ScreenSharingController {
     this.sequence = 0;
     this.lastViewerSequence = 0;
     this.viewerPolling = false;
+    this.pendingRequests = [];
     this.handle = globalThis.crypto?.randomUUID?.();
     if (this.supported() && this.handle) {
       try { this.browser.mediaDevices.setCaptureHandleConfig({ handle: this.handle, exposeOrigin: true, permittedOrigins: [this.location.origin] }); }
@@ -318,16 +361,22 @@ export class ScreenSharingController {
     const active = this.session;
     const status = message ? `<p role="status">${escapeHtml(message)}</p>` : '';
     const unavailable = this.captureUnavailableReason();
-    this.root.innerHTML = `${active?.state === 'active' || this.acceptInFlight || this.requestInFlight ? `<div class="screen-share-active" role="status"><strong>${active?.state === 'active' ? 'Screen sharing is active' : this.acceptInFlight ? 'Preparing screen sharing' : 'Sending screen request'}</strong><button type="button" data-screen-stop>${this.requestInFlight ? 'Cancel request' : 'Stop sharing'}</button></div>` : ''}<details data-screen-panel><summary>Screen sharing${active?.state === 'pending' ? ' · request pending' : ''}</summary><div class="screen-share-panel">
-      <p>Viewing requires the other person's approval. Sharing shows only selected Spina work, with no control or recording.</p>${status}<p data-screen-unavailable ${unavailable ? '' : 'hidden'}>${escapeHtml(unavailable)}</p>
-      ${canView ? `<div data-screen-request><label>Request a screen<select data-screen-target><option value="">Choose an account and device</option></select></label><button type="button" data-screen-request-button ${this.requestInFlight ? 'disabled' : ''}>Request view</button></div>` : ''}
+    const holderName = active?.viewer_name || 'Management';
+    const banner = active?.state === 'active'
+      ? this.participantMode === 'holder' ? `Management ${escapeHtml(holderName)} is viewing` : `Viewing ${escapeHtml(active.holder_name || 'the selected account')}`
+      : this.readyInFlight ? 'Connecting live view' : this.preparedTrack ? 'Live view ready' : this.prepareInFlight ? 'Preparing this Spina tab' : this.requestInFlight ? 'Sending screen request' : active?.state === 'pending' ? 'Screen request pending' : '';
+    const viewerCanStop = (active && this.participantMode === 'viewer') || this.requestInFlight;
+    this.root.innerHTML = `${banner ? `<div class="screen-share-active" role="status"><strong>${banner}</strong>${viewerCanStop ? `<button type="button" data-screen-stop>${this.requestInFlight ? 'Cancel request' : 'Stop viewing'}</button>` : ''}</div>` : ''}<details data-screen-panel><summary>Live screen view${active?.state === 'pending' ? ' · request pending' : ''}</summary><div class="screen-share-panel">
+      <p>Enable only this Spina browser tab. Management can then view an eligible work screen. A visible status shows when viewing is active. The browser keeps its own sharing controls. No remote control or recording.</p>${status}<p data-screen-unavailable ${unavailable ? '' : 'hidden'}>${escapeHtml(unavailable)}</p>
+      <button type="button" data-screen-prepare ${unavailable ? 'disabled' : ''}>Enable this Spina tab</button>
+      ${canView ? `<div data-screen-request><label>Request a screen<select data-screen-target><option value="">Choose an account and device</option></select></label><button type="button" data-screen-request-button ${this.requestInFlight || this.prepareInFlight || this.readyInFlight || this.preparedTrack || active ? 'disabled' : ''}>Request view</button></div>` : ''}
       <button type="button" data-screen-check>Check requests now</button>
       <div data-screen-pending></div>
-      ${active ? `<p data-screen-session-status>${escapeHtml(active.state === 'active' ? `Sharing with ${this.participantMode === 'viewer' ? active.holder_name : active.viewer_name}` : `Request ${active.state}`)}</p>` : ''}
-      ${active?.state === 'active' && this.participantMode === 'viewer' ? '<img data-screen-view-image alt="Consented live Spina screen" hidden />' : ''}
-      ${active?.state === 'pending' ? '<button type="button" data-screen-stop>Cancel request</button>' : ''}
+      ${active ? `<p data-screen-session-status>${escapeHtml(active.state === 'active' ? `Live view with ${this.participantMode === 'viewer' ? active.holder_name : active.viewer_name}` : `Request ${active.state}`)}</p>` : ''}
+      ${active?.state === 'active' && this.participantMode === 'viewer' ? '<img data-screen-view-image alt="Live Spina screen" hidden />' : ''}
     </div></details>`;
-    this.root.querySelector('[data-screen-panel]').open = panelWasOpen || active?.state === 'active' || this.requestInFlight || this.acceptInFlight;
+    this.root.querySelector('[data-screen-panel]').open = panelWasOpen || Boolean(banner);
+    this.root.querySelector('[data-screen-prepare]')?.addEventListener('click', () => void this.prepare());
     this.root.querySelector('[data-screen-request-button]')?.addEventListener('click', () => void this.request());
     for (const button of this.root.querySelectorAll('[data-screen-stop]')) button.addEventListener('click', () => void this.stop());
     this.root.querySelector('[data-screen-check]')?.addEventListener('click', () => void this.refreshLists());
@@ -356,13 +405,12 @@ export class ScreenSharingController {
         select.innerHTML = '<option value="">Choose an account and device</option>' + this.targets.map((target, index) => `<option value="${index}">${escapeHtml(target.display_name)} · ${escapeHtml(target.device_name)}</option>`).join('');
       }
       const pendingRoot = this.root.querySelector('[data-screen-pending]');
+      const items = Array.isArray(pending?.sessions) ? pending.sessions.filter(item => this.validPending(item)) : [];
+      this.pendingRequests = items;
       if (pendingRoot) {
-        const items = Array.isArray(pending?.sessions) ? pending.sessions : [];
-        const unavailable = this.captureUnavailableReason();
-        pendingRoot.innerHTML = items.map((item, index) => `<div class="notice-card"><strong>${escapeHtml(item.viewer_name || 'Management')}</strong> wants to view this Spina screen. <button type="button" data-screen-accept="${index}" ${unavailable || this.acceptInFlight ? 'disabled' : ''}>Accept and share this tab</button> <button type="button" data-screen-decline="${index}">Decline</button><p data-screen-accept-reason ${unavailable ? '' : 'hidden'}>${escapeHtml(unavailable)}</p></div>`).join('');
-        for (const button of pendingRoot.querySelectorAll('[data-screen-accept]')) button.addEventListener('click', () => void this.acceptAndShare(items[Number(button.dataset.screenAccept)]));
-        for (const button of pendingRoot.querySelectorAll('[data-screen-decline]')) button.addEventListener('click', () => void this.consent(items[Number(button.dataset.screenDecline)], 'decline'));
+        pendingRoot.innerHTML = items.map(item => `<div class="notice-card"><strong>Management ${escapeHtml(item.viewer_name || '')}</strong> requested live view. ${this.preparedTrack ? 'Connecting this enabled tab.' : 'Enable this Spina tab when it is safe to share.'}</div>`).join('');
       }
+      if (this.preparedTrack && !this.readyInFlight && !this.session && items[0]) void this.ready(items[0]);
     } catch { /* A private status failure is shown on the next explicit action. */ }
     finally {
       clearTimeout(timeout);
@@ -381,7 +429,7 @@ export class ScreenSharingController {
   }
 
   async request() {
-    if (this.requestInFlight || this.acceptInFlight || this.disposed || this.session) return;
+    if (this.requestInFlight || this.prepareInFlight || this.readyInFlight || this.preparedTrack || this.disposed || this.session) return;
     const select = this.root.querySelector('[data-screen-target]');
     const target = this.targets?.[Number(select?.value)];
     if (!select?.value || !target) return;
@@ -416,17 +464,6 @@ export class ScreenSharingController {
     if (!session?.id || !Number.isSafeInteger(session.generation)) return;
     try { await this.controlRequest(`${BASE}/${encodeURIComponent(session.id)}/stop`, { method: 'POST', body: { generation: session.generation } }); }
     catch { /* Expiry or revocation will also terminate this bounded grant. */ }
-  }
-
-  async consent(item, action = 'decline') {
-    if (!item || this.disposed || action !== 'decline') return;
-    const epoch = this.lifecycle.generation();
-    try {
-      const session = await this.controlRequest(`${BASE}/${encodeURIComponent(item.id)}/${action}`, { method: 'POST', body: { generation: item.generation } });
-      if (this.disposed || !this.lifecycle.current(epoch)) return;
-      this.render(session.state === 'declined' ? 'Request declined.' : 'Request is no longer available.');
-      void this.refreshLists();
-    } catch (error) { if (!this.disposed && this.lifecycle.current(epoch)) this.render(error.message); }
   }
 
   async pollSession(id) {
@@ -484,56 +521,93 @@ export class ScreenSharingController {
     if (!this.disposed && this.session?.id === id) this.later(() => void this.pollFrame(id), 1000);
   }
 
-  async acceptAndShare(item) {
-    if (this.disposed || this.track || this.session || this.requestInFlight || this.acceptInFlight || !item || !this.safeToCapture() || !this.supported() || !this.handle) return;
+  async prepare() {
+    if (this.disposed || this.track || this.preparedTrack || this.prepareInFlight || this.readyInFlight || this.session || this.requestInFlight || !this.safeToCapture() || !this.supported() || !this.handle) return;
     const epoch = this.lifecycle.generation();
-    this.acceptInFlight = true;
+    this.prepareInFlight = true;
     this.render();
     let stream;
-    let accepted;
     try {
-      // Must run directly in this click handler. No request or timer may consume the user gesture first.
+      // The browser chooser must be invoked by this explicit button gesture.
       stream = await this.browser.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser', frameRate: 1 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', monitorTypeSurfaces: 'exclude', surfaceSwitching: 'exclude', systemAudio: 'exclude' });
       const track = stream.getVideoTracks()[0];
-      if (!track || !this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Screen sharing was cancelled.');
+      if (!track || !this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Live view setup was cancelled.');
       this.pendingTrack = track;
       const target = await RestrictionTarget.fromElement(this.contentRoot);
       await verifySelfCapture(track, { handle: this.handle, origin: this.location.origin, restrictionTarget: target });
-      if (!this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Screen sharing was cancelled.');
-      // The holder accepts only after restricting the chosen self-tab. No pixels leave before this response.
-      accepted = await this.controlRequest(`${BASE}/${encodeURIComponent(item.id)}/accept`, { method: 'POST', body: { generation: item.generation } });
-      if (this.disposed || !this.lifecycle.current(epoch) || !this.safeToCapture()) { await this.bestEffortStop(accepted); return; }
-      if (accepted?.state !== 'active') throw new Error('This request is no longer active.');
-      this.session = accepted;
+      if (!this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Live view setup was cancelled.');
+      this.preparedTrack = track;
+      this.preparedStream = stream;
+      this.pendingTrack = null;
+      this.preparedUntil = this.now() + 600000;
+      this.prepareInFlight = false;
+      track.addEventListener('ended', () => { if (this.preparedTrack === track || this.track === track) void this.stop({ reason: 'Browser screen sharing ended. Enable this tab again if needed.' }); }, { once: true });
+      track.addEventListener?.('capturehandlechange', () => { if ((this.preparedTrack === track || this.track === track) && !this.selfCaptureStillValid(track)) void this.stop({ reason: 'The selected browser tab changed. Enable this tab again if needed.' }); });
+      this.later(() => { if (this.preparedTrack === track || this.track === track) void this.stop({ reason: 'Live view setup expired. Enable this tab again if needed.' }); }, 600000);
+      this.render();
+      if (this.listInFlight) this.listRefreshNeeded = true;
+      else void this.refreshLists();
+    } catch (error) {
+      stream?.getTracks().forEach(track => track.stop());
+      if (!this.disposed && this.lifecycle.current(epoch)) {
+        await this.stop({ notify: false });
+        this.render(['NotSupportedError', 'SecurityError', 'TypeError'].includes(error?.name)
+          ? 'This window cannot safely share only the Spina tab. Open Spina in a supported browser to enable it.'
+          : error.message);
+      }
+    } finally {
+      if (this.pendingTrack && stream?.getVideoTracks?.().includes(this.pendingTrack)) this.pendingTrack = null;
+      if (this.disposed || !this.lifecycle.current(epoch)) stream?.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  async ready(item) {
+    if (this.disposed || this.readyInFlight || this.session || !this.preparedTrack || !this.validPending(item)) return;
+    if (this.now() >= this.preparedUntil || !this.safeToCapture() || !this.selfCaptureStillValid(this.preparedTrack)) {
+      await this.stop({ reason: 'Live view setup ended. Enable this tab again if needed.' });
+      return;
+    }
+    const epoch = this.lifecycle.generation();
+    const track = this.preparedTrack;
+    const stream = this.preparedStream;
+    this.readyInFlight = true;
+    this.readyItem = item;
+    this.render();
+    let active;
+    try {
+      // Restriction completed during explicit setup. No image is encoded or sent yet.
+      active = await this.controlRequest(`${BASE}/${encodeURIComponent(item.id)}/ready`, { method: 'POST', body: { generation: item.generation } });
+      if (this.disposed || !this.lifecycle.current(epoch) || this.preparedTrack !== track || !this.safeToCapture() || !this.selfCaptureStillValid(track)) {
+        await this.bestEffortStop(active);
+        return;
+      }
+      if (active?.id !== item.id || active?.generation !== item.generation || active?.state !== 'active') throw new Error('Live view request is no longer active.');
+      this.session = active;
       this.participantMode = 'holder';
       this.track = track;
-      this.pendingTrack = null;
-      const ownsCapture = () => this.track === track && this.session?.id === accepted.id && this.session.generation === accepted.generation;
-      track.addEventListener('ended', () => { if (ownsCapture()) void this.stop(); }, { once: true });
-      track.addEventListener?.('capturehandlechange', () => { if (ownsCapture() && !this.selfCaptureStillValid()) void this.stop(); });
+      this.preparedTrack = null;
+      this.preparedStream = null;
       this.video = this.doc.createElement('video');
       this.video.muted = true;
       this.video.playsInline = true;
       this.video.srcObject = stream;
       await this.video.play();
-      if (!this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Screen sharing was cancelled.');
-      this.acceptInFlight = false;
-      this.render();
+      if (!this.lifecycle.current(epoch) || !this.safeToCapture() || !this.selfCaptureStillValid()) throw new Error('Live view setup ended.');
+      this.readyInFlight = false;
+      this.readyItem = null;
+      this.render(); // Paint the named status before the first encoded frame.
+      await new Promise((resolve, reject) => {
+        const raf = this.doc.defaultView?.requestAnimationFrame?.bind(this.doc.defaultView);
+        if (!raf) { reject(new Error('The live view status cannot be displayed safely.')); return; }
+        const deadline = setTimeout(() => reject(new Error('The live view status could not be displayed.')), 1000);
+        raf(() => raf(() => { clearTimeout(deadline); resolve(); }));
+      });
+      if (!this.lifecycle.current(epoch) || this.session?.id !== item.id || !this.safeToCapture() || !this.selfCaptureStillValid()) throw new Error('Live view setup ended.');
       this.queueCapture(0);
     } catch (error) {
-      stream?.getTracks().forEach((track) => track.stop());
-      if (accepted) await this.bestEffortStop(accepted);
-      else if (stream) await this.bestEffortStop(item);
-      if (!this.disposed && this.lifecycle.current(epoch)) {
-        await this.stop({ notify: false });
-        const message = ['NotSupportedError', 'SecurityError', 'TypeError'].includes(error?.name)
-          ? 'This window cannot safely share only the Spina tab. Open Spina in a supported browser to start sharing.'
-          : error.message;
-        this.render(message);
-      }
-    } finally {
-      if (this.pendingTrack && stream?.getVideoTracks?.().includes(this.pendingTrack)) this.pendingTrack = null;
-      if (this.disposed || !this.lifecycle.current(epoch)) stream?.getTracks().forEach((track) => track.stop());
+      this.suppressPending(item);
+      await this.bestEffortStop(active || item);
+      if (!this.disposed && this.lifecycle.current(epoch)) await this.stop({ notify: false, reason: 'Live view could not start. Enable this tab again for a new request.' });
     }
   }
 
@@ -588,8 +662,8 @@ export class ScreenSharingController {
     this.timers.add(this.captureTimer);
   }
 
-  selfCaptureStillValid() {
-    const chosen = this.track?.getCaptureHandle?.();
-    return this.track?.getSettings?.().displaySurface === 'browser' && chosen?.handle === this.handle && chosen?.origin === this.location.origin;
+  selfCaptureStillValid(track = this.track) {
+    const chosen = track?.getCaptureHandle?.();
+    return track?.getSettings?.().displaySurface === 'browser' && chosen?.handle === this.handle && chosen?.origin === this.location.origin;
   }
 }

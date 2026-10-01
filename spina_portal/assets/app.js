@@ -241,7 +241,7 @@ globalThis.addEventListener('online', () => {
   showToast('Connection restored. Refresh to load authoritative records.', 'success');
 });
 globalThis.addEventListener('offline', () => {
-  if (sharingController.session) void sharingController.stop();
+  if (sharingController.session || sharingController.preparedTrack || sharingController.prepareInFlight || sharingController.readyInFlight) void sharingController.stop();
   updateConnectionStatus();
   sharingController.updateCaptureAvailability();
   showToast('Connection lost. Financial entry is unavailable while offline.', 'error');

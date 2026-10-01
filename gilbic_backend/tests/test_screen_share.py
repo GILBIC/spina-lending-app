@@ -185,8 +185,43 @@ def test_frame_response_exposes_only_latest_sequence_and_disables_caching():
         assert response.headers["x-screen-share-generation"] == "2"
         assert response.headers["x-screen-share-sequence"] == "7"
         invalid = client.post(
-            "/api/v1/screen-shares/" + str(uuid4()) + "/accept",
+            "/api/v1/screen-shares/" + str(uuid4()) + "/ready",
             json={"generation": "private-input"},
         )
         assert invalid.status_code == 422 and "private-input" not in invalid.text
         assert invalid.headers["cache-control"] == "no-store"
+
+
+def test_device_readiness_endpoint_replaces_per_view_consent_endpoint():
+    from gilbic_backend.screen_share_api import (
+        screen_share_actor,
+        screen_share_repository,
+    )
+
+    calls = []
+
+    class Repository:
+        def ready(self, actor, sid, generation):
+            calls.append((actor, sid, generation))
+            return {"id": str(sid), "state": "active", "generation": generation}
+
+    actor = object()
+    app = create_app()
+    app.dependency_overrides[screen_share_actor] = lambda: actor
+    app.dependency_overrides[screen_share_repository] = Repository
+    sid = uuid4()
+    with TestClient(app) as client:
+        result = client.post(
+            f"/api/v1/screen-shares/{sid}/ready", json={"generation": 1}
+        )
+        assert result.status_code == 200
+        assert result.json()["state"] == "active"
+        assert result.headers["cache-control"] == "no-store"
+        assert calls == [(actor, sid, 1)]
+        assert (
+            client.post(
+                f"/api/v1/screen-shares/{sid}/accept", json={"generation": 1}
+            ).status_code
+            == 404
+        )
+        assert calls == [(actor, sid, 1)]

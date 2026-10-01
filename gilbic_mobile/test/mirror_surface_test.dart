@@ -49,7 +49,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.text('Request screen view'));
+      await tester.tap(find.text('Live screens'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Holder target'));
       await tester.pumpAndSettle();
@@ -58,16 +58,16 @@ void main() {
       expect(controller.sharing, isNull);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      await controller.accept(
+      await controller.ready(
         grant('pending'),
-      ); // viewer cannot accept another holder's request
+      ); // viewer cannot ready another holder's device
       expect(controller.sharing, isNull);
       await tester.pumpWidget(const SizedBox());
       controller.dispose();
     },
   );
   testWidgets(
-    'unknown route and dialog stop consent before new content appears',
+    'unknown route and dialog stop sharing before new content appears',
     (tester) async {
       final controller = MirrorController(
         FakeMirrorRepository(),
@@ -89,8 +89,8 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(controller.canAccept, isTrue);
-      await controller.accept(grant('pending'));
+      expect(controller.canReady, isTrue);
+      await controller.ready(grant('pending'));
       navigator.currentState!.push(
         MaterialPageRoute<void>(
           builder: (_) => const Scaffold(body: Text('Account credentials')),
@@ -98,21 +98,21 @@ void main() {
       );
       expect(controller.sharing, isNull);
       await tester.pumpAndSettle();
-      expect(controller.canAccept, isFalse);
+      expect(controller.canReady, isFalse);
       await controller.tick();
       await tester.pump();
       navigator.currentState!.pop();
       await tester.pumpAndSettle();
-      expect(controller.canAccept, isTrue);
+      expect(controller.canReady, isTrue);
+      expect(find.text('Allow viewing'), findsNothing);
+      await controller.checkIncoming();
       expect(
-        tester
-            .widget<TextButton>(
-              find.widgetWithText(TextButton, 'Allow viewing'),
-            )
-            .onPressed,
-        isNotNull,
-      );
-      await controller.accept(grant('pending'));
+        controller.sharing,
+        isNull,
+      ); // Excluded-route Stop suppresses replay.
+      await controller.ready(grant('pending', id: 'new-share'));
+      await tester.pump();
+      expect(controller.sharing, isNotNull);
       unawaited(
         showDialog<void>(
           context: navigator.currentContext!,
@@ -121,7 +121,7 @@ void main() {
       );
       expect(controller.sharing, isNull);
       await tester.pumpAndSettle();
-      expect(controller.canAccept, isFalse);
+      expect(controller.canReady, isFalse);
       await tester.pumpWidget(const SizedBox());
       controller.dispose();
     },
@@ -150,7 +150,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(controller.canAccept, isFalse);
+    expect(controller.canReady, isFalse);
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
   });

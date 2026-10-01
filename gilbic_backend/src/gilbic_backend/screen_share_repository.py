@@ -1,7 +1,7 @@
-"""Consent metadata and frame publication share a single serialization boundary.
+"""Live-view readiness metadata and frame publication share a single serialization boundary.
 
 One API worker only. No frame bytes enter SQL. A new process identity expires old
-consent on access; no client may resume it after a process restart.
+device readiness on access; no client may resume it after a process restart.
 """
 
 from __future__ import annotations
@@ -333,7 +333,7 @@ class PostgresScreenShareRepository:
         if row["state"] != "pending" or row["generation"] != generation:
             raise ScreenShareError(409, "Screen request is no longer pending.")
 
-    def accept(self, actor: AccountContext, sid: UUID, generation: int) -> Row:
+    def ready(self, actor: AccountContext, sid: UUID, generation: int) -> Row:
         def perform(c: SQLCursor, row: Row, now: datetime):
             self._holder_pending(actor, row, generation)
             if (
@@ -358,7 +358,7 @@ class PostgresScreenShareRepository:
                     ).fetchone()
                 )
             )
-            self._audit(c, row, "accepted", actor.user_id)
+            self._audit(c, row, "ready", actor.user_id)
             return payload(row)
 
         return self._one(actor, sid, perform)

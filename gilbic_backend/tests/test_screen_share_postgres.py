@@ -1,4 +1,4 @@
-"""Atomic consent/revocation checks; only the disposable financial runner supplies DSN."""
+"""Atomic device readiness/revocation checks; only the disposable financial runner supplies DSN."""
 
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -90,7 +90,7 @@ def requested(repo, viewer, holder):
     return repo.request(viewer, holder.user_id, holder.registered_device_id)
 
 
-def test_consent_exact_device_stop_and_late_frame(case):
+def test_device_readiness_exact_device_stop_and_late_frame(case):
     from gilbic_backend.screen_share_frames import ScreenShareError
 
     repo, a, _ = case
@@ -100,9 +100,18 @@ def test_consent_exact_device_stop_and_late_frame(case):
         repo.upload(a[1], sid, 1, 1, png())
     assert e.value.status_code == 409
     with pytest.raises(ScreenShareError) as e:
-        repo.accept(a[3], sid, 1)
+        repo.ready(a[3], sid, 1)
     assert e.value.status_code == 404
-    assert repo.accept(a[1], sid, 1)["state"] == "active"
+    with pytest.raises(ScreenShareError) as viewer_ready:
+        repo.ready(a[0], sid, 1)
+    assert viewer_ready.value.status_code == 404
+    with pytest.raises(ScreenShareError) as old_generation:
+        repo.ready(a[1], sid, 2)
+    assert old_generation.value.status_code == 409
+    with pytest.raises(ScreenShareError) as waiting:
+        repo.frame(a[0], sid)
+    assert waiting.value.status_code == 409
+    assert repo.ready(a[1], sid, 1)["state"] == "active"
     repo.upload(a[1], sid, 1, 1, png())
     assert repo.frame(a[0], sid).data == png()
     ended = repo.stop(a[1], sid, 1)
@@ -118,7 +127,7 @@ def test_current_holder_device_revocation_ends_access(case):
 
     repo, a, connect = case
     s = requested(repo, a[0], a[1])
-    repo.accept(a[1], s["id"], 1)
+    repo.ready(a[1], s["id"], 1)
     repo.upload(a[1], s["id"], 1, 1, png())
     with connect() as c:
         c.execute(
@@ -135,19 +144,19 @@ def test_current_holder_device_revocation_ends_access(case):
         ).fetchone() == ("stopped", "authorization_revoked")
 
 
-def test_role_removal_and_restart_cannot_resurrect_consent(case):
+def test_role_removal_and_restart_cannot_resurrect_device_readiness(case):
     from gilbic_backend.screen_share_frames import FrameCache, ScreenShareError
     from gilbic_backend.screen_share_repository import PostgresScreenShareRepository
 
     repo, a, connect = case
     s = requested(repo, a[0], a[1])
-    repo.accept(a[1], s["id"], 1)
+    repo.ready(a[1], s["id"], 1)
     with connect() as c:
         c.execute("DELETE FROM core.user_roles WHERE user_id=%s", (a[0].user_id,))
     with pytest.raises(ScreenShareError):
         repo.status(a[1], s["id"])
     s = requested(repo, a[2], a[3])
-    repo.accept(a[3], s["id"], 1)
+    repo.ready(a[3], s["id"], 1)
     cache = FrameCache()
     try:
         restarted = PostgresScreenShareRepository(cache=cache)
@@ -162,17 +171,17 @@ def test_expiry_rate_and_two_active_limit(case):
     repo, a, connect = case
     for v, h in [(a[0], a[1]), (a[2], a[3])]:
         s = requested(repo, v, h)
-        repo.accept(h, s["id"], 1)
+        repo.ready(h, s["id"], 1)
     third = requested(repo, a[4], a[5])
     with pytest.raises(ScreenShareError) as e:
-        repo.accept(a[5], third["id"], 1)
+        repo.ready(a[5], third["id"], 1)
     assert e.value.status_code == 429
     with connect() as c:
         c.execute(
             "UPDATE core.screen_share_sessions SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE viewer_user_id=%s",
             (a[0].user_id,),
         )
-    assert repo.accept(a[5], third["id"], 1)["state"] == "active"
+    assert repo.ready(a[5], third["id"], 1)["state"] == "active"
     repo.upload(a[5], third["id"], 1, 1, png())
     with pytest.raises(ScreenShareError) as e:
         repo.upload(a[5], third["id"], 1, 2, png())
@@ -182,20 +191,20 @@ def test_expiry_rate_and_two_active_limit(case):
     assert e.value.status_code == 409
 
 
-def test_racing_accept_has_one_transition_and_stop_clears_frame(case):
+def test_racing_ready_has_one_transition_and_stop_clears_frame(case):
     from gilbic_backend.screen_share_frames import ScreenShareError
 
     repo, a, _ = case
     s = requested(repo, a[0], a[1])
 
-    def accept():
+    def ready():
         try:
-            return repo.accept(a[1], s["id"], 1)["state"]
+            return repo.ready(a[1], s["id"], 1)["state"]
         except ScreenShareError as e:
             return e.status_code
 
     with ThreadPoolExecutor(2) as pool:
-        results = list(pool.map(lambda _: accept(), range(2)))
+        results = list(pool.map(lambda _: ready(), range(2)))
     assert sorted(map(str, results)) == ["409", "active"]
 
     def upload():
@@ -211,7 +220,7 @@ def test_racing_accept_has_one_transition_and_stop_clears_frame(case):
     assert repo.cache.retained_bytes == 0
 
 
-def test_same_user_different_device_cannot_accept_or_read(case):
+def test_same_user_different_device_cannot_ready_or_read(case):
     from dataclasses import replace
 
     from gilbic_backend.screen_share_frames import ScreenShareError
@@ -219,7 +228,7 @@ def test_same_user_different_device_cannot_accept_or_read(case):
     repo, a, _ = case
     s = requested(repo, a[0], a[1])
     for actor, action in [
-        (replace(a[1], registered_device_id=uuid4()), repo.accept),
+        (replace(a[1], registered_device_id=uuid4()), repo.ready),
         (replace(a[0], registered_device_id=uuid4()), repo.stop),
     ]:
         with pytest.raises(ScreenShareError) as error:
@@ -233,7 +242,7 @@ def test_disabled_participant_ends_grant(case, party):
 
     repo, a, connect = case
     s = requested(repo, a[0], a[1])
-    repo.accept(a[1], s["id"], 1)
+    repo.ready(a[1], s["id"], 1)
     repo.upload(a[1], s["id"], 1, 1, png())
     with connect() as c:
         c.execute(
@@ -249,7 +258,7 @@ def test_removed_view_permission_ends_grant(case):
 
     repo, a, connect = case
     s = requested(repo, a[0], a[1])
-    repo.accept(a[1], s["id"], 1)
+    repo.ready(a[1], s["id"], 1)
     # Roll back global permission change even if assertion fails.
     with connect() as c:
         c.execute(
@@ -280,7 +289,7 @@ def test_request_rate_decline_and_pending_expiry(case):
             (s["id"],),
         )
     with pytest.raises(ScreenShareError):
-        repo.accept(a[1], s["id"], 1)
+        repo.ready(a[1], s["id"], 1)
     assert repo.status(a[0], s["id"])["state"] == "expired"
     s = requested(repo, a[0], a[1])
     repo.decline(a[1], s["id"], 1)
@@ -320,7 +329,7 @@ def test_failed_commit_never_publishes_a_frame(case, monkeypatch):
 
     repo, a, connect = case
     s = requested(repo, a[0], a[1])
-    repo.accept(a[1], s["id"], 1)
+    repo.ready(a[1], s["id"], 1)
 
     @contextmanager
     def fail_commit():
@@ -350,3 +359,30 @@ def test_targets_disambiguate_registered_devices_by_recent_activity(case):
     )
     assert target["device_name"] == "web · last seen 2026-01-02 03:04:05 UTC"
     assert actors[1].registered_device_id.hex not in target["device_name"]
+
+
+@pytest.mark.parametrize("terminal", ["stopped", "declined", "expired"])
+def test_terminal_request_cannot_automatically_become_ready(case, terminal):
+    from gilbic_backend.screen_share_frames import ScreenShareError
+
+    repo, actors, connect = case
+    request = requested(repo, actors[0], actors[1])
+    sid = request["id"]
+    if terminal == "stopped":
+        ended = repo.stop(actors[0], sid, 1)
+    elif terminal == "declined":
+        ended = repo.decline(actors[1], sid, 1)
+    else:
+        with connect() as connection:
+            connection.execute(
+                "UPDATE core.screen_share_sessions SET expires_at=clock_timestamp()-interval '1 second' WHERE id=%s",
+                (sid,),
+            )
+        ended = repo.status(actors[0], sid)
+    assert ended["state"] == terminal
+    for generation in (1, ended["generation"]):
+        with pytest.raises(ScreenShareError) as failure:
+            repo.ready(actors[1], sid, generation)
+        assert failure.value.status_code == 409
+    assert repo.status(actors[0], sid)["state"] == terminal
+    assert repo.cache.retained_bytes == 0

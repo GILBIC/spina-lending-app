@@ -23,6 +23,12 @@ class MirrorHost extends StatelessWidget {
         final pending = controller.incoming.isEmpty
             ? null
             : controller.incoming.first;
+        if (grant != null && !controller.viewing && grant.state == 'active') {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) =>
+                controller.holderIndicatorPainted(grant.id, grant.generation),
+          );
+        }
         return Column(
           children: [
             if (grant != null || pending != null || controller.mayView)
@@ -46,44 +52,26 @@ class MirrorHost extends StatelessWidget {
                               Text(
                                 controller.viewing
                                     ? 'Viewing ${grant.holderName} — ${grant.state}'
-                                    : 'Sharing Spina with ${grant.viewerName}',
+                                    : 'Management ${grant.viewerName} is viewing',
                               ),
-                              TextButton(
-                                onPressed: controller.stop,
-                                child: const Text('Stop sharing'),
-                              ),
+                              if (controller.viewing)
+                                TextButton(
+                                  onPressed: controller.stop,
+                                  child: const Text('Stop sharing'),
+                                ),
                             ],
                           )
-                        else if (pending != null) ...[
-                          Text(
-                            '${pending.viewerName} requests to view your Spina screen. No control or recording. Sensitive screens are excluded.',
-                          ),
-                          Wrap(
-                            spacing: 12,
-                            children: [
-                              TextButton(
-                                onPressed: controller.canAccept
-                                    ? () => controller.accept(pending)
-                                    : null,
-                                child: const Text('Allow viewing'),
-                              ),
-                              TextButton(
-                                onPressed: () => controller.decline(pending),
-                                child: const Text('Decline'),
-                              ),
-                            ],
-                          ),
-                          if (!controller.canAccept)
-                            const Text(
-                              'Open a supported daily-work screen to allow viewing.',
-                            ),
-                        ] else if (controller.mayView)
+                        else if (pending != null)
+                          const Text(
+                            'Live viewing waits for a supported daily-work screen.',
+                          )
+                        else if (controller.mayView)
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton.icon(
                               onPressed: onOpenViewer,
                               icon: const Icon(Icons.screen_share_outlined),
-                              label: const Text('Request screen view'),
+                              label: const Text('Live screens'),
                             ),
                           ),
                       ],

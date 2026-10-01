@@ -38,7 +38,7 @@ class _MirrorViewerPageState extends State<MirrorViewerPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Consented screen view')),
+    appBar: AppBar(title: const Text('Live screens')),
     body: AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
@@ -54,7 +54,7 @@ class _MirrorViewerPageState extends State<MirrorViewerPage> {
               const Padding(
                 padding: EdgeInsets.all(12),
                 child: Text(
-                  'View only. The account holder can stop at any time.',
+                  'View only. Stop viewing here. Private screens and backgrounding end the view automatically.',
                 ),
               ),
               Expanded(
@@ -62,7 +62,7 @@ class _MirrorViewerPageState extends State<MirrorViewerPage> {
                     ? Center(
                         child: Text(
                           controller.sharing!.state == 'pending'
-                              ? 'Waiting for the account holder to allow viewing…'
+                              ? 'Waiting for the device to open an eligible Spina screen…'
                               : 'Waiting for a fresh screen…',
                         ),
                       )
@@ -82,7 +82,7 @@ class _MirrorViewerPageState extends State<MirrorViewerPage> {
             if (controller.notice != null) Text(controller.notice!),
             if (_error != null) Text(_error!),
             const Text(
-              'Choose an account device. Viewing starts only after its holder allows it.',
+              'Choose a device to view its supported Spina screen. Viewing is visibly indicated on that device.',
             ),
             if (_targets == null && _error == null)
               const LinearProgressIndicator(),
@@ -90,7 +90,7 @@ class _MirrorViewerPageState extends State<MirrorViewerPage> {
               ListTile(
                 title: Text(target.name),
                 subtitle: Text(target.deviceName),
-                trailing: const Icon(Icons.visibility_outlined),
+                trailing: const Text('View screen'),
                 onTap: controller.busy
                     ? null
                     : () => controller.request(target),

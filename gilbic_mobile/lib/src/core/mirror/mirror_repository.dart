@@ -16,11 +16,12 @@ class MirrorSession {
     required this.holderName,
     required this.expiresAt,
     this.leaseExpiresAt,
+    this.createdAt,
   });
   final String id, state, viewerUserId, holderUserId, viewerName, holderName;
   final int generation;
   final DateTime expiresAt;
-  final DateTime? leaseExpiresAt;
+  final DateTime? leaseExpiresAt, createdAt;
   bool get terminal => !['pending', 'active'].contains(state);
   factory MirrorSession.fromJson(Map<String, dynamic> value) {
     final state = value['state'] as String;
@@ -44,6 +45,9 @@ class MirrorSession {
       viewerName: value['viewer_name'] as String,
       holderName: value['holder_name'] as String,
       expiresAt: DateTime.parse(value['expires_at'] as String),
+      createdAt: value['created_at'] == null
+          ? null
+          : DateTime.parse(value['created_at'] as String),
       leaseExpiresAt: value['lease_expires_at'] == null
           ? null
           : DateTime.parse(value['lease_expires_at'] as String),
@@ -197,7 +201,7 @@ class SpinaMirrorRepository implements MirrorRepository {
       _session('GET', '/${Uri.encodeComponent(id)}');
   @override
   Future<MirrorSession> action(MirrorSession session, String action) {
-    if (!['accept', 'decline', 'stop'].contains(action)) {
+    if (!['ready', 'stop'].contains(action)) {
       throw ArgumentError('Invalid sharing action');
     }
     return _session('POST', '/${Uri.encodeComponent(session.id)}/$action', {

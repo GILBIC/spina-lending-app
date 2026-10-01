@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/mirror/mirror_host.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -5,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/mirror/mirror_controller.dart';
 import 'package:gilbic_mobile/src/core/mirror/mirror_repository.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
-import 'mirror_controller_test.dart' show FakeMirrorRepository, holder, grant;
+import 'mirror_controller_test.dart' show FakeMirrorRepository, holder;
 
 class CapturingRepository extends FakeMirrorRepository {
   Uint8List? captured;
@@ -30,8 +31,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         navigatorObservers: [MirrorNavigationObserver(controller)],
-        builder: (_, child) =>
-            MirrorScope(controller: controller, child: child!),
+        builder: (_, child) => MirrorHost(
+          controller: controller,
+          onOpenViewer: () {},
+          child: child!,
+        ),
         home: Scaffold(
           body: Column(
             children: [
@@ -57,9 +61,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(controller.canAccept, isTrue);
-    await controller.accept(grant('pending'));
+    expect(controller.canReady, isTrue);
+    await controller.tick();
     await tester.pump();
+    final safeSize = tester.getSize(find.byType(SafeMirrorSurface));
     await tester.runAsync(() async {
       await controller.tick();
       expect(api.captured, isNotNull);
@@ -72,8 +77,8 @@ void main() {
         expect(frame.image.width, 720);
         expect(
           frame.image.height,
-          468,
-        ); // 800x520 subtree, excluding80px private control.
+          (safeSize.height * 720 / safeSize.width).ceil(),
+        ); // Only the permitted subtree; excludes the private80px control and indicator.
         final pixels = await frame.image.toByteData(
           format: ui.ImageByteFormat.rawRgba,
         );

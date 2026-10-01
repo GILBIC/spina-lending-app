@@ -166,63 +166,62 @@ test('a hung old pending check is aborted and cannot block polling after remount
   subject.dispose();
 });
 
-test('double-clicking Accept opens one chooser and Stop cancels the pending attempt', async () => {
-  let resolveChooser;
-  let chooserCount = 0;
-  const subject = controller({
-    role: 'client', sectionId: 'client-overview', handle: 'self',
-    safeToCapture: () => true, supported: () => true,
-    browser: { mediaDevices: { getDisplayMedia: () => { chooserCount += 1; return new Promise(resolve => { resolveChooser = resolve; }); } } },
-  });
-  const item = { id: 'grant', generation: 1 };
-  const first = subject.acceptAndShare(item);
-  const second = subject.acceptAndShare(item);
-  assert.equal(chooserCount, 1);
-  await subject.stop({ notify: false });
-  let stopped = false;
-  const track = { stop: () => { stopped = true; } };
-  resolveChooser({ getVideoTracks: () => [track], getTracks: () => [track] });
-  await Promise.all([first, second]);
-  assert.equal(stopped, true);
-  assert.equal(subject.session, null);
+const pendingView = (overrides = {}) => ({
+  id: 'f9f5d846-7c60-44d8-a756-01a5c5ce2d93', generation: 1, state: 'pending',
+  holder_user_id: 'holder-id', viewer_name: 'Ana', expires_at: new Date(Date.now() + 60000).toISOString(),
+  ...overrides,
 });
 
-test('a device already viewing another holder cannot accept an overlapping request', async () => {
-  let chooserCount = 0;
-  let postCount = 0;
-  const subject = controller({
-    role: 'management', sectionId: 'management-overview', handle: 'self',
-    session: { id: 'viewing-a', generation: 1, state: 'active' }, participantMode: 'viewer',
-    safeToCapture: () => true, supported: () => true,
-    browser: { mediaDevices: { getDisplayMedia: () => { chooserCount += 1; } } },
-    api: { request: async () => { postCount += 1; return {}; } },
-  });
-  assert.match(subject.captureUnavailableReason(), /already has a screen request or active share/i);
-  await subject.acceptAndShare({ id: 'holder-b-request', generation: 1 });
-  assert.equal(chooserCount, 0);
-  assert.equal(postCount, 0);
-  assert.equal(subject.session.id, 'viewing-a');
-});
-
-test('a queued ended event from an old capture cannot stop a newer share', async () => {
+function selfTrack(order = []) {
   const listeners = {};
-  const oldTrack = { getSettings: () => ({ displaySurface: 'browser' }), getCaptureHandle: () => ({ handle: 'self', origin: 'https://spina.test' }), restrictTo: async () => {}, addEventListener: (name, fn) => { listeners[name] = fn; }, stop: () => {} };
+  const track = {
+    getSettings: () => ({ displaySurface: 'browser' }),
+    getCaptureHandle: () => ({ handle: 'self', origin: 'https://spina.test' }),
+    restrictTo: async () => { order.push('restricted'); },
+    addEventListener: (name, fn) => { listeners[name] = fn; },
+    stop: () => { order.push('stopped'); },
+  };
+  return { track, listeners, stream: { getVideoTracks: () => [track], getTracks: () => [track] } };
+}
+
+test('Enable browser gesture verifies and restricts self tab without encoding or uploading', async () => {
+  const order = [];
+  const capture = selfTrack(order);
   const previous = globalThis.RestrictionTarget;
   globalThis.RestrictionTarget = { fromElement: async () => ({}) };
   try {
     const subject = controller({
-      role: 'client', sectionId: 'client-overview', handle: 'self', safeToCapture: () => true, supported: () => true,
-      browser: { mediaDevices: { getDisplayMedia: async () => ({ getVideoTracks: () => [oldTrack], getTracks: () => [oldTrack] }) } },
-      api: { request: async () => ({ id: 'old-grant', generation: 1, state: 'active' }) },
-      queueCapture: () => {},
+      role: 'client', sectionId: 'client-overview', handle: 'self',
+      safeToCapture: () => true, supported: () => true,
+      browser: { mediaDevices: { getDisplayMedia: () => { order.push('browser chooser'); return Promise.resolve(capture.stream); } } },
+      api: { request: async () => { throw new Error('Preparation must not use the API'); } },
     });
-    await subject.acceptAndShare({ id: 'old-grant', generation: 1 });
+    await subject.prepare();
+    assert.deepEqual(order, ['browser chooser', 'restricted']);
+    assert.equal(subject.preparedTrack, capture.track);
+    assert.equal(subject.session, null);
+    assert.ok(subject.preparedUntil > Date.now());
     await subject.stop({ notify: false });
-    subject.session = { id: 'new-grant', generation: 1, state: 'active' };
-    subject.track = { stop: () => {} };
-    listeners.ended();
-    assert.equal(subject.session.id, 'new-grant');
+    assert.equal(order.at(-1), 'stopped');
   } finally { globalThis.RestrictionTarget = previous; }
+});
+
+test('a second Enable click cannot open another browser chooser', async () => {
+  let resolveChooser;
+  let count = 0;
+  const subject = controller({
+    role: 'client', sectionId: 'client-overview', handle: 'self', safeToCapture: () => true, supported: () => true,
+    browser: { mediaDevices: { getDisplayMedia: () => { count += 1; return new Promise(resolve => { resolveChooser = resolve; }); } } },
+  });
+  const first = subject.prepare();
+  const second = subject.prepare();
+  assert.equal(count, 1);
+  await subject.stop({ notify: false });
+  const capture = selfTrack();
+  resolveChooser(capture.stream);
+  await Promise.all([first, second]);
+  assert.equal(subject.preparedTrack, null);
+  assert.equal(subject.session, null);
 });
 
 test('a rejected old status request cannot stop a newly mounted share', async () => {
@@ -240,73 +239,141 @@ test('a rejected old status request cannot stop a newly mounted share', async ()
   assert.equal(subject.session.id, 'new-share');
 });
 
-test('holder browser gesture restricts own tab before POST accept and works with a different raw device header', async () => {
+test('prepared tab automatically readies only its pending request and paints the named indicator before frames', async () => {
   const order = [];
-  let ended = false;
-  const track = {
-    getSettings: () => ({ displaySurface: 'browser' }),
-    getCaptureHandle: () => ({ handle: 'self-handle', origin: 'https://spina.test' }),
-    restrictTo: async () => { order.push('restrict'); },
-    addEventListener: () => {},
-    stop: () => { ended = true; },
-  };
+  const capture = selfTrack(order);
   const previous = globalThis.RestrictionTarget;
   globalThis.RestrictionTarget = { fromElement: async () => ({}) };
   try {
+    const item = pendingView();
     const subject = controller({
-      role: 'client', sectionId: 'client-overview', handle: 'self-handle',
-      safeToCapture: () => true,
-      supported: () => true,
-      queueCapture: () => { order.push('capture scheduled'); },
-      browser: { mediaDevices: { getDisplayMedia: () => { order.push('browser chooser'); return Promise.resolve({ getVideoTracks: () => [track], getTracks: () => [track] }); } } },
+      role: 'client', sectionId: 'client-overview', handle: 'self', account: { user: { id: 'holder-id' } },
+      safeToCapture: () => true, supported: () => true,
+      doc: { hidden: false, defaultView: { requestAnimationFrame: callback => { order.push('paint'); callback(); } }, createElement: () => ({ play: async () => {}, pause: () => {}, remove: () => {} }) },
+      browser: { mediaDevices: { getDisplayMedia: () => { order.push('chooser'); return Promise.resolve(capture.stream); } } },
       api: { request: async (path, options) => {
-        assert.equal(path, '/api/v1/screen-shares/grant/accept');
+        assert.equal(path, `/api/v1/screen-shares/${item.id}/ready`);
         assert.deepEqual(options.body, { generation: 1 });
-        order.push('accept');
-        return { id: 'grant', generation: 1, state: 'active', holder_device_id: 'registered-device-uuid' };
+        order.push('ready');
+        return { ...item, state: 'active', holder_device_id: 'registered-device-uuid' };
       } },
+      queueCapture: () => { order.push('frame'); },
     });
-    await subject.acceptAndShare({ id: 'grant', generation: 1 });
-    assert.deepEqual(order, ['browser chooser', 'restrict', 'accept', 'capture scheduled']);
+    subject.render = () => { if (subject.session?.state === 'active') order.push(`visible Management ${subject.session.viewer_name} is viewing`); };
+    await subject.prepare();
+    assert.deepEqual(order, ['chooser', 'restricted']);
+    assert.equal(subject.validPending(pendingView({ holder_user_id: 'someone-else' })), false);
+    assert.equal(subject.validPending(pendingView({ expires_at: new Date(Date.now() - 1000).toISOString() })), false);
+    assert.equal(subject.validPending(item), true); // Raw X-Device-Id is not the registered device UUID.
+    await subject.ready(item);
+    assert.deepEqual(order, ['chooser', 'restricted', 'ready', 'visible Management Ana is viewing', 'paint', 'paint', 'frame']);
     assert.equal(subject.participantMode, 'holder');
-    assert.equal(subject.session.holder_device_id, 'registered-device-uuid');
-    assert.equal(ended, false);
     await subject.stop({ notify: false });
-    assert.equal(ended, true);
   } finally { globalThis.RestrictionTarget = previous; }
 });
 
-test('Stop while accept is pending revokes the late accepted grant and never schedules frames', async () => {
-  let resolveAccept;
+test('local Stop during ready revokes late grant and suppresses exact pending replay', async () => {
+  let resolveReady;
   const stopped = [];
-  let captureStopped = false;
-  const track = {
-    getSettings: () => ({ displaySurface: 'browser' }),
-    getCaptureHandle: () => ({ handle: 'self', origin: 'https://spina.test' }),
-    restrictTo: async () => {}, addEventListener: () => {}, stop: () => { captureStopped = true; },
-  };
+  const order = [];
+  const capture = selfTrack(order);
   const previous = globalThis.RestrictionTarget;
   globalThis.RestrictionTarget = { fromElement: async () => ({}) };
   try {
+    const item = pendingView();
     const subject = controller({
-      role: 'client', sectionId: 'client-overview', handle: 'self',
+      role: 'client', sectionId: 'client-overview', handle: 'self', account: { user: { id: 'holder-id' } },
       safeToCapture: () => true, supported: () => true,
+      browser: { mediaDevices: { getDisplayMedia: async () => capture.stream } },
       queueCapture: () => { throw new Error('late frame scheduled'); },
-      browser: { mediaDevices: { getDisplayMedia: async () => ({ getVideoTracks: () => [track], getTracks: () => [track] }) } },
-      api: { request: async (path) => {
-        if (path.endsWith('/accept')) return new Promise(resolve => { resolveAccept = resolve; });
+      api: { request: async path => {
+        if (path.endsWith('/ready')) return new Promise(resolve => { resolveReady = resolve; });
         stopped.push(path);
         return {};
       } },
     });
-    const pending = subject.acceptAndShare({ id: 'grant', generation: 1 });
-    while (!resolveAccept) await Promise.resolve();
+    await subject.prepare();
+    const pending = subject.ready(item);
+    assert.ok(resolveReady);
     await subject.stop({ notify: false });
-    assert.equal(captureStopped, true);
-    resolveAccept({ id: 'grant', generation: 1, state: 'active' });
+    assert.equal(order.at(-1), 'stopped');
+    resolveReady({ ...item, state: 'active' });
     await pending;
     assert.equal(subject.session, null);
-    assert.deepEqual(stopped, ['/api/v1/screen-shares/grant/stop']);
+    assert.equal(subject.validPending(item), false);
+    assert.deepEqual(stopped, [`/api/v1/screen-shares/${item.id}/stop`]);
+    subject.mount({ session: { user: { id: 'holder-id', role: 'client' } }, role: 'client' });
+    assert.equal(subject.validPending(item), false);
+    subject.dispose();
+  } finally { globalThis.RestrictionTarget = previous; }
+});
+
+test('stopped pending request stays suppressed across logout and workspace remount until expiry', async () => {
+  let time = Date.now();
+  const item = pendingView({ expires_at: new Date(time + 60000).toISOString() });
+  const subject = controller({
+    account: { user: { id: 'holder-id', role: 'client' } }, role: 'client', sectionId: 'client-overview',
+    now: () => time, supported: () => false, observeContent: () => {},
+  });
+  subject.pendingRequests = [item];
+  await subject.stop({ notify: false });
+  assert.equal(subject.validPending(item), false);
+  subject.mount({ session: { user: { id: 'holder-id', role: 'client' } }, role: 'client' });
+  assert.equal(subject.validPending(item), false);
+  subject.dispose();
+  subject.mount({ session: { user: { id: 'holder-id', role: 'client' } }, role: 'client' });
+  assert.equal(subject.validPending(item), false);
+  time += 60001;
+  assert.equal(subject.validPending(item), false); // The original request has expired.
+  assert.equal(subject.suppressedPending.size, 0); // Suppression is bounded, not permanent.
+  subject.dispose();
+});
+
+test('only Management viewer gets an app Stop or Cancel control; holder status stays visible', () => {
+  const root = { innerHTML: '', querySelector: selector => selector === '[data-screen-panel]' ? { open: false } : null, querySelectorAll: () => [] };
+  const subject = controller({ root, account: { user: { id: 'holder-id' } }, role: 'management', sectionId: 'management-overview' });
+  subject.render = ScreenSharingController.prototype.render.bind(subject);
+  subject.preparedTrack = { stop: () => {} };
+  subject.render();
+  assert.match(root.innerHTML, /Live view ready/);
+  assert.doesNotMatch(root.innerHTML, /data-screen-stop|Allow view|Decline view/);
+  subject.preparedTrack = null;
+  subject.session = { ...pendingView(), state: 'active' };
+  subject.participantMode = 'holder';
+  subject.render();
+  assert.match(root.innerHTML, /Management Ana is viewing/);
+  assert.doesNotMatch(root.innerHTML, /data-screen-stop/);
+  subject.participantMode = 'viewer';
+  subject.render();
+  assert.match(root.innerHTML, /data-screen-stop>Stop viewing/);
+  subject.session = null;
+  subject.requestInFlight = true;
+  subject.render();
+  assert.match(root.innerHTML, /data-screen-stop>Cancel request/);
+});
+
+test('leaving the eligible screen destroys prepared capture and prevents replayed request from readying', async () => {
+  const order = [];
+  const capture = selfTrack(order);
+  const previous = globalThis.RestrictionTarget;
+  globalThis.RestrictionTarget = { fromElement: async () => ({}) };
+  try {
+    const item = pendingView();
+    let readyCalls = 0;
+    const subject = controller({
+      role: 'client', sectionId: 'client-overview', handle: 'self', account: { user: { id: 'holder-id' } },
+      safeToCapture: () => true, supported: () => true,
+      browser: { mediaDevices: { getDisplayMedia: async () => capture.stream } },
+      api: { request: async () => { readyCalls += 1; return {}; } },
+    });
+    await subject.prepare();
+    subject.pendingRequests = [item];
+    subject.beforeNavigate('client-account');
+    assert.equal(subject.preparedTrack, null);
+    assert.equal(subject.validPending(item), false);
+    assert.equal(order.at(-1), 'stopped');
+    await subject.ready(item);
+    assert.equal(readyCalls, 0);
   } finally { globalThis.RestrictionTarget = previous; }
 });
 
@@ -466,7 +533,7 @@ test('a hung old upload cannot keep a new share capture marked busy', async () =
   assert.equal(subject.captureInFlight, false);
 });
 
-test('unsupported browser and excluded work screen explain why Accept is unavailable while viewing stays possible', () => {
+test('unsupported browser and excluded work screen explain why Enable is unavailable while viewing stays possible', () => {
   const subject = controller({ role: 'client', sectionId: 'client-overview', supported: () => false });
   assert.match(subject.captureUnavailableReason(), /supported browser/i);
   assert.match(subject.captureUnavailableReason(), /Viewing remains available/i);

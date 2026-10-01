@@ -27,17 +27,18 @@ const manager = UserSession(
   permissions: ['screen_share.view'],
 );
 
-MirrorSession grant(String state) => MirrorSession(
-  id: 'share',
-  state: state,
-  generation: 1,
-  viewerUserId: 'viewer',
-  holderUserId: 'holder',
-  viewerName: 'Viewer',
-  holderName: 'Holder',
-  expiresAt: DateTime.utc(2030),
-  leaseExpiresAt: DateTime.utc(2030),
-);
+MirrorSession grant(String state, {String id = 'share', int generation = 1}) =>
+    MirrorSession(
+      id: id,
+      state: state,
+      generation: generation,
+      viewerUserId: 'viewer',
+      holderUserId: 'holder',
+      viewerName: 'Viewer',
+      holderName: 'Holder',
+      expiresAt: DateTime.utc(2030),
+      leaseExpiresAt: DateTime.utc(2030),
+    );
 
 class FakeMirrorRepository implements MirrorRepository {
   int uploads = 0, stops = 0;
@@ -58,7 +59,9 @@ class FakeMirrorRepository implements MirrorRepository {
       stops++;
       return grant('stopped');
     }
-    return accepting == null ? grant('active') : accepting!.future;
+    return accepting == null
+        ? grant('active', id: session.id, generation: session.generation)
+        : accepting!.future;
   }
 
   @override
@@ -81,7 +84,7 @@ class FakeMirrorRepository implements MirrorRepository {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
-    'no capture without consent; Stop discards delayed accepted consent',
+    'no capture before readiness; Stop discards delayed readiness',
     () async {
       final api = FakeMirrorRepository()..accepting = Completer();
       final controller = MirrorController(api, automatic: false)
@@ -91,9 +94,9 @@ void main() {
         captures++;
         return Uint8List(8);
       });
-      await controller.tick();
+      final accepting = controller.tick();
+      await Future<void>.delayed(Duration.zero);
       expect(captures, 0);
-      final accepting = controller.accept(grant('pending'));
       controller.stop();
       api.accepting!.complete(grant('active'));
       await accepting;
@@ -110,7 +113,8 @@ void main() {
         ..attach(holder);
       final capture = Completer<Uint8List?>();
       controller.surfaceChanged(() => capture.future);
-      await controller.accept(grant('pending'));
+      await controller.ready(grant('pending'));
+      controller.holderIndicatorPainted('share', 1);
       final running = controller.tick();
       if (boundary == 'background') {
         controller.foreground(false);
@@ -137,7 +141,8 @@ void main() {
       captures++;
       return Uint8List.fromList([1]);
     });
-    await controller.accept(grant('pending'));
+    await controller.ready(grant('pending'));
+    controller.holderIndicatorPainted('share', 1);
     final running = controller.tick();
     await Future<void>.delayed(Duration.zero);
     await controller.tick();
@@ -203,7 +208,8 @@ void main() {
         now = now.add(const Duration(milliseconds: 750));
         return Uint8List(1);
       });
-      await controller.accept(grant('pending'));
+      await controller.ready(grant('pending'));
+      controller.holderIndicatorPainted('share', 1);
       await controller.tick();
       now = now.add(const Duration(milliseconds: 250));
       await controller.tick();
@@ -273,7 +279,8 @@ void main() {
       final controller = MirrorController(api, automatic: false, now: () => now)
         ..attach(holder);
       controller.surfaceChanged(() async => Uint8List(1));
-      await controller.accept(grant('pending'));
+      await controller.ready(grant('pending'));
+      controller.holderIndicatorPainted('share', 1);
       final upload = controller.tick();
       await Future<void>.delayed(Duration.zero);
       controller.navigating(eligible: true);
@@ -335,7 +342,8 @@ void main() {
       final controller = MirrorController(api, automatic: false)
         ..attach(holder);
       controller.surfaceChanged(() async => Uint8List(1));
-      await controller.accept(grant('pending'));
+      await controller.ready(grant('pending'));
+      controller.holderIndicatorPainted('share', 1);
       final upload = controller.tick();
       await Future<void>.delayed(Duration.zero);
       expect(devices, 2);

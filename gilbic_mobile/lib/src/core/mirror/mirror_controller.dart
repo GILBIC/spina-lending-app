@@ -28,6 +28,35 @@ class MirrorController extends ChangeNotifier {
   DateTime? _lastPending, _lastImage, _lastPublished;
   MirrorCapture? _capture;
   MirrorSession? sharing;
+  MirrorSession? _readying;
+  bool _indicatorPainted = false;
+  final Map<String, DateTime> _suppressed = {};
+  String _grantKey(MirrorSession item) => '${item.id}:${item.generation}';
+  void _suppress(MirrorSession item) {
+    final key = _grantKey(item);
+    final expiry =
+        item.expiresAt.isBefore(_now().add(const Duration(minutes: 10)))
+        ? item.expiresAt
+        : _now().add(const Duration(minutes: 10));
+    if (_suppressed[key] == null || _suppressed[key]!.isBefore(expiry)) {
+      _suppressed[key] = expiry;
+    }
+  }
+
+  bool _isSuppressed(MirrorSession item) {
+    _suppressed.removeWhere((_, expiry) => !expiry.isAfter(_now()));
+    return _suppressed.containsKey(_grantKey(item));
+  }
+
+  void holderIndicatorPainted(String id, int generation) {
+    if (sharing?.id == id &&
+        sharing?.generation == generation &&
+        !viewing &&
+        _foreground) {
+      _indicatorPainted = true;
+    }
+  }
+
   List<MirrorSession> incoming = [];
   Uint8List? viewerBytes;
   String? notice;
@@ -37,7 +66,7 @@ class MirrorController extends ChangeNotifier {
       _session!.hasPermission('screen_share.view');
   bool get viewing =>
       sharing?.viewerUserId == _session?.userId && sharing != null;
-  bool get canAccept =>
+  bool get canReady =>
       _foreground && _capture != null && !_busy && sharing == null;
   bool _current(int epoch) =>
       !_disposed &&
@@ -128,6 +157,13 @@ class MirrorController extends ChangeNotifier {
 
   void stop({String? message}) {
     final prior = sharing;
+    if (prior != null) _suppress(prior);
+    if (_readying != null) _suppress(_readying!);
+    for (final pending in incoming) {
+      _suppress(pending);
+    }
+    incoming = [];
+    _indicatorPainted = false;
     _epoch++;
     sharing = null;
     _clearImage();
@@ -143,49 +179,53 @@ class MirrorController extends ChangeNotifier {
     _emit();
   }
 
-  Future<void> accept(MirrorSession pending) async {
-    if (!canAccept ||
-        pending.holderUserId != _session?.userId ||
-        pending.state != 'pending') {
-      return;
-    }
-    final epoch = _epoch;
+  Future<void> ready(MirrorSession pending) async {
+    if (!canReady) return;
     _busy = true;
-    _emit();
     try {
-      final accepted = await repository.action(pending, 'accept');
-      if (!_current(epoch)) {
-        unawaited(
-          repository
-              .action(accepted, 'stop')
-              .catchError((Object _) => accepted),
-        );
-        return;
-      }
-      if (accepted.id != pending.id ||
-          accepted.holderUserId != _session!.userId ||
-          accepted.state != 'active') {
-        throw const FormatException('Invalid consent');
-      }
-      sharing = accepted;
-      _schedulePolling();
-      incoming = [];
-      notice = null;
-    } on Object {
-      if (_current(epoch)) stop(message: 'Screen sharing could not start.');
+      await _ready(pending, _epoch);
     } finally {
       _busy = false;
       _emit();
     }
   }
 
-  Future<void> decline(MirrorSession pending) async {
-    incoming = [];
-    _emit();
+  Future<void> _ready(MirrorSession pending, int epoch) async {
+    if (!_current(epoch) ||
+        _capture == null ||
+        sharing != null ||
+        pending.holderUserId != _session?.userId ||
+        pending.state != 'pending' ||
+        !pending.expiresAt.isAfter(_now()) ||
+        _isSuppressed(pending)) {
+      return;
+    }
+    _readying = pending;
     try {
-      await repository.action(pending, 'decline');
+      final active = await repository.action(pending, 'ready');
+      if (!_current(epoch) || _isSuppressed(pending)) {
+        _suppress(active);
+        unawaited(
+          repository.action(active, 'stop').catchError((Object _) => active),
+        );
+        return;
+      }
+      if (active.id != pending.id ||
+          active.generation != pending.generation ||
+          active.holderUserId != _session!.userId ||
+          active.state != 'active') {
+        throw const FormatException('Invalid readiness');
+      }
+      sharing = active;
+      _indicatorPainted = false;
+      _schedulePolling();
+      incoming = [];
+      notice = null;
     } on Object {
-      /* Pending requests expire server-side. */
+      _suppress(pending);
+      if (_current(epoch)) stop(message: 'Screen sharing could not start.');
+    } finally {
+      _readying = null;
     }
   }
 
@@ -243,6 +283,7 @@ class MirrorController extends ChangeNotifier {
       return;
     }
     final epoch = _epoch;
+    final pollingUserId = _session!.userId;
     _busy = true;
     Uint8List? bytes;
     try {
@@ -254,15 +295,29 @@ class MirrorController extends ChangeNotifier {
         }
         _lastPending = _now();
         final result = await repository.pending();
-        if (_current(epoch)) {
-          incoming = result
-              .where(
-                (item) =>
-                    item.holderUserId == _session!.userId &&
-                    item.state == 'pending' &&
-                    item.expiresAt.isAfter(_now()),
-              )
-              .toList();
+        if (!_current(epoch)) {
+          for (final item in result) {
+            if (item.holderUserId == pollingUserId) _suppress(item);
+          }
+          return;
+        }
+        incoming =
+            result
+                .where(
+                  (item) =>
+                      item.holderUserId == _session!.userId &&
+                      item.state == 'pending' &&
+                      item.expiresAt.isAfter(_now()) &&
+                      !_isSuppressed(item),
+                )
+                .toList()
+              ..sort(
+                (a, b) => (b.createdAt ?? b.expiresAt).compareTo(
+                  a.createdAt ?? a.expiresAt,
+                ),
+              );
+        if (_capture != null && incoming.isNotEmpty) {
+          await _ready(incoming.first, epoch);
         }
         return;
       }
@@ -302,7 +357,7 @@ class MirrorController extends ChangeNotifier {
         }
       } else {
         final capture = _capture;
-        if (capture == null) return;
+        if (capture == null || !_indicatorPainted) return;
         if (grant.state != 'active') {
           stop();
           return;
@@ -331,10 +386,7 @@ class MirrorController extends ChangeNotifier {
       }
     } on Object {
       if (_current(epoch)) {
-        stop(
-          message:
-              'Screen sharing stopped. Request consent again to reconnect.',
-        );
+        stop(message: 'Screen sharing stopped. Start a new view to reconnect.');
       }
     } finally {
       bytes?.fillRange(0, bytes.length, 0);

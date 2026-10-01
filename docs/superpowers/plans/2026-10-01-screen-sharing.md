@@ -1,10 +1,10 @@
-# Consented screen viewing implementation plan
+# Management live viewing implementation plan
 
 > **For agentic workers:** Use superpowers:subagent-driven-development for scoped implementation and independent review. Root owns Git and integration; agents do not commit or deploy.
 
-**Goal:** Let Management view an explicitly consenting account's eligible Spina screens without merging accounts or exposing sensitive screens.
+**Goal:** Let Management view an account's eligible Spina work screens with a visible named viewing indicator, automatic device readiness and Management-only in-app Stop, without merging accounts or exposing sensitive screens.
 
-**Architecture:** Private session metadata and a tightly bounded volatile latest-frame cache behind authenticated HTTP. Flutter captures explicit safe subtrees; supported desktop browsers capture only a verified restricted Spina element. Minimal request/consent/view/Stop controls reuse the existing session lifecycle.
+**Architecture:** Private session metadata and a tightly bounded volatile latest-frame cache behind authenticated HTTP. Flutter captures explicit safe subtrees; supported desktop browsers first obtain their platform sharing permission and capture only a verified restricted Spina element. Minimal setup/view/status and viewer-only Stop controls reuse the existing session lifecycle; holder safety teardown remains automatic.
 
 **Tech Stack:** Existing FastAPI/psycopg/PostgreSQL, browser JavaScript/Element Capture, Flutter/Dart.
 
@@ -21,6 +21,20 @@ The shared API, field names, failure codes and all bounds are those in the spec.
 - An account/device permission change must revoke a previously accepted session.
 - A killed process or sleeping app must not leave an unbounded or resumable session/image.
 - A browser choosing a different tab/window must never transmit that source.
+
+## Current approved revision — 1 October 2026
+
+Owner explicitly approved only Management stopping through Spina, with a clear Management-viewing indicator visible to the viewed account. This resolves the prior hold; covert viewing remains excluded. Finish the retained visible-only WIP before commit or release. Root owns integration and Git; native, web and backend owners work on separate files. The original completed tasks below describe historical implementation and are not proof of this revision.
+
+- [x] Backend: finish device-readiness `/ready` contract (remove `/accept`), preserve participant authentication and lifecycle Stop, verify unit/API and real PostgreSQL transitions.
+- [x] Native: automatic readiness only on eligible foreground work surfaces; painted visible indicator before capture; no holder Stop button; retain viewer Stop, safety termination and replay suppression; repair adapted capture test and verify changed flows.
+- [x] Web: finish direct-gesture browser preparation, zero upload before valid Management session, automatic readiness, visible named indicator and viewer-only Stop; preserve restrictions, limits and teardown; verify focused then full portal tests.
+- [x] Root: reconcile contracts and independent source review; preserve PR464 Management UI and verify persistent indicator layout on synthetic desktop/mobile pages.
+- [ ] Release: update dated handoffs/GitHub/Notion; pass current-head CI and protected release gates before claiming rollout. Notion is temporarily unavailable; local/GitHub are authoritative for the current approved revision.
+
+Ruling: retain participant-bound backend `/stop` for automatic lifecycle cleanup, because closing/backgrounding the app or browser permission revocation must end capture. Management-only Stop is the in-app manual-control rule; it does not promise uninterruptible viewing or bypass OS controls. No new control endpoint or media service is needed.
+
+Current revision verification, 1 October 19:54 Manila:13 backend unit/API cases and16 real PostgreSQL cases passed after136 migrations; Ruff/Pyright clean. Native52 focused cases plus7 small-screen/large-text readiness cases passed, with full analyzer clean. Web26 focused and916 total cases passed;139 module syntax checks and production portal build passed. Independent review corrected an offscreen indicator and pending-request replay on remount, then found no remaining substantive source blocker. Root verified the named banner after long scroll at2560x1185 and390x844 without horizontal overflow. Actual browser/Windows/phone capture acceptance remains untested and owner-deferred; source checks are not rollout evidence.
 
 ## Task 1 — backend consent, private metadata and bounded frames
 

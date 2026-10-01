@@ -52,6 +52,38 @@ void main() {
     },
   );
 
+  test(
+    'readiness uses ready endpoint and old accept action is rejected',
+    () async {
+      final api = SpinaMirrorRepository(
+        session: () => manager,
+        deviceId: () async => 'raw',
+        client: MockClient((request) async {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/v1/screen-shares/share/ready');
+          expect(jsonDecode(request.body), {'generation': 1});
+          return http.Response(
+            jsonEncode({
+              'id': 'share',
+              'state': 'active',
+              'generation': 1,
+              'viewer_user_id': 'viewer',
+              'holder_user_id': 'holder',
+              'viewer_name': 'Viewer',
+              'holder_name': 'Holder',
+              'expires_at': '2030-01-01T00:00:00Z',
+            }),
+            200,
+            headers: {'cache-control': 'no-store'},
+          );
+        }),
+      );
+      expect((await api.action(grant('pending'), 'ready')).state, 'active');
+      expect(() => api.action(grant('pending'), 'accept'), throwsArgumentError);
+      api.close();
+    },
+  );
+
   for (final fault in ['cache', 'generation', 'size', 'dimensions', 'mime']) {
     test('viewer rejects $fault protocol violation before decode', () async {
       final bytes = Uint8List(fault == 'size' ? 524289 : 24);
