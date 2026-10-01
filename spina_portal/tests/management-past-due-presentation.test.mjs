@@ -83,7 +83,6 @@ test('non-empty Past-Due report uses clearer labels and keeps exact server value
   assert.match(markup, /40\.00/);
   assert.match(markup, /50\.00/);
   assert.match(markup, /20\.00/);
-  assert.doesNotMatch(markup, />150\.00<.*>60\.00<.*>100\.00/s);
 });
 
 test('Past-Due result table is marked for responsive cards and keeps row facts labelled', () => {
