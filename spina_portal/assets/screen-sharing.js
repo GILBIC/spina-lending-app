@@ -10,6 +10,11 @@ const ELIGIBLE = Object.freeze({
   collector: new Set(['collector-overview', 'collector-master-review', 'collector-route', 'collector-remittance']),
   management: new Set(['management-overview', 'management-loans', 'management-loan-operations']),
 });
+// Group navigation must not widen the previously audited capture surfaces.
+const MANAGEMENT_CHILD = new Map([
+  ['management-clients-loans', 'management-loans'],
+  ['management-collections', 'management-loan-operations'],
+]);
 const SENSITIVE = 'input[type="password"], .one-time-client-credentials, [data-credential-result], [data-credential-own-form], [data-credential-reset-form], input[type="file"], dialog[open], [role="dialog"]';
 
 export function isEligibleScreen(role, id) {
@@ -81,6 +86,7 @@ export class ScreenSharingController {
     this.sectionId = null;
     this.track = null;
     this.pendingTrack = null;
+    this.restrictedElement = null;
     this.preparedTrack = null;
     this.preparedStream = null;
     this.preparedUntil = 0;
@@ -117,7 +123,7 @@ export class ScreenSharingController {
     if (this.session) return 'This device already has a screen request or active share. Stop it before enabling this tab again.';
     if (this.browser?.onLine === false) return 'Reconnect to Spina before sharing this screen.';
     if (!this.supported() || !this.handle) return 'This browser cannot safely share only this Spina tab. Open Spina in a supported browser to start sharing. Viewing remains available.';
-    if (!isEligibleScreen(this.role, this.sectionId)) return 'This screen is excluded from sharing. Open an eligible daily-work screen before enabling.';
+    if (!isEligibleScreen(this.role, this.captureSectionId())) return 'This screen is excluded from sharing. Open an eligible daily-work screen before enabling.';
     if (!this.safeToCapture()) return 'This screen contains private controls or is not visible. Close them before sharing.';
     return '';
   }
@@ -151,12 +157,27 @@ export class ScreenSharingController {
     }
   }
 
+  captureSectionId(id = this.sectionId) {
+    return this.role === 'management' ? MANAGEMENT_CHILD.get(id) || id : id;
+  }
+
   activeSection() {
-    return [...this.contentRoot.querySelectorAll('[data-workspace-section]')].find((item) => item.getAttribute('id') === this.sectionId && !item.hidden);
+    const group = [...this.contentRoot.querySelectorAll('[data-workspace-section]')].find((item) => item.getAttribute('id') === this.sectionId && !item.hidden);
+    const childId = this.captureSectionId();
+    if (!group || childId === this.sectionId) return group;
+    const children = [...group.querySelectorAll('[data-screen-share-section]')].filter((item) => item.getAttribute('id') === childId);
+    return children.length === 1 ? children[0] : null;
+  }
+
+  captureElement() {
+    return this.captureSectionId() === this.sectionId ? this.contentRoot : this.activeSection();
   }
 
   safeToCapture() {
-    return isEligibleScreen(this.role, this.sectionId) && !visibleSensitive(this.activeSection()) && !this.doc.hidden && this.browser?.onLine !== false;
+    return isEligibleScreen(this.role, this.captureSectionId())
+      && (!this.restrictedElement || this.restrictedElement === this.captureElement())
+      && !visibleSensitive(this.activeSection())
+      && !this.doc.hidden && this.browser?.onLine !== false;
   }
 
   pendingKey(item) {
@@ -248,6 +269,7 @@ export class ScreenSharingController {
     track?.stop();
     const pendingTrack = this.pendingTrack;
     this.pendingTrack = null;
+    this.restrictedElement = null;
     if (pendingTrack !== track) pendingTrack?.stop();
     const preparedTrack = this.preparedTrack;
     this.preparedTrack = null;
@@ -288,7 +310,10 @@ export class ScreenSharingController {
     this.sectionId = id;
     if (!this.session) this.listRefreshNeeded = true;
     if (this.preparedTrack || this.prepareInFlight || this.readyInFlight) { void this.stop({ reason: 'Live view setup stopped because the Spina screen changed. Enable this tab again when ready.' }); return; }
-    if (this.track && !isEligibleScreen(this.role, id)) { void this.stop({ reason: 'Sharing stopped because this screen is excluded.' }); return; }
+    if (this.track && (!isEligibleScreen(this.role, this.captureSectionId(id))
+      || this.restrictedElement && this.restrictedElement !== this.captureElement())) {
+      void this.stop({ reason: 'Sharing stopped because the captured work panel changed. Enable this tab again when ready.' }); return;
+    }
     if (this.track) {
       this.uploadAbort?.abort();
       this.queueCapture(0);
@@ -313,7 +338,7 @@ export class ScreenSharingController {
     this.observer = new MutationObserver(() => {
       if ((this.track || this.preparedTrack || this.prepareInFlight || this.readyInFlight) && !this.safeToCapture()) void this.stop({ reason: 'Sharing stopped because a private control appeared.' });
     });
-    this.observer.observe(this.contentRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'type', 'open'] });
+    this.observer.observe(this.contentRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'type', 'open', 'id', 'data-screen-share-section'] });
   }
 
   mount({ session, role }) {
@@ -533,9 +558,11 @@ export class ScreenSharingController {
       const track = stream.getVideoTracks()[0];
       if (!track || !this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Live view setup was cancelled.');
       this.pendingTrack = track;
-      const target = await RestrictionTarget.fromElement(this.contentRoot);
+      const captureElement = this.captureElement();
+      const target = await RestrictionTarget.fromElement(captureElement);
       await verifySelfCapture(track, { handle: this.handle, origin: this.location.origin, restrictionTarget: target });
-      if (!this.lifecycle.current(epoch) || !this.safeToCapture()) throw new Error('Live view setup was cancelled.');
+      if (!this.lifecycle.current(epoch) || !this.safeToCapture() || captureElement !== this.captureElement()) throw new Error('Live view setup was cancelled.');
+      this.restrictedElement = captureElement;
       this.preparedTrack = track;
       this.preparedStream = stream;
       this.pendingTrack = null;

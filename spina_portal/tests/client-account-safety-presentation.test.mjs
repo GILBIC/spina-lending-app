@@ -68,11 +68,11 @@ function hydrateDataset(root) {
   }
 }
 
-function mount({ api }) {
+function mount({ api, session = { user: { roles: ['management'] }, permissions: ['account.manage'] }, signal, isOnline } = {}) {
   const root = new Element();
   root.innerHTML = clientAccountAdminMarkup();
   hydrateDataset(root);
-  bindClientAccountAdmin({ root, api });
+  root.cleanup = bindClientAccountAdmin({ root, api, session, signal, isOnline });
   return root;
 }
 
@@ -258,4 +258,79 @@ test('Management empty Renewal and Support queues use compact status rows', () =
     managementSource,
     /emptyState\('No open support request requires review\.'\)/,
   );
+});
+
+test('editing borrower search makes detached selection controls inert and ignores a superseded response', async (t) => {
+  installFormData(t);
+  let finishOld;
+  const root = mount({ api: { request(path) {
+    return path.includes('q=old') ? new Promise((resolve) => { finishOld = resolve; }) : Promise.resolve({ clients: [clientB] });
+  } } });
+  const form = root.querySelector('#management-client-account-search');
+  const query = form.querySelector('[name="query"]');
+  query.value = 'old'; fire(form, 'submit');
+  query.value = 'new'; fire(query, 'input'); fire(form, 'submit'); await tick();
+  hydrateDataset(root);
+  const current = root.querySelector('.select-client-account-borrower');
+  finishOld({ clients: [clientA] }); await tick();
+  assert.doesNotMatch(root.querySelector('#management-client-account-candidates').textContent, /Maria A/);
+  query.value = 'different'; fire(query, 'input'); fire(current, 'click');
+  assert.equal(root.querySelector('[name="clientId"]').value, '');
+  assert.equal(root.querySelector('#management-client-account-create').querySelector('button').disabled, true);
+});
+
+test('failed and malformed borrower searches do not unlock uncertain creation', async (t) => {
+  installFormData(t);
+  const original = globalThis.confirm; globalThis.confirm = () => true; t.after(() => { globalThis.confirm = original; });
+  let searches = 0; let posts = 0;
+  const root = mount({ api: { async request(path, options = {}) {
+    if (options.method === 'POST') { posts += 1; throw Object.assign(new Error('uncertain'), { status: 503 }); }
+    searches += 1;
+    if (searches === 1) return { clients: [clientA] };
+    if (searches === 2) throw new Error('Search unavailable');
+    return {};
+  } } });
+  const search = root.querySelector('#management-client-account-search');
+  search.querySelector('[name="query"]').value = 'maria'; fire(search, 'submit'); await tick(); hydrateDataset(root);
+  fire(root.querySelector('.select-client-account-borrower'), 'click');
+  const create = root.querySelector('#management-client-account-create');
+  create.querySelector('[name="email"]').value = 'maria@example.com'; fire(create, 'submit'); await tick();
+  for (let index = 0; index < 2; index += 1) {
+    fire(search, 'submit'); await tick(); fire(create, 'submit'); await tick();
+    assert.ok(root.querySelector('[data-client-account-uncertain]'));
+    assert.equal(create.querySelector('button').disabled, true);
+  }
+  assert.equal(posts, 1);
+});
+
+test('pending creation submits once and late credentials cannot survive cleanup', async (t) => {
+  installFormData(t);
+  const original = globalThis.confirm; globalThis.confirm = () => true; t.after(() => { globalThis.confirm = original; });
+  let finish; let posts = 0;
+  const root = mount({ api: { async request(path, options = {}) {
+    if (options.method === 'POST') { posts += 1; return new Promise((resolve) => { finish = resolve; }); }
+    return { clients: [clientA] };
+  } } });
+  const search = root.querySelector('#management-client-account-search');
+  search.querySelector('[name="query"]').value = 'maria'; fire(search, 'submit'); await tick(); hydrateDataset(root);
+  fire(root.querySelector('.select-client-account-borrower'), 'click');
+  const create = root.querySelector('#management-client-account-create');
+  create.querySelector('[name="email"]').value = 'maria@example.com';
+  fire(create, 'submit'); fire(create, 'submit'); await tick(); assert.equal(posts, 1);
+  root.cleanup();
+  finish({ account: { username: 'server.client' }, credentials: { username: 'server.client', password: 'one-time-secret' }, delivery: { sent: false, detail: 'Not sent' } });
+  await tick(); fire(create, 'submit'); await tick();
+  assert.equal(posts, 1); assert.equal(create.querySelector('[name="email"]').value, '');
+  assert.doesNotMatch(root.textContent, /one-time-secret/);
+});
+
+for (const session of [
+  { user: { roles: ['employee'] }, permissions: ['account.manage'] },
+  { user: { roles: ['management'] }, permissions: [] },
+]) test('Client creation requires Management membership and account.manage in the active session', async (t) => {
+  installFormData(t); let requests = 0;
+  const root = mount({ session, api: { async request() { requests += 1; return { clients: [clientA] }; } } });
+  const search = root.querySelector('#management-client-account-search');
+  search.querySelector('[name="query"]').value = 'maria'; fire(search, 'submit'); await tick();
+  assert.equal(requests, 0);
 });

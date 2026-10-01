@@ -5,7 +5,7 @@ from gilbic_backend.employee_operations_models import ACTION_ADAPTER
 from pydantic import ValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "sql" / "0134_add_cash_disbursement_permission.sql"
+MIGRATION = ROOT / "sql" / "0135_add_cash_disbursement_permission.sql"
 REPOSITORY = ROOT / "src" / "gilbic_backend" / "employee_operations_repository.py"
 
 
@@ -46,7 +46,7 @@ def test_cash_disbursement_command_is_strict_and_uses_decimal_text():
 
 
 def test_cash_disbursement_permission_is_only_employee_and_management():
-    assert MIGRATION.exists(), "0134 cash-disbursement permission migration is required"
+    assert MIGRATION.exists(), "0135 cash-disbursement permission migration is required"
     sql = MIGRATION.read_text(encoding="utf-8").lower()
     compact = "".join(sql.split())
     assert "cash_disbursement.prepare" in sql

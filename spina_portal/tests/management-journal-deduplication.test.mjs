@@ -91,10 +91,12 @@ function pageMarkup(currentJournals = journals) {
 
 test('General Journal evidence renders each entry once and provides one action slot per entry', () => {
   const markup = managementGeneralJournalMarkup({ journals, trialBalance });
+  const root = new Element();
+  root.innerHTML = markup;
 
   for (const entry of journals.entries) {
     assert.equal(
-      (markup.match(new RegExp(entry.entry_number, 'g')) || []).length,
+      root.querySelectorAll('h3').filter((heading) => heading.textContent === entry.entry_number).length,
       1,
       entry.entry_number,
     );
@@ -225,4 +227,78 @@ test('integrated posting refreshes authoritative evidence once and keeps one vis
       .querySelector('[data-journal-post]'),
     null,
   );
+});
+
+for (const failure of [409, 503, 'refresh']) test(`integrated journal ${failure} failure locks external controls until a fresh authoritative reload`, async (t) => {
+  const page = new Element();
+  const initial = { ...journals, entries: [manualDraft] };
+  page.innerHTML = pageMarkup(initial);
+  const evidenceRoot = page.querySelector('#evidence');
+  const root = page.querySelector('#actions');
+  const calls = [];
+  let failing = true;
+  const posted = { ...manualDraft, status: 'posted' };
+  const refreshed = { ...journals, entries: [posted] };
+  const dispose = mountManagementJournalActions({
+    root, evidenceRoot, initialJournals: initial,
+    session: { user: { role: 'management' }, permissions: ['accounting.view', 'accounting.journal.manage'] },
+    confirm: () => true,
+    api: { request: async (path, options = {}) => {
+      calls.push({ path, options });
+      if (options.method) {
+        if (failure !== 'refresh' && failing) throw Object.assign(new Error('Synthetic failure'), { status: failure });
+        return { entry: posted };
+      }
+      if (failure === 'refresh' && failing) throw new Error('Synthetic refresh failure');
+      return refreshed;
+    } },
+    onSaved: async (freshJournals) => {
+      evidenceRoot.innerHTML = managementGeneralJournalMarkup({ journals: freshJournals, trialBalance });
+    },
+  });
+  t.after(dispose);
+  assert.equal(calls.length, 0);
+  const oldPost = evidenceRoot.querySelector('[data-journal-post]');
+  fire(oldPost, 'click');
+  await tick();
+  assert.equal(evidenceRoot.querySelector('[data-journal-post]').disabled, true);
+  assert.equal(root.querySelector('[data-journal-create]').disabled, true);
+  assert.equal(root.querySelector('[data-journal-refresh]').disabled, false);
+  fire(oldPost, 'click');
+  await tick();
+  assert.equal(calls.filter((call) => call.options.method).length, 1);
+  failing = false;
+  const readsBeforeRefresh = calls.filter((call) => !call.options.method).length;
+  fire(root.querySelector('[data-journal-refresh]'), 'click');
+  await tick();
+  assert.equal(calls.filter((call) => !call.options.method).length, readsBeforeRefresh + 1);
+  assert.equal(evidenceRoot.querySelector('[data-journal-post]'), null);
+  assert.ok(evidenceRoot.querySelector('[data-journal-reverse]'));
+  fire(oldPost, 'click');
+  await tick();
+  assert.equal(calls.filter((call) => call.options.method).length, 1);
+});
+
+test('integrated authorization failure clears external journal evidence and detached actions', async (t) => {
+  const page = new Element();
+  page.innerHTML = pageMarkup({ ...journals, entries: [manualDraft] });
+  const evidenceRoot = page.querySelector('#evidence');
+  const root = page.querySelector('#actions');
+  let mutations = 0;
+  const dispose = mountManagementJournalActions({
+    root, evidenceRoot, initialJournals: { ...journals, entries: [manualDraft] },
+    session: { user: { role: 'management' }, permissions: ['accounting.view', 'accounting.journal.manage'] },
+    confirm: () => true,
+    api: { request: async () => { mutations++; throw Object.assign(new Error('Private backend detail'), { status: 403 }); } },
+  });
+  t.after(dispose);
+  const oldPost = evidenceRoot.querySelector('[data-journal-post]');
+  fire(oldPost, 'click');
+  await tick();
+  assert.equal(evidenceRoot.innerHTML, '');
+  assert.doesNotMatch(root.textContent, /Private backend detail/);
+  assert.match(root.textContent, /Sign in again/);
+  fire(oldPost, 'click');
+  await tick();
+  assert.equal(mutations, 1);
 });

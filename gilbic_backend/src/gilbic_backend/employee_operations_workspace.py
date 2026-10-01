@@ -24,6 +24,7 @@ def capabilities(tx):
         "can_review_requests": owner or manager or tx.backup("review_requests"),
         "can_review_shortages": owner,
         "can_prepare_accounting": owner or manager,
+        "can_prepare_cash_disbursement": tx.can_prepare_cash_disbursement(),
         "can_view_statutory": owner or manager,
         "can_report_shortage": owner or manager or own,
         "can_record_advances": owner,
@@ -97,6 +98,7 @@ def allowed(tx, domain, row, caps):
             actions.append("payroll_history_correct")
     elif (
         domain == "accounting_preparations"
+        and not row["payload"].get("cash_disbursement")
         and caps["can_prepare_accounting"]
         and (owner or row["created_by"] == str(tx.actor.user_id))
     ):
@@ -109,6 +111,7 @@ def build_workspace(tx, request_id=None):
     owner = is_employee_owner(tx.actor)
     manager = tx.manager()
     actor_id = str(tx.actor.user_id)
+    cash_reviewer = tx.can_prepare_cash_disbursement(management_only=True)
     any_review = any(
         caps[k]
         for k in (
@@ -172,7 +175,11 @@ def build_workspace(tx, request_id=None):
             elif domain in ("statutory_months", "statutory_remittances"):
                 show = own or caps["can_view_statutory"]
             elif domain == "accounting_preparations":
-                show = caps["can_prepare_accounting"]
+                show = caps["can_prepare_accounting"] or (
+                    caps["can_prepare_cash_disbursement"]
+                    and record["payload"].get("cash_disbursement")
+                    and (cash_reviewer or record["created_by"] == actor_id)
+                )
             else:
                 show = False
             if not show:

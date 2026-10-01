@@ -26,6 +26,7 @@ test('a fresh worker serves the complete static app graph offline without cachin
           }
         },
         async put(input, response) { store.set(new ShellRequest(input).url, response); },
+        async match(input) { return store.get(new ShellRequest(input).url)?.clone(); },
       };
     },
     async keys() { return [...stores.keys()]; },
@@ -100,6 +101,10 @@ test('shell upgrade replaces a fresh HTTP-cached module and serves it offline', 
         },
         async put(input, response) {
           contents.set(new ShellRequest(input).url, await response.text());
+        },
+        async match(input) {
+          const key = new ShellRequest(input).url;
+          return contents.has(key) ? new Response(contents.get(key)) : undefined;
         },
       };
     },

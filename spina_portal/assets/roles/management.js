@@ -10,12 +10,15 @@ import { mountOfficeFirstLoan } from '../office-first-loan.js';
 import { mountOfficeOnboarding } from '../office-onboarding.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
+import { mountCashDisbursement } from '../cash-disbursement.js';
+import { bindManagementAlertsAudit, managementAlertsAuditMarkup } from '../management-alerts-audit.js';
 import {
   bindClientAccountAdmin,
   clientAccountAdminMarkup,
 } from '../client-account-admin.js';
 import { staffInviteMarkup, submitStaffInvitation } from '../staff-invite.js';
 import {
+  bindManagedDevicePanel,
   changeManagedDeviceStatus,
   deviceAction,
   loadManagedDevices,
@@ -248,30 +251,20 @@ function bindManagementOfficeWorkflow(root) {
   return () => removers.forEach((remove) => remove());
 }
 
-function alertsMarkup(alerts, events) {
-  const alertCards = alerts.length
-    ? `<div class="card-grid">${alerts.map((alert) => `<article class="data-card"><div class="section-heading"><div><h3>${escapeHtml(alert.title || titleCase(alert.code))}</h3><p>${escapeHtml(alert.domain || '')}</p></div>${badge(alert.severity || 'info')}</div><strong class="metric-value">${escapeHtml(alert.count ?? 0)}</strong>${alert.amount != null ? `<p>${formatMoney(alert.amount)}</p>` : ''}</article>`).join('')}</div>`
-    : emptyState('No actionable alert is visible under the current permissions.');
-  const eventList = events.length
-    ? `<div class="timeline">${events.slice(0, 60).map((event) => `<article class="timeline-item"><strong>${escapeHtml(event.title || event.action_code || 'Activity')}</strong><span>${escapeHtml(event.reference || event.current_state || '')}</span><span class="meta">${escapeHtml(event.actor_name || '')}${event.occurred_at ? ` · ${formatDateTime(event.occurred_at)}` : ''}</span>${event.reason ? `<span>${escapeHtml(event.reason)}</span>` : ''}</article>`).join('')}</div>`
-    : emptyState('No recent allowlisted audit event is available.');
-  return `${alertCards}<div class="section-heading" style="margin-top:1rem"><div><h2>Recent audit activity</h2></div></div>${eventList}`;
-}
-
 function renewalQueue(items) {
-  if (!items.length) return emptyState('No pending renewal request requires review.');
+  if (!items.length) return '<p class="management-queue-empty" role="status" data-management-queue-empty="renewals">No renewal requests waiting.</p>';
   return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.loan_number || 'Loan')} · ${escapeHtml(request.loan_type_name || '')}</div></div>${badge(request.status)}</div><div class="detail-grid"><div class="detail-item"><span>Current principal</span><strong>${formatMoney(request.current_principal)}</strong></div><div class="detail-item"><span>Remaining</span><strong>${formatMoney(request.remaining_balance)}</strong></div><div class="detail-item"><span>Requested</span><strong>${formatMoney(request.requested_amount)}</strong></div></div>${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}<form class="entry-form management-renewal-review" data-request-id="${escapeHtml(request.request_id)}"><label>Decision<select name="decision"><option value="approved">Approve request</option><option value="rejected">Reject request</option></select></label><label>Review note<textarea name="reviewNote" maxlength="1000" placeholder="Required when rejecting"></textarea></label><button class="button button-primary" type="submit">Confirm review</button></form></article>`).join('')}</div>`;
 }
 
 function supportQueue(items) {
-  if (!items.length) return emptyState('No open support request requires review.');
+  if (!items.length) return '<p class="management-queue-empty" role="status" data-management-queue-empty="support">No open support requests.</p>';
   return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div></div>${badge(request.status)}</div><p>${escapeHtml(request.message || '')}</p>${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}<form class="entry-form management-support-review" data-request-id="${escapeHtml(request.request_id)}"><label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label><label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label><button class="button button-primary" type="submit">Save response</button></form></article>`).join('')}</div>`;
 }
 
 function staffRows(accounts, canManageDevices) {
   if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
-  const actionLabel = canManageDevices ? 'Manage phones' : 'View';
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 0)}</td><td>${formatDateTime(account.updated_at)}</td><td><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
+  const actionLabel = canManageDevices ? 'Manage devices' : 'View account';
+  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Account updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr data-staff-row-id="${escapeHtml(account.id || '')}" aria-selected="false"><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).map((role) => titleCase(String(role).trim().toLowerCase())).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 'Not reported')}</td><td>${formatDateTime(account.updated_at)}</td><td><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function accountCard(account) {
@@ -312,90 +305,133 @@ function bindStaffInvite(context) {
 
 function deviceConfirmation(account, device, action) {
   const roles = asArray(account.roles).map((role) => String(role).trim().toLowerCase());
-  const platform = titleCase(device.platform || 'phone');
+  const platform = titleCase(device.platform || 'device');
   const current = titleCase(device.status || 'unknown');
   const requested = titleCase(action.nextStatus);
-  let consequence = 'The phone keeps its current server-authoritative access rules.';
-  if (device.status === 'pending' && action.nextStatus === 'active' && roles.includes('collector')) {
-    consequence = 'Approving this phone may revoke another active Collector phone for this account.';
-  } else if (device.status === 'pending' && action.nextStatus === 'active') {
-    consequence = 'Approving this phone allows protected SPINA access for this account.';
-  } else if (device.status === 'active' && action.nextStatus === 'revoked') {
-    consequence = 'Revoking this phone blocks future protected requests from this device.';
-  } else if (device.status === 'revoked' && action.nextStatus === 'active') {
-    consequence = 'Restoring this phone allows protected requests again.';
+  const status = String(device.status || '').trim().toLowerCase();
+  let consequence = 'The device keeps its current server-authoritative access rules.';
+  if (status === 'pending' && action.nextStatus === 'active' && roles.includes('collector')) {
+    consequence = 'Approving this device may revoke another active Collector device for this account.';
+  } else if (status === 'pending' && action.nextStatus === 'active') {
+    consequence = 'Approving this device allows protected SPINA access for this account.';
+  } else if (status === 'active' && action.nextStatus === 'revoked') {
+    consequence = 'Revoking this device blocks future protected requests from this device.';
+  } else if (status === 'revoked' && action.nextStatus === 'active') {
+    consequence = 'Restoring this device allows protected requests again.';
   }
-  return `${action.label} for ${account.full_name || account.username || 'this staff account'}?\n\nPhone: ${platform}\nCurrent: ${current}\nRequested: ${requested}\n\n${consequence}`;
+  return `${action.label} for ${account.full_name || account.username || 'this staff account'}?\n\nDevice: ${platform}\nCurrent: ${current}\nRequested: ${requested}\n\n${consequence}`;
 }
 
-function bindManagedDeviceActions(context, account, devices) {
+export function bindStaffDevices(context, accounts) {
   const detail = context.root.querySelector('#management-staff-device-detail');
-  if (!detail) return;
-  for (const button of detail.querySelectorAll('.managed-device-action')) {
-    button.addEventListener('click', async () => {
-      const index = Number.parseInt(button.dataset.managedDeviceIndex || '', 10);
-      const device = Number.isInteger(index) ? devices[index] : null;
-      const action = device ? deviceAction(device.status) : null;
-      if (!device || !action) {
-        showToast('The registered phone state is stale. Open the staff record again.', 'error');
-        return;
-      }
-      if (!globalThis.confirm?.(deviceConfirmation(account, device, action))) return;
-      setButtonBusy(button, true, action.nextStatus === 'active' ? 'Saving…' : 'Revoking…');
-      try {
-        await changeManagedDeviceStatus(context.api, device.id, action.nextStatus);
-        const refreshed = await loadManagedDevices(context.api, account.id);
-        detail.innerHTML = renderManagedDevicePanel(account, refreshed, { canManageDevices: true });
-        bindManagedDeviceActions(context, account, refreshed);
-        showToast(
-          action.nextStatus === 'revoked'
-            ? 'Phone access revoked from the authoritative server record.'
-            : device.status === 'pending'
-              ? 'Phone approved from the authoritative server record.'
-              : 'Phone access restored from the authoritative server record.',
-          'success',
-        );
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
-      }
-    });
-  }
-}
-
-function bindStaffDevices(context, accounts) {
-  const detail = context.root.querySelector('#management-staff-device-detail');
-  if (!detail) return;
+  if (!detail) return () => {};
   const canManageDevices = hasPermission(context.session, 'device.manage');
-  const accountById = new Map(
-    accounts.map((account) => [String(account.id || ''), account]),
-  );
+  const accountById = new Map(accounts.map((account) => [String(account.id || ''), account]));
+  const listeners = [];
+  let panelCleanup = () => {};
+  let selectionVersion = 0;
+  let selectedId = '';
+  let disposed = false;
+  let busy = false;
+  const active = (version) => !disposed && !context.signal?.aborted && version === selectionVersion;
+
+  function select(id) {
+    selectedId = id;
+    for (const row of context.root.querySelectorAll('[data-staff-row-id]')) {
+      row.setAttribute('aria-selected', String(row.getAttribute('data-staff-row-id') === id));
+    }
+  }
+
+  function close() {
+    selectionVersion += 1;
+    panelCleanup();
+    select('');
+    detail.innerHTML = '';
+    detail.setAttribute('hidden', '');
+  }
+
+  function showPanel(account, devices, version) {
+    panelCleanup();
+    detail.innerHTML = renderManagedDevicePanel(account, devices, { canManageDevices });
+    const removeFilters = bindManagedDevicePanel(detail);
+    const remove = [removeFilters];
+    const on = (button, handler) => {
+      button?.addEventListener('click', handler);
+      remove.push(() => button?.removeEventListener('click', handler));
+    };
+    on(detail.querySelector('[data-managed-device-close]'), close);
+    for (const button of detail.querySelectorAll('.managed-device-action')) {
+      on(button, async () => {
+        if (!active(version) || busy || !hasPermission(context.session, 'device.manage')) return;
+        const index = Number(button.getAttribute('data-managed-device-index'));
+        const device = Number.isInteger(index) ? devices[index] : null;
+        const action = device ? deviceAction(device.status) : null;
+        if (!device?.id || !action) return;
+        if (!globalThis.confirm?.(deviceConfirmation(account, device, action))) return;
+        busy = true;
+        for (const control of detail.querySelectorAll('.managed-device-action')) control.disabled = true;
+        try {
+          await changeManagedDeviceStatus(context.api, device.id, action.nextStatus);
+          const refreshed = await loadManagedDevices(context.api, account.id);
+          if (!active(version)) return;
+          showPanel(account, refreshed, version);
+          showToast('Device access updated from the authoritative server record.', 'success');
+        } catch (error) {
+          if (!active(version)) return;
+          panelCleanup();
+          detail.innerHTML = `${errorCard(error)}<p class="meta">Open the staff account again to refresh its device records before another change.</p><button class="button button-quiet" type="button" data-managed-device-close>Close</button>`;
+          const closeButton = detail.querySelector('[data-managed-device-close]');
+          closeButton.addEventListener('click', close);
+          panelCleanup = () => closeButton.removeEventListener('click', close);
+        } finally {
+          busy = false;
+        }
+      });
+    }
+    panelCleanup = () => { for (const cleanup of remove) cleanup(); };
+  }
+
   for (const button of context.root.querySelectorAll('[data-manage-staff-id]')) {
-    button.addEventListener('click', async () => {
-      const account = accountById.get(String(button.dataset.manageStaffId || ''));
+    const open = async () => {
+      if (disposed || context.signal?.aborted || busy) return;
+      const account = accountById.get(String(button.getAttribute('data-manage-staff-id') || ''));
+      const version = ++selectionVersion;
+      panelCleanup();
+      detail.removeAttribute('hidden');
       if (!account) {
+        select('');
         detail.innerHTML = emptyState('The selected staff record is no longer available. Refresh Management.');
         return;
       }
+      select(String(account.id));
       if (!canManageDevices) {
-        detail.innerHTML = renderManagedDevicePanel(account, [], { canManageDevices: false });
-        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showPanel(account, [], version);
+        detail.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
         return;
       }
-      setButtonBusy(button, true, 'Loading…');
-      detail.innerHTML = loadingPanel('Loading registered phones…');
+      detail.innerHTML = loadingPanel('Loading registered devices…');
       try {
         const devices = await loadManagedDevices(context.api, account.id);
-        detail.innerHTML = renderManagedDevicePanel(account, devices, { canManageDevices: true });
-        bindManagedDeviceActions(context, account, devices);
-        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!active(version) || selectedId !== String(account.id)) return;
+        showPanel(account, devices, version);
+        detail.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       } catch (error) {
-        detail.innerHTML = errorCard(error);
-      } finally {
-        setButtonBusy(button, false);
+        if (active(version)) detail.innerHTML = errorCard(error);
       }
-    });
+    };
+    button.addEventListener('click', open);
+    listeners.push(() => button.removeEventListener('click', open));
   }
+  function cleanup() {
+    if (disposed) return;
+    disposed = true;
+    close();
+    for (const remove of listeners) remove();
+    context.signal?.removeEventListener('abort', cleanup);
+  }
+  context.signal?.addEventListener('abort', cleanup, { once: true });
+  if (context.signal?.aborted) cleanup();
+  return cleanup;
 }
 
 function bindRenewals(context) {
@@ -469,6 +505,14 @@ export async function mountManagementWorkspace(context) {
   for (const key of ['collectionActionsCleanup', 'journalActionsCleanup', 'managementAccountingCleanup']) { context[key]?.(); context[key] = null; }
   context.accountCredentialsCleanup?.();
   context.accountCredentialsCleanup = null;
+  context.clientAccountAdminCleanup?.();
+  context.clientAccountAdminCleanup = null;
+  context.staffDevicesCleanup?.();
+  context.staffDevicesCleanup = null;
+  context.managementAlertsAuditCleanup?.();
+  context.managementAlertsAuditCleanup = null;
+  context.cashDisbursementCleanup?.();
+  context.cashDisbursementCleanup = null;
   context.accountingExportCleanup?.();
   context.accountingExportCleanup = null;
   context.employeeOperationsCleanup?.();
@@ -490,6 +534,7 @@ export async function mountManagementWorkspace(context) {
   const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canDashboard = hasPermission(session, 'management.dashboard.view');
   const canViewFinancialStatements = hasPermission(session, 'accounting.view');
+  const canPrepareCashDisbursement = hasPermission(session, 'cash_disbursement.prepare');
   const canViewGeneralJournal = canViewFinancialStatements;
   const canRenewals = hasPermission(session, 'renewal.manage');
   const canSupport = hasPermission(session, 'support.manage');
@@ -554,13 +599,13 @@ export async function mountManagementWorkspace(context) {
     ['management-collections', 'Collections', 'Review collection activity, corrections, and past-due work.'],
     ['management-operations', 'People & operations',
       canSupport && !support.error ? String(model.openSupport.length) + ' client support requests open' : 'Manage staff, areas, employee work, and audit activity.'],
-    ...(canViewFinancialStatements || canViewGeneralJournal
+    ...(canViewFinancialStatements || canViewGeneralJournal || canPrepareCashDisbursement
       ? [['management-accounting-hub', 'Accounting', 'Open accounting, statements, journals, and trial balance.']]
       : []),
   ];
 
   root.innerHTML = `<section class="section-card management-today" id="management-overview" data-workspace-section><header class="workspace-header"><div><p class="eyebrow">Management</p><h1>Today</h1><p>Today's portfolio, collections, and work requiring attention.</p></div>${model.generatedAt ? `<span class="meta">Updated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
-  ${renewals.error || support.error ? '<div class="notice-card warning">Some work queues could not load. Open the task or refresh before deciding there is no pending work.</div>' : ''}
+  ${renewals.error || support.error ? '<div class="notice-card warning">Some work queues are unavailable. Open the task or refresh before deciding there is no pending work.</div>' : ''}
   ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
   <div class="section-heading management-work-queues-heading"><div><h2>Work queues</h2><p>Open the area you need to work on.</p></div></div>
   ${dailyLinks.length ? `<div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>` : emptyState('No review queue is assigned to this account.')}
@@ -587,7 +632,7 @@ export async function mountManagementWorkspace(context) {
       <section id="management-first-loan"><h2>First-loan approval and office release</h2><p class="meta">Selected references are carried forward for convenience and revalidated by the protected first-loan workflow.</p><div data-office-first-loan></div></section>
     </div>
   </section>` : ''}
-  <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients & loans</h2><p>Search the official portfolio. A Client may have both Regular and 7x7 loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" aria-label="Search clients and loans" placeholder="Client name, code, area, or loan number" /><select name="status" aria-label="Loan status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid management-loan-summary">${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Outstanding balance', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue loans', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  <section class="section-card" id="management-loans" data-screen-share-section><div class="section-heading"><div><h2>Clients & loans</h2><p>Search the official portfolio. A Client may have both Regular and 7x7 loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" aria-label="Search clients and loans" placeholder="Client name, code, area, or loan number" /><select name="status" aria-label="Loan status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid management-loan-summary">${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Outstanding balance', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue loans', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canReviewPaymentProof ? '<section class="section-card" id="management-payment-proofs"><h2>Payment evidence review</h2><div data-management-payment-proofs></div></section>' : ''}
   ${canManageAccounts ? `<section class="section-card" id="management-client-accounts"><div class="section-heading"><div><h2>Client accounts</h2><p>Select an existing borrower record, enter the borrower's email, and let SPINA generate the credentials.</p></div></div>${clientAccountAdminMarkup()}</section>` : ''}
@@ -595,20 +640,21 @@ export async function mountManagementWorkspace(context) {
   <section class="workspace-group" id="management-collections" data-workspace-section>
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Collections</h1><p>Monitor collections, protected corrections, and past-due reasons.</p></div></header>
   ${canCollectionActions ? '<section class="section-card" id="management-collection-actions"><div data-management-collection-actions></div></section>' : ''}
-  <section class="section-card" id="management-loan-operations"><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" aria-label="Search collection history" placeholder="Client, receipt, loan, or collector" /><select name="status" aria-label="Collection status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
+  <section class="section-card" id="management-loan-operations" data-screen-share-section><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" aria-label="Search collection history" placeholder="Client, receipt, loan, or collector" /><select name="status" aria-label="Collection status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Review recorded past-due reasons and amounts by date, area, reason, or event.</p></div></div><form id="management-past-due-report-search" class="past-due-filter-grid"><label>Start date<input type="date" name="start_date" /></label><label>End date<input type="date" name="end_date" /></label><label>Area<input name="area" maxlength="200" placeholder="All areas" /></label><label>Reason<select name="reason_code"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select></label><label>Event<select name="event_kind"><option value="">All events</option><option value="unable_to_pay">Unable to pay</option><option value="partial_payment">Partial payment</option></select></label><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
   </section>
   <section class="workspace-group" id="management-accounting-hub" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header>\n  ${!canViewFinancialStatements && !canViewGeneralJournal ? emptyState('No accounting tools are assigned to this account.') : ''}
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header>\n  ${!canViewFinancialStatements && !canViewGeneralJournal && !canPrepareCashDisbursement ? emptyState('No accounting tools are assigned to this account.') : ''}
+  ${canPrepareCashDisbursement ? '<section class="section-card" id="management-cash-disbursement"><div data-cash-disbursement></div></section>' : ''}
   ${canViewFinancialStatements ? '<section class="section-card" id="management-accounting"><div data-management-accounting></div></section>' : ''}
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
   ${canViewGeneralJournal ? `<section class="section-card" id="management-general-journal"><div class="section-heading"><div><h2>General journal & trial balance</h2><p>Review accounting evidence and use the authorized journal actions below.</p></div></div>${generalJournal.error ? errorCard(generalJournal.error) : ''}${trialBalance.error ? errorCard(trialBalance.error) : ''}<div data-management-journal-evidence>${managementGeneralJournalMarkup({ journals: generalJournal.data, trialBalance: trialBalance.data })}</div><div data-management-journal-actions></div></section>` : ''}
   </section>
   <section class="workspace-group" id="management-operations" data-workspace-section>
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>People & operations</h1><p>Manage staff, areas, employee work, support, and audit activity.</p></div></header>
-  ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2><p>Read-only allowlisted activity from owning Spina records.</p></div></div>${alerts.error ? errorCard(alerts.error) : alertsMarkup(model.alerts, model.recentEvents)}</section>` : ''}
+  ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2></div></div><div data-management-alerts-audit>${alerts.error ? errorCard(alerts.error) : managementAlertsAuditMarkup(alerts.data)}</div></section>` : ''}
   ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
-  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff, inspect registered phones, and apply only server-authorized device changes.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" style="margin-top:1rem">${emptyState('Select a staff account to review registered phones.')}</div></section>` : ''}
+  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff and manage registered devices.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" hidden></div></section>` : ''}
   <section class="section-card" id="management-employee-operations"><div data-employee-operations></div></section>
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
   </section>
@@ -636,6 +682,12 @@ export async function mountManagementWorkspace(context) {
   context.employeeOperationsCleanup = mountEmployeeOperations({
     root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
   });
+  if (canPrepareCashDisbursement) context.cashDisbursementCleanup = mountCashDisbursement({
+    root: root.querySelector('[data-cash-disbursement]'), api, session, signal: context.signal,
+  });
+  context.managementAlertsAuditCleanup = bindManagementAlertsAudit(
+    root.querySelector('[data-management-alerts-audit]'), { signal: context.signal },
+  );
   if (canReviewPaymentProof) {
     context.paymentProofCleanup = mountPaymentProofs({
       root: root.querySelector('[data-management-payment-proofs]'), api, mode: 'management', signal: context.signal,
@@ -651,8 +703,9 @@ export async function mountManagementWorkspace(context) {
     context.accountingExportCleanup = bindManagementAccountingExport(context);
     context.journalActionsCleanup = mountManagementJournalActions({
       root: root.querySelector('[data-management-journal-actions]'), api, session, signal: context.signal,
-      onSaved: async () => {
-        const [journals, trialBalance] = await Promise.all([loadManagementGeneralJournal(api), loadManagementTrialBalance(api)]);
+      evidenceRoot: root.querySelector('[data-management-journal-evidence]'), initialJournals: generalJournal.data,
+      onSaved: async (freshJournals) => {
+        const [journals, trialBalance] = await Promise.all([freshJournals || loadManagementGeneralJournal(api), loadManagementTrialBalance(api)]);
         if (context.signal?.aborted || context.journalEvidenceVersion !== journalEvidenceVersion) return;
         context.accountingExportCleanup?.();
         root.querySelector('[data-management-journal-evidence]').innerHTML = managementGeneralJournalMarkup({journals, trialBalance});
@@ -662,9 +715,9 @@ export async function mountManagementWorkspace(context) {
   }
   bindRenewals(context);
   bindSupport(context);
-  bindClientAccountAdmin(context);
+  context.clientAccountAdminCleanup = bindClientAccountAdmin(context);
   bindStaffInvite(context);
-  bindStaffDevices(context, staffAccounts);
+  context.staffDevicesCleanup = bindStaffDevices(context, staffAccounts);
   if (canUseAreaManagement) {
     const areaRoot = root.querySelector('#management-area-management');
     if (areaRoot) await mountAreaManagement({ ...context, root: areaRoot });

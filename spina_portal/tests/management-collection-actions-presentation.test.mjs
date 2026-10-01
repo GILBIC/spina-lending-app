@@ -83,6 +83,38 @@ test('Contract collection summarizes readiness and keeps repeated technical bloc
   assert.ok(ready.querySelector('[data-contract-activate]'));
 });
 
+test('Common readiness categories count distinct loans and preserve each detailed reason', async (t) => {
+  const reasons = [
+    'Official collection state is not reconciled.',
+    'Mobile collection is disabled.',
+    'Protected ECL state needs review.',
+  ];
+  for (const loanCount of [1, 2]) {
+    const root=new Element();
+    const controller=new AbortController();
+    t.after(()=>controller.abort());
+    const loans=activationData().loans.slice(0,loanCount).map(loan=>({...loan,blockers:[...reasons]}));
+    mountManagementCollectionActions({
+      root,
+      session:{user:{role:'management'},permissions:['lending.contract_collection.activate']},
+      signal:controller.signal,
+      api:{request:async()=>({permission:true,loans})},
+    });
+    await tick();
+    const common=root.querySelector('[data-contract-common-blockers]');
+    if(loanCount===1)assert.equal(common,null,'multiple reasons on one loan are not common across loans');
+    else {
+      assert.match(common.textContent,/2 loans need another readiness requirement/);
+      assert.equal(common.querySelectorAll('li').length,1);
+    }
+    for(const row of root.querySelectorAll('[data-contract-loan]')) {
+      const details=row.querySelector('[data-contract-technical-details]');
+      assert.equal(details.querySelectorAll('li').length,reasons.length);
+      for(const reason of reasons)assert.ok(details.textContent.includes(reason));
+    }
+  }
+});
+
 test('Collection actions shows one local workflow at a time without starting mutations', async (t) => {
   const root=new Element();
   const calls=[];

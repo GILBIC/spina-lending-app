@@ -533,6 +533,7 @@ class EmployeeTransaction:
             "statutory_remittance": "statutory_remittances",
             "schedule_save": "schedules",
             "payroll_adjustment": "payroll",
+            "cash_disbursement_prepare": "accounting_preparations",
         }
         if c.action in create_domains and (
             c.expected_version != 0
@@ -1203,6 +1204,82 @@ class EmployeeTransaction:
         self.invalidate(c.employee_id)
         return result
 
+    def can_prepare_cash_disbursement(self, *, management_only=False):
+        # Current database memberships win over stale login roles, including owner.
+        return (
+            self.cursor.execute(
+                """select 1 from core.user_roles ur
+            join core.roles role on role.id=ur.role_id
+            join core.role_permissions rp on rp.role_id=ur.role_id
+            where ur.user_id=%s and role.code in ('employee','management')
+            and rp.permission_code='cash_disbursement.prepare'
+            and (not %s or role.code='management')
+            for share of ur,rp""",
+                (self.actor.user_id, management_only),
+            ).fetchone()
+            is not None
+        )
+
+    def require_cash_disbursement(self):
+        if not self.can_prepare_cash_disbursement():
+            raise EmployeeAccessDenied(
+                "Cash Disbursement preparation is not assigned to this account"
+            )
+
+    def do_cash_disbursement_prepare(self):
+        from .employee_authorization import save_employee_journal_draft
+
+        c = self.command_as(commands.CashDisbursementPrepare)
+        self.require_cash_disbursement()
+        lines: list[dict[str, object]] = [
+            {
+                "account_code": c.expense_account_code,
+                "debit": money_text(c.amount),
+                "credit": "0.00",
+            },
+            {
+                "account_code": c.cash_account_code,
+                "debit": "0.00",
+                "credit": money_text(c.amount),
+            },
+        ]
+        description = (
+            f"Cash Disbursement: {c.payee} - {c.purpose} ({c.evidence_reference})"
+        )
+        entry_id = save_employee_journal_draft(
+            self.cursor,
+            actor=self.actor,
+            posting_date=c.as_of,
+            description=description,
+            lines=lines,
+            permission="cash_disbursement.prepare",
+        )
+        payload = self.command_payload()
+        payload.update(
+            preparation_kind="journal",
+            cash_disbursement=True,
+            description=description,
+            lines=lines,
+            journal_entry_id=str(entry_id),
+        )
+        record = self.save("accounting_preparations", c.id, None, payload, "draft")
+        self.cursor.execute(
+            """insert into core.audit_logs(actor_user_id,action,target_type,target_id,details)
+            values(%s,'cash_disbursement.prepare','employee_accounting_preparation',%s,%s)""",
+            (
+                self.actor.user_id,
+                c.id,
+                Jsonb(
+                    {
+                        "request_id": str(c.request_id),
+                        "journal_entry_id": str(entry_id),
+                        "actor_device_id": str(self.actor.registered_device_id),
+                    }
+                ),
+            ),
+        )
+        return record
+
     def do_accounting_prepare(self):
         c = self.command_as(commands.AccountingPrepare)
         if not (is_employee_owner(self.actor) or self.manager()):
@@ -1211,6 +1288,10 @@ class EmployeeTransaction:
             )
         p = self.command_payload()
         previous = self.get("accounting_preparations", c.id, required=False)
+        if previous and previous["payload"].get("cash_disbursement"):
+            raise EmployeeConflict(
+                "Cash Disbursement preparations cannot be replaced; review the linked General Journal draft"
+            )
         if (
             previous
             and previous["created_by"] != str(self.actor.user_id)
@@ -1277,6 +1358,8 @@ class PostgresEmployeeOperationsRepository:
             "select pg_advisory_xact_lock(hashtext('spina.employee_operations'))"
         )
         require_employee_actor(cursor, actor)
+        if command.action == "cash_disbursement_prepare":
+            EmployeeTransaction(cursor, actor).require_cash_disbursement()
         payload = command.model_dump(mode="json")
         digest = hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()

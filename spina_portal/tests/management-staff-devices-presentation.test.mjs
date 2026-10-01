@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { setImmediate } from 'node:timers/promises';
+import { bindStaffDevices } from '../assets/roles/management.js';
 
 import {
   bindManagedDevicePanel,
@@ -188,4 +190,78 @@ test('device confirmation remains authoritative and platform-neutral', () => {
     /Approving this device may revoke another active Collector device for this account\./,
   );
   assert.doesNotMatch(managementSource, /Revoking this phone blocks future/);
+});
+
+test('unknown device statuses remain in All with exact total and no invented action', () => {
+  const root = new Element();
+  root.innerHTML = renderManagedDevicePanel(account, [...devices, { id: 'unknown-device-private', platform: 'web', status: 'suspended' }], { canManageDevices: true });
+  assert.match(root.textContent, /5 devices.*2 active.*1 pending.*1 revoked.*1 other/);
+  const card = root.querySelector('[data-managed-device-status="suspended"]');
+  assert.ok(card); assert.equal(card.querySelector('.managed-device-action'), null);
+  assert.doesNotMatch(root.innerHTML, /unknown-device-private/);
+  const cleanup = bindManagedDevicePanel(root);
+  fire(root.querySelector('[data-managed-device-filter="pending"]'), 'click');
+  assert.equal(card.getAttribute('hidden'), '');
+  fire(root.querySelector('[data-managed-device-filter="all"]'), 'click');
+  assert.equal(card.getAttribute('hidden'), null); cleanup();
+  fire(root.querySelector('[data-managed-device-filter="pending"]'), 'click');
+  assert.equal(card.getAttribute('hidden'), null, 'disposed filter handlers stay inert');
+});
+
+function staffHarness({ permissions = ['device.manage'], request } = {}) {
+  const root = new Element();
+  root.innerHTML = '<table><tbody><tr data-staff-row-id="staff-1" aria-selected="false"><td><button data-manage-staff-id="staff-1">Manage devices</button></td></tr><tr data-staff-row-id="staff-2" aria-selected="false"><td><button data-manage-staff-id="staff-2">Manage devices</button></td></tr></tbody></table><div id="management-staff-device-detail" hidden></div>';
+  const context = { root, session: { user: { roles: ['management'] }, permissions }, api: { request } };
+  const cleanup = bindStaffDevices(context, [account, { ...account, id: 'staff-2', full_name: 'Second staff member' }]);
+  return { root, cleanup, detail: root.querySelector('#management-staff-device-detail') };
+}
+
+test('staff selection keeps only the latest detail and Close clears selection and detached actions', async () => {
+  let first; const requests = [];
+  const h = staffHarness({ request(path, options) {
+    requests.push({ path, options });
+    return path.includes('/staff-1/') ? new Promise((resolve) => { first = resolve; }) : Promise.resolve({ devices });
+  } });
+  fire(h.root.querySelector('[data-manage-staff-id="staff-1"]'), 'click');
+  fire(h.root.querySelector('[data-manage-staff-id="staff-2"]'), 'click'); await setImmediate();
+  assert.match(h.detail.textContent, /Second staff member/);
+  first({ devices: [] }); await setImmediate();
+  assert.match(h.detail.textContent, /Second staff member/);
+  assert.equal(h.root.querySelector('[data-staff-row-id="staff-1"]').getAttribute('aria-selected'), 'false');
+  assert.equal(h.root.querySelector('[data-staff-row-id="staff-2"]').getAttribute('aria-selected'), 'true');
+  const oldAction = h.detail.querySelector('.managed-device-action');
+  fire(h.detail.querySelector('[data-managed-device-close]'), 'click'); fire(oldAction, 'click'); await setImmediate();
+  assert.equal(h.detail.getAttribute('hidden'), '');
+  assert.equal(h.root.querySelector('[data-staff-row-id="staff-2"]').getAttribute('aria-selected'), 'false');
+  assert.equal(requests.length, 2); h.cleanup();
+});
+
+test('staff account-only inspection cannot fetch or mutate registered devices', async () => {
+  let requests = 0;
+  const h = staffHarness({ permissions: ['account.manage'], request() { requests += 1; } });
+  fire(h.root.querySelector('[data-manage-staff-id="staff-1"]'), 'click'); await setImmediate();
+  assert.match(h.detail.textContent, /Device management permission/);
+  assert.equal(h.detail.querySelector('.managed-device-action'), null);
+  assert.equal(requests, 0); h.cleanup();
+});
+
+test('device mutation requires the consequence confirmation and one authoritative reload', async (t) => {
+  const previous = globalThis.confirm; let accepted = false; const confirmations = [];
+  globalThis.confirm = (message) => { confirmations.push(message); return accepted; };
+  t.after(() => { globalThis.confirm = previous; });
+  const requests = []; let finish;
+  const h = staffHarness({ request(path, options = {}) {
+    requests.push({ path, options });
+    if (options.method === 'PATCH') return new Promise((resolve) => { finish = resolve; });
+    return Promise.resolve({ devices: [devices[0]] });
+  } });
+  fire(h.root.querySelector('[data-manage-staff-id="staff-1"]'), 'click'); await setImmediate();
+  const action = h.detail.querySelector('.managed-device-action');
+  fire(action, 'click'); assert.equal(requests.length, 1);
+  accepted = true; fire(action, 'click'); fire(action, 'click');
+  assert.equal(requests.filter((call) => call.options.method === 'PATCH').length, 1);
+  assert.match(confirmations[0], /Revoking this device blocks future protected requests/);
+  assert.deepEqual(requests[1], { path: '/api/v1/management/devices/device-active-web/status', options: { method: 'PATCH', body: { status: 'revoked' } } });
+  finish({}); await setImmediate();
+  assert.equal(requests.length, 3); assert.match(h.detail.textContent, /1 device/); h.cleanup();
 });

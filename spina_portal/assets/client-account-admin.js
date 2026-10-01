@@ -4,6 +4,7 @@ import {
   emptyState,
   errorCard,
   escapeHtml,
+  hasPermission,
   setButtonBusy,
   showToast,
 } from './ui.js';
@@ -36,12 +37,12 @@ export function clientAccountAdminMarkup() {
         <input name="query" minlength="2" maxlength="200" required placeholder="Find borrower by name, Client code, phone, or area" />
         <button class="button button-secondary" type="submit">Find borrower</button>
       </form>
-      <div id="management-client-account-candidates">Select a borrower record before creating credentials.</div>
+      <div id="management-client-account-candidates" role="status">Search for an active borrower to create a Client account.</div>
     </article>
-    <article class="data-card">
+    <article class="data-card" data-client-account-create-stage hidden>
       <form id="management-client-account-create" class="entry-form">
         <input name="clientId" type="hidden" />
-        <div id="management-client-account-selected" class="empty-state">No borrower selected.</div>
+        <div id="management-client-account-selected"></div>
         <label>Email<input name="email" type="email" autocomplete="email" required maxlength="320" /></label>
         <button class="button button-primary" type="submit" disabled>Create Client account</button>
       </form>
@@ -90,50 +91,146 @@ export function bindClientAccountAdmin(context) {
   const createForm = context.root.querySelector('#management-client-account-create');
   const selectedRoot = context.root.querySelector('#management-client-account-selected');
   const resultRoot = context.root.querySelector('#management-client-account-result');
-  if (!searchForm || !candidateRoot || !createForm || !selectedRoot || !resultRoot) return;
+  const stage = context.root.querySelector('[data-client-account-create-stage]');
+  if (!searchForm || !candidateRoot || !createForm || !selectedRoot || !resultRoot || !stage) return () => {};
 
   const clientIdInput = createForm.querySelector('input[name="clientId"]');
+  const emailInput = createForm.querySelector('input[name="email"]');
+  const queryInput = searchForm.querySelector('input[name="query"]');
+  const searchButton = searchForm.querySelector('button[type="submit"]');
   const createButton = createForm.querySelector('button[type="submit"]');
+  const controller = new AbortController();
+  const listeners = [];
   let candidatesById = new Map();
+  let searchVersion = 0;
+  let selectedId = '';
+  let busy = false;
+  let uncertain = false;
+  let disposed = false;
+  const active = () => !disposed && !context.signal?.aborted;
+  const allowed = () => {
+    const session = context.session;
+    const roles = [...asArray(session?.roles), ...asArray(session?.user?.roles), session?.role, session?.user?.role];
+    return roles.includes('management') && !roles.includes('client') && hasPermission(session, 'account.manage');
+  };
+  const online = context.isOnline || (() => globalThis.navigator?.onLine !== false);
 
-  searchForm.addEventListener('submit', async (event) => {
+  function on(element, type, handler) {
+    element.addEventListener(type, handler);
+    listeners.push(() => element.removeEventListener(type, handler));
+  }
+
+  function clearSelection() {
+    selectedId = '';
+    clientIdInput.value = '';
+    emailInput.value = '';
+    selectedRoot.innerHTML = '';
+    stage.setAttribute('hidden', '');
+    createButton.disabled = true;
+  }
+
+  function invalidateSearch() {
+    searchVersion += 1;
+    candidatesById = new Map();
+    clearSelection();
+    candidateRoot.innerHTML = '';
+    if (!uncertain) resultRoot.innerHTML = '';
+    if (!busy && active()) setButtonBusy(searchButton, false);
+  }
+
+  function lockUncertain() {
+    uncertain = true;
+    invalidateSearch();
+    resultRoot.innerHTML = '<div class="notice-card warning" role="alert" data-client-account-uncertain><strong>The creation result is uncertain.</strong> The account may already exist. Search the borrower again to refresh authoritative records before another creation attempt.</div>';
+  }
+
+  function cleanup() {
+    if (disposed) return;
+    disposed = true;
+    controller.abort();
+    context.signal?.removeEventListener('abort', cleanup);
+    for (const remove of listeners) remove();
+    invalidateSearch();
+    resultRoot.innerHTML = '';
+    queryInput.value = '';
+    queryInput.disabled = true;
+    searchButton.disabled = true;
+  }
+
+  context.signal?.addEventListener('abort', cleanup, { once: true });
+  if (!active() || !allowed()) {
+    cleanup();
+    return cleanup;
+  }
+
+  on(queryInput, 'input', () => {
+    if (active() && !busy) invalidateSearch();
+  });
+
+  on(searchForm, 'submit', async (event) => {
     event.preventDefault();
+    if (!active() || !allowed() || busy) return;
+    invalidateSearch();
+    const version = searchVersion;
     const query = String(new FormData(searchForm).get('query') || '').trim();
+    if (!online()) {
+      candidateRoot.innerHTML = emptyState('Connect to the internet to search authoritative borrower records.');
+      return;
+    }
     if (query.length < 2) {
       candidateRoot.innerHTML = emptyState('Enter at least two characters to find a borrower.');
       return;
     }
-    const button = searchForm.querySelector('button[type="submit"]');
-    setButtonBusy(button, true, 'Searching…');
+    setButtonBusy(searchButton, true, 'Searching…');
     try {
       const data = await context.api.request(
         `/api/v1/management/client-link-candidates?q=${encodeURIComponent(query)}`,
+        { signal: controller.signal },
       );
-      const clients = asArray(data.clients);
+      if (!active() || version !== searchVersion) return;
+      if (!Array.isArray(data?.clients) || data.clients.some((client) => !client || typeof client.id !== 'string' || !client.id || client.status !== 'active')) {
+        throw new TypeError('The borrower search response could not be confirmed. Search again.');
+      }
+      const clients = data.clients;
       candidatesById = new Map(clients.map((client) => [String(client.id || ''), client]));
+      uncertain = false;
+      resultRoot.innerHTML = '';
       candidateRoot.innerHTML = candidateListMarkup(clients);
       for (const selectButton of candidateRoot.querySelectorAll('.select-client-account-borrower')) {
-        selectButton.addEventListener('click', () => {
-          const client = candidatesById.get(String(selectButton.dataset.clientId || ''));
+        on(selectButton, 'click', () => {
+          if (!active() || !allowed() || busy || uncertain || version !== searchVersion) return;
+          const client = candidatesById.get(String(selectButton.getAttribute('data-client-id') || ''));
           if (!client) {
             showToast('The borrower search result is stale. Search again.', 'error');
             return;
           }
-          clientIdInput.value = String(client.id || '');
+          if (selectedId !== client.id) emailInput.value = '';
+          selectedId = client.id;
+          clientIdInput.value = selectedId;
           selectedRoot.className = 'data-card';
           selectedRoot.innerHTML = `<strong>${escapeHtml(client.full_name || 'Borrower')}</strong><div class="meta">${escapeHtml(client.client_code || '—')} · ${escapeHtml(client.area || '')}</div>`;
+          stage.removeAttribute('hidden');
           createButton.disabled = false;
         });
       }
     } catch (error) {
+      if (!active() || version !== searchVersion) return;
+      if ([401, 403].includes(error?.status)) { cleanup(); return; }
       candidateRoot.innerHTML = errorCard(error, 'Borrower search is temporarily unavailable.');
     } finally {
-      setButtonBusy(button, false);
+      if (active() && version === searchVersion) setButtonBusy(searchButton, false);
     }
   });
 
-  createForm.addEventListener('submit', async (event) => {
+  on(createForm, 'submit', async (event) => {
     event.preventDefault();
+    if (!active() || !allowed() || busy || uncertain) return;
+    if (!online()) { showToast('Connect to the internet to create a Client account.', 'error'); return; }
+    if (!selectedId || clientIdInput.value !== selectedId || !candidatesById.has(selectedId)) {
+      clearSelection();
+      showToast('Search for and select the borrower again before creating an account.', 'error');
+      return;
+    }
     const data = new FormData(createForm);
     let body;
     try {
@@ -145,36 +242,50 @@ export function bindClientAccountAdmin(context) {
       showToast(error.message, 'error');
       return;
     }
-    if (
-      typeof globalThis.confirm === 'function' &&
-      !globalThis.confirm('Create a Client account for the selected borrower and generate credentials?')
-    ) {
+    if (!globalThis.confirm?.('Create a Client account for the selected borrower and generate credentials?')) {
       return;
     }
 
+    busy = true;
+    queryInput.disabled = true;
+    searchButton.disabled = true;
     setButtonBusy(createButton, true, 'Creating…');
     try {
       const result = await context.api.request('/api/v1/management/client-accounts', {
         method: 'POST',
         body,
+        signal: controller.signal,
       });
+      if (!active()) return;
+      if (!result?.account?.username || result.credentials?.username !== result.account.username ||
+          typeof result.credentials?.password !== 'string' || !result.credentials.password ||
+          typeof result.delivery?.sent !== 'boolean' || typeof result.delivery?.detail !== 'string') {
+        lockUncertain();
+        return;
+      }
+      invalidateSearch();
       resultRoot.innerHTML = renderOneTimeClientCredentials(result);
-      createForm.reset();
-      clientIdInput.value = '';
-      selectedRoot.className = 'empty-state';
-      selectedRoot.textContent = 'No borrower selected.';
-      createButton.disabled = true;
       candidateRoot.innerHTML = emptyState('Account created. Search again to select another borrower.');
-      candidatesById = new Map();
       showToast('Client account created. Copy the one-time credentials now.', 'success');
       resultRoot.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     } catch (error) {
-      resultRoot.innerHTML = errorCard(
-        error,
-        'SPINA could not confirm Client account creation. Refresh authoritative records before retrying.',
-      );
+      if (!active()) return;
+      if ([401, 403].includes(error?.status)) { cleanup(); return; }
+      if (!error?.status || error.status >= 500 || [408, 429].includes(error.status)) lockUncertain();
+      else {
+        invalidateSearch();
+        resultRoot.innerHTML = errorCard(error, 'Client account creation was not accepted. Search the borrower again before retrying.');
+      }
       showToast(error.message, 'error');
-      setButtonBusy(createButton, false);
+    } finally {
+      busy = false;
+      if (active()) {
+        setButtonBusy(createButton, false);
+        createButton.disabled = uncertain || !selectedId;
+        queryInput.disabled = false;
+        searchButton.disabled = false;
+      }
     }
   });
+  return cleanup;
 }

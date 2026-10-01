@@ -1,4 +1,5 @@
-import {asArray,escapeHtml as h,hasPermission,formatMoney} from './ui.js';
+import {asArray,escapeHtml as h,hasPermission} from './ui.js';
+import {journalEntriesMarkup} from './management-general-journal.js';
 import {createCollectorWriteGuard} from './collector-write-guard.js';
 import {collectorMutation} from './collector-workflow-contract.js';
 
@@ -13,23 +14,24 @@ function money(text){
 const cents=text=>BigInt(text.replace('.',''));
 
 export function mountManagementJournalActions(options){
-  const {root,api,session,signal,confirm=message=>globalThis.confirm?.(message),onSaved}=options;
+  const {root,api,session,signal,evidenceRoot,initialJournals,confirm=message=>globalThis.confirm?.(message),onSaved}=options;
   if(!root||!hasPermission(session,'accounting.view'))return ()=>{};
   let disposed=false,busy=false,guard,replacementCleanup;
   const controller=new AbortController();
   const current=()=>!disposed&&!signal?.aborted;
   const status=message=>{const node=root.querySelector('[data-journal-status]');if(current()&&node)node.textContent=message;};
-  const lock=()=>{if(current())for(const tag of ['button','input'])for(const node of root.querySelectorAll(tag))node.disabled=busy||(guard.locked&&node.getAttribute('data-journal-refresh')===null);};
-  root.innerHTML=`<h3>Journal actions</h3><p>Review manual drafts before posting. Posted records remain immutable; corrections create a separate reversal draft.</p>${button('Refresh journals','data-journal-refresh')}<p data-journal-status role="status" aria-live="polite"></p><div data-journal-records></div><div data-journal-editor></div>`;
+  const actionRoots=()=>[root,...(evidenceRoot?.querySelectorAll('[data-journal-actions-for]')||[])];
+  const lock=()=>{if(current())for(const target of actionRoots())for(const tag of ['button','input'])for(const node of target.querySelectorAll(tag))node.disabled=busy||(guard.locked&&node.getAttribute('data-journal-refresh')===null);};
+  root.innerHTML=`<p>Review manual drafts before posting. Posted records remain immutable; corrections create a separate reversal draft.</p>${button('Refresh journals','data-journal-refresh')}<p data-journal-status role="status" aria-live="polite"></p><div data-journal-records></div><div data-journal-editor></div>`;
   guard=createCollectorWriteGuard({signal:controller.signal,onLock:message=>{status(message);if(guard)lock();}});
   const run=async operation=>{
     if(!current()||!guard.begin())return;busy=true;lock();
-    try{await operation();}catch(error){if(current()){status(error.message);if([401,403,426].includes(error.status)){dispose();root.textContent=error.status===426?'Update SPINA before continuing.':'Access is unavailable. Sign in again before continuing.';}else if(error.status===409)guard.lock('The journal changed. Refresh the journals and review the current evidence before another action.');}}
+    try{await operation();}catch(error){if(current()){status(error.message);if([401,403,426].includes(error.status)){dispose();if(evidenceRoot)evidenceRoot.innerHTML='';root.textContent=error.status===426?'Update SPINA before continuing.':'Access is unavailable. Sign in again before continuing.';}else if(error.status===409)guard.lock('The journal changed. Refresh the journals and review the current evidence before another action.');}}
     finally{busy=false;guard.finish();lock();}
   };
   const save=(path,method,body,verify)=>collectorMutation({api,path,options:{method,body},guard,verify});
-  async function saved(message){if(!current())return;root.querySelector('[data-journal-editor]').innerHTML='';await load();if(current()){status(message);await onSaved?.();}}
-  root.querySelector('[data-journal-refresh]').addEventListener('click',()=>{if(busy||disposed)return;dispose();replacementCleanup=mountManagementJournalActions(options);});
+  async function saved(message){if(!current())return;root.querySelector('[data-journal-editor]').innerHTML='';try{await load();if(current())status(message);}catch(error){guard.lock('Refresh the journals and review the current evidence before another action.');throw error;}}
+  root.querySelector('[data-journal-refresh]').addEventListener('click',()=>{if(busy||disposed)return;dispose();replacementCleanup=mountManagementJournalActions({...options,initialJournals:undefined});});
   function editor(entry=null,reversal=false){
     if(guard.locked||busy||!current())return;
     const target=root.querySelector('[data-journal-editor]');
@@ -66,12 +68,23 @@ export function mountManagementJournalActions(options){
   }
   async function load(){
     const result=await api.request(PATH,{signal:controller.signal});if(!current())return;
+    await onSaved?.(result);if(!current())return;
+    render(result);
+  }
+  function render(result){
     const canManage=hasPermission(session,'accounting.journal.manage')&&result.can_manage===true;
     const target=root.querySelector('[data-journal-records]');
     const reversedIds=new Set(asArray(result.entries).map(entry=>entry.reversal_of_entry_id).filter(Boolean));
-    target.innerHTML=`${canManage?button('Create manual draft','data-journal-create'):'<p>Journal changes are unavailable for this account.</p>'}${asArray(result.entries).map((entry,index)=>`<article class="list-item"><h4>${h(entry.entry_number||entry.entry_id)} · ${h(entry.status)}</h4><p>${h(entry.posting_date)} · ${h(entry.description)} · ${h(entry.source_type)} · Debit ${formatMoney(entry.total_debit)} / Credit ${formatMoney(entry.total_credit)}</p><ul>${asArray(entry.lines).map(line=>`<li>${h(line.account_code)} · ${h(line.description)} · Debit ${formatMoney(line.debit)} / Credit ${formatMoney(line.credit)}</li>`).join('')}</ul>${canManage&&entry.status==='draft'&&entry.source_type==='manual'?button('Edit',`data-journal-edit="${index}"`)+button('Cancel draft',`data-journal-cancel="${index}"`):''}${canManage&&entry.status==='draft'&&(entry.source_type==='manual'||(entry.source_type==='reversal'&&entry.reversal_of_entry_id))?button('Post',`data-journal-post="${index}"`):''}${canManage&&entry.status==='posted'&&!entry.reversal_of_entry_id&&!['period_close','reversal'].includes(entry.source_type)&&!reversedIds.has(entry.entry_id)?button('Create reversal',`data-journal-reverse="${index}"`):''}</article>`).join('')}`;
+    target.innerHTML=`${canManage?button('Create manual draft','data-journal-create'):'<p>Journal changes are unavailable for this account.</p>'}${evidenceRoot?'':journalEntriesMarkup(result.entries)}`;
+    const slots=Array.from((evidenceRoot||target).querySelectorAll('[data-journal-actions-for]'));
+    for(const slot of slots)slot.innerHTML='';
+    asArray(result.entries).forEach((entry,index)=>{
+      const slot=slots.find(item=>item.getAttribute('data-journal-actions-for')===entry.entry_id);
+      if(!slot)return;
+      slot.innerHTML=`${canManage&&entry.status==='draft'&&entry.source_type==='manual'?button('Edit',`data-journal-edit="${index}"`)+button('Cancel draft',`data-journal-cancel="${index}"`):''}${canManage&&entry.status==='draft'&&(entry.source_type==='manual'||(entry.source_type==='reversal'&&entry.reversal_of_entry_id))?button('Post',`data-journal-post="${index}"`):''}${canManage&&entry.status==='posted'&&!entry.reversal_of_entry_id&&!['period_close','reversal'].includes(entry.source_type)&&!reversedIds.has(entry.entry_id)?button('Create reversal',`data-journal-reverse="${index}"`):''}`;
+    });
     target.querySelector('[data-journal-create]')?.addEventListener('click',()=>editor());
-    for(const action of ['edit','reverse','post','cancel'])for(const item of target.querySelectorAll(`[data-journal-${action}]`))item.addEventListener('click',()=>{
+    for(const action of ['edit','reverse','post','cancel'])for(const item of (evidenceRoot||target).querySelectorAll(`[data-journal-${action}]`))item.addEventListener('click',()=>{
       const entry=result.entries[Number(item.getAttribute(`data-journal-${action}`))];
       if(action==='edit'||action==='reverse'){editor(entry,action==='reverse');return;}
       run(async()=>{
@@ -82,7 +95,7 @@ export function mountManagementJournalActions(options){
       });
     });
   }
-  function dispose(){if(replacementCleanup){replacementCleanup();replacementCleanup=null;}if(disposed)return;disposed=true;controller.abort();guard.dispose();root.innerHTML='';signal?.removeEventListener('abort',dispose);}
-  signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();else run(load);
+  function dispose(){if(replacementCleanup){replacementCleanup();replacementCleanup=null;}if(disposed)return;disposed=true;controller.abort();guard.dispose();for(const slot of evidenceRoot?.querySelectorAll('[data-journal-actions-for]')||[])slot.innerHTML='';root.innerHTML='';signal?.removeEventListener('abort',dispose);}
+  signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();else if(initialJournals){render(initialJournals);lock();}else run(load);
   return dispose;
 }

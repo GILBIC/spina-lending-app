@@ -86,9 +86,11 @@ for (const role of ['employee', 'management']) {
     const h = harness(role);
     await mounts[role](h.context);
 
-    assert.deepEqual(h.navigation.find(({ id }) => id === `${role}-cif-review`), {
-      id: `${role}-cif-review`, label: 'CIF review', group: 'Daily work',
-    }, `${role} CIF review navigation is not connected`);
+    const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
+    assert.deepEqual(h.navigation.find(({ id }) => id === navigationId), role === 'management'
+      ? {id: navigationId, label: 'Clients & loans'}
+      : {id: navigationId, label: 'CIF review', group: 'Daily work'}, `${role} CIF review navigation is not connected`);
+    if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
     const root = officeSelection(h, role);
     assert.match(root.querySelector('label').textContent, /Office intake reference/);
     assert.equal(typeof h.context.officeCifCleanup, 'function');

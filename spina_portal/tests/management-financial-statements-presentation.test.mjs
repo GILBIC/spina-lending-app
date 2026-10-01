@@ -51,16 +51,43 @@ test('Financial Statements keep technical lifecycle notice under About these sta
   assert.match(markup,/ECL posting/i);
 });
 
-test('Financial Statements use clearer current-period earnings wording', () => {
+test('Financial Statements describe cumulative unclosed earnings accurately', () => {
   const payload=emptyStatements('closed');
   payload.statements.financial_position.unclosed_earnings_to_date='333.00';
   payload.statements.financial_position.asset_lines=[{account_code:'1100',account_name:'Cash',amount:'500.00'}];
   payload.statements.financial_position.liability_lines=[{account_code:'2100',account_name:'Payables',amount:'200.00'}];
   payload.statements.financial_position.equity_lines=[{account_code:'3100',account_name:'Capital',amount:'300.00'}];
   const markup=financialStatementsMarkup(payload);
-  assert.match(markup,/Current-period earnings \(not yet closed\)/);
+  // The server derives this amount from cumulative movements through period end.
+  assert.match(markup,/Earnings not yet closed \(through period end\)/);
+  assert.match(markup,/₱333\.00/);
+  assert.doesNotMatch(markup,/Current-period earnings/);
   assert.doesNotMatch(markup,/Unclosed earnings to date/);
   assert.match(markup,/Cash/);
   assert.match(markup,/Payables/);
   assert.match(markup,/Capital/);
+});
+
+test('Financial Statements preserve authoritative row order and exact large server totals', () => {
+  const payload = emptyStatements();
+  payload.statements.profit_or_loss.income_lines = [
+    { account_code: '4900', account_name: 'First server row', amount: '1.00' },
+    { account_code: '4100', account_name: 'Second server row', amount: '2.00' },
+  ];
+  payload.statements.profit_or_loss.total_income = '1234567890123456.78';
+  payload.statements.profit_or_loss.net_income = '777.99';
+  const markup = financialStatementsMarkup(payload);
+  assert.ok(markup.indexOf('First server row') < markup.indexOf('Second server row'));
+  assert.match(markup, /₱1,234,567,890,123,456\.78/);
+  assert.match(markup, /₱777\.99/);
+  assert.doesNotMatch(markup, /data-financial-statements-empty/);
+});
+
+test('missing statement lines never relabel nonzero authoritative totals as zero activity', () => {
+  const payload = emptyStatements();
+  payload.statements.profit_or_loss.total_income = '12.34';
+  const markup = financialStatementsMarkup(payload);
+  assert.match(markup, /Review the server totals below/);
+  assert.match(markup, /₱12\.34/);
+  assert.doesNotMatch(markup, /No posted General Ledger activity for this period yet/);
 });

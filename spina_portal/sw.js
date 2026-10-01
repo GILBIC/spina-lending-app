@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v20';
+const CACHE_NAME = 'spina-company-shell-v21';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -26,6 +26,7 @@ const SHELL_ASSETS = [
   '/assets/client-gcash.js',
   '/assets/client-statement.js',
   '/assets/employee-operations.js',
+  '/assets/cash-disbursement.js',
   '/assets/account-credentials.js',
   '/assets/client-account-admin.js',
   '/assets/client-documents.js',
@@ -52,6 +53,7 @@ const SHELL_ASSETS = [
   '/assets/management-tax-evidence.js',
   '/assets/management-loan-operations.js',
   '/assets/management-past-due-report.js',
+  '/assets/management-alerts-audit.js',
   '/assets/roles/client.js',
   '/assets/roles/employee.js',
   '/assets/roles/collector.js',
@@ -77,6 +79,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+async function shellResponse(request, cacheKey = request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) {
+    try {
+      await cache.put(cacheKey, response.clone());
+    } catch {
+      // A storage quota failure must not discard an available network response.
+    }
+  }
+  return response;
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -92,33 +109,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      caches.match('/index.html').then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
-          }
-          return response;
-        });
-      }),
-    );
+    event.respondWith(shellResponse(request, '/index.html'));
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    }),
-  );
+  event.respondWith(shellResponse(request));
 });

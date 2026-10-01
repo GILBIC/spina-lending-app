@@ -226,7 +226,7 @@ test('Management mounts the same shared Area component and receives retirement c
     },
   });
 
-  assert.ok(navigation.some((item) => item.label === 'Area Management'));
+  assert.ok(navigation.some((item) => item.id === 'management-operations' && item.label === 'People & operations'));
   assert.ok(calls.includes('/api/v1/areas?include_inactive=true'));
   assert.match(mountedAreaRoot.innerHTML, /AREA MANAGEMENT/i);
   assert.match(mountedAreaRoot.innerHTML, />Retire Area<\/button>/);

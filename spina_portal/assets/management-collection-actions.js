@@ -23,8 +23,7 @@ function plainBlocker(reason) {
 }
 function blockerSummary(loans) {
   const counts=new Map();
-  for(const loan of loans)for(const reason of asArray(loan.blockers)){
-    const label=plainBlocker(reason);
+  for(const loan of loans)for(const label of new Set(asArray(loan.blockers).map(plainBlocker))){
     counts.set(label,(counts.get(label)||0)+1);
   }
   const repeated=[...counts.entries()].filter(([,count])=>count>1);

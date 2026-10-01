@@ -213,7 +213,7 @@ for(const role of ['employee','collector','management'])test(`${role} mounts pri
  const roleModule=await import(`../assets/roles/${role}.js`);const root=new Element();root.dataset={};let navigation;const calls=[];const controller=new AbortController();
  const api={request:async(path)=>{calls.push(path);if(path==='/api/v1/employee-operations/workspace')return workspace();if(path==='/api/v1/account')return {profile:{full_name:'Synthetic employee'}};return {};}};
  await roleModule[names[role]]({root,api,session:{user:{id:SELF,role,roles:[role],permissions:[]}},signal:controller.signal,setNavigation:items=>{navigation=items;}});await setImmediate();
- assert.ok(calls.includes('/api/v1/employee-operations/workspace'));assert.ok(navigation.some(item=>item.id.includes('employee-operations')||item.id==='employee-operations'));assert.match(root.textContent,/My attendance/);
+ assert.ok(calls.includes('/api/v1/employee-operations/workspace'));assert.ok(navigation.some(item=>role==='management'?item.id==='management-operations':item.id.includes('employee-operations')));assert.match(root.textContent,/My attendance/);
  controller.abort();assert.equal(root.querySelector('[data-employee-operations]').innerHTML,'');
 });
 

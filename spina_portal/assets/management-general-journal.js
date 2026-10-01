@@ -172,7 +172,7 @@ function journalLineRows(lines) {
     .join('');
 }
 
-function journalEntriesMarkup(entries) {
+export function journalEntriesMarkup(entries) {
   const items = asArray(entries);
   if (!items.length) {
     return emptyState('No General Journal entry is currently available.');

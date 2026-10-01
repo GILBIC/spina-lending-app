@@ -1,4 +1,4 @@
-import { badge, emptyState, escapeHtml, formatDateTime } from './ui.js';
+import { badge, emptyState, escapeHtml, formatDateTime, titleCase } from './ui.js';
 
 function normalizedStatus(value) {
   return String(value ?? '').trim().toLowerCase();
@@ -16,13 +16,13 @@ export function deviceAction(status) {
 
 function switchStatus(status) {
   if (status === 'pending') {
-    return { nextStatus: 'active', label: 'Approve phone' };
+    return { nextStatus: 'active', label: 'Approve device' };
   }
   if (status === 'active') {
-    return { nextStatus: 'revoked', label: 'Revoke phone' };
+    return { nextStatus: 'revoked', label: 'Revoke access' };
   }
   if (status === 'revoked') {
-    return { nextStatus: 'active', label: 'Restore phone' };
+    return { nextStatus: 'active', label: 'Restore access' };
   }
   return null;
 }
@@ -57,31 +57,11 @@ function platformLabel(value) {
   return normalized ? 'Device' : 'Unknown device';
 }
 
-function deviceConsequence(account, device, action) {
-  const roles = normalizedRoles(account);
-  const isCollector = roles.includes('collector');
-  const status = normalizedStatus(device?.status);
-  if (status === 'pending' && action?.nextStatus === 'active' && isCollector) {
-    return 'Approving this phone may revoke another active Collector phone for this account.';
-  }
-  if (status === 'pending' && action?.nextStatus === 'active') {
-    return 'Approving this phone allows protected SPINA access for this account.';
-  }
-  if (status === 'active' && action?.nextStatus === 'revoked') {
-    return 'Revoking this phone blocks future protected requests from this device.';
-  }
-  if (status === 'revoked' && action?.nextStatus === 'active') {
-    return 'Restoring this phone allows protected requests again.';
-  }
-  return '';
-}
-
-function deviceCard(account, device, index, canManageDevices) {
+function deviceCard(device, index, canManageDevices) {
   const action = canManageDevices ? deviceAction(device?.status) : null;
-  const consequence = action ? deviceConsequence(account, device, action) : '';
   const version = String(device?.app_version ?? '').trim() || 'Not reported';
   const lastSeen = device?.last_seen_at ? formatDateTime(device.last_seen_at) : 'Not yet reported';
-  return `<article class="data-card">
+  return `<article class="data-card managed-device-card" data-managed-device-status="${escapeHtml(normalizedStatus(device?.status) || 'unknown')}">
     <div class="section-heading">
       <div><h3>${escapeHtml(platformLabel(device?.platform))}</h3><p>App version ${escapeHtml(version)}</p></div>
       ${badge(device?.status || 'unknown')}
@@ -90,8 +70,7 @@ function deviceCard(account, device, index, canManageDevices) {
       <div class="kv-row"><span>Registered</span><strong>${formatDateTime(device?.registered_at)}</strong></div>
       <div class="kv-row"><span>Last seen</span><strong>${lastSeen}</strong></div>
     </div>
-    ${consequence ? `<div class="notice-card warning">${escapeHtml(consequence)}</div>` : ''}
-    ${action ? `<div class="action-row"><button class="button ${action.nextStatus === 'revoked' ? 'button-outline' : 'button-primary'} managed-device-action" type="button" data-managed-device-index="${index}" data-next-device-status="${escapeHtml(action.nextStatus)}">${escapeHtml(action.label)}</button></div>` : ''}
+    ${action ? `<div class="action-row"><button class="button ${action.nextStatus === 'revoked' ? 'button-danger' : 'button-outline'} managed-device-action" type="button" data-managed-device-index="${index}" data-next-device-status="${escapeHtml(action.nextStatus)}">${escapeHtml(action.label)}</button></div>` : ''}
   </article>`;
 }
 
@@ -104,23 +83,58 @@ export function renderManagedDevicePanel(
   const name = account?.full_name || account?.username || 'Staff account';
   const username = account?.username ? `@${account.username}` : '';
   const roles = normalizedRoles(account);
-  const roleText = roles.length ? roles.join(', ') : 'role not reported';
+  const roleText = roles.length ? roles.map(titleCase).join(', ') : 'Role not reported';
   const permissionNotice = canManageDevices
     ? ''
-    : '<div class="notice-card warning">Device management permission is required to approve, revoke, or restore registered phones.</div>';
+    : '<div class="notice-card warning">Device management permission is required to inspect, approve, revoke, or restore registered devices.</div>';
+  const counts = { active: 0, pending: 0, revoked: 0, other: 0 };
+  for (const device of safeDevices) {
+    const status = normalizedStatus(device?.status);
+    counts[['active', 'pending', 'revoked'].includes(status) ? status : 'other'] += 1;
+  }
+  const summary = canManageDevices || safeDevices.length ? `<p class="managed-device-summary">${safeDevices.length} ${safeDevices.length === 1 ? 'device' : 'devices'} · ${counts.active} active · ${counts.pending} pending · ${counts.revoked} revoked${counts.other ? ` · ${counts.other} other` : ''}</p>` : '';
+  const filters = safeDevices.length ? `<div class="managed-device-filters" role="group" aria-label="Filter registered devices">${['all', 'active', 'pending', 'revoked'].map((status) => `<button class="button button-quiet button-small" type="button" data-managed-device-filter="${status}" aria-pressed="${status === 'all'}">${titleCase(status)}</button>`).join('')}</div>` : '';
   const cards = safeDevices.length
-    ? `<div class="card-grid">${safeDevices
-        .map((device, index) => deviceCard(account, device, index, canManageDevices))
-        .join('')}</div>`
+    ? `<div class="managed-device-list">${safeDevices
+        .map((device, index) => deviceCard(device, index, canManageDevices))
+        .join('')}</div><p class="meta" role="status" data-managed-device-filter-empty hidden>No devices match this status.</p>`
     : emptyState(
         canManageDevices
-          ? 'No registered phones were returned by the server for this staff account.'
-          : 'Registered phone details are available only with device management permission.',
+          ? 'No registered devices were returned by the server for this staff account.'
+          : 'Registered device details are available only with device management permission.',
       );
 
   return `<div class="section-heading">
     <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(username)}${username ? ' · ' : ''}${escapeHtml(roleText)}</p></div>
+    <button class="button button-quiet button-small" type="button" data-managed-device-close>Close</button>
   </div>
   ${permissionNotice}
+  ${summary}${filters}
   ${cards}`;
+}
+
+export function bindManagedDevicePanel(root) {
+  if (!root) return () => {};
+  const buttons = root.querySelectorAll('[data-managed-device-filter]');
+  const cards = root.querySelectorAll('[data-managed-device-status]');
+  const empty = root.querySelector('[data-managed-device-filter-empty]');
+  const listeners = [];
+  for (const button of buttons) {
+    const filter = () => {
+      const status = button.getAttribute('data-managed-device-filter');
+      if (!['all', 'active', 'pending', 'revoked'].includes(status)) return;
+      let visible = 0;
+      for (const card of cards) {
+        const show = status === 'all' || card.getAttribute('data-managed-device-status') === status;
+        if (show) { card.removeAttribute('hidden'); visible += 1; }
+        else card.setAttribute('hidden', '');
+      }
+      for (const control of buttons) control.setAttribute('aria-pressed', String(control === button));
+      if (visible) empty?.setAttribute('hidden', '');
+      else empty?.removeAttribute('hidden');
+    };
+    button.addEventListener('click', filter);
+    listeners.push(() => button.removeEventListener('click', filter));
+  }
+  return () => { for (const remove of listeners) remove(); };
 }

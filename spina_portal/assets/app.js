@@ -4,6 +4,7 @@ import { normalizeRole, sessionWorkspaceRoles } from './roles.js';
 import { SessionStore } from './session.js';
 import { SessionRefreshController } from './session-refresh.js';
 import { ScreenSharingController } from './screen-sharing.js';
+import { clearCashDisbursementRecovery, syncCashDisbursementRecovery } from './cash-disbursement.js';
 import {
   bindNavigation,
   escapeHtml,
@@ -67,6 +68,7 @@ let workspaceController = null;
 const refreshController = new SessionRefreshController({
   api, sessionStore,
   onRefreshed: async (session) => {
+    syncCashDisbursementRecovery(api, session);
     if (!currentContext || currentContext.session.user.id !== session.user.id) return;
     const scope = (value) => JSON.stringify([sessionWorkspaceRoles(value), value.permissions, value.user?.permissions]);
     if (scope(currentContext.session) !== scope(session)) {
@@ -110,6 +112,7 @@ function clearWorkspace() {
 }
 
 function showAuthentication() {
+  clearCashDisbursementRecovery(api);
   refreshController.stop();
   clearWorkspace();
   authenticatedApp.hidden = true;
@@ -139,6 +142,7 @@ async function mountCurrentWorkspace() {
 }
 
 async function showAuthenticated(session, requestedRole) {
+  syncCashDisbursementRecovery(api, session);
   const roles = sessionWorkspaceRoles(session);
   const hasManagementWorkspace = roles.includes('management');
   const role = hasManagementWorkspace

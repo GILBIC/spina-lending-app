@@ -217,3 +217,22 @@ test('Management integrates the isolated Alerts & Audit presenter without changi
 test('installed Web shell precaches the isolated Alerts & Audit dependency', () => {
   assert.match(serviceWorkerSource, /'\/assets\/management-alerts-audit\.js'/);
 });
+
+test('audit snapshot order and unknown navigation remain read-only after filter cleanup', () => {
+  const root = new Element();
+  root.innerHTML = module.managementAlertsAuditMarkup({ ...snapshot,
+    events: [...snapshot.events, { ...snapshot.events[0], event_key: 'event-4', navigation_code: 'constructor',
+      title: '<script>Private</script>' }],
+  });
+  assert.deepEqual(root.querySelectorAll('[data-audit-event-key]').map((item) => item.getAttribute('data-audit-event-key')),
+    ['event-1', 'event-2', 'event-3', 'event-4']);
+  assert.equal(root.querySelector('[data-audit-event-key="event-4"]').getAttribute('data-nav-target'), null);
+  assert.equal(root.querySelector('script'), null);
+  const controller = new AbortController();
+  const cleanup = module.bindManagementAlertsAudit(root, { signal: controller.signal });
+  const chip = root.querySelector('[data-alert-domain-filter="financial"]');
+  controller.abort();
+  fire(chip, 'click');
+  assert.equal(root.querySelectorAll('[data-alert-domain]').every((item) => item.getAttribute('hidden') === null), true);
+  cleanup();
+});

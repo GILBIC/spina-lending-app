@@ -103,7 +103,7 @@ export async function loadClientHomeObligationSchedules(api, portfolio) {
 
 function paymentRows(payments) {
   if (!payments.length) return emptyState('No official payment receipt is available yet.');
-  return `<div class="table-wrap"><table>
+  return `<div class="table-wrap"><table class="mobile-card-table client-payment-table">
     <thead><tr><th>Date</th><th>Loan</th><th>Type</th><th>Amount</th><th>Receipt</th><th>Official balance</th><th>Status</th></tr></thead>
     <tbody>${payments
       .map(
@@ -215,7 +215,7 @@ export function clientRenewalWorkflowRows(requests) {
             : borrowerSigner
               ? `<p class="meta">Own app ${borrowerSigner.has_app === true ? '✓' : '—'} · Government ID ${borrowerSigner.government_id_verified === true ? '✓' : 'Pending'} · Selfie ${borrowerSigner.selfie_verified === true ? '✓' : 'Pending'} · Signature ${borrowerSigner.signed === true ? '✓' : 'Pending'}</p>${canSign ? `<button class="button button-primary" type="button" data-client-renewal-sign-request="${escapeHtml(requestId)}" data-client-renewal-sign-signer="${escapeHtml(borrowerSigner.signer_id)}">Sign Renewal</button>` : ''}`
               : '<p>Waiting for Management to register your borrower signer requirement.</p>'}
-          ${otherSigners.length ? '<p class="meta">Other required signers must complete their own verification and signature from their own SPINA account.</p>' : ''}
+          ${otherSigners.length ? '<p class="meta">Every other required signer must use their own SPINA account to complete verification and signing.</p>' : ''}
         </div>` : ''}
         ${canConfirmCash ? `<div class="notice-card">
           <strong>Collector marked ${netAmount} as given to you.</strong>
@@ -465,7 +465,7 @@ function renderWorkspace(root, model, raw, errors) {
   <section class="section-card" id="client-payment-proofs" data-workspace-section><h2>Payment proof</h2><div data-client-payment-proofs></div></section>
 
   <section class="section-card" id="client-renewals" data-workspace-section>
-    <div class="section-heading"><div><h2>Renewal requests</h2><p>Submit a request for review. Your assigned Collector recommends it, then Management decides. Approval does not release cash until the required steps are complete.</p></div></div>
+    <div class="section-heading"><div><h2>Renewal requests</h2><p>Submit a request for review. Your permanently assigned Collector must recommend it before Management reviews and decides. Approval does not release cash until the required steps are complete.</p></div></div>
     ${errors.renewals ? errorCard(errors.renewals) : clientRenewalRows(model.renewals)}
     ${errors.renewals ? '' : clientRenewalEligibilityRows(asArray(raw.renewals.loans))}
     <details ${renewalLoans.length ? '' : 'hidden'}>
