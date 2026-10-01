@@ -4,6 +4,7 @@ import { normalizeRole, sessionWorkspaceRoles } from './roles.js';
 import { SessionStore } from './session.js';
 import { SessionRefreshController } from './session-refresh.js';
 import { ScreenSharingController } from './screen-sharing.js';
+import { clearCashDisbursementRecovery, syncCashDisbursementRecovery } from './cash-disbursement.js';
 import {
   bindNavigation,
   escapeHtml,
@@ -67,6 +68,7 @@ let workspaceController = null;
 const refreshController = new SessionRefreshController({
   api, sessionStore,
   onRefreshed: async (session) => {
+    syncCashDisbursementRecovery(api, session);
     if (!currentContext || currentContext.session.user.id !== session.user.id) return;
     const scope = (value) => JSON.stringify([sessionWorkspaceRoles(value), value.permissions, value.user?.permissions]);
     if (scope(currentContext.session) !== scope(session)) {
@@ -110,6 +112,7 @@ function clearWorkspace() {
 }
 
 function showAuthentication() {
+  clearCashDisbursementRecovery(api);
   refreshController.stop();
   clearWorkspace();
   authenticatedApp.hidden = true;
@@ -139,8 +142,14 @@ async function mountCurrentWorkspace() {
 }
 
 async function showAuthenticated(session, requestedRole) {
+  syncCashDisbursementRecovery(api, session);
   const roles = sessionWorkspaceRoles(session);
-  const role = roles.includes(normalizeRole(requestedRole)) ? normalizeRole(requestedRole) : roles[0] || 'unknown';
+  const hasManagementWorkspace = roles.includes('management');
+  const role = hasManagementWorkspace
+    ? 'management'
+    : roles.includes(normalizeRole(requestedRole))
+      ? normalizeRole(requestedRole)
+      : roles[0] || 'unknown';
   if (role === 'unknown') {
     sessionStore.clear();
     showAuthentication();
@@ -155,10 +164,12 @@ async function showAuthenticated(session, requestedRole) {
   signedInName.textContent = session.user.full_name || session.user.username || 'Signed in';
   workspaceTitle.textContent = `${roleDisplayName(role)} workspace`;
   if (workspaceChoice) {
-    workspaceChoice.innerHTML = roles.map((value) => `<option value="${value}">${roleDisplayName(value)}</option>`).join('');
-    workspaceChoice.value = role;
+    workspaceChoice.innerHTML = hasManagementWorkspace
+      ? ''
+      : roles.map((value) => `<option value="${value}">${roleDisplayName(value)}</option>`).join('');
+    workspaceChoice.value = hasManagementWorkspace ? '' : role;
   }
-  if (workspaceChoiceLabel) workspaceChoiceLabel.hidden = roles.length < 2;
+  if (workspaceChoiceLabel) workspaceChoiceLabel.hidden = hasManagementWorkspace || roles.length < 2;
   updateConnectionStatus();
 
   const mounts = {
@@ -212,7 +223,8 @@ loginForm.addEventListener('submit', async (event) => {
 refreshButton.addEventListener('click', () => mountCurrentWorkspace());
 workspaceChoice?.addEventListener('change', () => {
   const session = currentContext?.session;
-  if (session && sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
+  if (!session || sessionWorkspaceRoles(session).includes('management')) return;
+  if (sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
     if (accountMenu) accountMenu.open = false;
     workspaceNavigation.reset();
     void showAuthenticated(session, workspaceChoice.value);

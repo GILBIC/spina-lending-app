@@ -2,6 +2,7 @@ import { mountAccountCredentials } from '../account-credentials.js';
 import { mountRemittanceReview } from '../remittance-review.js';
 import { mountAreaManagement } from '../area-management.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
+import { mountCashDisbursement } from '../cash-disbursement.js';
 import { buildEmployeeViewModel } from '../presenters.js';
 import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import { mountOfficeApplicationReview } from '../office-application-review.js';
@@ -131,6 +132,8 @@ export async function mountEmployeeWorkspace(context) {
   context.accountCredentialsCleanup = null;
   context.employeeOperationsCleanup?.();
   context.employeeOperationsCleanup = null;
+  context.cashDisbursementCleanup?.();
+  context.cashDisbursementCleanup = null;
   context.officeCifCleanup?.();
   context.officeCifCleanup = null;
   context.officeApplicationCleanup?.();
@@ -143,6 +146,7 @@ export async function mountEmployeeWorkspace(context) {
   const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
   const canViewRemittance = hasPermission(session, 'remittance.view');
   const canManageSupport = hasPermission(session, 'support.manage');
+  const canPrepareCashDisbursement = hasPermission(session, 'cash_disbursement.prepare');
   const canUseAreaManagement = [
     'area.manage',
     'area.collector.assign',
@@ -152,6 +156,7 @@ export async function mountEmployeeWorkspace(context) {
   setNavigation([
     { id: 'employee-overview', label: 'Today', group: 'Daily work' },
     { id: 'employee-operations', label: 'My tasks & attendance', group: 'Daily work' },
+    ...(canPrepareCashDisbursement ? [{id: 'employee-cash-disbursement', label: 'Cash Disbursement', group: 'Daily work'}] : []),
     ...(canReviewCif ? [{ id: 'employee-onboarding', label: 'Office intake', group: 'Daily work' }, { id: 'employee-cif-review', label: 'CIF review', group: 'Daily work' }, { id: 'employee-application-review', label: 'Application review', group: 'Daily work' }, { id: 'employee-first-loan', label: 'First-loan work', group: 'Daily work' }] : []),
     ...(canViewRemittance ? [{ id: 'employee-remittance', label: 'Remittance notices', group: 'Daily work' }] : []),
     ...(canManageSupport ? [{ id: 'employee-support', label: 'Client support', group: 'Daily work' }] : []),
@@ -182,6 +187,7 @@ export async function mountEmployeeWorkspace(context) {
 
   const dailyLinks = [
     ['employee-operations', 'My tasks & attendance', 'Review assigned work and your time record.'],
+    ...(canPrepareCashDisbursement ? [['employee-cash-disbursement', 'Prepare Cash Disbursement', 'Prepare an expense draft for Management review.']] : []),
     ...(canReviewCif ? [['employee-onboarding', 'Office intake', 'Check new client requirements.'], ['employee-cif-review', 'Review client information', 'Continue an intake review.'], ['employee-application-review', 'Review applications', 'Check submitted loan details.'], ['employee-first-loan', 'First-loan work', 'Complete authorized office steps.']] : []),
     ...(canViewRemittance ? [['employee-remittance', 'Review remittance', remittances.error ? 'Notices unavailable — refresh.' : `${model.remittances.length} notices`]] : []),
     ...(canManageSupport ? [['employee-support', 'Answer clients', support.error ? 'Queue unavailable — refresh.' : `${model.openSupportCount} open`]] : []),
@@ -200,6 +206,7 @@ export async function mountEmployeeWorkspace(context) {
   </section>
   </section>
   <section class="section-card" id="employee-operations" data-workspace-section><div data-employee-operations></div></section>
+  ${canPrepareCashDisbursement ? '<section class="section-card" id="employee-cash-disbursement" data-workspace-section><div data-cash-disbursement></div></section>' : ''}
   ${canReviewCif ? '<section class="section-card" id="employee-onboarding" data-workspace-section><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
   ${canReviewCif ? `<section class="section-card" id="employee-cif-review" data-workspace-section><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
   ${canReviewCif ? '<section class="section-card" id="employee-application-review" data-workspace-section><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
@@ -219,6 +226,9 @@ export async function mountEmployeeWorkspace(context) {
   });
   context.employeeOperationsCleanup = mountEmployeeOperations({
     root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
+  });
+  context.cashDisbursementCleanup = mountCashDisbursement({
+    root: root.querySelector('[data-cash-disbursement]'), api, session, signal: context.signal,
   });
   if (canReviewCif) {
     context.officeFirstLoanCleanup = mountOfficeFirstLoan({

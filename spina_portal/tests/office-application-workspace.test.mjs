@@ -58,9 +58,11 @@ for (const role of ['employee', 'management']) {
     const h = harness(role);
     t.after(() => h.controller.abort());
     await mounts[role](h.context);
-    assert.deepEqual(h.navigation.find((item) => item.id === `${role}-application-review`), {
-      id: `${role}-application-review`, label: 'Application review', group: 'Daily work',
-    });
+    const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-application-review`;
+    assert.deepEqual(h.navigation.find((item) => item.id === navigationId), role === 'management'
+      ? {id: navigationId, label: 'Clients & loans'}
+      : {id: navigationId, label: 'Application review', group: 'Daily work'});
+    if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="application"]'));
     const cif = h.root.querySelector('[data-office-cif-selection]');
     const area = h.root.querySelector(`#${role}-area-management`);
     const cifBefore = cif.innerHTML, areaBefore = area.innerHTML;

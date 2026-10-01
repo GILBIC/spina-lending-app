@@ -385,6 +385,18 @@ class AccountingLine(StrictModel):
     credit: Money
 
 
+class CashDisbursementPrepare(Command):
+    action: Literal["cash_disbursement_prepare"]
+    as_of: date
+    payee: Note
+    purpose: Note
+    amount: Annotated[Money, Field(gt=0)]
+    expense_account_code: Literal["5200", "5210", "5220", "5230", "5240", "5290"]
+    cash_account_code: Literal["1010", "1030"]
+    evidence_reference: Note
+    evidence: Note
+
+
 class AccountingPrepare(Command):
     action: Literal["accounting_prepare"]
     preparation_kind: Literal["journal", "reconciliation"]
@@ -427,6 +439,7 @@ EmployeeAction = Annotated[
     | PayrollAdjustment
     | PayrollHistoryImport
     | PayrollHistoryCorrect
+    | CashDisbursementPrepare
     | AccountingPrepare,
     Field(discriminator="action"),
 ]

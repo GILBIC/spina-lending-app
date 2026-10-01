@@ -14,18 +14,18 @@ const managementSource = await readFile(
   'utf8',
 );
 
-test('pending phones map to the explicit approve action', () => {
+test('registered devices map to explicit access actions', () => {
   assert.deepEqual(deviceAction('pending'), {
     nextStatus: 'active',
-    label: 'Approve phone',
+    label: 'Approve device',
   });
   assert.deepEqual(deviceAction('active'), {
     nextStatus: 'revoked',
-    label: 'Revoke phone',
+    label: 'Revoke access',
   });
   assert.deepEqual(deviceAction('revoked'), {
     nextStatus: 'active',
-    label: 'Restore phone',
+    label: 'Restore access',
   });
 });
 
@@ -51,7 +51,7 @@ test('device detail uses the existing Management device endpoints', async () => 
   ]);
 });
 
-test('pending Collector phone renders approval warning without showing its raw identifier', () => {
+test('pending Collector device keeps approval and confirmation consequence without showing its raw identifier', () => {
   const html = renderManagedDevicePanel(
     {
       id: 'staff-1',
@@ -72,8 +72,8 @@ test('pending Collector phone renders approval warning without showing its raw i
     { canManageDevices: true },
   );
 
-  assert.match(html, /Approve phone/);
-  assert.match(html, /another active Collector phone/i);
+  assert.match(html, /Approve device/);
+  assert.match(managementSource, /Approving this device may revoke another active Collector device/i);
   assert.match(html, /data-managed-device-index="0"/);
   assert.doesNotMatch(html, /device-secret/);
 });

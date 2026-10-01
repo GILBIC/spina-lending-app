@@ -98,29 +98,40 @@ export function mountPaymentProofs({root, api, loans = [], mode = 'client', sign
   }
   function render() {
     clear();const records=asArray(listing.proofs);const proof=detail?.proof;const canUpload=listing.capability?.upload_available===true;
-    root.innerHTML=`<p>${management?'Reviewing evidence does not confirm settlement, post a payment, or change a borrower balance.':'Uploading proof does not change your balance. Only an official SPINA payment does.'}</p>
-      <button type="button" class="button button-secondary" data-proof-refresh>Refresh</button>
-      ${records.length?records.map((record)=>`<article class="list-item"><strong>${escapeHtml(record.loan_number||'Loan')}</strong>
-        ${management?`<span>${escapeHtml(record.client_name||'')} ${escapeHtml(record.client_code||'')}</span>`:''}${badge(record.status)}
-        <button type="button" class="button button-secondary" data-proof-detail="${escapeHtml(record.proof_id)}">Open evidence and history</button></article>`).join(''):emptyState('No payment-proof submissions on this page.')}
-      <div class="inline-actions">${offset>0?'<button type="button" data-proof-previous>Previous</button>':''}${listing.has_more?'<button type="button" data-proof-next>Next</button>':''}</div>
-      ${proof?`<article class="notice-card"><h3>${escapeHtml(proof.loan_number||'Payment proof')}</h3>${badge(proof.status)}
-        ${proof.latest_review?.reason?`<p>Review note: ${escapeHtml(proof.latest_review.reason)}</p>`:''}
-        ${asArray(detail.history).map((entry)=>`<div class="list-item"><strong>Version ${escapeHtml(entry.version.version_number)}</strong>
-          <span>${formatDateTime(entry.version.uploaded_at)}</span><p>${escapeHtml(entry.version.note||'')}</p>
-          <button type="button" class="button button-secondary" data-proof-content="${escapeHtml(entry.version.version_number)}">Download submitted file</button>
-          ${asArray(entry.reviews).map((review)=>`<p>${escapeHtml(titleCase(review.decision))} · ${formatDateTime(review.reviewed_at)}${review.reason?` · ${escapeHtml(review.reason)}`:''}</p>`).join('')}</div>`).join('')}</article>`:''}
-      ${management&&proof?`<form data-proof-review class="entry-form"><h3>Review current evidence</h3>
-        <label>Decision<select name="decision"><option value="reviewed">Evidence reviewed (no payment posted)</option><option value="correction_required">Request correction</option><option value="rejected">Reject evidence</option></select></label>
-        <label>Reason<textarea name="reason" maxlength="1000"></textarea></label><button type="submit" class="button button-primary">Save evidence review</button></form>`:''}
-      ${!management&&canUpload&&(!proof||proof.can_reupload)?`<form data-proof-upload class="entry-form"><h3>${proof?'Upload a corrected version':'Submit payment proof'}</h3>
-        ${!proof?`<label>Loan<select name="loanId" required>${loans.map((loan)=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('')}</select></label>`:''}
-        <label>Proof file<input type="file" name="proofFile" accept="application/pdf,image/png,image/jpeg" required /></label>
-        <label>Note or payment reference<textarea name="note" maxlength="1000"></textarea></label>
-        <button type="submit" class="button button-primary">${proof?'Save corrected evidence':'Submit evidence for review'}</button></form>`:''}
-      ${!management&&!canUpload?emptyState(listing.capability?.message||'Proof upload is currently unavailable.') : ''}
-      ${!management&&proof?'<button type="button" class="button button-secondary" data-proof-new>Start a new submission</button>':''}
+    const paging=`<div class="inline-actions">${offset>0?'<button type="button" data-proof-previous>Previous</button>':''}${listing.has_more?'<button type="button" data-proof-next>Next</button>':''}</div>`;
+    if(management&&records.length===0&&!proof){
+      root.innerHTML=`<div class="payment-proof-empty-row" data-payment-proof-empty>
+        <div><strong>${offset>0?'No payment evidence on this page.':'No payment evidence awaiting review.'}</strong>
+          <span class="meta">Evidence review does not post a payment or change a borrower balance.</span></div>
+        <button type="button" class="button button-secondary" data-proof-refresh>Refresh</button>
+      </div>
+      ${paging}
       <div data-proof-status role="status" aria-live="polite"></div>`;
+    } else {
+      root.innerHTML=`<p>${management?'Reviewing evidence does not confirm settlement, post a payment, or change a borrower balance.':'Uploading proof does not change your balance. Only an official SPINA payment does.'}</p>
+        <button type="button" class="button button-secondary" data-proof-refresh>Refresh</button>
+        ${records.length?records.map((record)=>`<article class="list-item"><strong>${escapeHtml(record.loan_number||'Loan')}</strong>
+          ${management?`<span>${escapeHtml(record.client_name||'')} ${escapeHtml(record.client_code||'')}</span>`:''}${badge(record.status)}
+          <button type="button" class="button button-secondary" data-proof-detail="${escapeHtml(record.proof_id)}">Open evidence and history</button></article>`).join(''):emptyState('No payment-proof submissions on this page.')}
+        ${paging}
+        ${proof?`<article class="notice-card"><h3>${escapeHtml(proof.loan_number||'Payment proof')}</h3>${badge(proof.status)}
+          ${proof.latest_review?.reason?`<p>Review note: ${escapeHtml(proof.latest_review.reason)}</p>`:''}
+          ${asArray(detail.history).map((entry)=>`<div class="list-item"><strong>Version ${escapeHtml(entry.version.version_number)}</strong>
+            <span>${formatDateTime(entry.version.uploaded_at)}</span><p>${escapeHtml(entry.version.note||'')}</p>
+            <button type="button" class="button button-secondary" data-proof-content="${escapeHtml(entry.version.version_number)}">Download submitted file</button>
+            ${asArray(entry.reviews).map((review)=>`<p>${escapeHtml(titleCase(review.decision))} · ${formatDateTime(review.reviewed_at)}${review.reason?` · ${escapeHtml(review.reason)}`:''}</p>`).join('')}</div>`).join('')}</article>`:''}
+        ${management&&proof?`<form data-proof-review class="entry-form"><h3>Review current evidence</h3>
+          <label>Decision<select name="decision"><option value="reviewed">Evidence reviewed (no payment posted)</option><option value="correction_required">Request correction</option><option value="rejected">Reject evidence</option></select></label>
+          <label>Reason<textarea name="reason" maxlength="1000"></textarea></label><button type="submit" class="button button-primary">Save evidence review</button></form>`:''}
+        ${!management&&canUpload&&(!proof||proof.can_reupload)?`<form data-proof-upload class="entry-form"><h3>${proof?'Upload a corrected version':'Submit payment proof'}</h3>
+          ${!proof?`<label>Loan<select name="loanId" required>${loans.map((loan)=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('')}</select></label>`:''}
+          <label>Proof file<input type="file" name="proofFile" accept="application/pdf,image/png,image/jpeg" required /></label>
+          <label>Note or payment reference<textarea name="note" maxlength="1000"></textarea></label>
+          <button type="submit" class="button button-primary">${proof?'Save corrected evidence':'Submit evidence for review'}</button></form>`:''}
+        ${!management&&!canUpload?emptyState(listing.capability?.message||'Proof upload is currently unavailable.') : ''}
+        ${!management&&proof?'<button type="button" class="button button-secondary" data-proof-new>Start a new submission</button>':''}
+        <div data-proof-status role="status" aria-live="polite"></div>`;
+    }
     listen(root.querySelector('[data-proof-refresh]'),'click',()=>load());
     listen(root.querySelector('[data-proof-previous]'),'click',()=>load(Math.max(0,offset-50)));
     listen(root.querySelector('[data-proof-next]'),'click',()=>load(offset+50));

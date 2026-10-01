@@ -24,7 +24,8 @@ for (const role of ['employee', 'management', 'collector']) {
   test(`${role}: exact onboarding permission connects only its scoped case lookup`, async () => {
     const h = harness(role, [permission]); await mounts[role](h);
     const area = h.root.querySelector(selector); assert.ok(area);
-    assert.ok(h.navigation.some(item => item.id === `${role}-onboarding`));
+    assert.ok(h.navigation.some(item => item.id === (role === 'management' ? 'management-clients-loans' : `${role}-onboarding`)));
+    if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="intake"]'));
     assert.equal(h.calls.some(path => path.includes('/onboarding/')), false);
     area.querySelector('[name="applicationReference"]').value = ' Intake / Case ';
     fire(area.querySelector('[data-case-lookup]'), 'submit'); await setImmediate();

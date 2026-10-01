@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { Element } from './helpers/dom.mjs';
+import { mountManagementWorkspace } from '../assets/roles/management.js';
 import {
   isEligibleScreen,
   verifySelfCapture,
@@ -8,6 +10,80 @@ import {
   viewerFrameIsNew,
   ScreenSharingController,
 } from '../assets/screen-sharing.js';
+
+function groupedManagementContent(groupId, childId) {
+  const content = new Element();
+  content.innerHTML = `<section id="${groupId}" data-workspace-section>
+    <section id="private-sibling"><input type="password"><input type="file"></section>
+    <section id="${childId}" data-screen-share-section><p>Audited work records</p></section>
+  </section>`;
+  function decorate(node, parent = null) {
+    Object.defineProperty(node, 'hidden', { get: () => node.getAttribute('hidden') !== null, set: value => value ? node.setAttribute('hidden', '') : node.removeAttribute('hidden') });
+    node.closest = selector => selector === '[hidden]' ? (node.hidden ? node : parent?.closest(selector)) : null;
+    const query = node.querySelectorAll.bind(node);
+    node.querySelectorAll = selector => selector.split(',').flatMap(part => query(part.trim()));
+    for (const child of node.children) if (typeof child !== 'string') decorate(child, node);
+  }
+  decorate(content);
+  return content;
+}
+
+test('grouped Management sharing restricts each former audited panel and excludes private siblings', async () => {
+  const previous = globalThis.RestrictionTarget;
+  try {
+    for (const [group, child] of [['management-clients-loans', 'management-loans'], ['management-collections', 'management-loan-operations']]) {
+      const contentRoot = groupedManagementContent(group, child);
+      const panel = contentRoot.querySelector(`#${child}`);
+      const restricted = [];
+      globalThis.RestrictionTarget = { fromElement: async element => { restricted.push(element); return {}; } };
+      const capture = selfTrack();
+      const subject = controller({ sectionId: group, contentRoot, handle: 'self', supported: () => true,
+        browser: { mediaDevices: { getDisplayMedia: async () => capture.stream } } });
+      assert.equal(subject.activeSection(), panel);
+      assert.equal(subject.safeToCapture(), true, 'excluded siblings are outside the restricted child');
+      assert.equal(isEligibleScreen('management', group), false, 'whole groups must never become eligible');
+      await subject.prepare();
+      assert.deepEqual(restricted, [panel]);
+      assert.equal(subject.preparedTrack, capture.track);
+      await subject.stop({ notify: false });
+      panel.innerHTML = '<input type="password">';
+      assert.equal(subject.safeToCapture(), false, 'a sensitive control inside the audited panel blocks capture');
+      subject.dispose();
+    }
+  } finally { globalThis.RestrictionTarget = previous; }
+});
+
+test('grouped Management capture stops when navigating or replacing its exact restricted child', async () => {
+  const contentRoot = groupedManagementContent('management-clients-loans', 'management-loans');
+  const panel = contentRoot.querySelector('#management-loans');
+  let stopped = 0;
+  const subject = controller({ sectionId: 'management-clients-loans', contentRoot, restrictedElement: panel,
+    track: { stop: () => { stopped += 1; } } });
+  subject.beforeNavigate('management-overview');
+  assert.equal(stopped, 1);
+  assert.equal(subject.track, null);
+  subject.sectionId = 'management-clients-loans';
+  subject.restrictedElement = panel;
+  const group = contentRoot.querySelector('#management-clients-loans');
+  group.innerHTML = '<section id="management-loans" data-screen-share-section>Replacement</section>';
+  assert.equal(subject.safeToCapture(), false, 'remount cannot reuse an old element restriction');
+  subject.restrictedElement = null;
+  group.setAttribute('hidden', '');
+  assert.equal(subject.safeToCapture(), false, 'hidden groups fail closed');
+  subject.dispose();
+});
+
+test('Management rendering marks only the two existing audited child panels for grouped capture', async () => {
+  const root = new Element(); root.dataset = {};
+  const abort = new AbortController();
+  try {
+    await mountManagementWorkspace({ root, signal: abort.signal, setNavigation() {},
+      session: { user: { role: 'management', roles: ['management'] }, permissions: [] },
+      api: { request: async () => ({}) } });
+    assert.deepEqual(root.querySelectorAll('[data-screen-share-section]').map(panel => panel.getAttribute('id')),
+      ['management-loans', 'management-loan-operations']);
+  } finally { abort.abort(); }
+});
 
 function controller(overrides = {}) {
   const root = { querySelector: () => null, querySelectorAll: () => [], replaceChildren: () => {} };

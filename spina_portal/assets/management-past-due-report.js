@@ -59,59 +59,79 @@ export function loadManagementPastDueReport(
 }
 
 function summaryMarkup(summary = {}) {
-  return `<div class="metric-grid">
+  return `<div class="metric-grid past-due-summary-grid">
     ${metricCard(
-      'Past-Due events',
+      'Past-due events',
       escapeHtml(summary.event_count ?? 0),
-      'Server-returned event count',
+      'Recorded events',
     )}
     ${metricCard(
-      'Past-Due amount',
+      'Amount past due',
       formatMoney(summary.total_past_due_amount),
-      'Server-returned total',
+      'Total amount',
     )}
     ${metricCard(
-      'Remaining Past-Due',
+      'Still past due',
       formatMoney(summary.remaining_past_due_amount),
-      'Server-returned remaining amount',
+      'Remaining amount',
     )}
   </div>`;
+}
+
+function zeroLike(value) {
+  const text = String(value ?? '0').trim();
+  return /^0+(?:\.0+)?$/.test(text);
+}
+
+function isEmptyReport(summary = {}, rows = []) {
+  return Number(summary.event_count ?? 0) === 0
+    && zeroLike(summary.total_past_due_amount)
+    && zeroLike(summary.remaining_past_due_amount)
+    && asArray(rows).length === 0;
 }
 
 function rowsMarkup(rows) {
   const items = asArray(rows);
   if (!items.length) {
-    return emptyState('No Past-Due reason rows match the current server filters.');
+    return emptyState('No past-due reasons match the current filters.');
   }
 
-  return `<div class="table-wrap"><table>
-    <thead><tr><th>Client</th><th>Collector / Area</th><th>Reason</th><th>Event</th><th>Count</th><th>Past-Due amount</th><th>Remaining</th></tr></thead>
+  return `<div class="table-wrap"><table class="mobile-card-table past-due-table">
+    <thead><tr><th>Client</th><th>Collector / Area</th><th>Reason</th><th>Event</th><th>Count</th><th>Amount past due</th><th>Still past due</th></tr></thead>
     <tbody>${items
       .map(
         (row) => `<tr>
-          <td><strong>${escapeHtml(row.client_name || '—')}</strong></td>
-          <td>${escapeHtml(row.collector_name || '—')}<br><span class="meta">${escapeHtml(row.area || '—')}</span></td>
-          <td>${escapeHtml(row.reason_label || row.reason_code || '—')}</td>
-          <td>${escapeHtml(row.event_kind_label || row.event_kind || '—')}</td>
-          <td>${escapeHtml(row.event_count ?? 0)}</td>
-          <td>${formatMoney(row.total_past_due_amount)}</td>
-          <td>${formatMoney(row.remaining_past_due_amount)}</td>
+          <td data-label="Client"><strong>${escapeHtml(row.client_name || '—')}</strong></td>
+          <td data-label="Collector / Area">${escapeHtml(row.collector_name || '—')}<br><span class="meta">${escapeHtml(row.area || '—')}</span></td>
+          <td data-label="Reason">${escapeHtml(row.reason_label || row.reason_code || '—')}</td>
+          <td data-label="Event">${escapeHtml(row.event_kind_label || row.event_kind || '—')}</td>
+          <td data-label="Count">${escapeHtml(row.event_count ?? 0)}</td>
+          <td data-label="Amount past due">${formatMoney(row.total_past_due_amount)}</td>
+          <td data-label="Still past due">${formatMoney(row.remaining_past_due_amount)}</td>
         </tr>`,
       )
       .join('')}</tbody>
   </table></div>`;
 }
-
 export function managementPastDueReportMarkup(payload = {}) {
   if (payload.schema_available === false) {
     return '<div class="notice-card warning"><strong>Past-Due reporting is not available.</strong><br>The authoritative reporting schema is not available on this server.</div>';
   }
 
-  return `<div class="list-stack">
-    <div class="notice-card"><strong>Read-only Past-Due reporting</strong><br>Summary totals and reason rows are returned by the protected SPINA server. This Web view does not calculate delinquency, penalties, balances, or schedules.</div>
-    ${summaryMarkup(payload.summary ?? {})}
-    <div class="section-heading"><div><h3>Reason summary</h3><p>Server-returned Client, Collector, Area, reason, and event grouping.</p></div></div>
-    ${rowsMarkup(payload.rows)}
+  const summary = payload.summary ?? {};
+  const rows = asArray(payload.rows);
+  if (isEmptyReport(summary, rows)) {
+    return `<div class="past-due-zero-state" data-past-due-zero>
+      <strong>No past-due reasons found for these filters.</strong>
+      <span class="meta">Read-only report from SPINA records.</span>
+    </div>`;
+  }
+
+  return `<div class="list-stack past-due-report">
+    <div class="notice-card past-due-readonly-notice"><strong>Read-only report</strong><br>Amounts and reasons come from SPINA records.</div>
+    ${summaryMarkup(summary)}
+    <div class="section-heading"><div><h3>Reasons by client and area</h3><p>Review recorded reasons, events, and remaining amounts.</p></div></div>
+    ${rowsMarkup(rows)}
   </div>`;
 }
 

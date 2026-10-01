@@ -19,7 +19,8 @@ for (const [role, mount] of [['employee', mountEmployeeWorkspace], ['management'
   test(`${role}: exact permission connects first-loan workspace without background financial requests`, async () => {
     const h = harness(); await mount(h);
     const area = h.root.querySelector('[data-office-first-loan]'); assert.ok(area);
-    assert.ok(h.navigation.some(item => item.id === `${role}-first-loan`));
+    assert.ok(h.navigation.some(item => item.id === (role === 'management' ? 'management-clients-loans' : `${role}-first-loan`)));
+    if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="first-loan"]'));
     assert.ok(availableRoleActions(role, [permission]).some(item => item.key === `${role}-first-loan`));
     assert.equal(h.calls.some(path => path.includes('/first-loans/')), false);
     area.querySelector('[name="intakeReference"]').value = 'Intake / Mixed';

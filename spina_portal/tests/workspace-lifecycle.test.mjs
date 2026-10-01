@@ -160,3 +160,17 @@ for (const role of ['employee', 'management', 'client']) {
     assert.doesNotMatch(current, /Office intake reference/);
   });
 }
+
+
+test('Management membership opens one Web Management workspace without a role switch', async (t) => {
+  const h = await harness(t, 'collector', ['collector', 'employee', 'management']);
+  const picker = h.elements.get('workspace-choice');
+  const label = h.elements.get('workspace-choice-label');
+  assert.equal(h.elements.get('workspace-title').textContent, 'Management workspace');
+  assert.equal(h.elements.get('signed-in-role').textContent, 'Management');
+  assert.equal(label.hidden, true);
+  assert.equal(picker.innerHTML, '');
+  h.accounts[0].resolve(json({ profile: { full_name: 'Management user' } }));
+  await tick();
+  assert.equal(h.elements.get('workspace-title').textContent, 'Management workspace');
+});

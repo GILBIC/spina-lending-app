@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from datetime import date
+from typing import Literal
 from uuid import UUID
 
 from psycopg.types.json import Jsonb
@@ -150,6 +151,9 @@ def save_employee_journal_draft(
     description: str,
     lines: list[dict[str, object]],
     entry_id: UUID | None = None,
+    permission: Literal[
+        "accounting.journal.prepare", "cash_disbursement.prepare"
+    ] = "accounting.journal.prepare",
 ) -> UUID:
     """Use existing accounting validation/ledger within the HR action transaction.
 
@@ -157,9 +161,7 @@ def save_employee_journal_draft(
     The established SQL functions validate balances and exact active posting accounts;
     this helper never posts, reverses or creates a second accounting ledger.
     """
-    require_employee_action(
-        cursor, actor=actor, permission="accounting.journal.prepare"
-    )
+    require_employee_action(cursor, actor=actor, permission=permission)
     if entry_id is None:
         row = cursor.execute(
             """select accounting.create_manual_journal_draft(%s,%s,%s,%s::jsonb)

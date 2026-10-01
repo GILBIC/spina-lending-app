@@ -9,6 +9,63 @@ const value=(root,name)=>String(root.querySelector(`[name="${name}"]`)?.value||'
 const note=(name,label)=>`<label>${label}<textarea name="${name}" maxlength="500" required></textarea></label>`;
 const button=(label,extra='')=>`<button class="button button-primary" ${extra}>${label}</button>`;
 
+const readinessLabel=loan=>loan.is_active?'Active':loan.can_activate?'Ready':'Blocked';
+const readinessTone=loan=>loan.is_active?'success':loan.can_activate?'warning':'danger';
+function plainBlocker(reason) {
+  const text=String(reason||'').trim();
+  if(text==='Signed-contract schedule has not been registered.')return 'a verified signed repayment schedule';
+  if(text==='Current schedule is not backed by verified signed-contract evidence.')return 'verified signed-contract evidence';
+  if(text.startsWith('Contract schedule/payment allocation is not DPD-ready'))return 'schedule/payment allocation setup';
+  if(text==='Loan type is not using direct remaining-balance collection mode.')return 'supported collection mode';
+  if(/balance/i.test(text)&&/reconcil/i.test(text))return 'balance reconciliation';
+  if(/accounting/i.test(text))return 'accounting readiness';
+  return 'another readiness requirement';
+}
+function blockerSummary(loans) {
+  const counts=new Map();
+  for(const loan of loans)for(const label of new Set(asArray(loan.blockers).map(plainBlocker))){
+    counts.set(label,(counts.get(label)||0)+1);
+  }
+  const repeated=[...counts.entries()].filter(([,count])=>count>1);
+  if(!repeated.length)return '';
+  return `<div class="notice-card warning contract-common-blockers" data-contract-common-blockers>
+    <strong>Common readiness issues</strong>
+    <ul>${repeated.map(([label,count])=>`<li>${count} loans need ${h(label)}.</li>`).join('')}</ul>
+  </div>`;
+}
+function contractReadinessMarkup(result) {
+  const loans=asArray(result.loans);
+  if(!loans.length)return '<p>No loan readiness is available.</p>';
+  const active=loans.filter(loan=>loan.is_active===true).length;
+  const ready=loans.filter(loan=>loan.is_active!==true&&loan.can_activate===true).length;
+  const blocked=loans.length-active-ready;
+  return `<div class="contract-readiness-summary" data-contract-readiness-summary>
+      <span><strong>${active}</strong> Active</span>
+      <span><strong>${ready}</strong> Ready</span>
+      <span><strong>${blocked}</strong> Blocked</span>
+    </div>
+    ${blockerSummary(loans)}
+    <div class="contract-loan-list">${loans.map((loan,index)=>{
+      const blockers=asArray(loan.blockers);
+      const status=readinessLabel(loan);
+      const detail=blockers.length?`<details class="contract-technical-details" data-contract-technical-details>
+        <summary>${status==='Blocked'?'Why this loan is blocked':'Readiness details'}</summary>
+        <ul>${blockers.map(reason=>`<li>${h(reason)}</li>`).join('')}</ul>
+      </details>`:'';
+      const action=result.permission===true&&(loan.can_activate===true||loan.can_deactivate===true)
+        ?`<form class="entry-form contract-activation-form" data-contract-activate="${index}">${note('activation_note','Evidence / reason')}${button(loan.can_activate?'Activate contract collection':'Deactivate contract collection','type="submit"')}</form>`
+        :'';
+      return `<article class="contract-loan-row" data-contract-loan="${h(loan.loan_id||index)}">
+        <div class="contract-loan-heading">
+          <div><strong>${h(loan.client_name||'Client')}</strong><span class="meta">${h(loan.loan_number||'Loan')}${loan.loan_type_name?` · ${h(loan.loan_type_name)}`:''} · ${formatMoney(loan.remaining_balance)}</span></div>
+          <span class="badge ${readinessTone(loan)}">${status}</span>
+        </div>
+        ${detail}
+        ${action}
+      </article>`;
+    }).join('')}</div>`;
+}
+
 export function mountManagementCollectionActions(options) {
   const {root,api,session,sessionStore,signal,confirm=message=>globalThis.confirm?.(message),now=()=>new Date()}=options;
   if(!root)return ()=>{};
@@ -30,17 +87,38 @@ export function mountManagementCollectionActions(options) {
     finally{busy=false;guard.finish();lock();}
   };
   const save=async(path,body,verify)=>collectorMutation({api,path,options:{method:'POST',body},guard,verify});
-  root.innerHTML=`<h2>Collection actions</h2><p>Review the selected borrower and server evidence before confirming a change.</p>${button('Refresh collection records','type="button" data-management-collection-refresh')}<p data-management-collection-status role="status" aria-live="polite"></p>
-    ${can('lending.contract_collection.activate')?'<section class="data-card"><h3>Contract collection</h3><div data-contract-collection>Loading readiness…</div></section>':''}
-    ${can('lending.no_collection.manage')?`<section class="data-card"><h3>No Collection</h3><form class="entry-form" data-no-collection-search><label>Client, loan number or area<input name="query" minlength="2" required></label>${button('Find loan','type="submit"')}</form><div data-no-collection-results></div><div data-no-collection-detail></div></section>`:''}
-    ${can('collection.void.unremitted')?`<section class="data-card"><h3>Void incorrect payment</h3><form class="entry-form" data-void-search><label>Receipt number<input name="receipt_number" maxlength="120" required></label>${button('Find receipt','type="submit"')}</form><div data-void-detail></div></section>`:''}
-    ${can('collection.create')?'<section class="data-card" data-management-direct-payment></section>':''}`;
+  const workflows=[
+    can('lending.contract_collection.activate')&&['contract','Contract collection'],
+    can('lending.no_collection.manage')&&['no-collection','No Collection'],
+    can('collection.void.unremitted')&&['void','Void payment'],
+    can('collection.create')&&['direct','Record payment'],
+  ].filter(Boolean);
+  const initialWorkflow=workflows[0]?.[0]||'';
+  root.innerHTML=`<div class="section-heading collection-actions-heading"><div><h2>Collection actions</h2><p>Choose one protected workflow. Review the borrower and server evidence before confirming a change.</p></div><button class="button button-outline" type="button" data-management-collection-refresh>Refresh</button></div>
+    <div class="collection-action-tabs" role="tablist" aria-label="Collection actions">
+      ${workflows.map(([id,label],index)=>`<button class="collection-action-tab" type="button" role="tab" data-management-collection-tab="${id}" aria-selected="${index===0?'true':'false'}">${label}</button>`).join('')}
+    </div>
+    <p data-management-collection-status role="status" aria-live="polite"></p>
+    ${can('lending.contract_collection.activate')?`<section class="data-card collection-action-panel" data-management-collection-panel="contract"${initialWorkflow==='contract'?'':' hidden'}><div class="section-heading"><div><h3>Contract collection</h3><p>Activate only loans whose verified contract, schedule, balance and accounting checks are ready.</p></div></div><div data-contract-collection>Loading readiness…</div></section>`:''}
+    ${can('lending.no_collection.manage')?`<section class="data-card collection-action-panel" data-management-collection-panel="no-collection"${initialWorkflow==='no-collection'?'':' hidden'}><h3>No Collection</h3><form class="entry-form" data-no-collection-search><label>Client, loan number or area<input name="query" minlength="2" required></label>${button('Find loan','type="submit"')}</form><div data-no-collection-results></div><div data-no-collection-detail></div></section>`:''}
+    ${can('collection.void.unremitted')?`<section class="data-card collection-action-panel danger-panel" data-management-collection-panel="void"${initialWorkflow==='void'?'':' hidden'}><h3>Void incorrect payment</h3><p class="meta">Use only for an incorrect unremitted payment. The reversal is permanently recorded.</p><form class="entry-form" data-void-search><label>Receipt number<input name="receipt_number" maxlength="120" required></label>${button('Find receipt','type="submit"')}</form><div data-void-detail></div></section>`:''}
+    ${can('collection.create')?`<section class="data-card collection-action-panel" data-management-collection-panel="direct"${initialWorkflow==='direct'?'':' hidden'} data-management-direct-payment></section>`:''}`;
+  const activateWorkflow=id=>{
+    for(const panel of root.querySelectorAll('[data-management-collection-panel]')){
+      if(panel.getAttribute('data-management-collection-panel')===id)panel.removeAttribute('hidden');
+      else panel.setAttribute('hidden','');
+    }
+    for(const tab of root.querySelectorAll('[data-management-collection-tab]')){
+      tab.setAttribute('aria-selected',tab.getAttribute('data-management-collection-tab')===id?'true':'false');
+    }
+  };
+  for(const tab of root.querySelectorAll('[data-management-collection-tab]'))tab.addEventListener('click',()=>activateWorkflow(tab.getAttribute('data-management-collection-tab')));
   root.querySelector('[data-management-collection-refresh]').addEventListener('click',()=>{if(busy||disposed)return;dispose();replacementCleanup=mountManagementCollectionActions(options);});
 
   async function loadActivations(){
     const result=await read(ACTIVATION);if(!current())return;
     const target=root.querySelector('[data-contract-collection]');
-    target.innerHTML=asArray(result.loans).map((loan,index)=>`<article class="list-item"><h4>${h(loan.client_name)} · ${h(loan.loan_number)}</h4><p>Official balance ${formatMoney(loan.remaining_balance)} · ${loan.is_active?'Active':'Inactive'}</p>${asArray(loan.blockers).map(reason=>`<p>${h(reason)}</p>`).join('')}${result.permission===true&&(loan.can_activate===true||loan.can_deactivate===true)?`<form class="entry-form" data-contract-activate="${index}">${note('activation_note','Evidence / reason')}${button(loan.can_activate?'Activate contract collection':'Deactivate contract collection','type="submit"')}</form>`:''}</article>`).join('')||'<p>No loan readiness is available.</p>';
+    target.innerHTML=contractReadinessMarkup(result);
     for(const form of target.querySelectorAll('[data-contract-activate]'))form.addEventListener('submit',event=>{event.preventDefault();run(async()=>{
       const loan=result.loans[Number(form.getAttribute('data-contract-activate'))];
       const activationNote=value(form,'activation_note');if(!activationNote)throw new Error('Enter the evidence or reason.');

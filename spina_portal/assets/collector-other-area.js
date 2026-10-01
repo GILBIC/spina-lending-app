@@ -17,7 +17,7 @@ export function mountCollectorOtherArea({root,api,session,routeDate,guard,identi
   }
   let disposed=false;let searchVersion=0;let previewVersion=0;let reviewedTarget=null;
   const current=()=>!disposed && guard.current && !signal?.aborted;
-  root.innerHTML=`<h2>${mode==='management'?'Direct payment':'Other-area collection'}</h2><p>You remain the recorder. Assigned ownership and cash custody are preserved by SPINA.</p><form data-other-search class="entry-form"><label>Client name, code, phone or area<input name="query" minlength="2" maxlength="120" required /></label><button class="button button-outline" type="submit">${mode==='management'?'Find client':'Search other-area clients'}</button></form><div data-other-results></div><div data-cross-remittance></div><div data-other-status role="status"></div>`;
+  root.innerHTML=`<h2>${mode==='management'?'Direct payment':'Other-area collection'}</h2><p>${mode==='management'?'Record a payment for a client outside the assigned route. The client’s assigned Collector remains unchanged.':'You remain the recorder. Assigned ownership and cash custody are preserved by SPINA.'}</p><form data-other-search class="entry-form"><label>Client name, code, phone or area<input name="query" minlength="2" maxlength="120" required /></label><button class="button button-outline" type="submit">${mode==='management'?'Find client':'Search other-area clients'}</button></form><div data-other-results></div><div data-cross-remittance></div><div data-other-status role="status"></div>`;
   const status=message=>{if(current()) root.querySelector('[data-other-status]').textContent=message;};
   const run=async operation=>{
     if(!current() || !guard.begin()) return;

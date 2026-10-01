@@ -62,7 +62,14 @@ for (const { role, mount, permissions } of scenarios) {
 
       assert.equal(activated, 1, 'selection runs after the full role markup is installed');
       assert.equal(navigation[0].id, `${role}-overview`);
-      assert.equal(navigation[0].group, 'Daily work');
+      if (role === 'management') {
+        assert.deepEqual(
+          navigation.map((item) => item.label),
+          ['Today', 'Clients & loans', 'Collections', 'Accounting', 'People & operations', 'Account'],
+        );
+      } else {
+        assert.equal(navigation[0].group, 'Daily work');
+      }
       const today = root.querySelector(`#${role}-overview`);
       if (today.innerHTML.includes('metric-grid')) {
         assert.ok(today.innerHTML.indexOf('daily-actions') < today.innerHTML.indexOf('metric-grid'),
@@ -165,3 +172,63 @@ for (const { role, mount, permissions, paths } of failedReads) {
     }
   });
 }
+
+
+test('Management keeps detailed tools inside six high-level workspace sections', async () => {
+  const controller = new AbortController();
+  const root = new RoleElement();
+  root.dataset = {};
+  let navigation = [];
+  try {
+    await mountManagementWorkspace({
+      root,
+      api: { async request(path) { return response(path); } },
+      session: {
+        user: { role: 'management' },
+        permissions: [
+          'management.dashboard.view',
+          'client_onboarding.requirement.review',
+          'renewal.manage',
+          'support.manage',
+          'client_payment_proof.review',
+          'collection.create',
+          'collection.correct',
+          'accounting.view',
+          'area.manage',
+          'account.manage',
+          'device.manage',
+        ],
+      },
+      signal: controller.signal,
+      setNavigation(items) { navigation = items; },
+      activateNavigation() {},
+    });
+
+    assert.deepEqual(
+      navigation.map((item) => item.id),
+      [
+        'management-overview',
+        'management-clients-loans',
+        'management-collections',
+        'management-accounting-hub',
+        'management-operations',
+        'management-account',
+      ],
+    );
+    const topLevel = root.children.filter((child) => typeof child !== 'string'
+      && child.attributes?.['data-workspace-section'] !== undefined);
+    assert.deepEqual(
+      topLevel.map((section) => section.attributes.id),
+      navigation.map((item) => item.id),
+    );
+    assert.ok(root.querySelector('#management-renewals'));
+    assert.ok(root.querySelector('#management-loan-operations'));
+    assert.ok(root.querySelector('#management-financial-statements'));
+    assert.ok(root.querySelector('#management-staff'));
+    for (const link of root.querySelector('#management-overview').querySelectorAll('.task-link')) {
+      assert.ok(navigation.some((item) => item.id === link.attributes['data-nav-target']));
+    }
+  } finally {
+    controller.abort();
+  }
+});
