@@ -1,4 +1,4 @@
-import { asArray, escapeHtml } from './ui.js';
+import { asArray, escapeHtml, titleCase } from './ui.js';
 
 function accessFor(session = {}) {
   const roles = new Set([
@@ -15,21 +15,24 @@ function accessFor(session = {}) {
 export function accountCredentialsMarkup({ session } = {}) {
   const access = accessFor(session);
   if (!access.staff) return '';
-  return `<div class="list-stack">
-    <article class="data-card">
-      <h3>Change my password</h3>
+  return `<div class="list-stack credential-security-stack">
+    <article class="data-card credential-own-password-card">
+      <h3>My password</h3>
       <p>Changes only the password for your signed-in staff account.</p>
+      <p class="meta">Both entries must match. SPINA validates the new password on the server.</p>
       <form class="entry-form" data-credential-own-form>
         <label>New password<input type="password" name="newPassword" autocomplete="new-password" required maxlength="200" /></label>
         <label>Confirm new password<input type="password" name="confirmPassword" autocomplete="new-password" required maxlength="200" /></label>
         <button class="button button-primary" type="submit">Change password</button>
-        <button class="button button-secondary" type="button" data-credential-clear-password>Clear password</button>
+        <button class="button button-quiet" type="button" data-credential-clear-password>Clear password</button>
       </form>
       <div role="status" aria-live="polite" data-credential-own-message></div>
     </article>
-    ${access.reset ? `<article class="data-card">
-      <h3>${access.anyAccount ? 'Reset account password' : 'Reset Client password'}</h3>
-      <p>Find an existing ${access.anyAccount ? 'Client or staff' : 'Client'} account, then confirm whose password will be replaced.</p>
+    ${access.reset ? `<article class="data-card credential-admin-card">
+      <h3>${access.anyAccount ? "Reset another account's password" : 'Reset Client password'}</h3>
+      ${access.anyAccount
+        ? '<div class="notice-card warning credential-admin-note"><strong>Higher-risk administrator action.</strong> Find an existing Client or staff account, then confirm whose password will be replaced.</div>'
+        : '<p>Find an existing Client account, then confirm whose password will be replaced.</p>'}
       <form class="search-bar" data-credential-search-form>
         <label>Account search<input name="accountQuery" minlength="2" maxlength="200" required autocomplete="off" placeholder="Name, username, or email" /></label>
         <button class="button button-secondary" type="submit">Find account</button>
@@ -49,9 +52,14 @@ function validAccount(account, access) {
 }
 
 function accountIdentity(account) {
+  const roles = asArray(account.roles)
+    .map((role) => titleCase(String(role).trim().toLowerCase()))
+    .filter(Boolean)
+    .join(', ');
+  const status = titleCase(String(account.status || 'Unknown status').trim().toLowerCase());
   return `<strong>${escapeHtml(account.full_name || account.username)}</strong>
     <div class="meta">Username: ${escapeHtml(account.username)} · ${escapeHtml(account.email || 'No email')}
-    · ${escapeHtml(asArray(account.roles).join(', '))} · ${escapeHtml(account.status || 'Unknown status')}</div>`;
+    · ${escapeHtml(roles || 'No role')} · ${escapeHtml(status)}</div>`;
 }
 
 function confirmedReset(data, target, access) {
