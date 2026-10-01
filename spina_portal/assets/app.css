@@ -1429,6 +1429,13 @@ details > :not(summary) {
   min-width: 0;
 }
 
+.area-tree-row-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .area-tree-row {
   display: grid;
   width: 100%;
@@ -1475,6 +1482,18 @@ details > :not(summary) {
   border-left: 1px solid var(--pink-200);
 }
 
+.area-tree-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.area-tree-order-actions .button-small {
+  width: 36px;
+  min-height: 36px;
+  padding: 0.2rem;
+}
+
 .area-details-panel h3 {
   margin: 0;
 }
@@ -1496,6 +1515,10 @@ details > :not(summary) {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
+}
+
+.area-collector-summary > strong {
+  font-size: 1rem;
 }
 
 .area-collector-summary p {
@@ -1526,6 +1549,15 @@ details > :not(summary) {
 }
 
 @media (max-width: 680px) {
+  .area-tree-row-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .area-tree-order-actions {
+    justify-content: flex-end;
+    padding-inline: 0.4rem;
+  }
+
   .area-tree-row {
     grid-template-columns: auto minmax(0, 1fr);
   }
