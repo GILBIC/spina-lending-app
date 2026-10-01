@@ -14,8 +14,6 @@ import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.d
 
 void main() {
   for (final roles in [
-    ['Management', 'Collector'],
-    ['Management', 'Employee', 'Collector'],
     ['Collector'],
     ['Collector', 'Employee'],
   ]) {
