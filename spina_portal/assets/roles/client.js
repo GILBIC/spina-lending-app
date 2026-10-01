@@ -12,6 +12,7 @@ import {
   metricCard,
   settledRequest,
   setButtonBusy,
+  clearButtonBusyFocus,
   showToast,
 } from '../ui.js';
 import { classifyLoanType } from '../collector-contract.js';
@@ -257,7 +258,7 @@ export function clientNotificationRows(items) {
       return `<article class="timeline-item">
         <div class="section-heading">
           <strong>${escapeHtml(item.title || item.notification_type || 'SPINA update')}</strong>
-          ${badge(isRead ? 'Read' : 'Unread', isRead ? 'success' : 'warning')}
+          <span data-client-notification-status tabindex="-1">${badge(isRead ? 'Read' : 'Unread', isRead ? 'success' : 'warning')}</span>
         </div>
         <span>${escapeHtml(item.message || '')}</span>
         <span class="meta">${formatDateTime(item.created_at)}</span>
@@ -580,20 +581,36 @@ function bindClientAccountDeviceSecurity(context) {
 }
 
 function bindClientNotificationReadActions(context) {
+  const signal = context.signal;
+  const generation = context.clientWorkspaceGeneration;
   for (const button of context.root.querySelectorAll('[data-client-notification-read]')) {
     button.addEventListener('click', async () => {
+      if (button.disabled || button.hidden || signal?.aborted) return;
       const notificationId = button.dataset.clientNotificationRead;
+      const current = () => !signal?.aborted && button.isConnected && context.clientWorkspaceGeneration === generation;
+      let saved = false;
       setButtonBusy(button, true, 'Marking…');
       try {
-        await requestClientNotificationRead({
+        const result = await requestClientNotificationRead({
           api: context.api,
           notificationId,
         });
+        if (!current()) return;
+        if (result?.notification_id !== notificationId || result.is_read !== true) throw new Error('The update could not be confirmed as read. Refresh Updates before trying again.');
+        saved = true;
+        button.parentElement.querySelector('[data-client-notification-status]').innerHTML = badge('Read', 'success');
         showToast('Update marked as read.', 'success');
-        await mountClientWorkspace(context);
       } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
+        if (current()) showToast(error.message, 'error');
+      } finally {
+        if (current()) setButtonBusy(button, false);
+        else clearButtonBusyFocus(button);
+      }
+      if (saved && current()) {
+        if (button.ownerDocument.activeElement === button && !button.closest('[hidden]')) {
+          button.parentElement.querySelector('[data-client-notification-status]').focus({ preventScroll: true });
+        }
+        button.hidden = true;
       }
     });
   }

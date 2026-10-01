@@ -128,15 +128,41 @@ export async function settledRequest(api, path, options, fallback) {
   }
 }
 
+const busyButtons = new WeakMap();
+export function clearButtonBusyFocus(button) {
+  busyButtons.get(button)?.stop();
+  busyButtons.delete(button);
+}
 export function setButtonBusy(button, busy, busyText = 'Saving…') {
   if (!button) return;
   if (busy) {
-    button.dataset.originalText = button.textContent;
+    if (!busyButtons.has(button)) {
+      button.dataset.originalText = button.textContent;
+      const document = button.ownerDocument;
+      const state = { restore: document?.activeElement === button, stop: () => {} };
+      const moved = (event) => {
+        if (event.type === 'focusin' && event.target === button) return;
+        state.restore = false;
+        state.stop();
+      };
+      state.stop = () => {
+        for (const type of ['focusin', 'pointerdown', 'keydown']) document?.removeEventListener(type, moved, true);
+      };
+      if (state.restore) for (const type of ['focusin', 'pointerdown', 'keydown']) document.addEventListener(type, moved, true);
+      busyButtons.set(button, state);
+    }
     button.textContent = busyText;
     button.disabled = true;
   } else {
+    const state = busyButtons.get(button);
+    clearButtonBusyFocus(button);
     button.textContent = button.dataset.originalText || button.textContent;
     button.disabled = false;
+    const document = button.ownerDocument;
+    if (state?.restore && button.isConnected && document.activeElement === document.body
+      && !button.closest('[hidden]') && !button.closest('[inert]') && button.getClientRects?.().length !== 0) {
+      button.focus({ preventScroll: true });
+    }
   }
 }
 

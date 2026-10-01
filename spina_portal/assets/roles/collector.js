@@ -22,6 +22,7 @@ import {
   metricCard,
   settledRequest,
   setButtonBusy,
+  clearButtonBusyFocus,
   showToast,
 } from '../ui.js';
 
@@ -64,6 +65,7 @@ function entryForm(entry, defaultAmount) {
     ${allocationField()}
     ${followupFields()}
     <label>Note<textarea name="note" maxlength="500" placeholder="Short factual note"></textarea></label>
+    <p class="notice-card danger" data-collection-feedback role="alert" tabindex="-1" hidden></p>
     <div class="action-row"><button class="button button-primary" type="submit">Save official entry</button><button class="button button-quiet cancel-entry" type="button">Cancel</button></div>
   </form>`;
 }
@@ -125,7 +127,7 @@ function remittanceSection(routeDate, preview, recipients, history, errors, canC
   return `<section class="section-card" id="collector-remittance" data-workspace-section>
     <div class="section-heading"><div><h2>Remittance</h2><p>Submit only after reviewing the complete server-calculated collection summary.</p></div></div>
     ${errors.preview ? errorCard(errors.preview) : `<div class="metric-grid">${metricCard('Cash total', formatMoney(preview.total_amount || 0))}${metricCard('Transactions', escapeHtml(preview.transaction_count ?? 0))}${metricCard('Clients', escapeHtml(preview.client_count ?? 0))}${metricCard('Unable to pay', escapeHtml(preview.unable_to_pay_count ?? 0))}</div>`}
-    ${canCreate && recipients.length ? `<form id="collector-remittance-form" class="entry-form"><label>Recipient<select name="recipientUserId" required>${recipients.map((recipient) => `<option value="${escapeHtml(recipient.user_id)}">${escapeHtml(recipient.full_name)} · ${escapeHtml(recipient.role_name)}</option>`).join('')}</select></label><label>Collection date<input name="collectionDate" type="date" value="${escapeHtml(routeDate || '')}" readonly /></label><label>Note<textarea name="note" maxlength="500"></textarea></label><button class="button button-primary" type="submit" ${numeric(preview.total_amount) <= 0 ? 'disabled' : ''}>Submit remittance</button></form>` : canCreate ? emptyState('No eligible remittance recipient is available.') : `<div class="notice-card warning">Your account can view remittance history but cannot create a remittance.</div>`}
+    ${canCreate && recipients.length ? `<form id="collector-remittance-form" class="entry-form"><label>Recipient<select name="recipientUserId" required>${recipients.map((recipient) => `<option value="${escapeHtml(recipient.user_id)}">${escapeHtml(recipient.full_name)} · ${escapeHtml(recipient.role_name)}</option>`).join('')}</select></label><label>Collection date<input name="collectionDate" type="date" value="${escapeHtml(routeDate || '')}" readonly /></label><label>Note<textarea name="note" maxlength="500"></textarea></label><p class="notice-card danger" data-collection-feedback role="alert" tabindex="-1" hidden></p><button class="button button-primary" type="submit" ${numeric(preview.total_amount) <= 0 ? 'disabled' : ''}>Submit remittance</button></form>` : canCreate ? emptyState('No eligible remittance recipient is available.') : `<div class="notice-card warning">Your account can view remittance history but cannot create a remittance.</div>`}
     <div class="section-heading" style="margin-top:1rem"><div><h2>History</h2></div></div>
     ${errors.history ? errorCard(errors.history) : remittanceHistory(history)}
   </section>`;
@@ -145,6 +147,34 @@ function lockFinancialEntry(root, message) {
   if (!existing) {
     root.insertAdjacentHTML('afterbegin', `<div id="collector-uncertain-lock" class="notice-card danger"><strong>Financial entry locked for reconciliation.</strong><br>${escapeHtml(message)} Use Refresh to load authoritative SPINA state before any new attempt.</div>`);
   }
+}
+
+function beginSubmissionFeedback(form, button) {
+  const feedback = form.querySelector('[data-collection-feedback]');
+  const document = form.ownerDocument;
+  let retainFocus = document?.activeElement === button;
+  const moved = (event) => { if (event.target !== button) retainFocus = false; };
+  document?.addEventListener('focusin', moved);
+  document?.addEventListener('pointerdown', moved);
+  document?.addEventListener('keydown', moved);
+  feedback.hidden = true;
+  feedback.textContent = '';
+  if (!feedback.getAttribute('id')) feedback.setAttribute('id', `collection-feedback-${globalThis.crypto.randomUUID()}`);
+  const descriptions = new Set((form.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+  descriptions.add(feedback.getAttribute('id'));
+  form.setAttribute('aria-describedby', [...descriptions].join(' '));
+  return (error, canFocus) => {
+    document?.removeEventListener('focusin', moved);
+    document?.removeEventListener('pointerdown', moved);
+    document?.removeEventListener('keydown', moved);
+    if (!error || !form.isConnected) return;
+    feedback.hidden = false;
+    feedback.textContent = error.message;
+    if (canFocus && retainFocus && !form.closest('[hidden]') && !form.closest('[inert]') && form.getClientRects?.().length !== 0
+      && (document.activeElement === document.body || document.activeElement === button)) {
+      feedback.focus({ preventScroll: true });
+    }
+  };
 }
 
 function bindRouteActions(context, entryMap) {
@@ -176,7 +206,9 @@ function bindRouteActions(context, entryMap) {
       event.preventDefault();
       if (context.root.dataset.financialLocked === 'true' || !guard.begin()) return;
       const submitButton = form.querySelector('button[type="submit"]');
+      const finishFeedback = beginSubmissionFeedback(form, submitButton);
       let submission;
+      let rejection;
       try {
         const entry = entryMap.get(form.dataset.routeEntryId);
         if (!entry) throw new Error('The route entry is stale. Refresh the route.');
@@ -210,10 +242,13 @@ function bindRouteActions(context, entryMap) {
           context.uncertainCollection = submission;
           guard.lock(error.message);
         }
+        rejection = error;
         showToast(error.message, 'error', 7600);
       } finally {
         if (guard.current) setButtonBusy(submitButton, false);
+        else clearButtonBusyFocus(submitButton);
         guard.finish();
+        finishFeedback(guard.current ? rejection : null, guard.current && !guard.locked);
       }
     });
   }
@@ -227,6 +262,8 @@ function bindRemittance(context) {
     if (context.root.dataset.financialLocked === 'true' || !guard.begin()) return;
     const data = new FormData(form);
     const button = form.querySelector('button[type="submit"]');
+    const finishFeedback = beginSubmissionFeedback(form, button);
+    let rejection;
     setButtonBusy(button, true, 'Submitting…');
     try {
       const result = await context.api.request('/api/v1/collector/remittances', {
@@ -246,10 +283,13 @@ function bindRemittance(context) {
       if (error.code === 'network_uncertain') {
         guard.lock(error.message);
       }
+      rejection = error;
       showToast(error.message, 'error');
     } finally {
       if (guard.current) setButtonBusy(button, false);
+      else clearButtonBusyFocus(button);
       guard.finish();
+      finishFeedback(guard.current ? rejection : null, guard.current && !guard.locked);
     }
   });
 }

@@ -19,6 +19,7 @@ import {
   metricCard,
   settledRequest,
   setButtonBusy,
+  clearButtonBusyFocus,
   showToast,
 } from '../ui.js';
 
@@ -46,12 +47,12 @@ function supportQueue(items) {
             <strong>${escapeHtml(request.client_name || request.client_code || 'Client')}</strong>
             <div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div>
           </div>
-          ${badge(request.status)}
+          <span data-support-status tabindex="-1">${badge(request.status)}</span>
         </div>
         <p>${escapeHtml(request.message || '')}</p>
         ${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}
-        ${request.management_response ? `<div class="notice-card"><strong>Current response:</strong> ${escapeHtml(request.management_response)}</div>` : ''}
-        <form class="entry-form employee-support-review" data-request-id="${escapeHtml(request.request_id)}">
+        <div data-support-response>${request.management_response ? `<div class="notice-card"><strong>Current response:</strong> ${escapeHtml(request.management_response)}</div>` : ''}</div>
+        <form class="entry-form employee-support-review" data-request-id="${escapeHtml(request.request_id)}" data-support-state="${escapeHtml(request.status)}">
           <label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label>
           <label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label>
           <button class="button button-primary" type="submit">Save response</button>
@@ -76,25 +77,47 @@ function accountSection(account) {
 }
 
 function bindActions(context) {
+  const signal = context.signal;
   for (const form of context.root.querySelectorAll('.employee-support-review')) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const button = form.querySelector('button[type="submit"]');
+      if (button.disabled || form.hidden || signal?.aborted) return;
+      const current = () => !signal?.aborted && form.isConnected;
       setButtonBusy(button, true, 'Saving…');
       const data = new FormData(form);
+      const response = String(data.get('response') || '').trim();
+      let completed = false;
       try {
-        await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, {
+        const result = await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, {
           method: 'POST',
           body: {
             action: data.get('action'),
-            response: String(data.get('response') || '').trim(),
+            response,
           },
         });
+        if (!current()) return;
+        const record = result?.request;
+        if (record?.request_id !== form.dataset.requestId || !['answered', 'resolved'].includes(record.status) || typeof record.management_response !== 'string') throw new Error('The saved response could not be confirmed. Refresh the support queue before trying again.');
+        const card = form.parentElement;
+        card.querySelector('[data-support-status]').innerHTML = badge(record.status);
+        card.querySelector('[data-support-response]').innerHTML = `<div class="notice-card"><strong>Current response:</strong> ${escapeHtml(record.management_response)}</div>`;
+        const responseInput = form.querySelector('[name="response"]');
+        if (responseInput.value.trim() === response) responseInput.value = '';
+        form.setAttribute('data-support-state', record.status);
+        const openCount = [...context.root.querySelectorAll('[data-support-state]')].filter(item => item.getAttribute('data-support-state') === 'open').length;
+        for (const count of context.root.querySelectorAll('[data-support-count]')) count.textContent = String(openCount);
+        completed = true;
         showToast('Client support response saved.', 'success');
-        await mountEmployeeWorkspace(context);
       } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
+        if (current()) showToast(error.message, 'error');
+      } finally {
+        if (current()) setButtonBusy(button, false);
+        else clearButtonBusyFocus(button);
+      }
+      if (completed && current()) {
+        if (button.ownerDocument.activeElement === button && !form.closest('[hidden]')) form.parentElement.querySelector('[data-support-status]').focus({ preventScroll: true });
+        form.hidden = true;
       }
     });
   }
@@ -168,10 +191,10 @@ export async function mountEmployeeWorkspace(context) {
   </header>
   ${support.error || remittances.error || activity.error ? '<div class="notice-card warning">Some work counts could not load. Open the task or refresh before deciding there is no pending work.</div>' : ''}
   <div class="section-heading"><div><h2>Open a task</h2><p>Only work allowed for your account appears here.</p></div></div>
-  <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>
+  <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${target === 'employee-support' && !support.error ? `<span data-support-count>${model.openSupportCount}</span> open` : escapeHtml(detail)}</span></button>`).join('')}</div>
   <section class="metric-grid">
     ${metricCard('Connected functions', escapeHtml(model.connectedActions.length))}
-    ${metricCard('Open support', support.error ? 'Unavailable' : escapeHtml(model.openSupportCount))}
+    ${metricCard('Open support', support.error ? 'Unavailable' : `<span data-support-count>${model.openSupportCount}</span>`)}
     ${metricCard('Remittance notices', remittances.error ? 'Unavailable' : escapeHtml(model.remittances.length))}
     ${metricCard('Account updates', activity.error ? 'Unavailable' : escapeHtml(model.notifications.length))}
   </section>

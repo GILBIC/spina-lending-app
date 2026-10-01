@@ -152,6 +152,13 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
 
   async function mutate(path, body, { method = 'POST', intake = false, eligibility = false } = {}) {
     if (disposed || !['case', 'intake'].includes(state)) return;
+    const document = root.ownerDocument;
+    const focused = document?.activeElement;
+    let restoreFocus = Boolean(focused && caseRoot.contains?.(focused));
+    const moved = event => { if (event.type !== 'focusin' || event.target !== focused) restoreFocus = false; };
+    const submittingForm = restoreFocus ? focused.closest('form') : null;
+    if (submittingForm) submittingForm.setAttribute('aria-describedby', statusRoot.getAttribute('id'));
+    for (const type of ['focusin', 'pointerdown', 'keydown']) document?.addEventListener(type, moved, true);
     const selected = record?.application_reference;
     const request = {};
     token = request;
@@ -177,6 +184,13 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
       setDisabled(!retry);
       fail(error, !retry && !intake ? selected : null);
       if (intake && !retry && !disposed) statusRoot.innerHTML += '<p>The intake outcome is uncertain. Do not submit another intake; verify the office record before continuing.</p>';
+      if (retry && restoreFocus && current(request) && root.isConnected && !root.closest('[hidden]')
+        && !root.closest('[inert]') && root.getClientRects?.().length !== 0
+        && (document.activeElement === document.body || document.activeElement === focused)) {
+        statusRoot.focus({ preventScroll: true });
+      }
+    } finally {
+      for (const type of ['focusin', 'pointerdown', 'keydown']) document?.removeEventListener(type, moved, true);
     }
   }
 
@@ -283,6 +297,8 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
     <div data-onboarding-status role="status" aria-live="polite"></div><div data-onboarding-case></div>`;
   caseRoot = root.querySelector('[data-onboarding-case]');
   statusRoot = root.querySelector('[data-onboarding-status]');
+  statusRoot.setAttribute('id', `onboarding-feedback-${globalThis.crypto.randomUUID()}`);
+  statusRoot.setAttribute('tabindex', '-1');
   referenceInput = root.querySelector('[name="applicationReference"]');
   listen(root.querySelector('[data-case-lookup]'), 'submit', (event) => { event.preventDefault(); loadCase(referenceInput.value); }, false);
   listen(referenceInput, 'input', invalidate, false);

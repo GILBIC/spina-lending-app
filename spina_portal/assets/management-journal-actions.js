@@ -39,7 +39,13 @@ export function mountManagementJournalActions(options){
     const capture=()=>lines.map((_,index)=>Object.fromEntries(['account_code','description','debit','credit'].map(key=>[key,value(form,`${key}_${index}`)])));
     const renderLines=()=>{
       form.querySelector('[data-journal-lines]').innerHTML=lines.map((line,index)=>`<fieldset><legend>Line ${index+1}</legend>${input(`account_code_${index}`,'Account code','text',line.account_code||'','maxlength="20" required')}${input(`description_${index}`,'Line description','text',line.description||'','maxlength="240"')}${input(`debit_${index}`,'Debit','text',line.debit||'0.00','inputmode="decimal" required')}${input(`credit_${index}`,'Credit','text',line.credit||'0.00','inputmode="decimal" required')}${lines.length>2?button('Remove line',`data-journal-remove-line="${index}"`):''}</fieldset>`).join('');
-      for(const item of form.querySelectorAll('[data-journal-remove-line]'))item.addEventListener('click',()=>{if(busy||guard.locked)return;lines=capture();lines.splice(Number(item.getAttribute('data-journal-remove-line')),1);renderLines();});
+      for(const item of form.querySelectorAll('[data-journal-remove-line]'))item.addEventListener('click',()=>{
+        if(busy||guard.locked)return;
+        const removedIndex=Number(item.getAttribute('data-journal-remove-line'));
+        lines=capture();lines.splice(removedIndex,1);renderLines();
+        const nextIndex=Math.min(removedIndex,lines.length-1);
+        (form.querySelector(`[name="account_code_${nextIndex}"]`)||form.querySelector('[data-journal-add-line]'))?.focus();
+      });
     };
     if(!reversal){renderLines();form.querySelector('[data-journal-add-line]').addEventListener('click',()=>{if(busy||guard.locked)return;if(lines.length>=30){status('A draft supports at most 30 lines.');return;}lines=capture();lines.push({});renderLines();});}
     form.addEventListener('submit',event=>{event.preventDefault();run(async()=>{

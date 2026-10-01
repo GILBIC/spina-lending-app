@@ -255,3 +255,25 @@ test('case values and external evidence references are escaped, and already-abor
   assert.match(h.root.innerHTML, /&lt;img/); assert.match(h.root.innerHTML, /&lt;svg/);
   h.controller.abort(); await mount(h); assert.equal(h.root.innerHTML, '');
 });
+
+for(const navigation of ['none','another-control','hidden-workspace'])test(`document review422 focuses linked feedback only while user remains in form: ${navigation}`,async()=>{
+ const h=harness();await mount(h);await open(h);
+ const doc=Object.assign(new EventTarget(),{body:{}});
+ function decorate(node,parent=null){node.ownerDocument=doc;node.parentElement=parent;node.isConnected=true;
+  node.contains=target=>node===target||node.children.some(child=>typeof child!=='string'&&child.contains(target));
+  node.closest=selector=>{let current=node;while(current){if(selector==='[hidden]'&&current.hidden)return current;if(selector==='form'&&current.tag==='form')return current;current=current.parentElement;}return null;};
+  node.focus=()=>{doc.activeElement=node;const event=new Event('focusin');Object.defineProperty(event,'target',{value:node});doc.dispatchEvent(event);};
+  let disabled=node.disabled;Object.defineProperty(node,'disabled',{get:()=>disabled,set:value=>{disabled=value;if(value&&doc.activeElement===node)doc.activeElement=doc.body;}});
+  for(const child of node.children)if(typeof child!=='string')decorate(child,node);
+ }
+ decorate(h.root);
+ for(const name of ['national_id','tin_id','meralco_bill'])enter(h,`${name}_status`,'passed');
+ const form=h.root.querySelector('[data-document-review]');form.querySelector('button').focus();
+ const pending=deferred();h.fetch=()=>pending.promise;submit(h,'[data-document-review]');assert.equal(doc.activeElement,doc.body);
+ if(navigation==='another-control')field(h,'applicationReference').focus();
+ if(navigation==='hidden-workspace')h.root.hidden=true;
+ const active=doc.activeElement;pending.resolve(response({detail:'Synthetic review validation'},422));await setImmediate();
+ const status=h.root.querySelector('[data-onboarding-status]');assert.match(status.textContent,/Synthetic review validation/);
+ assert.equal(doc.activeElement,navigation==='none'?status:active);assert.equal(field(h,'national_id_status').value,'passed');assert.equal(field(h,'national_id_status').disabled,false);
+ assert.equal(form.getAttribute('aria-describedby'),status.getAttribute('id'));
+});

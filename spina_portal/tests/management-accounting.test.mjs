@@ -54,6 +54,58 @@ test('opening line saves exact money and locks uncertain outcomes until reload',
   assert.equal(f.calls.filter((call) => call.method).length, 1); assert.ok(f.root.querySelector('[data-workbook-line]')); f.cleanup();
 });
 
+test('cancelled opening-line review returns to the entered draft and its first field', async () => {
+  const f = await setup({ read: (path) => path.includes('opening-balance-workbook') ? wb() : overview });
+  await f.tab('workbook');
+  value(f.root, 'debit', '1234.56'); value(f.root, 'credit', '');
+  value(f.root, 'verification_status', 'verified'); value(f.root, 'evidence_note', 'Reviewed cash evidence');
+  fire(f.root.querySelector('[data-workbook-line]'), 'submit'); await tick();
+  assert.match(f.root.textContent, /1,234\.56/);
+  fire(f.root.querySelector('[data-accounting-cancel]'), 'click'); await tick();
+  assert.equal(f.root.querySelector('[name="debit"]').value, '1234.56');
+  assert.equal(f.root.querySelector('[name="credit"]').value, '');
+  assert.equal(f.root.querySelector('[name="verification_status"]').value, 'verified');
+  assert.equal(f.root.querySelector('[name="evidence_note"]').value, 'Reviewed cash evidence');
+  assert.equal(f.root.querySelector('[name="debit"]').focused, true);
+  assert.equal(f.calls.filter((call) => call.method).length, 0);
+  f.cleanup();
+});
+
+test('confirmed rejected opening line keeps its draft without replaying the write', async () => {
+  const f = await setup({ read: (path) => path.includes('opening-balance-workbook') ? wb() : overview,
+    write: () => { throw Object.assign(new Error('Evidence note needs review.'), { status: 422 }); } });
+  await f.tab('workbook');
+  value(f.root, 'debit', '1234.56'); value(f.root, 'credit', '');
+  value(f.root, 'verification_status', 'verified'); value(f.root, 'evidence_note', 'Reviewed cash evidence');
+  fire(f.root.querySelector('[data-workbook-line]'), 'submit'); await tick();
+  fire(f.root.querySelector('[data-accounting-confirm]'), 'click'); await tick();
+  assert.equal(f.calls.filter((call) => call.method).length, 1);
+  assert.equal(f.root.querySelector('[name="debit"]').value, '1234.56');
+  assert.equal(f.root.querySelector('[name="evidence_note"]').value, 'Reviewed cash evidence');
+  assert.equal(f.root.querySelector('[name="debit"]').focused, true);
+  assert.match(f.root.textContent, /Evidence note needs review/);
+  assert.equal(f.root.querySelector('[data-accounting-confirm]'), null);
+  value(f.root, 'evidence_note', 'Corrected retained evidence note');
+  fire(f.root.querySelector('[data-workbook-line]'), 'submit'); await tick();
+  assert.equal(f.calls.filter((call) => call.method).length, 1);
+  fire(f.root.querySelector('[data-accounting-confirm]'), 'click'); await tick();
+  assert.equal(f.calls.filter((call) => call.method).length, 2);
+  f.cleanup();
+});
+
+test('cancelled policy review keeps the selected choice and note', async () => {
+  const f = await setup({ read: (path) => path.includes('opening-balance-workbook') ? wb() : overview });
+  await f.tab('workbook');
+  value(f.root, 'confirmed', 'true'); value(f.root, 'policy_note', 'Approved company migration policy');
+  fire(f.root.querySelector('[data-workbook-policy]'), 'submit'); await tick();
+  fire(f.root.querySelector('[data-accounting-cancel]'), 'click'); await tick();
+  assert.equal(f.root.querySelector('[name="confirmed"]').value, 'true');
+  assert.equal(f.root.querySelector('[name="policy_note"]').value, 'Approved company migration policy');
+  assert.equal(f.root.querySelector('[name="confirmed"]').focused, true);
+  assert.equal(f.calls.filter((call) => call.method).length, 0);
+  f.cleanup();
+});
+
 test('opening post binds the current journal identity and authoritative decimal totals', async () => {
   const draft = { workbook_id: workbook, cutover_date: '2026-09-01', workbook_status: 'review_ready', journal_entry_id: journal, journal_status: 'draft', draft_prepared: true, preparation_ready: false, opening_balance_posting_enabled: true, automatic_source_posting_enabled: false, posting_ready: true, total_debit: '1234567890123456.78', total_credit: '1234567890123456.78' };
   const f = await setup({ read: (path) => path.endsWith('journal-draft') ? { journal_draft: draft } : path.includes('opening-balance-workbook') ? wb() : overview, write: () => ({ journal_draft: { ...draft, journal_status: 'posted' } }) });
