@@ -184,7 +184,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Your current permissions do not allow this Management view.',
+            'Your account does not have access to this Management view.',
           ),
         ),
       );
@@ -233,7 +233,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Your current server permissions do not allow ${module.title}.',
+            'Your account does not have access to ${module.title}.',
           ),
         ),
       );
