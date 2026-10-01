@@ -381,15 +381,11 @@ export async function mountManagementWorkspace(context) {
   const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data });
   const staffAccounts = asArray(staff.data.accounts);
   const dailyLinks = [
-    ...(canReviewCif || canRenewals || canReviewPaymentProof
-      ? [['management-clients-loans', 'Clients & loan decisions', renewals.error ? 'Renewal queue unavailable — refresh.' : String(model.pendingRenewals.length) + ' renewals waiting']]
-      : []),
-    ...(canCollectionActions
-      ? [['management-collections', 'Collections', 'Review collection activity, corrections, and past-due work.']]
-      : []),
-    ...(canSupport || canViewStaff || canUseAreaManagement
-      ? [['management-operations', 'People & operations', support.error ? 'Support queue unavailable — refresh.' : String(model.openSupport.length) + ' client support requests open']]
-      : []),
+    ['management-clients-loans', 'Clients & loan decisions',
+      canRenewals && !renewals.error ? String(model.pendingRenewals.length) + ' renewals waiting' : 'Review borrowers, applications, loans, and evidence.'],
+    ['management-collections', 'Collections', 'Review collection activity, corrections, and past-due work.'],
+    ['management-operations', 'People & operations',
+      canSupport && !support.error ? String(model.openSupport.length) + ' client support requests open' : 'Manage staff, areas, employee work, and audit activity.'],
     ...(canViewFinancialStatements || canViewGeneralJournal
       ? [['management-accounting-hub', 'Accounting', 'Open accounting, statements, journals, and trial balance.']]
       : []),
@@ -419,7 +415,7 @@ export async function mountManagementWorkspace(context) {
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Read-only server summary of Past-Due reasons. No penalty, balance, or schedule calculation is performed in Web.</p></div></div><form id="management-past-due-report-search" class="search-bar"><input type="date" name="start_date" aria-label="Start date" /><input type="date" name="end_date" aria-label="End date" /><input name="area" aria-label="Area" maxlength="200" placeholder="Area" /><select name="reason_code" aria-label="Past-due reason"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select><select name="event_kind" aria-label="Past-due event"><option value="">All events</option><option value="unable_to_pay">Full Unable to Pay</option><option value="partial_payment">Partial-payment Past Due</option></select><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
   </section>
   <section class="workspace-group" id="management-accounting-hub" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header>
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header>\n  ${!canViewFinancialStatements && !canViewGeneralJournal ? emptyState('No accounting tools are assigned to this account.') : ''}
   ${canViewFinancialStatements ? '<section class="section-card" id="management-accounting"><div data-management-accounting></div></section>' : ''}
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
   ${canViewGeneralJournal ? `<section class="section-card" id="management-general-journal"><div class="section-heading"><div><h2>General journal & trial balance</h2><p>Review accounting evidence and use the authorized journal actions below.</p></div></div>${generalJournal.error ? errorCard(generalJournal.error) : ''}${trialBalance.error ? errorCard(trialBalance.error) : ''}<div data-management-journal-evidence>${managementGeneralJournalMarkup({ journals: generalJournal.data, trialBalance: trialBalance.data })}</div><div data-management-journal-actions></div></section>` : ''}
