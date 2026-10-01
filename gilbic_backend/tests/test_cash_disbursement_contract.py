@@ -6,12 +6,7 @@ from pydantic import ValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "sql" / "0134_add_cash_disbursement_permission.sql"
-REPOSITORY = (
-    ROOT
-    / "src"
-    / "gilbic_backend"
-    / "employee_operations_repository.py"
-)
+REPOSITORY = ROOT / "src" / "gilbic_backend" / "employee_operations_repository.py"
 
 
 def command(**overrides):
@@ -51,9 +46,7 @@ def test_cash_disbursement_command_is_strict_and_uses_decimal_text():
 
 
 def test_cash_disbursement_permission_is_only_employee_and_management():
-    assert MIGRATION.exists(), (
-        "0134 cash-disbursement permission migration is required"
-    )
+    assert MIGRATION.exists(), "0134 cash-disbursement permission migration is required"
     sql = MIGRATION.read_text(encoding="utf-8").lower()
     compact = "".join(sql.split())
     assert "cash_disbursement.prepare" in sql
@@ -71,8 +64,9 @@ def test_cash_disbursement_repository_derives_balanced_expense_to_cash_lines_onl
     assert "cash_account_code" in source
 
     handler = source[
-        source.index("def do_cash_disbursement_prepare") :
-        source.index("def do_accounting_prepare")
+        source.index("def do_cash_disbursement_prepare") : source.index(
+            "def do_accounting_prepare"
+        )
     ]
     assert "post_manual_journal_entry" not in handler
 
