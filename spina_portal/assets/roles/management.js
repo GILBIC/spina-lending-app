@@ -88,6 +88,71 @@ function loanTable(data) {
   </table></div>`;
 }
 
+function bindManagementOfficeWorkflow(root) {
+  const workflow = root.querySelector('[data-office-workflow]');
+  if (!workflow) return () => {};
+
+  const buttons = Array.from(workflow.querySelectorAll('[data-office-step-target]'));
+  const panels = Array.from(workflow.querySelectorAll('[data-office-step]'));
+  const panelByStep = new Map(
+    panels.map((panel) => [panel.getAttribute('data-office-step'), panel]),
+  );
+
+  const read = (step, name) => {
+    const control = panelByStep.get(step)?.querySelector(`[name="${name}"]`);
+    return String(control?.value || '').trim();
+  };
+  const writeIfEmpty = (step, name, value) => {
+    if (!value) return;
+    const control = panelByStep.get(step)?.querySelector(`[name="${name}"]`);
+    if (control && !String(control.value || '').trim()) control.value = value;
+  };
+  const currentReferences = () => ({
+    intake:
+      read('intake', 'applicationReference')
+      || read('cif', 'applicationReference')
+      || read('application', 'intakeReference')
+      || read('first-loan', 'intakeReference'),
+    application:
+      read('application', 'applicationReference')
+      || read('first-loan', 'applicationReference'),
+  });
+
+  function activate(step) {
+    if (!panelByStep.has(step)) return;
+    const references = currentReferences();
+    if (step === 'cif') {
+      writeIfEmpty('cif', 'applicationReference', references.intake);
+    } else if (step === 'application') {
+      writeIfEmpty('application', 'intakeReference', references.intake);
+    } else if (step === 'first-loan') {
+      writeIfEmpty('first-loan', 'intakeReference', references.intake);
+      writeIfEmpty('first-loan', 'applicationReference', references.application);
+    }
+
+    for (const panel of panels) {
+      if (panel.getAttribute('data-office-step') === step) panel.removeAttribute('hidden');
+      else panel.setAttribute('hidden', '');
+    }
+    for (const button of buttons) {
+      if (button.getAttribute('data-office-step-target') === step) {
+        button.setAttribute('aria-current', 'step');
+      } else {
+        button.removeAttribute('aria-current');
+      }
+    }
+  }
+
+  const removers = buttons.map((button) => {
+    const handler = () => activate(button.getAttribute('data-office-step-target'));
+    button.addEventListener('click', handler);
+    return () => button.removeEventListener('click', handler);
+  });
+
+  activate('intake');
+  return () => removers.forEach((remove) => remove());
+}
+
 function alertsMarkup(alerts, events) {
   const alertCards = alerts.length
     ? `<div class="card-grid">${alerts.map((alert) => `<article class="data-card"><div class="section-heading"><div><h3>${escapeHtml(alert.title || titleCase(alert.code))}</h3><p>${escapeHtml(alert.domain || '')}</p></div>${badge(alert.severity || 'info')}</div><strong class="metric-value">${escapeHtml(alert.count ?? 0)}</strong>${alert.amount != null ? `<p>${formatMoney(alert.amount)}</p>` : ''}</article>`).join('')}</div>`
@@ -317,6 +382,8 @@ export async function mountManagementWorkspace(context) {
   context.officeFirstLoanCleanup = null;
   context.officeOnboardingCleanup?.();
   context.officeOnboardingCleanup = null;
+  context.officeWorkflowCleanup?.();
+  context.officeWorkflowCleanup = null;
   const { root, api, session, setNavigation } = context;
   const canCollectionActions = ['collection.create', 'collection.void.unremitted', 'lending.no_collection.manage', 'lending.contract_collection.activate'].some(permission => hasPermission(session, permission));
   const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
@@ -399,10 +466,26 @@ export async function mountManagementWorkspace(context) {
   </section>
   <section class="workspace-group" id="management-clients-loans" data-workspace-section>
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Clients & loans</h1><p>Review borrowers, applications, loans, renewals, and payment evidence.</p></div></header>
-  ${canReviewCif ? '<section class="section-card" id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>' : ''}
-  ${canReviewCif ? `<section class="section-card" id="management-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Find the office intake record to review the applicant's information.</p></div></div><div data-office-cif-selection></div></section>` : ''}
-  ${canReviewCif ? '<section class="section-card" id="management-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Open recorded request and repayment information using the office references.</p></div></div><div data-office-application-review></div></section>' : ''}
-  ${canReviewCif ? '<section class="section-card" id="management-first-loan"><h2>First-loan approval and office release</h2><div data-office-first-loan></div></section>' : ''}
+  ${canReviewCif ? `<section class="section-card office-workflow-card" data-office-workflow>
+    <div class="office-workflow-nav" role="group" aria-label="Office workflow">
+      <button class="office-workflow-step" type="button" data-office-step-target="intake" aria-current="step">1. Office intake</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="cif">2. CIF review</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="application">3. Application review</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="first-loan">4. First loan</button>
+    </div>
+    <div data-office-step="intake">
+      <section id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>
+    </div>
+    <div data-office-step="cif" hidden>
+      <section id="management-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Continue the selected office intake. SPINA rechecks the reference before showing Client information.</p></div></div><div data-office-cif-selection></div></section>
+    </div>
+    <div data-office-step="application" hidden>
+      <section id="management-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Continue the selected Client and application. SPINA rechecks both references before loading saved details.</p></div></div><div data-office-application-review></div></section>
+    </div>
+    <div data-office-step="first-loan" hidden>
+      <section id="management-first-loan"><h2>First-loan approval and office release</h2><p class="meta">Selected references are carried forward for convenience and revalidated by the protected first-loan workflow.</p><div data-office-first-loan></div></section>
+    </div>
+  </section>` : ''}
   <section class="section-card" id="management-loans"><div class="section-heading"><div><h2>Clients and loans</h2><p>Search the official portfolio. This view does not create or release loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" aria-label="Search clients and loans" placeholder="Client, code, area, or loan number" /><select name="status" aria-label="Loan status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid">${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Remaining portfolio', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue active', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canReviewPaymentProof ? '<section class="section-card" id="management-payment-proofs"><h2>Payment evidence review</h2><div data-management-payment-proofs></div></section>' : ''}
@@ -447,6 +530,7 @@ export async function mountManagementWorkspace(context) {
     context.officeApplicationCleanup = mountOfficeApplicationReview({
       root: root.querySelector('[data-office-application-review]'), api, session, signal: context.signal,
     });
+    context.officeWorkflowCleanup = bindManagementOfficeWorkflow(root);
   }
   context.employeeOperationsCleanup = mountEmployeeOperations({
     root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
