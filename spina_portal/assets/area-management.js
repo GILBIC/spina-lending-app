@@ -38,7 +38,7 @@ export function buildAreaTree(nodes = []) {
 }
 
 export function areaKindLabel(node, parent = null) {
-  if (node?.is_legacy_unmapped) return 'Legacy unmapped area';
+  if (node?.is_legacy_unmapped) return 'Legacy area';
   const depth = Number(node?.depth ?? (parent ? 1 : 0));
   if (depth === 0) return 'City/Municipality';
   if (depth === 1) return 'Barangay';
@@ -146,12 +146,14 @@ function renderTreeRows(
     const collector = node.effective_collector?.full_name || node.effective_collector?.username || '';
     const draggable = canManageOrder && siblings.length > 1;
     return `<div class="area-tree-branch">
-      <button class="area-tree-row${selected ? ' selected' : ''}" type="button" data-area-id="${escapeHtml(node.area_id)}" data-area-parent-id="${escapeHtml(node.parent_area_id || '')}"${draggable ? ' draggable="true"' : ''}>
-        <span class="area-tree-toggle" aria-hidden="true">${hasChildren ? (expanded ? '▾' : '▸') : '•'}</span>
-        <span><strong>${escapeHtml(node.name)}</strong><small>${escapeHtml(areaKindLabel(node, parent))}</small></span>
-        ${collector ? `<span class="meta">${escapeHtml(collector)}</span>` : ''}
-      </button>
-      ${renderOrderControls(node, siblings, index, canManageOrder)}
+      <div class="area-tree-row-shell">
+        <button class="area-tree-row${selected ? ' selected' : ''}" type="button" data-area-id="${escapeHtml(node.area_id)}" data-area-parent-id="${escapeHtml(node.parent_area_id || '')}"${draggable ? ' draggable="true"' : ''}>
+          <span class="area-tree-toggle" aria-hidden="true">${hasChildren ? (expanded ? '▾' : '▸') : '•'}</span>
+          <span><strong>${escapeHtml(node.name)}</strong><small>${escapeHtml(areaKindLabel(node, parent))}</small></span>
+          ${collector ? `<span class="meta">${escapeHtml(collector)}</span>` : ''}
+        </button>
+        ${renderOrderControls(node, siblings, index, canManageOrder)}
+      </div>
       ${expanded ? `<div class="area-tree-children">${renderTreeRows(node.children, expandedAreaIds, selectedAreaId, node, canManageOrder)}</div>` : ''}
     </div>`;
   }).join('');
@@ -163,42 +165,45 @@ function selectedAreaDetails(tree, selected) {
   const selectedCollector = selected.effective_collector?.full_name
     || selected.effective_collector?.username
     || 'Unassigned';
-  const explicitCollector = selected.explicit_collector?.full_name
-    || selected.explicit_collector?.username
-    || 'None';
   const sourceArea = selected.effective_collector_source_area_id
     ? findArea(tree, selected.effective_collector_source_area_id)
     : null;
   const inheritedFrom = sourceArea && sourceArea.area_id !== selected.area_id
     ? sourceArea.name
     : null;
-  let ownershipSummary = '<p><strong>Unassigned</strong></p>';
+
+  let collectorDetail = '<strong>Unassigned</strong><span class="meta">No Collector is assigned to this Area.</span>';
   if (selected.explicit_collector) {
-    ownershipSummary = `<p><strong>Explicit:</strong> ${escapeHtml(explicitCollector)}</p>`;
+    collectorDetail = `<strong>${escapeHtml(selectedCollector)}</strong><span class="meta">Assigned directly</span>`;
   } else if (selected.effective_collector && inheritedFrom) {
-    ownershipSummary = `<p><strong>Inherited:</strong> ${escapeHtml(selectedCollector)} from ${escapeHtml(inheritedFrom)}</p>`;
+    collectorDetail = `<strong>${escapeHtml(selectedCollector)}</strong><span class="meta">Inherited from ${escapeHtml(inheritedFrom)}</span>`;
   } else if (selected.effective_collector) {
-    ownershipSummary = `<p><strong>Inherited:</strong> ${escapeHtml(selectedCollector)}</p>`;
+    collectorDetail = `<strong>${escapeHtml(selectedCollector)}</strong><span class="meta">Inherited assignment</span>`;
   }
+
+  const path = String(selected.full_path || '').trim();
+  const showPath = path && path.toLowerCase() !== String(selected.name || '').trim().toLowerCase();
+  const directClients = Number(selected.direct_client_count ?? 0);
+  const subtreeClients = Number(selected.subtree_client_count ?? 0);
+  const childAreas = Number(selected.child_count ?? 0);
+  const simpleLeaf = childAreas === 0 && directClients === subtreeClients;
+  const countMarkup = simpleLeaf
+    ? `${detailItem('Clients', escapeHtml(directClients))}${detailItem('Child areas', escapeHtml(childAreas))}`
+    : `${detailItem('Direct clients', escapeHtml(directClients))}${detailItem('Clients including subareas', escapeHtml(subtreeClients))}${detailItem('Child areas', escapeHtml(childAreas))}`;
 
   return `<div class="section-heading area-details-heading">
       <div><p class="eyebrow">${escapeHtml(areaKindLabel(selected))}</p><h3>${escapeHtml(selected.name)}</h3></div>
       ${badge(selected.is_active ? 'active' : 'inactive')}
     </div>
-    <p class="area-path">${escapeHtml(selected.full_path)}</p>
+    ${showPath ? `<p class="area-path">${escapeHtml(path)}</p>` : ''}
     <div class="area-collector-summary">
-      ${ownershipSummary}
-      <p><strong>Effective Collector:</strong> ${escapeHtml(selectedCollector)}</p>
-      <p><strong>Explicit Collector:</strong> ${escapeHtml(explicitCollector)}</p>
-      ${inheritedFrom ? `<p><strong>Inherited from:</strong> ${escapeHtml(inheritedFrom)}</p>` : ''}
+      <span class="meta">Collector</span>
+      ${collectorDetail}
     </div>
     <div class="detail-grid area-counts">
-      ${detailItem('Direct Clients:', escapeHtml(selected.direct_client_count ?? 0))}
-      ${detailItem('Subtree Clients:', escapeHtml(selected.subtree_client_count ?? 0))}
-      ${detailItem('Child Areas:', escapeHtml(selected.child_count ?? 0))}
+      ${countMarkup}
     </div>`;
 }
-
 function childCreateLabel(selected) {
   if (!selected || selected.is_legacy_unmapped) return null;
   return Number(selected.depth ?? 0) === 0 ? '+ Add Barangay' : '+ Add Subarea';
@@ -219,11 +224,11 @@ function actionControls(selected, session) {
     }
     actions.push('<button class="button button-outline button-small" type="button" data-area-action="rename">Rename</button>');
     if (selected.is_active) {
-      actions.push('<button class="button button-outline button-small" type="button" data-area-action="move">Move</button>');
+      actions.push('<button class="button button-outline button-small" type="button" data-area-action="move">Move Area</button>');
     }
   }
   if (hasPermission(session, 'area.collector.assign')) {
-    actions.push('<button class="button button-outline button-small" type="button" data-area-action="collector">Collector</button>');
+    actions.push('<button class="button button-outline button-small" type="button" data-area-action="collector">Assign Collector</button>');
   }
   if (hasPermission(session, 'area.client.assign')) {
     actions.push('<button class="button button-outline button-small" type="button" data-area-action="client-transfer">Move Client</button>');
@@ -546,12 +551,12 @@ export function renderAreaManagementShell({
   const canManageOrder = hasPermission(session, 'area.manage');
 
   return `<section class="area-management">
-    <header><p class="eyebrow">AREA MANAGEMENT</p><h2>Area Management</h2></header>
+    <header><h2>Area Management</h2></header>
     <div class="area-management-grid">
       <section class="area-tree-panel">
-        <label>Search area / Collector<input type="search" value="${escapeHtml(query)}" data-area-search></label>
+        <label>Search area or collector<input type="search" value="${escapeHtml(query)}" data-area-search></label>
         <div class="area-tree">${renderTreeRows(filteredTree, expanded, selected?.area_id || null, null, canManageOrder)}</div>
-        ${canManageOrder ? `<div class="area-route-order-controls">${rootCreateControl(session)}<span class="meta">Route order follows the authoritative server order.</span></div>` : ''}
+        ${canManageOrder ? `<div class="area-route-order-controls">${rootCreateControl(session)}<span class="meta">Use the arrows to set collection route order.</span></div>` : ''}
       </section>
       <section class="area-details-panel">
         ${selectedAreaDetails(tree, selected)}
