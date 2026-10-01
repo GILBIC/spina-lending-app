@@ -3,6 +3,7 @@ import { PORTAL_CONFIG } from './config.js';
 import { normalizeRole, sessionWorkspaceRoles } from './roles.js';
 import { SessionStore } from './session.js';
 import { SessionRefreshController } from './session-refresh.js';
+import { ScreenSharingController } from './screen-sharing.js';
 import {
   bindNavigation,
   escapeHtml,
@@ -41,12 +42,20 @@ const workspaceSidebar = document.getElementById('workspace-sidebar');
 const currentScreen = document.getElementById('current-screen');
 const loginFeedback = document.getElementById('login-feedback');
 const accountMenu = document.getElementById('account-menu');
+const sharingController = new ScreenSharingController({
+  root: document.getElementById('screen-sharing-controls'),
+  contentRoot: roleContent,
+  api,
+  sessionStore,
+});
 function closeNavigation() {
   workspaceSidebar?.classList.toggle('is-open', false);
   navigationToggle?.setAttribute('aria-expanded', 'false');
 }
 const workspaceNavigation = bindNavigation(roleNavigation, roleContent, {
+  onBeforeNavigate: ({ to }) => sharingController.beforeNavigate(to),
   onNavigate: ({ label, userInitiated }) => {
+    sharingController.afterNavigate();
     if (currentScreen) currentScreen.textContent = label || 'Today';
     if (userInitiated) closeNavigation();
   },
@@ -85,6 +94,7 @@ function setNavigation(items) {
 }
 
 function clearWorkspace() {
+  sharingController.dispose();
   workspaceController?.abort();
   workspaceController = null;
   currentMount = null;
@@ -109,6 +119,7 @@ function showAuthentication() {
 
 async function mountCurrentWorkspace() {
   if (!currentMount || !currentContext) return;
+  if (sharingController.session) void sharingController.stop();
   workspaceController?.abort();
   const controller = new AbortController();
   workspaceController = controller;
@@ -167,6 +178,7 @@ async function showAuthenticated(session, requestedRole) {
     activateNavigation: () => { if (!workspaceController?.signal.aborted) workspaceNavigation.activate(); },
     uncertainCollection: null,
   };
+  sharingController.mount({ session, role });
   refreshController.start();
   await mountCurrentWorkspace();
   if (currentContext?.session === session) roleContent.focus({ preventScroll: true });
@@ -225,10 +237,13 @@ globalThis.addEventListener('spina:unauthorized', () => {
 });
 globalThis.addEventListener('online', () => {
   updateConnectionStatus();
+  sharingController.updateCaptureAvailability();
   showToast('Connection restored. Refresh to load authoritative records.', 'success');
 });
 globalThis.addEventListener('offline', () => {
+  if (sharingController.session) void sharingController.stop();
   updateConnectionStatus();
+  sharingController.updateCaptureAvailability();
   showToast('Connection lost. Financial entry is unavailable while offline.', 'error');
 });
 

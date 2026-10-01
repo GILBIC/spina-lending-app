@@ -59,6 +59,17 @@ test('phone menu closes before the selected section is scrolled into view', () =
   assert.deepEqual(order, ['collapse-menu', 'focus', 'scroll']);
 });
 
+test('screen sharing invalidates capture before a sensitive section becomes visible', () => {
+  const h = workspace();
+  const observed = [];
+  const control = bindNavigation(h.nav, h.content, {
+    onBeforeNavigate: ({to}) => observed.push({to, oldHidden:h.today.hidden, newHidden:h.records.hidden}),
+  });
+  control.activate('today');
+  control.activate('records');
+  assert.deepEqual(observed.at(-1), {to:'records', oldHidden:false, newHidden:true});
+});
+
 test('home task shortcuts navigate through the same control and unknown targets do nothing', () => {
   const h = workspace();
   assert.equal(typeof h.control?.activate, 'function');

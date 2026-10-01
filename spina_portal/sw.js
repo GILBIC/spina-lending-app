@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v19';
+const CACHE_NAME = 'spina-company-shell-v20';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +9,7 @@ const SHELL_ASSETS = [
   '/assets/config.js',
   '/assets/session.js',
   '/assets/session-refresh.js',
+  '/assets/screen-sharing.js',
   '/assets/roles.js',
   '/assets/ui.js',
   '/assets/presenters.js',

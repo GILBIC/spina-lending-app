@@ -49,7 +49,7 @@ Client errors: 404 unrelated identity/device; 403 authorization failure; 409 inv
 - Pending request expiry: 60 seconds. Active absolute limit: 600 seconds after acceptance.
 - Active lease: 15 seconds, renewed only by an accepted new frame. No automatic reconnect/resume after expiry.
 - Latest image only; expires after 3 seconds. At most 1 accepted frame per second per session.
-- PNG only, at most 524288 bytes and at most 1024 pixels per dimension. Clients target maximum 720-pixel long edge and drop overlarge images. Exactly one in-flight capture/upload; no queue/retries of stale frames.
+- Noninterlaced 8-bit RGB/RGBA PNG only, at most 524288 bytes and at most 1024 pixels per dimension. Validate exact scanline sizes and filter bytes; reject APNG and unknown critical chunks. Clients target maximum 720-pixel long edge and drop overlarge images. Exactly one in-flight capture/upload; no queue/retries of stale frames.
 - At most 2 active sessions hostwide; one pending/active session per viewer device and holder device. Request rate at most 3 requests per viewer per minute. Bound pending rows and target enumeration.
 - Private SQL migration 0134 stores session/audit metadata only. No image bytes, screen text, hashes, secrets or tokens in SQL, logs or disk. Direct client roles have no table access. The new narrow view permission goes to Management only.
 - Process-local cache retains at most approximately 1 MiB of encoded images. Expired bytes are actively evicted by a lightweight process timer, as well as before reads. No infrastructure/service purchase, capture SDK or third-party media relay.
@@ -59,3 +59,5 @@ Client errors: 404 unrelated identity/device; 403 authorization failure; 409 inv
 ## Acceptance
 
 Automated checks must cover wrong roles/accounts/devices, permission and device revocation, consent/expiry, Stop against late upload/read, stale sequence/generation, request/frame size/rate/cap limits, process restart and image eviction, SQL direct-client denial, no private frame persistence and unknown/sensitive route exclusion. Real disposable PostgreSQL checks cover atomic transitions. Web tests use synthetic content; browser capture support must be proved with harmless content before claiming platform acceptance. Android tests cover capture cancellation after dialog/navigation/background/logout and buffer disposal. A small synthetic load check establishes the bounded polling cost. User/device/browser acceptance must be labelled untested until observed; do not equate unit tests with actual capture acceptance.
+
+The owner explicitly deferred the harmless browser capture check on1October (“I'll test it later”). Automated implementation and review continue; actual browser/Windows capture acceptance remains pending.

@@ -1,3 +1,6 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -118,6 +121,8 @@ from .renewal_workflow_api import create_renewal_workflow_router
 from .renewal_workflow_query_api import create_renewal_workflow_query_router
 from .request_body_limit import RequestBodyLimitMiddleware
 from .request_observability import RequestObservabilityMiddleware
+from .screen_share_api import create_screen_share_router
+from .screen_share_repository import PostgresScreenShareRepository
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .seven_by_seven_journal_posting_api import (
     create_seven_by_seven_journal_posting_router,
@@ -143,12 +148,25 @@ _PORTAL_ALLOWED_HEADERS = [
     "X-File-Name",
     "X-Gilbic-Contract-Version",
     "X-Proof-Note",
+    "X-Screen-Share-Generation",
+    "X-Screen-Share-Sequence",
 ]
+
+
+@asynccontextmanager
+async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        app.state.screen_shares.cache.close()
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version=__version__)
+    app = FastAPI(
+        title=settings.app_name, version=__version__, lifespan=application_lifespan
+    )
+    app.state.screen_shares = PostgresScreenShareRepository()
     app.add_middleware(RequestBodyLimitMiddleware)
     app.add_middleware(
         CORSMiddleware,
@@ -156,7 +174,11 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=_PORTAL_ALLOWED_HEADERS,
-        expose_headers=["X-Request-ID"],
+        expose_headers=[
+            "X-Request-ID",
+            "X-Screen-Share-Generation",
+            "X-Screen-Share-Sequence",
+        ],
     )
     app.add_middleware(RequestObservabilityMiddleware)
 
@@ -167,7 +189,14 @@ def create_app() -> FastAPI:
         return PlainTextResponse(
             "Internal Server Error",
             status_code=500,
-            headers={"X-Request-ID": request.state.request_id},
+            headers={
+                "X-Request-ID": request.state.request_id,
+                **(
+                    {"Cache-Control": "no-store"}
+                    if request.url.path.startswith("/api/v1/screen-shares")
+                    else {}
+                ),
+            },
         )
 
     @app.get("/health/live")
@@ -191,6 +220,7 @@ def create_app() -> FastAPI:
         return {"service": "gilbic-backend", "version": __version__}
 
     app.include_router(create_auth_router())
+    app.include_router(create_screen_share_router())
     app.include_router(create_account_router())
     app.include_router(create_employee_operations_router())
     app.include_router(create_management_router())

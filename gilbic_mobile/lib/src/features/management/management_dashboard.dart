@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'dart:async';
 
@@ -154,9 +155,16 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
   }
 
   void _push(BuildContext context, Widget page) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (context) => page));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        settings: page is ManagementLoanPortfolioPage
+            ? const RouteSettings(name: '/mirror-safe/management-portfolio')
+            : null,
+        builder: (context) => page is ManagementLoanPortfolioPage
+            ? SafeMirrorSurface(child: page)
+            : page,
+      ),
+    );
   }
 
   void _openAlertsDestination(

@@ -1380,3 +1380,12 @@ details > :not(summary) {
 .accounting-details dd { margin: 0.2rem 0 0; overflow-wrap: anywhere; }
 [data-journal-form] fieldset { min-width: 0; }
 [data-evidence-form] fieldset { min-width: 0; grid-column: 1 / -1; }
+
+/* The Stop control is outside the restricted workspace capture target. */
+.screen-sharing-controls { padding: 0.4rem clamp(1rem, 3vw, 2rem); background: var(--surface, #fff); }
+.screen-share-panel { display: grid; gap: 0.65rem; padding: 0.8rem; max-width: 46rem; }
+.screen-share-panel select { display: block; max-width: 100%; }
+.screen-share-panel button, .screen-share-active button { min-height: 2.75rem; }
+.screen-share-panel img { display: block; width: 100%; max-width: 45rem; max-height: 70vh; object-fit: contain; background: #15121b; }
+.screen-share-active { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; padding: 0.45rem 0.7rem; border: 2px solid var(--pink-600, #ad1c64); border-radius: 0.6rem; }
+.role-content { isolation: isolate; transform-style: flat; background-color: var(--surface, #fff); }
