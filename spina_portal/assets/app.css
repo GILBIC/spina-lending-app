@@ -1858,6 +1858,68 @@ details > :not(summary) {
   margin-bottom: 1rem;
 }
 
+.accounting-book-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.accounting-book-tab {
+  min-height: 42px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--pink-200);
+  border-radius: var(--radius-sm);
+  color: var(--ink-800);
+  background: white;
+  font-weight: 750;
+}
+
+.accounting-book-tab[aria-selected="true"] {
+  color: var(--pink-900);
+  border-color: var(--pink-500);
+  background: var(--pink-100);
+}
+
+[data-accounting-book-panel][hidden] {
+  display: none;
+}
+
+.accounting-export-details {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.accounting-export-details > summary,
+[data-trial-balance-all-accounts] > summary {
+  cursor: pointer;
+  color: var(--pink-900);
+  font-weight: 750;
+}
+
+.accounting-export-details > .data-card,
+[data-trial-balance-all-accounts] > .table-wrap {
+  margin-top: 0.7rem;
+}
+
+.trial-balance-zero {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.trial-balance-card > details {
+  margin-top: 0.8rem;
+}
+
+.trial-balance-table td:first-child strong {
+  overflow-wrap: anywhere;
+}
+
+
 @media (max-width: 900px) {
   .accounting-navigation {
     grid-template-columns: repeat(2, minmax(0, 1fr));
