@@ -197,9 +197,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text(
-          'Your current server permissions do not allow Staff & devices.',
-        ),
+        find.text('Your account does not have access to Staff & devices.'),
         findsOneWidget,
       );
     },
@@ -287,9 +285,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
-        'Your current server permissions do not allow Financial Accounting.',
-      ),
+      find.text('Your account does not have access to Financial Accounting.'),
       findsOneWidget,
     );
   });
