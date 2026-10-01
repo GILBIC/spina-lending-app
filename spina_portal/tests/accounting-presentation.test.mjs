@@ -61,9 +61,9 @@ test('Accounting workflows are grouped into four clear navigation areas without 
       ['overview', 'periods', 'opening', 'ecl'],
     );
     assert.match(groups[0].textContent, /Overview/);
-    assert.match(groups[1].textContent, /Periods & close/);
+    assert.match(groups[1].textContent, /Periods (?:&|&amp;) close/);
     assert.match(groups[2].textContent, /Opening & cutover/);
-    assert.match(groups[3].textContent, /ECL & tax/);
+    assert.match(groups[3].textContent, /ECL (?:&|&amp;) tax/);
 
     for (const workflow of ['periods','close','capital','workbook','opening','measurement','outcomes','tax']) {
       assert.ok(root.querySelector(`[data-accounting-tab="${workflow}"]`), workflow);
