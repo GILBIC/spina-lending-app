@@ -57,9 +57,21 @@ function installFormData(t) {
   });
 }
 
+function hydrateDataset(root) {
+  for (const element of root.querySelectorAll('[data-client-id]')) {
+    element.dataset = {
+      clientId: element.getAttribute('data-client-id'),
+    };
+  }
+  for (const element of root.querySelectorAll('button')) {
+    element.dataset ||= {};
+  }
+}
+
 function mount({ api }) {
   const root = new Element();
   root.innerHTML = clientAccountAdminMarkup();
+  hydrateDataset(root);
   bindClientAccountAdmin({ root, api });
   return root;
 }
@@ -101,6 +113,7 @@ test('new borrower search invalidates prior borrower and email before new result
   query.value = 'first';
   fire(search, 'submit');
   await tick();
+  hydrateDataset(root);
   fire(root.querySelector('.select-client-account-borrower'), 'click');
 
   create.querySelector('[name="email"]').value = 'maria.a@example.com';
@@ -118,6 +131,7 @@ test('new borrower search invalidates prior borrower and email before new result
 
   resolveSecond({ clients: [clientB] });
   await tick();
+  hydrateDataset(root);
   fire(root.querySelector('.select-client-account-borrower'), 'click');
 
   assert.equal(create.querySelector('[name="clientId"]').value, CLIENT_B);
@@ -140,6 +154,7 @@ test('changing borrower clears an email entered for the previous borrower', asyn
   search.querySelector('[name="query"]').value = 'maria';
   fire(search, 'submit');
   await tick();
+  hydrateDataset(root);
 
   const candidates = root.querySelectorAll('.select-client-account-borrower');
   fire(candidates[0], 'click');
@@ -186,6 +201,7 @@ test('uncertain Client-account creation locks repeat mutation until an authorita
   search.querySelector('[name="query"]').value = 'maria';
   fire(search, 'submit');
   await tick();
+  hydrateDataset(root);
   fire(root.querySelector('.select-client-account-borrower'), 'click');
 
   const create = root.querySelector('#management-client-account-create');
@@ -212,6 +228,7 @@ test('uncertain Client-account creation locks repeat mutation until an authorita
   search.querySelector('[name="query"]').value = 'maria';
   fire(search, 'submit');
   await tick();
+  hydrateDataset(root);
 
   assert.equal(searchCount, 2);
   assert.equal(root.querySelector('[data-client-account-uncertain]'), null);
