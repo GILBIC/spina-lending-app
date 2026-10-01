@@ -7,9 +7,10 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from gilbic_backend import renewal_workflow_api as renewal
 from gilbic_backend.collection_posting import PostgresCollectionPostingBridge
 from spina_mobile_collections.service import CollectionConflict
+
+from gilbic_backend import renewal_workflow_api as renewal
 
 
 @pytest.fixture

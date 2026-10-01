@@ -7,7 +7,6 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from gilbic_backend import collection_void_repository
 from gilbic_backend.collection_void_repository import PostgresCollectionVoidRepository
 from gilbic_backend.concurrent_receipt_collection_posting import (
     ConcurrentReceiptSafeCollectionPostingBridge,
@@ -25,6 +24,8 @@ from test_combined_collection_renewal_workflow_postgres import (
     _connect,
     _setup_combined_case,
 )
+
+from gilbic_backend import collection_void_repository
 
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="GILBIC_TEST_DATABASE_URL is not configured"
@@ -137,8 +138,9 @@ def test_renewal_decision_and_release_serialize_on_request_lock(
     from types import SimpleNamespace
 
     from fastapi import HTTPException
-    from gilbic_backend import renewal_workflow_api as renewal
     from test_combined_collection_renewal_workflow_postgres import _setup_renewal_client
+
+    from gilbic_backend import renewal_workflow_api as renewal
 
     borrower, _collector, client, loan = _setup_renewal_client(mode="fixed_daily")
     with _connect() as connection:

@@ -125,7 +125,7 @@ void main() {
     }
   }
 
-  testWidgets('permission-denied shell still exposes offline safety policy', (
+  testWidgets('collector without route view still exposes offline safety policy', (
     tester,
   ) async {
     final session = UserSession(
@@ -135,7 +135,8 @@ void main() {
       role: AppRole.collector,
       rawRole: 'Collector',
       accessToken: 'token',
-      permissions: const <String>['route.view'],
+      // Write permission alone must never grant route viewing.
+      permissions: const <String>['collection.create'],
     );
 
     await tester.pumpWidget(

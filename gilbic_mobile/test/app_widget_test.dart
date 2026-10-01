@@ -119,7 +119,7 @@ void main() {
   });
 
   testWidgets(
-    'server permission removal fails closed before collector navigation',
+    'server route-view permission removal fails closed before collector navigation',
     (tester) async {
       final store = MemorySessionStore();
       const restricted = UserSession(
@@ -129,7 +129,7 @@ void main() {
         role: AppRole.collector,
         rawRole: 'Collector',
         accessToken: 'restricted-token',
-        permissions: <String>['route.view'],
+        permissions: <String>['collection.create'],
       );
       await store.write(restricted);
 
@@ -151,7 +151,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Daily Collection'), findsNothing);
-      expect((await store.read())?.permissions, <String>['route.view']);
+      expect((await store.read())?.permissions, <String>['collection.create']);
     },
   );
 
