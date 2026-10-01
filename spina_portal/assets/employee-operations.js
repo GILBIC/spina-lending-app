@@ -316,17 +316,44 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     clear();if(!workspace)return;
     const available=Object.entries(FORMS).filter(([action])=>createAllowed(workspace,action));
     const groups=[...new Set(available.map(([,form])=>form.group))];
-    root.innerHTML=`<div class="section-heading"><div><h2>Employee work and pay</h2><p>Record attendance, request time off and review your work and pay. Open a record group below for details and available actions.</p></div><button type="button" class="button button-outline" data-employee-refresh>Refresh employee records</button></div>
+    const reviewer=workspace.capabilities.can_manage_staff||workspace.capabilities.can_configure
+      ||workspace.capabilities.can_prepare_payroll||workspace.capabilities.can_approve_payroll
+      ||workspace.capabilities.can_review_requests||workspace.capabilities.can_review_shortages;
+    const latestAttendance=workspace.attendance_days[0]||null;
+    const latestLeave=workspace.leave_balances[0]||null;
+    const recordCounts={
+      requests:workspace.requests.length,
+      tasks:workspace.tasks.length,
+      advances:workspace.advances.length,
+      shortages:workspace.shortages.length,
+      payroll:workspace.payroll.length,
+    };
+    const setupNotice=workspace.setup_missing.length?`<div class="notice-card warning employee-setup-notice">
+      <h3>Employee setup incomplete</h3>
+      <p>Some employee or payroll information still needs setup before all records are available.</p>
+      <details data-employee-setup-details><summary>Review setup details</summary><ul>${workspace.setup_missing.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></details>
+      <p class="meta">Missing setup does not mean zero pay.</p>
+    </div>`:'';
+    const summary=`<div class="employee-work-summary" data-employee-work-summary>
+      <article><span>Attendance</span><strong>${latestAttendance?esc(latestAttendance.work_date):'No records'}</strong></article>
+      <article><span>Leave</span><strong>${latestLeave?esc(latestLeave.available_minutes)+' min available':'Not configured'}</strong></article>
+      <article><span>Requests</span><strong>${recordCounts.requests}</strong></article>
+      <article><span>Tasks</span><strong>${recordCounts.tasks}</strong></article>
+      <article><span>Advances</span><strong>${recordCounts.advances}</strong></article>
+      <article><span>Payroll</span><strong>${recordCounts.payroll}</strong></article>
+    </div>`;
+    root.innerHTML=`<div class="section-heading"><div><h2>Employee work and pay</h2><p>${reviewer?'Review employee setup, attendance, requests and pay records. Available actions are shown below.':'Record attendance, request time off and review your work and pay.'}</p></div><button type="button" class="button button-outline" data-employee-refresh>Refresh employee records</button></div>
       <p class="meta" data-employee-connection></p>
-      ${workspace.setup_missing.length?`<div class="notice-card warning"><h3>Setup or review needed</h3><ul>${workspace.setup_missing.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><p>Missing inputs do not mean zero pay.</p></div>`:''}
+      ${setupNotice}
+      ${summary}
       ${workspace.capabilities.can_self_service?`<section class="employee-time"><h3>My attendance</h3><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
       <div class="employee-command-groups">${groups.map(group=>`<section><h3>${esc(group)}</h3><div class="inline-actions">${available.filter(([,form])=>form.group===group).map(([action,form])=>`<button type="button" class="button button-outline" data-employee-create="${action}">${esc(form.label)}</button>`).join('')}</div></section>`).join('')}</div>
       <div id="${feedbackId}" data-employee-status role="status" aria-live="polite" tabindex="-1"></div>
       ${pending?'<div class="notice-card warning"><h3>Confirm previous submission</h3><p>The same request identity is retained. Check its result before creating any other change.</p><button type="button" class="button button-secondary" data-employee-check>Check saved result</button><button type="button" class="button button-outline" data-employee-retry>Retry same unchanged request</button></div>':''}
       ${editorMarkup()}
-      <section><h3>Attendance day review</h3>${workspace.attendance_days.length?workspace.attendance_days.map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join(''):emptyState('No attendance day has been recorded.')}</section>
-      <section><h3>Leave balances</h3>${workspace.leave_balances.length?workspace.leave_balances.map(balance=>`<article class="data-card"><strong>${esc(employeeName(workspace,balance.employee_id))}</strong><p>As of ${esc(balance.as_of)} · ${balance.eligible?'Eligible':'Not yet eligible'}</p><p>Available: ${esc(balance.available_minutes)} minutes · Used: ${esc(balance.used_minutes)} · Reserved: ${esc(balance.reserved_minutes)} · Accrued: ${esc(balance.accrued_minutes)} · Verified opening: ${esc(balance.opening_minutes)}</p></article>`).join(''):emptyState('No verified leave balance is available.')}</section>
-      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length||['requests','tasks','advances','shortages','payroll'].includes(key)).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length})</summary><div class="employee-record-grid">${workspace[key].length?workspace[key].map((record,index)=>recordMarkup(workspace,record,`${key}:${index}`)).join(''):emptyState(`No ${label.toLowerCase()} are available for your account.`)}</div></details>`).join('')}`;
+      ${workspace.attendance_days.length?`<section><h3>Attendance day review</h3>${workspace.attendance_days.map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
+      ${workspace.leave_balances.length?`<section><h3>Leave balances</h3>${workspace.leave_balances.map(balance=>`<article class="data-card"><strong>${esc(employeeName(workspace,balance.employee_id))}</strong><p>As of ${esc(balance.as_of)} · ${balance.eligible?'Eligible':'Not yet eligible'}</p><p>Available: ${esc(balance.available_minutes)} minutes · Used: ${esc(balance.used_minutes)} · Reserved: ${esc(balance.reserved_minutes)} · Accrued: ${esc(balance.accrued_minutes)} · Verified opening: ${esc(balance.opening_minutes)}</p></article>`).join('')}</section>`:''}
+      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length})</summary><div class="employee-record-grid">${workspace[key].map((record,index)=>recordMarkup(workspace,record,`${key}:${index}`)).join('')}</div></details>`).join('')}`;
     listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());
     listen(root.querySelector('[data-employee-check]'),'click',()=>load({recover:true}));
     listen(root.querySelector('[data-employee-retry]'),'click',()=>{if(pending)void execute(pending);});
