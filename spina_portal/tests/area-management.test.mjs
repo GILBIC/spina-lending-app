@@ -212,7 +212,7 @@ test('Area kind labels follow root, direct-child, deeper-child, and legacy rules
     name: 'Legacy Route Text',
     is_legacy_unmapped: true,
   };
-  assert.equal(areaKindLabel(legacy, null), 'Legacy unmapped area');
+  assert.equal(areaKindLabel(legacy, null), 'Legacy area');
 });
 
 test('Area search keeps NIA with Cardona and Calahan hierarchy context', () => {
@@ -276,11 +276,11 @@ test('selected Balayong details show inherited Collector, counts, state, and the
 
   assert.match(html, /Cardona › Calahan › Balayong/);
   assert.match(html, /Subarea/);
-  assert.match(html, /Effective Collector:\s*<\/strong>\s*Collector A/);
-  assert.match(html, /Inherited from:\s*<\/strong>\s*Calahan/);
-  assert.match(html, /Direct Clients:\s*<\/span>\s*<strong>3<\/strong>/);
-  assert.match(html, /Subtree Clients:\s*<\/span>\s*<strong>3<\/strong>/);
-  assert.match(html, /Child Areas:\s*<\/span>\s*<strong>0<\/strong>/);
+  assert.match(html, /Collector A/);
+  assert.match(html, /Inherited from Calahan/);
+  assert.match(html, /Clients\s*<\/span>\s*<strong>3<\/strong>/);
+  assert.match(html, /Child areas\s*<\/span>\s*<strong>0<\/strong>/);
+  assert.doesNotMatch(html, /Effective Collector|Explicit Collector|Subtree Clients/);
   assert.match(html, />Active<\/span>/);
 });
 
