@@ -50,7 +50,8 @@ def test_cash_disbursement_permission_is_only_employee_and_management():
     assert MIGRATION.exists(), "0134 cash-disbursement permission migration is required"
     sql = MIGRATION.read_text(encoding="utf-8").lower()
     assert "cash_disbursement.prepare" in sql
-    assert "role.code in ('employee','management')" in sql.replace(" ", "")
+    compact = "".join(sql.split())
+    assert "role.codein('employee','management')" in compact
     assert "collector" not in sql
 
 
