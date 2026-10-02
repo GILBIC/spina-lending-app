@@ -155,7 +155,7 @@ test('Client Web cash confirmation requires explicit confirmation before protect
 });
 
 test('Client workspace consumes the protected renewal-workflow endpoint', () => {
-  assert.match(clientRoleSource, /settledRequest\(api, '\/api\/v1\/client\/renewal-workflow'/);
+  assert.match(clientRoleSource, /renewalWorkflow:'\/api\/v1\/client\/renewal-workflow'/);
   assert.match(clientRoleSource, /clientRenewalWorkflowRows\(/);
   assert.match(clientRoleSource, /bindClientRenewalWorkflowActions\(context\)/);
 });

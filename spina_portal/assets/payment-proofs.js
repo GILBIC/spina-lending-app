@@ -12,7 +12,7 @@ function completeDetail(value) {
     && Array.isArray(value?.history) && value.history.some((entry) => entry?.version?.version_number === proof.current_version.version_number);
 }
 
-export function mountPaymentProofs({root, api, loans = [], loansState, registerHandle, mode = 'client', signal, saveFile = savePrivateFile}) {
+export function mountPaymentProofs({root, api, loans = [], loansState, getLoansState, registerHandle, mode = 'client', signal, saveFile = savePrivateFile}) {
   mounts.get(root)?.();
   const management = mode === 'management';
   const base = `/api/v1/${management ? 'management' : 'client'}/payment-proofs`;
@@ -41,14 +41,14 @@ export function mountPaymentProofs({root, api, loans = [], loansState, registerH
     if (disposed || busy || uncertain || (!preserveEditor&&!discardAllowed())) return; busy = true;
     try {
       const value = await api.request(`${base}?limit=50&offset=${nextOffset}`,{signal:controller.signal});
-      if (disposed) return; offset = nextOffset; listing = value;loaded=true; if(preserveEditor&&root.querySelector('form')){status('Records refreshed. Your draft has been retained.');return;}detail = null; attempt = null; render();
+      if (disposed) return;if(!Array.isArray(value?.proofs))throw Error('Payment-proof records are unavailable. Retry this read.'); offset = nextOffset; listing = value;loaded=true; if(preserveEditor&&root.querySelector('form')){const editor=root.querySelector('form');if(editor.parentNode&&editor.replaceWith){render();const replacement=root.querySelector('form');if(replacement){replacement.replaceWith(editor);listen(editor,'submit',submit);}else {root.appendChild(editor);listen(editor,'submit',submit);editor.querySelector('button[type="submit"]').disabled=true;}}status('Records refreshed. Your draft has been retained.');return;}detail = null; attempt = null; render();
     } catch(error) {fail(error);} finally {busy = false;if(!disposed) lockInputs();}
   }
   function discardAllowed(){const form=root.querySelector('[data-proof-upload]')||root.querySelector('[data-proof-review]');const dirty=form&&(form.querySelector('[name="proofFile"]')?.files?.length||form.querySelector('textarea')?.value);return !dirty||globalThis.confirm?.('Discard this proof draft to open another record?')===true;}
   async function open(id) {
     if(!discardAllowed())return;
     if(disposed || busy || uncertain || !UUID.test(id)) return; busy = true;lockInputs();
-    try {const value=await api.request(`${base}/${id}`,{signal:controller.signal});if(!disposed){detail=value;attempt=null;render();}}
+    try {const value=await api.request(`${base}/${id}`,{signal:controller.signal});if(!disposed){if(!completeDetail(value)||value.proof.proof_id!==id)throw Error('The evidence response does not match the selected record.');detail=value;attempt=null;render();}}
     catch(error){fail(error);}finally{busy=false;if(!disposed)lockInputs();}
   }
   async function content(number, mediaType) {
@@ -61,7 +61,7 @@ export function mountPaymentProofs({root, api, loans = [], loansState, registerH
   async function submit(event) {
     event.preventDefault();if(disposed||busy)return;
     if(!uncertain){
-      if(!management&&!detail?.proof&&loansState&&loansState.status!=='ready'){fail(new Error('Loan records unavailable. Refresh before submitting new proof.'));return;}
+      if(!management&&!detail?.proof&&(getLoansState?.()??loansState)&&(getLoansState?.()??loansState).status!=='ready'){fail(new Error('Loan records unavailable. Refresh before submitting new proof.'));return;}
       if(globalThis.navigator?.onLine===false){fail(new Error('Connect to the internet before submitting evidence.'));return;}
       if(management){
         const decision=root.querySelector('[name="decision"]').value;
@@ -78,7 +78,7 @@ export function mountPaymentProofs({root, api, loans = [], loansState, registerH
         const query=new URLSearchParams({request_id:crypto.randomUUID()});
         let path=base;
         if(detail?.proof){path+=`/${detail.proof.proof_id}/versions`;query.set('expected_version',detail.proof.current_version.version_number);}
-        else {const loanId=root.querySelector('[name="loanId"]').value;if(!UUID.test(loanId)){fail(new Error('Select your loan.'));return;}query.set('loan_id',loanId);}
+        else {const loanId=root.querySelector('[name="loanId"]').value;const currentLoans=getLoansState?.();if(!UUID.test(loanId)||(currentLoans&&!asArray(currentLoans.data?.loans).some(loan=>loan.loan_id===loanId))){fail(new Error('Select your loan.'));return;}query.set('loan_id',loanId);}
         const encodedNote=btoa(String.fromCharCode(...new TextEncoder().encode(note)));
         attempt={path:`${path}?${query}`,options:{method:'POST',rawBody:file,headers:{'Content-Type':file.type,'X-Proof-Note':encodedNote}}};
       }

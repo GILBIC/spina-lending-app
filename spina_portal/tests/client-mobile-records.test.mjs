@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {renderClientSchedule} from '../assets/client-schedule.js';import {renderClientStatement} from '../assets/client-statement.js';
+test('schedule and statement labels, bounded expansion retain every distinct row and exact amount',()=>{
+ const schedule={past_due_amount:'105.00',rows:Array.from({length:120},(_,i)=>({payment_date:'2026-10-02',status:'Unknown',amount:'90071992547409.93',details:{remaining_amount:'40.00',note:`row-${i}`}}))};for(const limit of [20,40,120]){const html=renderClientSchedule(schedule,{today:'2026-10-02',view:'all',visibleLimit:limit});assert.equal((html.match(/data-label="Date"/g)||[]).length,limit);assert.match(html,/90,071,992,547,409\.93/);assert.match(html,/105/);assert.match(html,new RegExp(`Showing ${limit} of 120`));}
+ const html=renderClientStatement({loans:[{}],payments:[{is_voided:true}]});assert.match(html,/data-label="Principal"/);assert.match(html,/data-label="Recorded"/);assert.match(html,/Voided/);
+});
