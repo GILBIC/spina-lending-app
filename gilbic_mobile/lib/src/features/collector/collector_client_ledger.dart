@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
@@ -381,21 +382,11 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: SpinaTheme.brandPinkSoft,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: SpinaTheme.brandPinkDark,
-          fontSize: 9,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
+    return SpinaStatusLabel(label: text, tone: switch (text) {
+      'COLLECTED' || 'REMITTED' => SpinaStatusTone.success,
+      'LACKING' || 'UNABLE' || 'PARTIAL' || 'NOT COLLECTED' => SpinaStatusTone.attention,
+      _ => SpinaStatusTone.information,
+    });
   }
 }
 
@@ -603,10 +594,7 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
     0,
     (highest, entry) => entry.passCount > highest ? entry.passCount : highest,
   );
-  final textBlob = loans
-      .expand((entry) => <String>[entry.status, entry.note, entry.todayNote])
-      .join(' ')
-      .toLowerCase();
+
 
   if (hasLacking) {
     chips.add('LACKING');
@@ -626,7 +614,7 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
     chips.add('MISSED $missed');
   }
   if (hasAdvance) chips.add('ADV');
-  if (textBlob.contains('gcash')) chips.add('GCASH');
+  if (loans.any((entry) => entry.note.trim().isNotEmpty || entry.todayNote.trim().isNotEmpty)) chips.add('NOTE');
   if (desktop7x7) chips.add('7x7 DESK');
   return chips;
 }

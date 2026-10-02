@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -424,10 +425,7 @@ class _ClientLoanSummaryRow extends StatelessWidget {
                     loan.loanTypeName,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  Chip(
-                    visualDensity: VisualDensity.compact,
-                    label: Text(_titleCase(loan.status)),
-                  ),
+                  SpinaStatusLabel(label: _titleCase(loan.status), tone: SpinaStatusTone.information),
                 ],
               ),
               const SizedBox(height: 2),
