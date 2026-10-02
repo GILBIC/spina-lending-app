@@ -74,8 +74,11 @@ const refreshController = new SessionRefreshController({
   api, sessionStore,
   onRefreshed: async (session) => {
     syncCashDisbursementRecovery(api, session);
-    if (!currentContext || currentContext.session.user.id !== session.user.id) return;
-    const scope = (value) => JSON.stringify([sessionWorkspaceRoles(value), value.permissions, value.user?.permissions]);
+    if (!currentContext) return;
+    if (currentContext.session.user.id !== session.user?.id) {
+      sessionStore.clear();showAuthentication();return;
+    }
+    const scope = (value) => JSON.stringify([sessionWorkspaceRoles(value), value.permissions, value.user?.permissions, value.user?.status, value.user?.device_registered]);
     if (scope(currentContext.session) !== scope(session)) {
       await showAuthenticated(session, currentContext.role);
     } else {
