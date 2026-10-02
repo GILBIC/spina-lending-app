@@ -63,6 +63,7 @@ test('readonly preview failure stays editable and performs no financial write',a
 test('late preview and detached forms cannot submit after workspace disposal',async()=>{
   let resolve;const h=harness({response:()=>new Promise(done=>{resolve=done;})});const form=h.root.querySelector('[data-combined-form]');set(form,'amount','100');fire(form.querySelector('[data-preview]'),'click');h.dispose();resolve(preview);await flush();fire(form,'submit');await flush();assert.equal(h.calls.length,1);h.guard.dispose();
 });
+test('confirmed Combined Pay cannot renew its command when route readback remains unchanged',async()=>{const h=harness({response:(path,options)=>path.endsWith('/preview')?{...preview,regular_past_due_followup_required:false}:accepted(options)});const form=h.root.querySelector('[data-combined-form]');set(form,'amount','175.01');fire(form.querySelector('[data-preview]'),'click');await flush();fire(form,'submit');await flush();assert.equal(h.saved,1);fire(form.querySelector('[data-preview]'),'click');await flush();fire(form,'submit');await flush();assert.equal(h.saved,1);assert.equal(h.calls.length,2);assert.match(h.root.textContent,/already saved/i);h.dispose();h.guard.dispose();});
 
 test('changed authoritative route invalidates a mounted reviewed Combined Pay without remounting its cash field',async()=>{
   const root=new Element(),guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock(){}});let consumer,posts=0;const entries=[regular,seven];let route={route_date:'2026-09-28',entries};

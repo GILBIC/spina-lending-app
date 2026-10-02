@@ -46,6 +46,7 @@ export function renderCombinedPreview(result) {
 // Uses the workspace guard for every request that can change financial state.
 // No replay queue: uncertainty locks the workspace until authoritative refresh.
 export function mountCollectorWorkflows({root, api, session, getSession=()=>session, entries, routeDate, getRoute, registerRouteConsumer=()=>()=>{}, guard, identity, onSaved, signal}) {
+  const confirmedPairs=new Set(),pairKey=pair=>JSON.stringify([routeDate,...(pair || []).map(item=>item.route_entry_id).sort()]);
   let pairs = hasPermission(getSession(),'collection.create') ? combinedPairs(entries) : [];
   let canCorrect = hasPermission(getSession(),'collection.correct.own_unremitted');
   let choices = entries.filter(entry => (hasPermission(getSession(),'collection.create') && entry.can_enter_payment && !entry.processed_today) || (canCorrect && entry.can_edit_today && !entry.today_is_locked));
@@ -75,6 +76,7 @@ export function mountCollectorWorkflows({root, api, session, getSession=()=>sess
   form?.addEventListener('input', invalidate);
   form?.addEventListener('change', invalidate);
   form?.querySelector('[data-preview]').addEventListener('click', () => run(async () => {
+    if(confirmedPairs.has(pairKey(pairs[Number(value(form,'pair')) || 0])))throw new Error('This Combined Pay was already saved. Review another current loan pair.');
     const draft = buildCombinedSubmission({...identity(3),routeDate,entries:pairs[Number(value(form,'pair')) || 0],amount:value(form,'amount'),extraChoice:value(form,'extraChoice'),pastDueFollowup:readFollowup(form)});
     const result = await review.preview(draft);
     if (!current() || !result) return;
@@ -86,10 +88,12 @@ export function mountCollectorWorkflows({root, api, session, getSession=()=>sess
   form?.addEventListener('submit', event => {
     event.preventDefault();
     run(async () => {
+      const key=pairKey(pairs[Number(value(form,'pair')) || 0]);
+      if(confirmedPairs.has(key))throw new Error('This Combined Pay was already saved. Review another current loan pair.');
       const request = review.submission();
       const result = await collectorMutation({api,guard,path:'/api/v1/collector/collections/combined',options:{method:'POST',...request},verify:result=>['accepted','duplicate'].includes(result.status) && result.client_transaction_id===request.body.client_transaction_id && result.total_amount===request.body.cash_received_amount && Array.isArray(result.legs) && result.legs.length>0 && result.legs.every(leg=>request.body.legs.some(item=>item.loan_id===leg.loan_id) && typeof leg.receipt_number==='string' && leg.receipt_number.length>0)});
       if (!current()) return;
-      invalidate();
+      confirmedPairs.add(key);invalidate();
       status(result.message || 'Combined payment saved.');
       await onSaved(result,{source:'combined',entryIds:request.body.legs.map(item=>item.route_entry_id)});
     });
