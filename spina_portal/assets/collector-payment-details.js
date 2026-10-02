@@ -33,4 +33,3 @@ export function readFollowup(form) {
   const reason = value(form,'reasonCode');
   return reason ? {reason_code:reason, note:value(form,'followupNote'), promised_payment_date:reason === 'promised_to_pay_later' ? value(form,'promiseDate') : null, promised_amount:reason === 'promised_to_pay_later' ? value(form,'promiseAmount') : null} : null;
 }
-
