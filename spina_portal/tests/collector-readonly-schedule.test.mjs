@@ -7,6 +7,14 @@ const schedule={loan_id:'l',client_id:'c',read_only:true,as_of_date:'2026-10-02'
 test('schedule verifies loan client scope and refuses malformed money',()=>{assert.equal(validateCollectorSchedule(schedule,entry),true);for(const bad of [{...schedule,loan_id:'other'},{...schedule,client_id:'other'},{...schedule,read_only:false},{...schedule,exact_payoff_total:'NaN'}])assert.equal(validateCollectorSchedule(bad,entry),false);});
 test('payoff assessed and projected penalties remain distinct review suppresses confirmed payoff',()=>{const html=renderCollectorSchedule(schedule);for(const text of ['2,205.00','105.00','50.00','Base maturity','Updated maturity','Contract','Past due'])assert.ok(html.includes(text),text);const review=renderCollectorSchedule({...schedule,management_review_required_reason:'Disputed plan'});assert.match(review,/Disputed plan/);assert.doesNotMatch(review,/Exact payoff total/);});
 test('all mode reaches every same date row history uses server as of date',()=>{assert.equal(collectorScheduleRows(schedule,'all').length,120);assert.equal(collectorScheduleRows(schedule,'current').length,60);assert.equal(collectorScheduleRows(schedule,'history').length,60);});
+test('schedule identity version and supplied route contract version are required and consistent',()=>{
+  for(const patch of [{schedule_id:null},{schedule_id:' '},{schedule_version:null},{schedule_version:0},{schedule_version:1.5}])assert.equal(validateCollectorSchedule({...schedule,...patch},entry),false);
+  assert.equal(validateCollectorSchedule(schedule,{...entry,contract_schedule_version:2}),false);assert.equal(validateCollectorSchedule(schedule,{...entry,contract_schedule_version:1}),true);
+});
+test('past installment promise remains visible in Current view without summing row balances',()=>{
+  const root=new Element();root.innerHTML=renderCollectorSchedule({...schedule,rows:[{...schedule.rows[0],installment_id:'old',installment_number:4,promised_for_date:'2026-10-06',promise_status:'pending',promise_remaining_amount:'50.25',date:'2026-10-01'},schedule.rows[61]]});
+  assert.match(root.textContent,/Payment promises/);assert.match(root.textContent,/2026-10-06/);assert.match(root.textContent,/50\.25/);assert.match(root.textContent,/pending/);assert.equal(root.querySelector('tbody').querySelectorAll('tr').length,1);
+});
 for(const change of ['revision','date'])test(`loaded schedule requires explicit re-review after route ${change} changes`,async()=>{
   const root=new Element();let route={route_date:'2026-10-02',entries:[{...entry,route_revision:'v1'}]},reads=0;
   const handle=mountCollectorScheduleView({root,api:{async request(){reads++;return schedule;}},getSession:()=>({permissions:['route.view']}),getRoute:()=>route});
