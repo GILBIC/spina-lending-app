@@ -61,7 +61,7 @@ test('a fresh worker serves the complete static app graph offline without cachin
     seen.add(pathname);
     const response = await offlineFetch(pathname);
     assert.ok(response instanceof Response, `${pathname} must load on first offline reload`);
-    for (const match of (await response.text()).matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)) {
+    for (const match of (await response.text()).matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*)['"]([^'"]+)['"]/g)) {
       if (match[1].startsWith('.')) await visit(new URL(match[1], origin + pathname).pathname);
     }
   }

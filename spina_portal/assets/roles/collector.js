@@ -1,17 +1,8 @@
-import {mountCollectorSurplus} from '../collector-surplus.js';
-import {createTreasuryRoleGate,mountTreasuryBorrowerClaims} from '../treasury-role-tasks.js';
-import {mountAccountCredentials} from '../account-credentials.js';
+import {createTreasuryRoleGate} from '../treasury-role-gate.js';
 import {createCollectorWriteGuard} from '../collector-write-guard.js';
 import {buildCollectorRouteViewModel} from '../presenters.js';
-import {mountCollectorOnboardingVisit} from '../collector-onboarding-visit.js';
-import {mountCollectorWorkflows} from '../collector-workflows.js';
-import {mountCollectorOtherArea} from '../collector-other-area.js';
-import {mountCollectorRenewals} from '../collector-renewals.js';
-import {mountEmployeeOperations} from '../employee-operations.js';
-import {mountCollectorRemittance} from '../collector-remittance.js';
 import {mountCollectorRouteView,collectorWithAttention} from '../collector-route-view.js';
 import {mountCollectorScheduleView} from '../collector-schedule-view.js';
-import {mountCollectorActivity} from '../collector-activity.js';
 import {escapeHtml as h,hasPermission,formatExactMoney as money,metricCard,showToast} from '../ui.js';
 
 export async function mountCollectorWorkspace(context) {
@@ -39,7 +30,20 @@ export async function mountCollectorWorkspace(context) {
   async function onSaved(result,change={}){if(!current())return;remittance?.invalidatePreview('Saved collection or cash change');const refreshed=await refreshRoute(change);if(!current())return;if(refreshed){root.querySelector('[data-collector-refresh-status]').textContent='Saved. Current authoritative route loaded.';if(remittance)await remittance.refresh();}return refreshed;}
   const workflowContext=()=>({api,session:getSession(),getSession,getRoute:()=>route,getRouteDate:()=>route?.route_date,routeDate:route?.route_date,entries:route?.entries || [],guard,identity,onSaved,signal,registerRouteConsumer,beforeTaskChange,afterTaskChange});
   function taskRoot(id){return root.querySelector(`[data-collector-task="${id}"]`);}
-  async function activate(id){if(!current() || !navigation.some(item=>item.id===id))return;visible=id;if(mounted.has(id))return mounted.get(id);let blocked=false;const load=(async()=>{const task=taskRoot(id);if(!task)return;
+  const authority=()=>JSON.stringify([getSession()?.user?.id||getSession()?.user?.user_id,getSession()?.user?.role,(getSession()?.permissions||getSession()?.user?.permissions||[]).slice().sort()]);
+  const loaders={'collector-surplus':()=>import('../collector-surplus.js'),'collector-gcash-claims':()=>import('../treasury-role-tasks.js'),'collector-account':()=>import('../account-credentials.js'),'collector-onboarding':()=>import('../collector-onboarding-visit.js'),'collector-workflows':()=>import('../collector-workflows.js'),'collector-other-area':()=>import('../collector-other-area.js'),'collector-renewals':()=>import('../collector-renewals.js'),'collector-employee-operations':()=>import('../employee-operations.js'),'collector-remittance':()=>import('../collector-remittance.js'),'collector-updates':()=>import('../collector-activity.js')};
+  const retryFiles={'collector-surplus':'collector-surplus.js','collector-gcash-claims':'treasury-role-tasks.js','collector-account':'account-credentials.js','collector-onboarding':'collector-onboarding-visit.js','collector-workflows':'collector-workflows.js','collector-other-area':'collector-other-area.js','collector-renewals':'collector-renewals.js','collector-employee-operations':'employee-operations.js','collector-remittance':'collector-remittance.js','collector-updates':'collector-activity.js'};
+  const importAttempts=new Map();
+  async function taskModule(id){
+    if(!loaders[id])return;
+    const attempt=importAttempts.get(id)||0;
+    try{
+      // Browsers remember failed module URLs. Only an explicit retry requests a
+      // fresh URL for this known task; other mounts and their drafts stay put.
+      return attempt?await import(new URL(`../${retryFiles[id]}?collector_retry=${attempt}`,import.meta.url).href):await loaders[id]();
+    }catch(error){importAttempts.set(id,attempt+1);throw error;}
+  }
+  async function activate(id){if(!current() || !navigation.some(item=>item.id===id))return;visible=id;if(mounted.has(id))return mounted.get(id);let blocked=false;const load=(async()=>{const task=taskRoot(id);if(!task)return;const scope=authority();const module=await taskModule(id);if(!current()||scope!==authority()){blocked=true;return;}const {mountCollectorSurplus,mountTreasuryBorrowerClaims,mountAccountCredentials,mountCollectorOnboardingVisit,mountCollectorWorkflows,mountCollectorOtherArea,mountCollectorRenewals,mountEmployeeOperations,mountCollectorRemittance,mountCollectorActivity}=module||{};
       if(id==='collector-surplus'){surplusHandle=mountCollectorSurplus({root:task,api,getSession,signal,beforeTaskChange,afterTaskChange,canStartWrite:treasuryGate.canStartWrite,mode:'own'});cleanups.push(surplusHandle);await surplusHandle.ready;}else if(id==='collector-gcash-claims'){treasuryHandle=mountTreasuryBorrowerClaims({root:task,api,getSession,signal,mode:'collector',beforeTaskChange,afterTaskChange,canStartWrite:treasuryGate.canStartWrite});cleanups.push(treasuryHandle);await treasuryHandle.ready;}else if(id==='collector-remittance'){remittance=mountCollectorRemittance({root:task,api,getSession,getRouteDate:()=>routeError?null:route?.route_date,guard,onSaved,signal,beforeTaskChange,afterTaskChange});cleanups.push(()=>remittance.dispose());await remittance.refresh();}
       else if(id==='collector-updates'){const activity=mountCollectorActivity({root:task,api,getSession,getTargets:()=>({route:routeError?null:route,remittances:remittance?.states.history.data || []}),navigate,openTarget:async target=>{if(target.sectionId==='collector-route'){routeView.focusEntry(target.routeEntryId);routeView.openReceipt({routeEntryId:target.routeEntryId,transactionId:target.recordId});}else{await activate('collector-remittance');remittance?.openRecord(target.recordId);}},signal,beforeTaskChange,afterTaskChange});cleanups.push(()=>activity.dispose());task.activityHandle=activity;await activity.refresh();}
       else if(id==='collector-workflows' || id==='collector-other-area'){if(!route || routeError){task.innerHTML='<h2>'+h(id==='collector-workflows'?'Collections & corrections':'Other-area collection')+'</h2><p>Route unavailable — refresh before collecting.</p>';blocked=true;return;}const mount=id==='collector-workflows'?mountCollectorWorkflows:mountCollectorOtherArea;cleanups.push(mount({...workflowContext(),root:task}));}
@@ -47,8 +51,18 @@ export async function mountCollectorWorkspace(context) {
       else if(id==='collector-employee-operations'){task.setAttribute('data-employee-operations','');context.employeeOperationsCleanup=mountEmployeeOperations({...workflowContext(),root:task,onController:handle=>{employeeHandle=handle;}});cleanups.push(()=>context.employeeOperationsCleanup?.());}
       else if(id==='collector-onboarding'){task.setAttribute('data-collector-onboarding','');context.collectorOnboardingCleanup=mountCollectorOnboardingVisit({...workflowContext(),root:task});cleanups.push(()=>context.collectorOnboardingCleanup?.());}
       else if(id==='collector-account'){task.innerHTML='<h2>My account</h2><div data-collector-account-summary></div><div data-account-credentials></div>';context.accountCredentialsCleanup=mountAccountCredentials({root:task.querySelector('[data-account-credentials]'),api,session:getSession(),getSession,signal});cleanups.push(()=>context.accountCredentialsCleanup?.());try{const account=await api.request('/api/v1/account',{signal});if(current())task.querySelector('[data-collector-account-summary]').textContent=account.profile?.full_name || 'Signed-in Collector account';}catch(error){if(current())task.querySelector('[data-collector-account-summary]').textContent='Account details unavailable. '+error.message;}}
-      if(current())guard.sync();})();mounted.set(id,load);await load;if(blocked)mounted.delete(id);return load;}
+      if(current())guard.sync();})();
+    const handled=load.then(()=>{if(blocked)mounted.delete(id);}).catch(()=>{
+      mounted.delete(id);
+      if(current()){
+        beforeTaskChange();const task=taskRoot(id);
+        task.innerHTML='<p>This task could not load. Your other work is retained.</p><button type="button" data-retry-task>Retry task</button>'+(importAttempts.get(id)>1?'<p>If app files remain unavailable, save or finish your other work before reloading the page.</p>':'');
+        task.querySelector('[data-retry-task]')?.addEventListener('click',()=>activate(id));afterTaskChange();
+      }
+    });
+    mounted.set(id,handled);return handled;
+  }
   async function refreshVisible(){if(!current())return false;if(guard.busy || guard.locked || surplusHandle?.isWritePending()||treasuryHandle?.isWritePending()||treasuryGate.isWritePending()||employeeHandle?.isWritePending()){root.querySelector('[data-collector-refresh-status]').textContent=guard.locked?'Financial uncertainty remains locked. Check the saved record before any new attempt.':'A protected write is in progress. Refresh after it finishes.';showToast('Refresh is paused while financial entry needs confirmation. Your drafts are retained.','warning');return false;}if(visible==='collector-surplus')return surplusHandle?.refreshReadOnly();if(visible==='collector-gcash-claims')return treasuryHandle?.refreshReadOnly();const refreshed=await refreshRoute();if(!current())return false;await activate(visible);if(visible==='collector-remittance' && remittance)await remittance.refresh();if(visible==='collector-updates')await taskRoot(visible)?.activityHandle?.refresh();if(visible==='collector-renewals')await renewalHandle?.refresh();if(visible==='collector-employee-operations')await employeeHandle?.refresh();return refreshed;}
-  function dispose(){if(disposed)return;disposed=true;routeVersion++;beforeTaskChange();for(const cleanup of cleanups)cleanup();consumers.clear();mounted.clear();route=null;guard.dispose();root.innerHTML='';signal?.removeEventListener('abort',dispose);afterTaskChange();}
+  function dispose(){if(disposed)return;disposed=true;routeVersion++;beforeTaskChange();for(const cleanup of cleanups)cleanup();consumers.clear();mounted.clear();importAttempts.clear();route=null;guard.dispose();root.innerHTML='';signal?.removeEventListener('abort',dispose);afterTaskChange();}
   const handle={activate,refreshVisible,dispose,isWritePending:()=>guard.busy||guard.locked||surplusHandle?.isWritePending()||treasuryHandle?.isWritePending()||treasuryGate.isWritePending()||Boolean(employeeHandle?.isWritePending())};context.collectorWorkspaceHandle=handle;context.registerWorkspaceHandle?.(handle);signal?.addEventListener('abort',dispose,{once:true});today();context.activateNavigation?.();await refreshRoute();
 }

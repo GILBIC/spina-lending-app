@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -22,6 +22,8 @@ const files = [
 ];
 
 for (const file of files) {
+  // Browsers decode modules as UTF-8; reject corrupted labels before publishing.
+  new TextDecoder('utf-8', { fatal: true }).decode(await readFile(file));
   const result = spawnSync(process.execPath, ['--check', file], {
     encoding: 'utf8',
     stdio: 'pipe',

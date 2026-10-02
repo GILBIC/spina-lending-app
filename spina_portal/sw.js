@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v24-collector-surplus';
+const CACHE_NAME = 'spina-company-shell-v25-exact-plan-followthrough';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -11,6 +11,7 @@ const SHELL_ASSETS = [
   '/assets/treasury-workspace.js',
   '/assets/treasury-payment-claim.js',
   '/assets/treasury-role-tasks.js',
+  '/assets/treasury-role-gate.js',
   '/assets/api.js',
   '/assets/config.js',
   '/assets/session.js',
@@ -23,6 +24,7 @@ const SHELL_ASSETS = [
   '/assets/collector-write-guard.js',
   '/assets/collector-workflow-contract.js',
   '/assets/collector-workflows.js',
+  '/assets/collector-payment-details.js',
   '/assets/collector-other-area.js',
   '/assets/collector-renewals.js',
   '/assets/collector-remittance.js',
