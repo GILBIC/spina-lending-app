@@ -171,6 +171,7 @@ export function bindManagementLoanOperations(context) {
     const tabs = context.root.querySelectorAll?.('[data-loan-ops-tab]') ?? [];
     const panels = context.root.querySelectorAll?.('[data-loan-ops-panel]') ?? [];
     const activate = (id) => {
+      context.beforeTaskChange?.();
       selectedView=id;
       for (const panel of panels) {
         if (panel.getAttribute('data-loan-ops-panel') === id) panel.removeAttribute('hidden');
@@ -182,6 +183,7 @@ export function bindManagementLoanOperations(context) {
         if (selected) tab.setAttribute('class', 'loan-ops-tab active');
         else tab.setAttribute('class', 'loan-ops-tab');
       }
+      context.afterTaskChange?.();
     };
     for (const tab of tabs) {
       tab.addEventListener?.('click', (event) => {
@@ -195,6 +197,7 @@ export function bindManagementLoanOperations(context) {
   const reload = async () => {
     if(!alive())return false;
     const version=++generation;
+    context.beforeTaskChange?.();
     target.innerHTML = loadingPanel('Loading loan operations…');
     try {
       const data = await loadManagementLoanOperations(context.api, {
@@ -202,11 +205,12 @@ export function bindManagementLoanOperations(context) {
         status: statusInput?.value ?? 'all',
       });
       if(!alive()||version!==generation)return false;
+      context.beforeTaskChange?.();
       target.innerHTML = managementLoanOperationsMarkup(data);
       bindLocalViews();
       return true;
     } catch (error) {
-      if(alive()&&version===generation)target.innerHTML = `${errorCard(error)}<button type="button" class="button button-outline" data-loan-operations-retry>Retry collection history</button>`;
+      if(alive()&&version===generation){context.beforeTaskChange?.();target.innerHTML = `${errorCard(error)}<button type="button" class="button button-outline" data-loan-operations-retry>Retry collection history</button>`;context.afterTaskChange?.();}
       target.querySelector('[data-loan-operations-retry]')?.addEventListener('click',()=>void reload(),{once:true});
       return false;
     }

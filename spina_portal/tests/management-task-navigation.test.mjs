@@ -14,7 +14,7 @@ test('local tasks load on first activation, retain DOM drafts and refresh only t
  assert.equal(reads,0);await c.activate('group','first');assert.equal(reads,1);
  const input=root.querySelector('[name="draft"]');input.value='Unfinished';
  await c.activate('group','second');await c.activate('group','first');assert.equal(reads,2);assert.equal(root.querySelector('[name="draft"]'),input);assert.equal(input.value,'Unfinished');
- await c.refreshVisible();assert.equal(refreshes,1);assert.deepEqual(order,['before','after','before','after','before','after']);c.dispose();
+ await c.refreshVisible();assert.equal(refreshes,1);assert.deepEqual(order,['before','after','before','after','before','after','before','after']);c.dispose();
 });
 test('slow, failed or disposed tasks cannot replace another task or clear pending work',async()=>{
  const mod=await import('../assets/management-workspace-tasks.js').catch(()=>null);assert.ok(mod?.createManagementTaskController);

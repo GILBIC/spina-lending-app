@@ -66,8 +66,11 @@ export function createManagementTaskController({root, signal, getSession, tasks,
     if(!state || !allowed(state.task))return false;
     const handle=await load(state);
     if(!alive())return false;
-    if(handle?.refresh)return handle.refresh();
-    if(state.task.refresh)return state.task.refresh(handle);
+    if(handle?.refresh||state.task.refresh){
+      beforeTaskChange();
+      try{return await (handle?.refresh?handle.refresh():state.task.refresh(handle));}
+      finally{if(alive())afterTaskChange();}
+    }
     showToast('Your work is retained. Use the task’s refresh or search controls.');
     return false;
   }

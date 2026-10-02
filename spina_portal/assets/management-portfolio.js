@@ -35,7 +35,7 @@ export function managementPortfolioSummaryMarkup({status, summary = {}}) {
     </div>`;
 }
 
-export function mountManagementPortfolio({root, api, signal, initialResult, getSession = () => null}) {
+export function mountManagementPortfolio({root, api, signal, initialResult, getSession = () => null, beforeTaskChange=()=>{}, afterTaskChange=()=>{}}) {
   let disposed = false;
   let generation = 0;
   let offset = 0;
@@ -72,6 +72,7 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
   }
   function render(result) {
     if (!alive()) return;
+    beforeTaskChange();
     const failed = result.error || !result.data || !Array.isArray(result.data.loans);
     summaryRoot.innerHTML = managementPortfolioSummaryMarkup({status: failed ? 'error' : 'ready', summary: result.data?.summary});
     results.innerHTML = failed ? errorCard(result.error || new Error('Portfolio response unavailable. Retry this read.')) : loanTable(result.data);
@@ -85,13 +86,14 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
         const loan = result.data.loans.find(row => validId(row.loan_id) && validId(row.client_id)
           && row.loan_id === button.getAttribute('data-portfolio-open') && row.client_id === button.getAttribute('data-portfolio-client'));
         if (!loan) return;
-        closeDetail();detail.innerHTML=managementLoanDetailMarkup(loan);detail.hidden=false;
+        beforeTaskChange();closeDetail();detail.innerHTML=managementLoanDetailMarkup(loan);detail.hidden=false;afterTaskChange();
         detail.querySelector('[data-portfolio-detail-title]')?.focus();
-        const close=()=>{closeDetail();button.focus?.();};
+        const close=()=>{beforeTaskChange();closeDetail();button.focus?.();if(alive())afterTaskChange();};
         const control=detail.querySelector('[data-portfolio-close]');control.addEventListener('click',close);
         detailCleanup=()=>control.removeEventListener('click',close);
       });
     }
+    afterTaskChange();
   }
   async function refresh() {
     if (!alive()) return;
@@ -101,6 +103,7 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
     const status = ['active','paid','all'].includes(selected) ? selected : 'active';
     const key = `${query}|${status}`;
     if (queryKey !== key) offset=0;
+    beforeTaskChange();
     queryKey=key;loading=true;closeDetail();updatePaging();
     summaryRoot.innerHTML = managementPortfolioSummaryMarkup({status:'loading'});
     results.innerHTML = '<p role="status">Loading search results…</p>';

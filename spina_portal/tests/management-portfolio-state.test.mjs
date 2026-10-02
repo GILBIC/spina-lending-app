@@ -56,3 +56,9 @@ test('an older or aborted search cannot replace a newer query response',async t=
   pending[0]({summary,loans:[]});await a;assert.match(root.textContent,/₱900\.00/);assert.doesNotMatch(root.textContent,/12,345/);
   const c=h.refresh();controller.abort();pending[2]({summary,loans:[]});await c;assert.doesNotMatch(root.textContent,/12,345/);
 });
+
+test('portfolio search invalidates prepared capture before replacing the visible report',async()=>{
+ const {mountManagementPortfolio}=await import('../assets/management-portfolio.js');const root=new Element(),snapshots=[];
+ const h=mountManagementPortfolio({root,getSession:()=>session,beforeTaskChange:()=>snapshots.push(root.querySelector('#management-loan-results')?.textContent),api:{async request(){return {summary,loans:[]};}}});
+ root.querySelector('#management-loan-results').textContent='Previously visible';await h.refresh();assert.equal(snapshots[0],'Previously visible');assert.ok(snapshots.length>=2);h.dispose();
+});

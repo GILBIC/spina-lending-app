@@ -531,7 +531,7 @@ export async function mountManagementWorkspace(context) {
   }
   const tasks=[];
   const add=(id,group,label,mount,permission)=>{if(root.querySelector(`#${id}`))tasks.push({id,group,label,mount,allowed:()=>!permission||can(permission)});};
-  const options=selector=>({root:root.querySelector(selector),api,session:getSession(),getSession,signal:context.signal});
+  const options=selector=>({root:root.querySelector(selector),api,session:getSession(),getSession,signal:context.signal,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange});
   function readTask({load,render,target,bind}){
     let version=0,cleanup=()=>{};
     const refresh=async()=>{const request=++version;try{const data=await load();if(!active()||request!==version)return;cleanup();target.innerHTML=render(data);cleanup=bind?.(data)||(()=>{});return true;}catch(error){if(active()&&request===version){cleanup();target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-read-retry>Retry</button>`;target.querySelector('[data-read-retry]')?.addEventListener('click',()=>void refresh(),{once:true});}return false;}};
