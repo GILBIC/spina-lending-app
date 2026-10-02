@@ -531,7 +531,7 @@ export async function mountManagementWorkspace(context) {
   add('management-remittances','management-collections','Remittance review',async()=>{
     let handle;
     const dispose=mountRemittanceReview({...options('[data-management-remittance-review]'),notifications:null,
-      loadNotifications:()=>api.request('/api/v1/notifications',{signal:context.signal}),
+      receivingContractRequired:true,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange,canStartCountWrite:()=>!context.managementTaskController?.isWritePending('management-remittances')&&!treasuryGate.isWritePending(),loadNotifications:()=>api.request('/api/v1/notifications',{signal:context.signal}),
       registerHandle:value=>{handle=value;},onNoticesChanged:()=>{void refreshOverview();}});
     await handle?.refreshReadOnly();
     return{dispose,refresh:()=>handle?.refreshReadOnly(),isWritePending:()=>handle?.isUncertain()===true||handle?.isWritePending()===true};

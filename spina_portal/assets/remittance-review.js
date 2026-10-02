@@ -1,3 +1,4 @@
+import {mountCollectorSurplus} from './collector-surplus.js';
 import { asArray, badge, emptyState, escapeHtml, hasPermission } from './ui.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -63,7 +64,7 @@ export function rejectedRemittanceMatches(result, record, actorId, reason) {
     && result.rejection_reason === reason.trim();
 }
 
-function detailMarkup(record, decisionAllowed = true) {
+function detailMarkup(record, decisionAllowed = true, counted=false) {
   return `<article class="data-card">
     <h3>Review ${escapeHtml(record.remittance_number)}</h3>
     <p>From ${escapeHtml(record.collector_name)} to ${escapeHtml(record.recipient_name)} · ${escapeHtml(record.collection_date)}</p>
@@ -88,10 +89,10 @@ function detailMarkup(record, decisionAllowed = true) {
     <p>Submitted: ${escapeHtml(record.submitted_at || 'Not recorded')} · Reviewed: ${escapeHtml(record.reviewed_at || 'Not recorded')} · Received: ${escapeHtml(record.received_at || 'Not recorded')} · Rejected: ${escapeHtml(record.rejected_at || 'Not recorded')}</p>
     ${record.rejection_reason ? `<p>Rejection reason: ${escapeHtml(record.rejection_reason)}</p>` : ''}
     <p>Cash stays under the sender's responsibility until you physically receive it and SPINA confirms acceptance.</p>
-    ${decisionAllowed ? `<form class="entry-form" data-remittance-accept-form>
+    ${counted?'<div data-counted-receiving data-private-panel></div>':''}${decisionAllowed ? `<form class="entry-form" data-remittance-accept-form>
       <label><input type="checkbox" name="reviewedPayments" /> I reviewed every included payment, receipt, covered date and refund cash outflow.</label>
-      <label><input type="checkbox" name="physicallyReceived" /> I physically received and counted the cash matching the server cash total.</label>
-      <button class="button button-primary" type="submit" data-remittance-accept disabled>Accept cash custody</button>
+      <label ${counted?'hidden':''}><input type="checkbox" name="physicallyReceived" /> I physically received and counted the cash matching the server cash total.</label>
+      <button class="button button-primary" type="submit" data-remittance-accept ${counted?'hidden':''} disabled>Accept cash custody</button>
       <label>Reason for rejecting this remittance <textarea name="rejectionReason" maxlength="500"></textarea></label>
       <label><input type="checkbox" name="confirmRejection" /> Reject ${escapeHtml(record.remittance_number)}: cash remains with the sender and this handover cannot be accepted.</label>
       <button class="button button-secondary" type="button" data-remittance-reject disabled>Reject remittance</button>
@@ -101,7 +102,7 @@ function detailMarkup(record, decisionAllowed = true) {
 }
 
 export function mountRemittanceReview({ root, api, session, notifications, signal, loadNotifications, onNoticesChanged,
-  getSession = () => session, registerHandle, isOnline = () => globalThis.navigator?.onLine !== false }) {
+  getSession = () => session, registerHandle, receivingContractRequired=false,beforeTaskChange=()=>{},afterTaskChange=()=>{},canStartCountWrite=()=>true, isOnline = () => globalThis.navigator?.onLine !== false }) {
   if (!root) return () => {};
   let notices = asArray(notifications).filter((notice) => notice && typeof notice === 'object');
   let noticesLoaded = Array.isArray(notifications);
@@ -114,7 +115,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   let loading = false;
   let submitting = false;
   let locked = false;
-  let pendingDecision = null;
+  let pendingDecision = null,countHandle=null;
   const finalized = new Set();
   let opener = null;
   root.innerHTML = '<div class="list-stack" data-remittance-notices></div><div role="status" aria-live="polite" tabindex="-1" data-remittance-message></div><button class="button button-secondary" type="button" data-remittance-retry>Refresh remittances</button><div data-remittance-detail></div>';
@@ -133,24 +134,24 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
     listeners.push(() => element.removeEventListener(type, handler));
   }
 
-  function clearDetail() {
+  function clearDetail() {const previous=countHandle;countHandle=null;previous?.();beforeTaskChange();
     generation += 1;
     loading = false;
     for (const input of detail.querySelectorAll('input')) input.checked = false;
     for (const input of detail.querySelectorAll('textarea')) input.value = '';
-    detail.innerHTML = '';
+    detail.innerHTML = '';afterTaskChange();
   }
 
   function updateButtons() {
     for (const button of rows.querySelectorAll('[data-review-notification]')) {
-      button.disabled = locked || loading || submitting;
+      button.disabled = locked || loading || submitting||countHandle?.isWritePending();
     }
     for (const input of detail.querySelectorAll('input')) input.disabled = locked || submitting;
     for (const input of detail.querySelectorAll('textarea')) input.disabled = locked || submitting;
     const retry = root.querySelector('[data-remittance-retry]');
     if (retry) retry.disabled = submitting || loading;
     const close = detail.querySelector('[data-remittance-close]');
-    if (close) close.disabled = submitting;
+    if (close) close.disabled = submitting||countHandle?.isWritePending();
     const accept = detail.querySelector('[data-remittance-accept]');
     if (accept) accept.disabled = locked || submitting
       || !detail.querySelector('[name="reviewedPayments"]').checked
@@ -217,7 +218,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
         message.textContent = 'The complete pending remittance could not be verified. Use Refresh to check its current status.';
         return;
       }
-      detail.innerHTML = detailMarkup(matches[0],!readOnly);
+      let counted=false;if(receivingContractRequired&&!readOnly){const compatibility=await api.request(`/api/v1/treasury/collector-surplus/remittances/${notice.remittance_id}/receiving-contract`,{signal:controller.signal});if(!active()||current!==generation)return;if(compatibility?.collector_surplus_contract_version!==1||compatibility.remittance_id!==notice.remittance_id||compatibility.recipient_user_id!==actorId||typeof compatibility.count_required!=='boolean'||typeof compatibility.legacy_receive_allowed!=='boolean'||compatibility.count_required===compatibility.legacy_receive_allowed)throw Error('The current receiving contract is unavailable. No cash acceptance can be submitted.');counted=compatibility.count_required;}beforeTaskChange();detail.innerHTML = detailMarkup(matches[0],!readOnly,counted);afterTaskChange();if(counted){countHandle=mountCollectorSurplus({root:detail.querySelector('[data-counted-receiving]'),api,getSession,signal:controller.signal,remittanceId:notice.remittance_id,mode:'staff',beforeTaskChange,afterTaskChange,canStartWrite:canStartCountWrite,onPendingChange:updateButtons,onSaved:result=>{if(!['accepted_exact','accepted_pending_identification'].includes(result.result?.disposition))return;if(result.result.settlement?.remittance_id!==notice.remittance_id)return;finalized.add(notice.notification_id);clearDetail();message.textContent='Exact counted cash acceptance is confirmed. Additional cash remains pending identification if recorded.';void refreshReadOnly();}});await countHandle.ready;}
       const reviewedEvidence = JSON.stringify(matches[0]);
       message.textContent = 'Review the complete list, then confirm physical cash receipt.';
       if(readOnly){message.textContent='Full remittance evidence, read only.';on(detail.querySelector('[data-remittance-close]'),'click',()=>{if(submitting)return;clearDetail();updateButtons();opener?.focus?.();});detail.querySelector('[data-remittance-close]')?.focus();return;}
@@ -231,12 +232,13 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       on(confirm, 'change', updateButtons);
       reviewed.focus?.();
       on(detail.querySelector('[data-remittance-close]'), 'click', () => {
-        if (!active() || submitting || current !== generation) return;
+        if (!active() || submitting || countHandle?.isWritePending() || current !== generation) return;
         clearDetail(); message.textContent = ''; updateButtons();
         opener?.focus?.();
       });
       async function decide(kind, event) {
         event.preventDefault();
+        if(kind==='accept'&&counted){message.textContent='Use the current count and exact acceptance phases. Boolean acceptance is unavailable.';return;}if(countHandle?.isWritePending()){message.textContent='Recover the exact pending counted phase before another decision.';return;}
         if (!active() || locked || submitting || current !== generation || offline()) return;
         if (!authorized(true)) {denied();return;}
         if (!reviewed.checked || (kind === 'accept' && !received.checked)) {
@@ -295,7 +297,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
         } catch (error) {
           if (!active() || current !== generation) return;
           if ([401, 403].includes(error?.status)) denied();
-          else if(pendingDecision)uncertain();
+          else if(error?.code==='collector_count_required'){pendingDecision=null;locked=false;clearDetail();message.textContent='Actual count is now required. Open a fresh review; acknowledgment-only acceptance is disabled.';}else if(pendingDecision)uncertain();
           else message.textContent='Current remittance evidence could not refresh. No decision was sent. Use Refresh and review again.';
         } finally {
           submitting = false;
@@ -314,7 +316,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   }
 
   async function refreshReadOnly() {
-    if(!active() || loading || submitting || offline())return;
+    if(!active() || loading || submitting || countHandle?.isWritePending() || offline())return;
     if(!authorized()) {denied();return;}
     loading=true;updateButtons();
     try {
@@ -357,7 +359,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
 
   signal?.addEventListener('abort', cleanup, { once: true });
   on(root.querySelector('[data-remittance-retry]'),'click',refreshReadOnly);
-  registerHandle?.({refreshReadOnly,openRecord:async(id)=>{const notice=notices.find(item=>item?.remittance_id===id||item?.notification_id===id);if(notice)await openReview(notice,!canReceive||!reviewable(notice,actorId));},isUncertain:()=>locked,isWritePending:()=>submitting,dispose:cleanup});
+  registerHandle?.({refreshReadOnly,openRecord:async(id)=>{const notice=notices.find(item=>item?.remittance_id===id||item?.notification_id===id);if(notice)await openReview(notice,!canReceive||!reviewable(notice,actorId));},isUncertain:()=>locked||countHandle?.isUncertain()===true,isLegacyWritePending:()=>submitting||locked,isWritePending:()=>submitting||countHandle?.isWritePending()===true,dispose:cleanup});
   if (signal?.aborted || !hasPermission(session, 'remittance.view')) cleanup();
   else renderNotices();
   return cleanup;

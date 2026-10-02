@@ -273,6 +273,7 @@ test('Employee workspace wires review and disposes it before remount', async (t)
     api: { async request(path, options = {}) {
       calls.push({ path, options });
       if (path === '/api/v1/notifications') return [notice];
+      if(path.endsWith('/receiving-contract'))return {collector_surplus_contract_version:1,remittance_id:REMITTANCE,recipient_user_id:RECIPIENT,count_required:false,legacy_receive_allowed:true};
       if (path === '/api/v1/remittances') return [record()];
       return {};
     } } };
