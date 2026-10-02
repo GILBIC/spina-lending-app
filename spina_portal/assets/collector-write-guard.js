@@ -33,6 +33,7 @@ export function createCollectorWriteGuard({
   return {
     get current() { return !disposed; },
     get locked() { return Boolean(lockMessage); },
+    get busy() { return busy; },
     begin() {
       if (disposed || busy) return false;
       sync();

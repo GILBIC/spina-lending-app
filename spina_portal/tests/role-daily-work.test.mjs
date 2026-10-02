@@ -125,7 +125,7 @@ test('Collector attention list offers the route action without changing the entr
     api: { async request(path) {
       if (path === '/api/v1/collector/routes/today') return {
         route_date: '2026-10-01', entries: [{
-          route_entry_id: 'synthetic-entry', area: 'Synthetic Area', client_name: 'Synthetic Client',
+          route_entry_id: 'synthetic-entry',client_id:'synthetic-client',loan_id:'synthetic-loan', area: 'Synthetic Area', client_name: 'Synthetic Client',
           loan_type: 'Regular', processed_today: false, daily_amount: '100.00',
         }],
       };
