@@ -18,7 +18,7 @@ import sys
 import tempfile
 import time
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -305,6 +305,327 @@ def seed(dsn: str, private_root: Path) -> None:
                 user,
             ),
         )
+    seed_treasury(dsn, private_root, user, device, client, loan)
+
+
+def seed_treasury(dsn, private_root, user, device, client, loan):
+    """Exercise actual service and protected loan posting before the full restore.
+
+    Every amount/account/reference is synthetic. No raw fabricated application or
+    official transaction is inserted; the existing posting adapter produces it.
+    """
+    from gilbic_backend.account_repository import AccountContext
+    from gilbic_backend.treasury_claims import submit_claim, upload_evidence
+    from gilbic_backend.treasury_models import (
+        AccountConfigure,
+        AllocationPreview,
+        ClaimMetadata,
+        DisbursementRecord,
+        OpeningActivate,
+        OpeningPrepare,
+        ReceiptApply,
+        ReceiptVerify,
+        ReconciliationClose,
+        ReconciliationMatch,
+        ReconciliationObserve,
+        TransferRecord,
+    )
+    from gilbic_backend.treasury_repository import TreasuryService
+    from psycopg.rows import dict_row
+
+    from gilbic_backend import combined_collection_api as combined
+
+    previous = {
+        key: os.environ.get(key)
+        for key in ["SPINA_TREASURY_ENABLED", "SPINA_EMPLOYEE_OWNER_USER_ID"]
+    }
+    try:
+        os.environ["SPINA_TREASURY_ENABLED"] = "true"
+        os.environ["SPINA_EMPLOYEE_OWNER_USER_ID"] = str(user)
+
+        def connection():
+            params = conninfo_to_dict(dsn)
+            if params.get("host") not in {
+                "127.0.0.1",
+                "localhost",
+                "::1",
+            } or not DATABASE_NAME.fullmatch(params.get("dbname", "")):
+                raise DrillError(
+                    "Treasury fixture requires a drill-owned loopback database."
+                )
+            return psycopg.connect(dsn, row_factory=dict_row)
+
+        with connection() as conn:
+            conn.execute(
+                "update lending.clients set area='SYNTHETIC-RECOVERY' where id=%s",
+                (client,),
+            )
+            conn.execute(
+                "insert into lending.collector_area_assignments(collector_user_id,area) values(%s,'SYNTHETIC-RECOVERY')",
+                (user,),
+            )
+            conn.execute(
+                """update lending.loan_types set settings=%s where id=(select loan_type_id from lending.loans where id=%s)""",
+                (
+                    Jsonb(
+                        {
+                            "mobile_collections_enabled": True,
+                            "mobile_balance_mode": "direct_remaining_balance",
+                        }
+                    ),
+                    loan,
+                ),
+            )
+            conn.execute(
+                "insert into lending.loan_collection_state(loan_id,remaining_balance,is_reconciled,state_version) values(%s,1000,true,0)",
+                (loan,),
+            )
+        actor = AccountContext(
+            user,
+            user,
+            "synthetic",
+            None,
+            "Synthetic recovery actor",
+            "active",
+            ("collector",),
+            ("treasury.payment.apply",),
+            True,
+            device,
+        )
+        service = TreasuryService(connection, PrivateEvidenceStore(private_root))
+        context, account, bank = uuid4(), uuid4(), uuid4()
+
+        def version(target=account):
+            with connection() as conn:
+                return conn.execute(
+                    "select version from treasury.accounts where id=%s", (target,)
+                ).fetchone()["version"]
+
+        def evidence(purpose="recipient", target=account):
+            return upload_evidence(
+                service, actor, uuid4(), target, purpose, PDF, "application/pdf"
+            )["target_id"]
+
+        def run(model, **values):
+            target = values.pop("account_id", account)
+            return service.execute(
+                actor,
+                model(
+                    request_id=uuid4(),
+                    account_id=target,
+                    expected_version=version(target),
+                    **values,
+                ),
+            )
+
+        for target, kind in [(account, "gcash"), (bank, "bank")]:
+            service.execute(
+                actor,
+                AccountConfigure(
+                    action="account_configure",
+                    request_id=uuid4(),
+                    account_id=target,
+                    expected_version=0,
+                    ledger_context_id=context,
+                    context="synthetic",
+                    kind=kind,
+                    alias="Synthetic recovery " + kind,
+                    ownership="synthetic",
+                    custodian_user_id=user,
+                    designated_receiving=kind == "gcash",
+                    payment_instructions="Synthetic only",
+                ),
+            )
+        cutoff = datetime.now(timezone.utc) - timedelta(days=1)
+        prepared = run(
+            OpeningPrepare,
+            action="opening_prepare",
+            cutoff=cutoff,
+            amount="10000.00",
+            evidence_id=evidence("opening"),
+            reason="Synthetic actual opening",
+        )
+        run(
+            OpeningActivate,
+            action="opening_activate",
+            opening_id=prepared["target_id"],
+            opening_version=prepared["version"],
+            confirmed=True,
+            reason="Synthetic owner confirmed",
+        )
+        now = datetime.now(timezone.utc)
+        claim = submit_claim(
+            service,
+            actor,
+            ClaimMetadata(
+                request_id=uuid4(),
+                account_id=account,
+                account_version=version(),
+                client_id=client,
+                loan_ids=[loan],
+                amount="1000.00",
+                reference="recovery-receipt",
+                claimed_at=now,
+                sender_note="Synthetic proof",
+            ),
+            PDF,
+            "application/pdf",
+        )
+        claim = submit_claim(
+            service,
+            actor,
+            ClaimMetadata(
+                request_id=uuid4(),
+                account_id=account,
+                account_version=version(),
+                client_id=client,
+                loan_ids=[loan],
+                amount="1000.00",
+                reference="recovery-receipt",
+                claimed_at=now,
+                sender_note="Synthetic corrected proof",
+                expected_version=1,
+            ),
+            PDF,
+            "application/pdf",
+            claim["target_id"],
+        )
+        receipt = run(
+            ReceiptVerify,
+            action="receipt_verify",
+            client_id=client,
+            amount="1000.00",
+            provider="gcash",
+            reference="recovery-receipt",
+            effective_at=now,
+            evidence_id=evidence(),
+            recipient_attestation="Synthetic recipient-side history independently verified",
+            claim_id=claim["target_id"],
+            claim_version=2,
+        )
+        reviewed = AllocationPreview(
+            mode="single",
+            total_amount="40.00",
+            loans=[{"loan_id": loan, "expected_version": 0}],
+            effective_date=combined._current_business_date(),
+            expected_version=1,
+        )
+        preview = service.preview_receipt_application(
+            actor, receipt["target_id"], reviewed
+        )
+        if not preview["can_apply"]:
+            raise DrillError("Synthetic protected receipt application is unavailable.")
+        service.execute(
+            actor,
+            ReceiptApply(
+                **reviewed.model_dump(),
+                action="receipt_apply",
+                request_id=uuid4(),
+                account_id=account,
+                receipt_id=receipt["target_id"],
+                digest=preview["digest"],
+            ),
+        )
+        run(
+            DisbursementRecord,
+            action="disbursement_record",
+            amount="100.00",
+            provider="gcash",
+            reference="recovery-refund",
+            effective_at=datetime.now(timezone.utc),
+            evidence_id=evidence(),
+            recipient_attestation="Synthetic actual refund debit",
+            purpose="refund",
+            receipt_id=receipt["target_id"],
+            reason="Actual synthetic provider refund",
+        )
+        transfer_id = uuid4()
+        run(
+            TransferRecord,
+            action="transfer_record",
+            transfer_id=transfer_id,
+            leg="source",
+            other_account_id=bank,
+            other_account_version=version(bank),
+            amount="200.00",
+            provider="gcash",
+            reference="recovery-transfer-source",
+            effective_at=datetime.now(timezone.utc),
+            evidence_id=evidence(),
+            recipient_attestation="Synthetic actual source transfer",
+            reason="Synthetic own-account transfer",
+        )
+        run(
+            TransferRecord,
+            account_id=bank,
+            action="transfer_record",
+            transfer_id=transfer_id,
+            leg="destination",
+            other_account_id=account,
+            other_account_version=version(),
+            amount="200.00",
+            provider="bank",
+            reference="recovery-transfer-destination",
+            effective_at=datetime.now(timezone.utc),
+            evidence_id=evidence(target=bank),
+            recipient_attestation="Synthetic actual destination transfer",
+            reason="Synthetic own-account receipt",
+        )
+        with connection() as conn:
+            events = conn.execute(
+                "select * from treasury.events where account_id=%s order by effective_at,id",
+                (account,),
+            ).fetchall()
+        rows = [
+            {
+                "id": uuid4(),
+                "provider": row["provider"],
+                "reference": row["reference"],
+                "direction": row["direction"],
+                "amount": format(row["amount"], ".2f"),
+                "effective_at": row["effective_at"],
+            }
+            for row in events
+        ]
+        reconciliation = run(
+            ReconciliationObserve,
+            action="reconciliation_observe",
+            reconciliation_id=uuid4(),
+            coverage_start=cutoff,
+            cutoff=datetime.now(timezone.utc),
+            actual_balance="10700.00",
+            evidence_id=evidence("statement"),
+            complete_history=True,
+            rows=rows,
+        )
+        for observed, event in zip(rows, events):
+            reconciliation = run(
+                ReconciliationMatch,
+                action="reconciliation_match",
+                reconciliation_id=reconciliation["target_id"],
+                reconciliation_version=reconciliation["version"],
+                observation_id=observed["id"],
+                event_id=event["id"],
+            )
+        closed = run(
+            ReconciliationClose,
+            action="reconciliation_close",
+            reconciliation_id=reconciliation["target_id"],
+            reconciliation_version=reconciliation["version"],
+            opening_id=prepared["target_id"],
+            movement_watermark=reconciliation["result"]["reconciliation"][
+                "movement_watermark"
+            ],
+            reason="All exact synthetic statements matched",
+        )
+        if closed["status"] != "saved":
+            raise DrillError("Synthetic full-coverage reconciliation did not close.")
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def database_snapshot(
@@ -364,9 +685,62 @@ def verify_relationships(
     for key, digest, size in proofs:
         if store.read(key, digest, size) != PDF:
             raise DrillError("Restored database-linked private content differs.")
+    treasury_files = connection.execute(
+        "select id,sha256,byte_count from treasury.evidence"
+    ).fetchall()
+    for key, digest, size in treasury_files:
+        if store.read(key, digest, size) != PDF:
+            raise DrillError(
+                "Restored treasury database-linked private content differs."
+            )
+    funded = connection.execute("""select count(*) from treasury.applications a join treasury.receipts r on r.id=a.receipt_id and r.account_id=a.account_id
+        join treasury.events e on e.id=r.event_id and e.account_id=r.account_id and e.ledger_context_id=r.ledger_context_id
+        join lending.collection_transactions t on a.source_result->'transaction_ids' ? t.id::text
+        where t.funding_source='treasury_receipt' and t.funding_receipt_id=r.id and t.funding_account_id=a.account_id and t.client_id=r.client_id
+        and a.amount=40 and t.applied_amount=40 and r.applied_amount=40 and r.refunded_amount=100""").fetchone()[
+        0
+    ]
+    claim_versions = connection.execute("""select count(*) from treasury.claim_versions v join treasury.claims c on c.id=v.claim_id
+        join treasury.evidence e on e.id=v.evidence_id and e.account_id=c.account_id
+        join treasury.receipts r on r.id=c.receipt_id and r.client_id=c.client_id and r.account_id=c.account_id""").fetchone()[
+        0
+    ]
+    closed = connection.execute(
+        "select count(*) from treasury.reconciliations where status='reconciled' and difference=0 and expected_balance=10700 and closed_snapshot is not null"
+    ).fetchone()[0]
+    linked = connection.execute(
+        "select count(*) from treasury.source_links where source_kind='receipt_refund' and linked_amount=100"
+    ).fetchone()[0]
+    transfers = connection.execute(
+        "select count(*) from treasury.transfers where source_event_id is not null and destination_event_id is not null"
+    ).fetchone()[0]
+    outcomes = connection.execute("""select count(*) from treasury.outcomes o join core.devices d on d.id=o.device_id and d.user_id=o.actor_id
+        join treasury.accounts a on a.id=o.account_id where o.result->'result'->>'account_id'=a.id::text
+        and o.result->'result'->>'ledger_context_id'=a.ledger_context_id::text""").fetchone()[
+        0
+    ]
+    if (
+        funded != 1
+        or claim_versions != 2
+        or closed != 1
+        or linked != 1
+        or transfers != 1
+        or outcomes < 10
+        or len(treasury_files) < 7
+    ):
+        raise DrillError(
+            "Restored treasury funding/evidence/version/source/reconciliation/outcome relationships are incomplete."
+        )
     return {
         "borrower_loan_device_proof_file": len(proofs),
         "employee_profile_payroll": payroll[0],
+        "treasury_private_files": len(treasury_files),
+        "treasury_funded_application": funded,
+        "treasury_claim_versions": claim_versions,
+        "treasury_closed_reconciliation": closed,
+        "treasury_actual_refund_link": linked,
+        "treasury_completed_transfer": transfers,
+        "treasury_private_outcomes": outcomes,
     }
 
 

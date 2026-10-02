@@ -51,6 +51,20 @@ def test_missing_disposable_opt_in_never_connects(monkeypatch, tmp_path):
         drill.run_drill("", allow_disposable=False, pg_bin=tmp_path)
 
 
+def test_treasury_restore_seed_rejects_unowned_database_and_restores_flags(monkeypatch,tmp_path):
+    from uuid import uuid4
+    monkeypatch.setenv('SPINA_TREASURY_ENABLED','false')
+    owner=str(uuid4())
+    monkeypatch.setenv('SPINA_EMPLOYEE_OWNER_USER_ID',owner)
+    def unexpected(*args,**kwargs):
+        pytest.fail('Unowned recovery seed must not connect')
+    monkeypatch.setattr(drill.psycopg,'connect',unexpected)
+    with pytest.raises(drill.DrillError,match='drill-owned'):
+        drill.seed_treasury('host=127.0.0.1 port=55437 user=spina_test_owner dbname=spina_production',tmp_path,*[uuid4() for _ in range(4)])
+    assert drill.os.environ['SPINA_TREASURY_ENABLED']=='false'
+    assert drill.os.environ['SPINA_EMPLOYEE_OWNER_USER_ID']==owner
+
+
 def test_file_restore_requires_nonempty_exact_bytes_and_detects_corruption(tmp_path):
     original = tmp_path / "original"
     original.mkdir()
