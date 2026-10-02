@@ -25,7 +25,12 @@ from .treasury_authorization import (
     TreasuryUnavailable,
 )
 from .treasury_claims import submit_claim, upload_evidence
-from .treasury_models import AllocationPreview, ClaimMetadata, TreasuryCommand
+from .treasury_models import (
+    AllocationPreview,
+    ClaimMetadata,
+    SettlementPreview,
+    TreasuryCommand,
+)
 from .treasury_repository import TreasuryService
 
 
@@ -145,6 +150,147 @@ def create_treasury_router():
     router = APIRouter(tags=["treasury"], route_class=PrivateOfficeRoute)
 
     def routes(prefix, mobile=False):
+        @router.get(
+            prefix
+            + "/collector-surplus/remittances/{remittance_id}/receiving-contract",
+            include_in_schema=not mobile,
+        )
+        def surplus_receiving_contract(
+            remittance_id: UUID,
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            from .collector_settlement import receiving_contract
+
+            def operation():
+                with repository.connect() as conn, conn.transaction():
+                    return receiving_contract(repository, conn, actor, remittance_id)
+
+            return call(operation)
+
+        @router.get(
+            prefix + "/collector-surplus/workspace", include_in_schema=not mobile
+        )
+        def surplus_workspace(
+            kind: Literal[
+                "credits",
+                "cases",
+                "actions",
+                "requests",
+                "counts",
+                "exceptions",
+                "remittances",
+                "openings",
+            ] = "credits",
+            account_id: UUID | None = None,
+            collector_user_id: UUID | None = None,
+            limit: int = Query(50, ge=1, le=100),
+            offset: int = Query(0, ge=0, le=100000),
+            mode: Literal["own", "staff"] | None = None,
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            from .collector_surplus_reads import workspace
+
+            def operation():
+                with repository.connect() as conn, conn.transaction():
+                    return workspace(
+                        repository,
+                        conn,
+                        actor,
+                        kind,
+                        account_id,
+                        collector_user_id,
+                        limit,
+                        offset,
+                        mode=mode,
+                    )
+
+            return call(operation)
+
+        @router.get(prefix + "/collector-surplus/export", include_in_schema=not mobile)
+        def surplus_export(
+            kind: Literal[
+                "credits",
+                "cases",
+                "actions",
+                "requests",
+                "counts",
+                "exceptions",
+                "remittances",
+                "openings",
+            ] = "credits",
+            account_id: UUID | None = None,
+            collector_user_id: UUID | None = None,
+            mode: Literal["own", "staff"] | None = None,
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            from .collector_surplus_reads import workspace
+
+            def operation():
+                with repository.connect() as conn, conn.transaction():
+                    return workspace(
+                        repository,
+                        conn,
+                        actor,
+                        kind,
+                        account_id,
+                        collector_user_id,
+                        export=True,
+                        mode=mode,
+                    )
+
+            result = call(operation)
+            return Response(
+                json.dumps(result),
+                media_type="application/json",
+                headers={
+                    "Content-Disposition": 'attachment; filename="collector-surplus-private.json"',
+                    "Cache-Control": "no-store",
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+        @router.post(
+            prefix + "/collector-surplus/remittances/{remittance_id}/preview",
+            include_in_schema=not mobile,
+        )
+        def surplus_preview(
+            remittance_id: UUID,
+            command: SettlementPreview,
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            from .collector_settlement import preview
+
+            def operation():
+                with repository.connect() as conn, conn.transaction():
+                    return preview(repository, conn, actor, remittance_id, command)
+
+            return call(operation)
+
+        @router.get(
+            prefix + "/collector-surplus/{kind}/{target_id}",
+            include_in_schema=not mobile,
+        )
+        def surplus_detail(
+            kind: Literal[
+                "credits", "cases", "actions", "counts", "exceptions", "requests"
+            ],
+            target_id: UUID,
+            mode: Literal["own", "staff"] | None = None,
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            from .collector_surplus_reads import detail
+
+            def operation():
+                with repository.connect() as conn, conn.transaction():
+                    return detail(repository, conn, actor, kind, target_id, mode=mode)
+
+            return call(operation)
+
         @router.get(prefix + "/workspace", include_in_schema=not mobile)
         def workspace(actor=_ACTOR_DEPENDENCY, repository=_REPOSITORY_DEPENDENCY):
             return call(lambda: repository.workspace(actor))

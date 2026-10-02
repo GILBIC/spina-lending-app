@@ -905,6 +905,15 @@
           "title": "Expected Version",
           "type": "integer"
         },
+        "anchor_kind": {
+          "default": "credit",
+          "enum": [
+            "credit",
+            "pending_excess"
+          ],
+          "title": "Anchor Kind",
+          "type": "string"
+        },
         "action": {
           "const": "collector_surplus_opening_prepare",
           "title": "Action",

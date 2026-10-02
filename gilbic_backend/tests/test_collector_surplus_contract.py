@@ -6,19 +6,19 @@ from pydantic import ValidationError
 
 
 def count(**updates):
-    value = dict(
-        action="collector_count_record",
-        request_id=str(uuid4()),
-        account_id=str(uuid4()),
-        expected_version=1,
-        remittance_id=str(uuid4()),
-        source_digest="a" * 64,
-        counted_amount="0.00",
-        counted_at="2026-10-02T08:00:00+08:00",
-        evidence_id=str(uuid4()),
-        review_acknowledged=True,
-        recipient_attestation="Synthetic count reviewed",
-    )
+    value = {
+        "action": "collector_count_record",
+        "request_id": str(uuid4()),
+        "account_id": str(uuid4()),
+        "expected_version": 1,
+        "remittance_id": str(uuid4()),
+        "source_digest": "a" * 64,
+        "counted_amount": "0.00",
+        "counted_at": "2026-10-02T08:00:00+08:00",
+        "evidence_id": str(uuid4()),
+        "review_acknowledged": True,
+        "recipient_attestation": "Synthetic count reviewed",
+    }
     return dict(value, **updates)
 
 
@@ -46,15 +46,15 @@ def test_review_flag_does_not_accept_integer_truth():
 
 
 def test_own_credit_request_has_no_wallet_authority_fields():
-    value = dict(
-        action="collector_surplus_return_request",
-        request_id=str(uuid4()),
-        credit_id=str(uuid4()),
-        credit_version=1,
-        amount="0.01",
-        destination=dict(kind="physical_cash", recipient_reference=None),
-        reason="Please return my recognized credit",
-    )
+    value = {
+        "action": "collector_surplus_return_request",
+        "request_id": str(uuid4()),
+        "credit_id": str(uuid4()),
+        "credit_version": 1,
+        "amount": "0.01",
+        "destination": {"kind": "physical_cash", "recipient_reference": None},
+        "reason": "Please return my recognized credit",
+    }
     parsed = COMMAND_ADAPTER.validate_python(value)
     assert parsed.amount == "0.01"
     with pytest.raises(ValidationError):

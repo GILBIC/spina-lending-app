@@ -39,6 +39,17 @@ REQUIRED_TABLES = (
     "treasury.claim_versions",
     "treasury.reconciliations",
     "treasury.outcomes",
+    "treasury.collector_counts",
+    "treasury.collector_settlements",
+    "treasury.collector_cases",
+    "treasury.collector_credits",
+    "treasury.collector_requests",
+    "treasury.collector_actions",
+    "treasury.collector_acknowledgments",
+    "treasury.collector_exceptions",
+    "treasury.collector_openings",
+    "treasury.collector_entries",
+    "treasury.collector_resolutions",
 )
 
 
@@ -131,7 +142,9 @@ def probe_database(settings: Settings) -> dict[str, bool]:
                     ('lending.collection_remittance_items', 'treasury_remittance_item_guard',
                      'lending.guard_treasury_remittance_item()', 23),
                     ('accounting.journal_entries', 'treasury_collection_journal_guard',
-                     'accounting.guard_treasury_collection_journal()', 23)
+                     'accounting.guard_treasury_collection_journal()', 23),
+                    ('lending.collection_remittances','guard_collector_legacy_receive','treasury.guard_collector_legacy_receive()',19),
+                    ('lending.collection_remittance_rejections','guard_collector_rejection','treasury.guard_collector_rejection()',7)
                 )
                 SELECT bool_and(EXISTS (
                     SELECT 1 FROM pg_trigger t

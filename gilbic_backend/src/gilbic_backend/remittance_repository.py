@@ -475,6 +475,13 @@ class PostgresRemittanceRepository:
         with open_connection() as connection:
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
+                    from .collector_settlement import guard_legacy_receive
+
+                    cursor.execute(
+                        "select id from lending.collection_remittances where id=%s for update",
+                        (remittance_id,),
+                    )
+                    guard_legacy_receive(cursor, remittance_id)
                     cursor.execute(
                         """
                         select

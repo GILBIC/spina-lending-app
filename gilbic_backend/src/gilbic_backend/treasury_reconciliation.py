@@ -98,6 +98,8 @@ def preview_reconciliation(conn, account, row):
         and (source_event_id is null or destination_event_id is null)""",
         (account["id"], account["id"]),
     ).fetchall()
+    from .collector_surplus import source_summary
+
     return json_value(
         {
             "id": row["id"],
@@ -105,8 +107,14 @@ def preview_reconciliation(conn, account, row):
             "ledger_context_id": account["ledger_context_id"],
             "version": row["version"],
             "status": row["status"],
+            "requires_review": row["requires_review"],
+            "closed_collector_source_status": (row["closed_snapshot"] or {}).get(
+                "collector_source_status"
+            ),
             "opening_id": snapshot["opening_id"],
             "movement_watermark": account["movement_watermark"],
+            "collector_source_watermark": account.get("collector_source_watermark", 0),
+            "collector_source_status": source_summary(conn, account["id"]),
             "coverage_start": row["coverage_start"],
             "cutoff": row["cutoff"],
             "actual_balance": row["actual_balance"],

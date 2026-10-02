@@ -37,6 +37,24 @@ def test_current_source_aware_release_is_accepted():
     assert guard_module().compatible(Path(__file__).resolve().parents[1])
 
 
+def test_treasury_only_runtime_cannot_replace_retained_surplus_runtime(tmp_path):
+    guard = guard_module()
+    for relative in guard.REQUIRED_FILES:
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("synthetic compatibility fixture")
+    (tmp_path / "release-capabilities.json").write_text(
+        json.dumps({"treasury_funding_schema": 1})
+    )
+    assert not guard.compatible(tmp_path)
+    (tmp_path / "release-capabilities.json").write_text(
+        json.dumps({"treasury_funding_schema": 1, "collector_surplus_schema": 1})
+    )
+    assert guard.compatible(tmp_path)
+    (tmp_path / "gilbic_backend/sql/0138_add_collector_surplus.sql").unlink()
+    assert not guard.compatible(tmp_path)
+
+
 def test_host_guard_survives_ordinary_release_rollback():
     root = Path(__file__).resolve().parents[1]
     script = (root / "ops/digitalocean/bootstrap.sh").read_text(encoding="utf-8")

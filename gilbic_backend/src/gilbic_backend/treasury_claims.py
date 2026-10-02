@@ -319,13 +319,32 @@ def upload_evidence(
         conn.execute(
             "select pg_advisory_xact_lock(hashtextextended(%s,0))", (str(request_id),)
         )
-        account = require_account(
-            conn,
-            actor,
-            account_id,
-            permissions[purpose],
-            private=purpose == "statement",
-        )
+        upload_permission = permissions[purpose]
+        try:
+            account = require_account(
+                conn,
+                actor,
+                account_id,
+                upload_permission,
+                private=purpose == "statement",
+            )
+        except TreasuryDenied:
+            if purpose != "recipient":
+                raise
+            account = None
+            for suffix in ["receive", "resolve", "settle"]:
+                try:
+                    upload_permission = "treasury.collector_surplus." + suffix
+                    account = require_account(
+                        conn, actor, account_id, upload_permission
+                    )
+                    break
+                except TreasuryDenied:
+                    continue
+            if account is None:
+                raise TreasuryDenied(
+                    "Current recipient-evidence authority is required."
+                )
         if purpose == "opening" and not is_owner(actor):
             raise TreasuryDenied("Only the configured owner may evidence an opening.")
         replay = service.replay(conn, actor, request_id, payload_hash)
@@ -347,7 +366,7 @@ def upload_evidence(
             request_id,
             "evidence_upload",
             account,
-            permissions[purpose],
+            upload_permission,
             payload_hash,
             row["id"],
             1,

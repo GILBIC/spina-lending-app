@@ -337,7 +337,11 @@ def seed_treasury(dsn, private_root, user, device, client, loan):
 
     previous = {
         key: os.environ.get(key)
-        for key in ["SPINA_TREASURY_ENABLED", "SPINA_EMPLOYEE_OWNER_USER_ID"]
+        for key in [
+            "SPINA_TREASURY_ENABLED",
+            "SPINA_EMPLOYEE_OWNER_USER_ID",
+            "SPINA_COLLECTOR_SURPLUS_ENABLED",
+        ]
     }
     try:
         os.environ["SPINA_TREASURY_ENABLED"] = "true"
@@ -620,6 +624,7 @@ def seed_treasury(dsn, private_root, user, device, client, loan):
         )
         if closed["status"] != "saved":
             raise DrillError("Synthetic full-coverage reconciliation did not close.")
+        seed_collector_surplus(service, connection, actor, context, client, loan)
     finally:
         for key, value in previous.items():
             if value is None:
@@ -658,9 +663,268 @@ def verify_database(
         raise DrillError("Restored database row integrity check failed.")
 
 
+def seed_collector_surplus(service, connection, owner, context, client, loan):
+    """Populate every new relationship through real surplus services, synthetic only."""
+    from gilbic_backend.account_repository import AccountContext
+    from gilbic_backend.collector_settlement import preview
+    from gilbic_backend.treasury_claims import upload_evidence
+    from gilbic_backend.treasury_models import COMMAND_ADAPTER, SettlementPreview
+
+    os.environ["SPINA_COLLECTOR_SURPLUS_ENABLED"] = "true"
+    collector_id, device_id, account = uuid4(), uuid4(), uuid4()
+    with connection() as conn:
+        conn.execute(
+            "insert into core.user_roles(user_id,role_id) select %s,id from core.roles where code='management' on conflict do nothing",
+            (owner.user_id,),
+        )
+        conn.execute(
+            "insert into core.users(id,username,full_name,status) values(%s,%s,'Synthetic surplus restore Collector','active')",
+            (collector_id, "surplus-restore-" + collector_id.hex),
+        )
+        conn.execute(
+            "insert into core.devices(id,user_id,device_identifier_hash,platform,status) values(%s,%s,%s,'web','active')",
+            (device_id, collector_id, device_id.hex),
+        )
+        conn.execute(
+            "insert into core.user_roles(user_id,role_id) select %s,id from core.roles where code='collector'",
+            (collector_id,),
+        )
+    collector = AccountContext(
+        collector_id,
+        collector_id,
+        "synthetic",
+        None,
+        "Synthetic surplus restore Collector",
+        "active",
+        ("collector",),
+        (),
+        True,
+        device_id,
+    )
+
+    def version():
+        with connection() as conn:
+            return conn.execute(
+                "select version from treasury.accounts where id=%s", (account,)
+            ).fetchone()["version"]
+
+    def run(action, actor=owner, **fields):
+        own = action in {
+            "collector_surplus_return_request",
+            "collector_surplus_return_acknowledge",
+        }
+        common = (
+            {}
+            if own
+            else {
+                "account_id": account,
+                "expected_version": 0 if action == "account_configure" else version(),
+            }
+        )
+        return service.execute(
+            actor,
+            COMMAND_ADAPTER.validate_python(
+                dict(action=action, request_id=uuid4(), **common, **fields)
+            ),
+        )
+
+    run(
+        "account_configure",
+        ledger_context_id=context,
+        context="synthetic",
+        kind="physical_cash",
+        alias="Synthetic surplus restore counter",
+        ownership="synthetic",
+        custodian_user_id=owner.user_id,
+    )
+
+    def evidence(purpose="recipient"):
+        return upload_evidence(
+            service, owner, uuid4(), account, purpose, PDF, "application/pdf"
+        )["target_id"]
+
+    proof = evidence()
+    opening = run(
+        "opening_prepare",
+        cutoff=datetime.now(timezone.utc) - timedelta(days=1),
+        amount="100.00",
+        evidence_id=evidence("opening"),
+        reason="Synthetic evidenced opening",
+    )
+    run(
+        "opening_activate",
+        opening_id=opening["target_id"],
+        opening_version=opening["version"],
+        confirmed=True,
+        reason="Synthetic owner confirms",
+    )
+    anchor = run(
+        "collector_surplus_opening_prepare",
+        collector_user_id=collector_id,
+        opening_id=opening["target_id"],
+        opening_version=2,
+        amount="10.00",
+        evidence_id=evidence("opening"),
+        overlap_review_acknowledged=True,
+        reason="Synthetic separately evidenced opening credit",
+    )
+    run(
+        "collector_surplus_opening_activate",
+        anchor_id=anchor["target_id"],
+        anchor_version=anchor["version"],
+        reason="Synthetic retained liability, no new cash",
+    )
+
+    def remittance(sequence):
+        rid, tid = uuid4(), uuid4()
+        with connection() as conn:
+            conn.execute(
+                """insert into lending.collection_transactions(id,idempotency_key,loan_id,client_id,collector_user_id,registered_device_id,route_entry_id,collection_date,entry_type,amount,recorded_at,device_sequence,note,previous_balance,official_balance,pass_count_after,receipt_number,details)
+             values(%s,%s,%s,%s,%s,%s,%s,current_date,'payment',20,now(),%s,'Synthetic restore source',960,940,0,%s,'{}')""",
+                (
+                    tid,
+                    uuid4(),
+                    loan,
+                    client,
+                    collector_id,
+                    device_id,
+                    loan,
+                    sequence,
+                    tid.hex,
+                ),
+            )
+            conn.execute(
+                """insert into lending.collection_remittances(id,remittance_number,collector_user_id,recipient_user_id,collection_date,status,transaction_count,payment_count,unable_to_pay_count,covered_payment_count,client_count,total_amount,note,submitted_at) values(%s,%s,%s,%s,current_date,'submitted',1,1,0,0,1,20,'Synthetic restore source',now())""",
+                (rid, rid.hex, collector_id, owner.user_id),
+            )
+            conn.execute(
+                "insert into lending.collection_remittance_items(remittance_id,transaction_id,client_id,loan_id,collection_date,entry_type,amount,receipt_number,transaction_snapshot) values(%s,%s,%s,%s,current_date,'payment',20,%s,'{}')",
+                (rid, tid, client, loan, tid.hex),
+            )
+            conn.execute(
+                "update lending.collection_transactions set remittance_id=%s,is_locked=true,locked_at=now(),locked_by_user_id=%s where id=%s",
+                (rid, collector_id, tid),
+            )
+        return rid
+
+    def count(rid, amount):
+        with connection() as conn:
+            p = preview(
+                service,
+                conn,
+                owner,
+                rid,
+                SettlementPreview(account_id=account, expected_version=version()),
+            )
+        return run(
+            "collector_count_record",
+            remittance_id=rid,
+            source_digest=p["source_digest"],
+            counted_amount=amount,
+            counted_at=datetime.now(timezone.utc),
+            evidence_id=proof,
+            recipient_attestation="Synthetic counted cash for restore",
+            review_acknowledged=True,
+        )["result"]["count"]
+
+    counted = count(remittance(1), "30.00")
+    accepted = run(
+        "collector_count_accept",
+        count_id=counted["id"],
+        count_version=1,
+        source_digest=counted["source_digest"],
+        physical_receipt_acknowledged=True,
+    )["result"]
+    case = accepted["case"]
+    credit = run(
+        "collector_surplus_recognize",
+        case_id=case["id"],
+        case_version=1,
+        source_digest=case["source_digest"],
+        source_review_acknowledged=True,
+        amount="10.00",
+        evidence_id=proof,
+        reason="Synthetic independent identification",
+    )["result"]["credit"]
+    request = run(
+        "collector_surplus_return_request",
+        actor=collector,
+        credit_id=credit["id"],
+        credit_version=1,
+        amount="4.00",
+        destination={"kind": "physical_cash", "recipient_reference": None},
+        reason="Synthetic own return request",
+    )["result"]["request"]
+    reserved = run(
+        "collector_surplus_return_prepare",
+        credit_id=credit["id"],
+        credit_version=1,
+        collector_request_id=request["id"],
+        collector_request_version=1,
+        amount="4.00",
+        destination=request["destination"],
+        evidence_id=proof,
+        reason="Synthetic independently approved return",
+    )["result"]
+    action = reserved["action_record"]
+    credit = reserved["credit"]
+    debit = run(
+        "disbursement_record",
+        purpose="collector_surplus_return",
+        source_id=action["id"],
+        source_version=action["version"],
+        payee_id=collector_id,
+        amount="4.00",
+        provider="physical_cash",
+        reference="surplus-restore-return",
+        effective_at=datetime.now(timezone.utc),
+        evidence_id=proof,
+        recipient_attestation="Synthetic actual cash payout",
+        reason="Actual independently observed payout",
+    )["result"]
+    action = debit["source_link"]["action_record"]
+    event = debit["event"]
+    ack = run(
+        "collector_surplus_return_acknowledge",
+        actor=collector,
+        credit_id=credit["id"],
+        credit_version=credit["version"],
+        action_id=action["id"],
+        action_version=action["version"],
+        event_id=event["id"],
+        event_version=1,
+        reviewed_amount="4.00",
+        confirmation="received",
+        acknowledged_at=datetime.now(timezone.utc),
+        reason="Synthetic own actual receipt",
+    )["result"]["acknowledgment"]
+    run(
+        "collector_surplus_return_record",
+        action_id=action["id"],
+        action_version=action["version"],
+        event_id=event["id"],
+        event_version=1,
+        acknowledgment_id=ack["id"],
+        acknowledgment_version=1,
+        reason="Synthetic received payout settlement",
+    )
+    short = count(remittance(2), "19.00")
+    run(
+        "collector_custody_exception_record",
+        count_id=short["id"],
+        count_version=1,
+        source_digest=short["source_digest"],
+        retained_amount="19.00",
+        retained_at=datetime.now(timezone.utc),
+        evidence_id=proof,
+        holder_attestation="Synthetic dispute cash held by real recipient",
+        reason="Preserve rejected obligation and actual held cash",
+    )
+
+
 def verify_relationships(
     connection: psycopg.Connection, private_root: Path
-) -> dict[str, int]:
+) -> dict[str, Any]:
     proofs = connection.execute(
         """SELECT v.storage_key,v.content_sha256,v.byte_count
         FROM lending.client_payment_proof_versions v
@@ -731,7 +995,39 @@ def verify_relationships(
         raise DrillError(
             "Restored treasury funding/evidence/version/source/reconciliation/outcome relationships are incomplete."
         )
+    surplus_counts = {}
+    for kind in [
+        "counts",
+        "settlements",
+        "cases",
+        "credits",
+        "requests",
+        "actions",
+        "acknowledgments",
+        "exceptions",
+        "openings",
+        "entries",
+        "resolutions",
+    ]:
+        surplus_counts[kind] = connection.execute(
+            sql.SQL("select count(*) from treasury.{}").format(
+                sql.Identifier("collector_" + kind)
+            )
+        ).fetchone()[0]
+    relationships = connection.execute("""select count(*) from treasury.collector_actions a
+       join treasury.collector_credits c on c.id=a.credit_id and c.ledger_context_id=a.ledger_context_id and c.collector_user_id=a.collector_user_id
+       join treasury.events e on e.id=a.event_id and e.account_id=a.account_id
+       join treasury.collector_acknowledgments ack on ack.action_id=a.id
+       where a.payload->>'status'='paid' and c.payload->>'outstanding_amount'='6.00' and ack.payload->>'confirmation'='received' and e.direction='debit' and e.amount=4""").fetchone()[
+        0
+    ]
+    if any(count < 1 for count in surplus_counts.values()) or relationships != 1:
+        raise DrillError(
+            "Restored populated Collector settlement/liability/own-acknowledgment relationships are incomplete."
+        )
     return {
+        "collector_surplus_tables": surplus_counts,
+        "collector_surplus_paid_relationship": relationships,
         "borrower_loan_device_proof_file": len(proofs),
         "employee_profile_payroll": payroll[0],
         "treasury_private_files": len(treasury_files),

@@ -16,9 +16,64 @@ from .treasury_repository import identity, json_value
 def source_choices(conn, actor):
     # Existing salary/advance payment authority is owner-only, independently of
     # account-access grants. This projection does not expose payroll to delegates.
-    if not is_owner(actor):
-        return []
+    from .collector_surplus import load, observed_debit
+
     result = []
+    for item in conn.execute(
+        "select id,account_id from treasury.collector_actions where payload->>'status'='reserved' order by created_at,id"
+    ).fetchall():
+        try:
+            require_account(
+                conn,
+                actor,
+                item["account_id"],
+                "treasury.disbursement.record",
+                lock=False,
+            )
+            require_account(
+                conn,
+                actor,
+                item["account_id"],
+                "treasury.collector_surplus.settle",
+                lock=False,
+            )
+            row = load(conn, "actions", item["id"], lock=False)
+            if observed_debit(conn, row["id"]):
+                continue
+            require_account(
+                conn,
+                actor,
+                row["origin_account_id"],
+                "treasury.collector_surplus.settle",
+                lock=False,
+            )
+            if row["collector_user_id"] == str(actor.user_id):
+                continue
+            account = conn.execute(
+                "select kind from treasury.accounts where id=%s", (item["account_id"],)
+            ).fetchone()
+            result.append(
+                {
+                    "id": row["id"],
+                    "kind": "collector_custody_exception_return"
+                    if row["kind"] == "exception_return"
+                    else "collector_surplus_return",
+                    "version": row["version"],
+                    "payee_id": row["collector_user_id"],
+                    "account_id": str(item["account_id"]),
+                    "provider": account["kind"],
+                    "amount": row["amount"],
+                    "currency": "PHP",
+                    "status": "reserved",
+                    "supported": True,
+                    "partial_supported": False,
+                    "destination": row["destination"],
+                }
+            )
+        except TreasuryDenied:
+            continue
+    if not is_owner(actor):
+        return result
     for kind, table, amount_field, statuses in [
         ("payroll", "employee_payroll", "balance_due", ["approved", "partially_paid"]),
         ("salary_advance", "employee_advances", "amount", ["approved"]),
@@ -242,6 +297,17 @@ def outgoing_action(service, conn, actor, account, command):
         "expense",
         "refund",
     }
+    collector_action = {}
+    if command.purpose.startswith("collector_"):
+        from .collector_surplus import PREFIX, debit_authority, require_enabled
+
+        require_enabled()
+        require_account(conn, actor, account["id"], PREFIX + "settle")
+        if not command.source_id or command.source_version is None:
+            raise TreasuryConflict(
+                "Exact approved Collector action/version is required."
+            )
+        collector_action = debit_authority(service, conn, actor, account, command)
     event, new = service.record_verified_event(
         conn,
         actor,
@@ -259,12 +325,27 @@ def outgoing_action(service, conn, actor, account, command):
             "classification": "unresolved_reference"
             if command.reference is None
             else "verified_unclassified"
-            if business
+            if business or command.purpose.startswith("collector_")
             else command.purpose,
             "reason": command.reason,
         },
     )
     link = {"status": "not_applicable"}
+    if command.purpose.startswith("collector_"):
+        from .collector_surplus import link_debit
+
+        try:
+            with conn.transaction():
+                link = link_debit(service, conn, actor, account, event, command)
+        except TreasuryConflict as error:
+            link = {
+                "status": "blocked",
+                "blocker": str(error),
+                "source_id": str(command.source_id),
+                "source_version": command.source_version,
+                "observed_event_id": str(event["id"]),
+                "action_record": collector_action,
+            }
     if business:
         # A failed source-link savepoint must not erase a real independently verified
         # debit. It remains a visible exception, never a paid business record.

@@ -504,6 +504,7 @@ class CollectorSurplusResolveSource(Command):
 
 
 class CollectorSurplusOpeningPrepare(Command):
+    anchor_kind: Literal["credit", "pending_excess"] = "credit"
     action: Literal["collector_surplus_opening_prepare"]
     collector_user_id: UUID
     opening_id: UUID

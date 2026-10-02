@@ -6,7 +6,7 @@ claim/source, loan state via protected adapter, reconciliation. No self HTTP cal
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID, uuid5
@@ -59,7 +59,7 @@ def identity(request_id, suffix):
 def json_value(value: Any) -> Any:
     if isinstance(value, Decimal):
         return format(value, ".2f")
-    if isinstance(value, (UUID, datetime)):
+    if isinstance(value, (UUID, date, datetime)):
         return str(value) if isinstance(value, UUID) else value.isoformat()
     if isinstance(value, dict):
         return {
@@ -191,6 +191,10 @@ class TreasuryService:
             "opening_activate",
         }:
             require_owner(conn, actor)
+        if row["action"].startswith("collector_"):
+            from .collector_surplus import replay_scope
+
+            return replay_scope(self, conn, actor, row)
         if row["permission"] == "claim_own":
             from .treasury_claims import get_claim
 
@@ -209,6 +213,34 @@ class TreasuryService:
         self.require_source_authority(
             conn, actor, row["action"], row["result"]["result"].get("application_id")
         )
+        collector_return = (
+            row["result"]["result"].get("source_link", {}).get("action_record")
+        )
+        if collector_return:
+            from .collector_surplus import check_account, independent, load
+
+            current_return = load(
+                conn, "actions", UUID(collector_return["id"]), lock=False
+            )
+            independent(actor, current_return)
+            check_account(
+                {
+                    "id": row["account_id"],
+                    "ledger_context_id": UUID(
+                        row["result"]["result"]["ledger_context_id"]
+                    ),
+                },
+                current_return,
+            )
+            require_account(
+                conn, actor, row["account_id"], "treasury.collector_surplus.settle"
+            )
+            require_account(
+                conn,
+                actor,
+                UUID(collector_return["origin_account_id"]),
+                "treasury.collector_surplus.settle",
+            )
         # Private files must still be intact on recovery; no successful phantom file.
         detail = row["result"]["result"]
         if detail.get("receipt", {}).get("client_id"):
@@ -274,6 +306,10 @@ class TreasuryService:
         detail,
         status: Literal["saved", "blocked"] = "saved",
     ):
+        if permission == "collector_surplus_own":
+            from .collector_surplus_reads import redacted
+
+            detail = redacted(detail)
         enriched = dict(
             detail,
             actor_user_id=str(actor.user_id),
@@ -331,7 +367,31 @@ class TreasuryService:
                     "select pg_advisory_xact_lock(hashtextextended(%s,0))",
                     (str(command.request_id),),
                 )
-                permission = PERMISSIONS[command.action]
+                from .collector_surplus import (
+                    OWN,
+                    affected_accounts,
+                    own_account,
+                    require_enabled,
+                )
+                from .collector_surplus import (
+                    PERMISSIONS as surplus_permissions,
+                )
+
+                surplus = command.action in surplus_permissions
+                if surplus:
+                    require_enabled()
+                permission = (surplus_permissions if surplus else PERMISSIONS)[
+                    command.action
+                ]
+                account_id = getattr(command, "account_id", None)
+                involved_accounts = [account_id]
+                if surplus or (
+                    command.action == "disbursement_record"
+                    and command.purpose.startswith("collector_")
+                ):
+                    account_id, involved_accounts = affected_accounts(
+                        conn, actor, command
+                    )
                 self.require_source_authority(
                     conn,
                     actor,
@@ -346,22 +406,30 @@ class TreasuryService:
                 }:
                     require_owner(conn, actor)
                 # Account create also serializes an absent row across request IDs.
-                conn.execute(
-                    "select pg_advisory_xact_lock(hashtextextended(%s,1))",
-                    (str(command.account_id),),
-                )
+                for involved in involved_accounts:
+                    conn.execute(
+                        "select pg_advisory_xact_lock(hashtextextended(%s,1))",
+                        (str(involved),),
+                    )
+                if len(involved_accounts) > 1:
+                    for involved in involved_accounts:
+                        require_account(
+                            conn, actor, involved, "treasury.collector_surplus.settle"
+                        )
                 if command.action == "transfer_record":
-                    for account_id in sorted(
+                    for transfer_account_id in sorted(
                         [command.account_id, command.other_account_id], key=str
                     ):
-                        require_account(conn, actor, account_id, permission)
+                        require_account(conn, actor, transfer_account_id, permission)
                 account = (
                     None
                     if command.action == "account_configure"
+                    else own_account(conn, actor, account_id)
+                    if command.action in OWN
                     else require_account(
                         conn,
                         actor,
-                        command.account_id,
+                        account_id,
                         permission,
                         private=command.action.startswith("reconciliation")
                         or command.action.startswith("movement_"),
@@ -376,12 +444,22 @@ class TreasuryService:
                     account is not None
                     and command.action
                     not in {"receipt_apply", "receipt_application_reverse"}
+                    and command.action not in OWN
                     and account["version"] != command.expected_version
                 ):
                     raise TreasuryConflict(
                         "The account changed; refresh and review the exact version."
                     )
-                if command.action == "account_configure":
+                if surplus:
+                    from .collector_surplus import action as surplus_action
+
+                    target, version, detail, status = surplus_action(
+                        self, conn, actor, account, command
+                    )
+                    from .collector_surplus import source_changed
+
+                    source_changed(self, conn, account, command, detail)
+                elif command.action == "account_configure":
                     target, version, detail, status = self.configure_account(
                         conn, actor, command
                     )
@@ -927,7 +1005,34 @@ class TreasuryService:
                         "active",
                     ]
                 }
+                surplus_upload = is_owner(actor) or any(
+                    "treasury.collector_surplus." + suffix in live_permissions
+                    and "treasury.collector_surplus." + suffix
+                    in account.get("account_permissions", [])
+                    for suffix in ["receive", "resolve", "settle"]
+                )
+                evidence_purposes = []
+                for purpose, upload_permission in {
+                    "recipient": "treasury.receipt.verify",
+                    "opening": "treasury.account.manage",
+                    "statement": "treasury.reconcile",
+                    "correction": "treasury.adjust",
+                }.items():
+                    if (
+                        is_owner(actor)
+                        or upload_permission in live_permissions
+                        and upload_permission in account.get("account_permissions", [])
+                        and (
+                            purpose != "statement"
+                            or account.get("private_history", False)
+                        )
+                        and purpose != "opening"
+                    ):
+                        evidence_purposes.append(purpose)
+                if surplus_upload and "recipient" not in evidence_purposes:
+                    evidence_purposes.append("recipient")
                 projection.update(
+                    evidence_purposes=evidence_purposes,
                     context=context,
                     actions=actions,
                     balance=account_snapshot(conn, account["id"]) if private else None,
@@ -935,7 +1040,7 @@ class TreasuryService:
                     if account["designated_receiving"]
                     else "",
                 )
-                if is_owner(actor) or any(
+                if surplus_upload or any(
                     PERMISSIONS[action]
                     in {
                         "treasury.receipt.verify",
@@ -1207,13 +1312,34 @@ class TreasuryService:
                 "statement": "treasury.reconcile",
                 "correction": "treasury.adjust",
             }
-            require_account(
-                conn,
-                actor,
-                row["account_id"],
-                permissions[row["purpose"]],
-                private=row["purpose"] == "statement",
-            )
+            try:
+                require_account(
+                    conn,
+                    actor,
+                    row["account_id"],
+                    permissions[row["purpose"]],
+                    private=row["purpose"] == "statement",
+                )
+            except TreasuryDenied:
+                if row["purpose"] != "recipient":
+                    raise
+                permitted = False
+                for suffix in ["receive", "resolve", "settle"]:
+                    try:
+                        require_account(
+                            conn,
+                            actor,
+                            row["account_id"],
+                            "treasury.collector_surplus." + suffix,
+                        )
+                        permitted = True
+                        break
+                    except TreasuryDenied:
+                        continue
+                if not permitted:
+                    raise TreasuryDenied(
+                        "Current scoped recipient-evidence authority is required."
+                    )
             if row["purpose"] == "recipient" and not is_owner(actor):
                 events = conn.execute(
                     "select * from treasury.events where evidence_id=%s", (evidence_id,)

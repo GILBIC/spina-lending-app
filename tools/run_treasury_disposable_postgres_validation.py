@@ -27,11 +27,16 @@ def main() -> int:
         raise SystemExit("The configured database cannot use the reserved test prefix.")
     disposable._clear_endpoint_environment()
     disposable.TEST_DATABASE_PREFIX = DATABASE_PREFIX
-    disposable.BOOTSTRAP_THROUGH = 137
+    disposable.BOOTSTRAP_THROUGH = 138
     name = DATABASE_PREFIX + uuid4().hex[:24]
     admin_url = disposable._conninfo_for_database(params, "postgres")
     test_url = disposable._conninfo_for_database(params, name)
-    tests = sorted((ROOT / "gilbic_backend" / "tests").glob("test_treasury*.py"))
+    tests = sorted(
+        [
+            *(ROOT / "gilbic_backend" / "tests").glob("test_treasury*.py"),
+            *(ROOT / "gilbic_backend" / "tests").glob("test_collector_surplus*.py"),
+        ]
+    )
     if len(tests) < 9:
         raise SystemExit("Required treasury acceptance files are missing.")
     created = False
@@ -68,7 +73,7 @@ def main() -> int:
             raise SystemExit(
                 "Treasury disposable acceptance failed; inspect the synthetic test report."
             )
-        print("Treasury disposable validation passed on fresh schema 0137.")
+        print("Treasury disposable validation passed on fresh schema 0138.")
         return 0
     except psycopg.Error:
         raise SystemExit("Treasury disposable database validation failed.") from None
