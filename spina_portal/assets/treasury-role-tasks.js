@@ -1,0 +1,27 @@
+import {createTreasuryClient} from './treasury-api.js';
+import {mountTreasuryClaim} from './treasury-payment-claim.js';
+import {escapeHtml} from './ui.js';
+export function createTreasuryRoleGate(api,{isTreasuryPending=()=>false,isRolePending=()=>false,getRoleWriteOwner=()=>null}={}){
+ let pending=0;const unknown=new Set(),wrapped=Object.create(api);
+ function unresolved(){for(const attempt of unknown)if(attempt.owner&&attempt.owner.isWritePending()===false)unknown.delete(attempt);return unknown.size>0;}
+ wrapped.request=(path,options={})=>{const write=!['GET','HEAD','OPTIONS'].includes((options.method??'GET').toUpperCase()),treasury=path.startsWith('/api/v1/treasury/');if(!write||treasury)return api.request(path,options);if(isTreasuryPending())return Promise.reject(Object.assign(Error('Recover the pending Cash and GCash request before another submission.'),{code:'treasury_workspace_locked'}));
+  // Capture the mounted source owner before dispatch. Its existing verification
+  // contract retains pending state until that exact attempt is confirmed.
+  const candidate=getRoleWriteOwner(path,options),owner=candidate?.isWritePending?.()===true?candidate:null;pending++;
+  return (async()=>{try{return await api.request(path,options);}catch(error){if(options.financial&&(error.code==='network_uncertain'||error.status===0||error.status>=500))unknown.add({owner});throw error;}finally{pending--;}})();};
+ return {api:wrapped,canStartWrite:()=>pending===0&&!unresolved()&&!isRolePending(),isWritePending:()=>pending>0||unresolved()};
+}
+// Borrowers and receiving scope come from the protected Treasury projection.
+// Changing the selection deliberately tears down the previous private editor.
+export function mountTreasuryBorrowerClaims({root,api,getSession,signal,mode='collector',beforeTaskChange=()=>{},afterTaskChange=()=>{},canStartWrite=()=>true,confirmDiscard=message=>globalThis.confirm?.(message)===true}){
+ let disposed=false,borrowers=[],selected=null,child=null,epoch=0;const client=createTreasuryClient(api,{getSession,signal,onDenied:()=>dispose()});
+ function dispose(){if(disposed)return;disposed=true;epoch++;child?.();client.dispose();borrowers=[];selected=null;beforeTaskChange();root.innerHTML='';afterTaskChange();signal?.removeEventListener('abort',cleanup);}
+ function current(){if(disposed)return false;if(!client.isCurrent()){dispose();return false;}return true;}
+ if(signal?.aborted){disposed=true;client.dispose();const noop=()=>{};noop.ready=Promise.resolve(false);noop.refreshReadOnly=async()=>false;noop.isWritePending=()=>false;return noop;}
+ beforeTaskChange();root.innerHTML='<section data-private-panel><h2>Report GCash proof</h2><p>Only your currently assigned borrowers are available. Evidence does not change cash to remit.</p><label>Assigned borrower<select data-treasury-borrower></select></label><p data-treasury-borrower-status role="status"></p><div data-treasury-borrower-editor></div></section>';afterTaskChange();
+ const select=root.querySelector('[data-treasury-borrower]'),status=root.querySelector('[data-treasury-borrower-status]');
+ function mount(id){child?.();selected=borrowers.find(x=>x.client_id===id)??null;if(!selected)return;child=mountTreasuryClaim({root:root.querySelector('[data-treasury-borrower-editor]'),api,getSession,signal,mode,borrowerContext:()=>selected,beforeTaskChange,afterTaskChange,canStartWrite,confirmDiscard});}
+ const change=()=>{if(!current())return;if(child?.isWritePending()){select.value=selected?.client_id??'';status.textContent='Recover the exact pending claim before changing borrower.';return;}if(child&&!confirmDiscard('Change borrower and discard the current claim draft and selected file?')){select.value=selected?.client_id??'';return;}mount(select.value);};select.addEventListener('change',change);
+ async function refreshReadOnly(){if(!current())return false;if(child?.isWritePending())return false;const key=++epoch;try{const workspace=await client.workspace();if(!current()||key!==epoch)return false;borrowers=(workspace.borrower_choices??[]).filter(x=>x.allowed_account_ids?.some(id=>workspace.accounts.some(a=>a.id===id&&a.actions?.includes('claim_submit')))&&Array.isArray(x.loans)&&x.loans.length);if(selected){const next=borrowers.find(x=>x.client_id===selected.client_id);if(!next||selected.loans.some(loan=>!next.loans.some(item=>item.loan_id===loan.loan_id))){child?.();child=null;selected=null;status.textContent='This borrower or loan is no longer assigned. Select a current borrower.';}else selected=next;}const id=selected?.client_id??'';select.innerHTML='<option value="">Choose an assigned borrower</option>'+borrowers.map(x=>`<option value="${escapeHtml(x.client_id)}">${escapeHtml(x.name)}</option>`).join('');select.value=id;if(!borrowers.length)status.textContent=workspace.blockers.join(' ')||'No current assigned borrower is available for proof reporting.';return child?child.refreshReadOnly():true;}catch(error){if(current())status.textContent=error.message;return false;}}
+ const cleanup=()=>{select.removeEventListener('change',change);dispose();};cleanup.ready=refreshReadOnly();cleanup.refreshReadOnly=refreshReadOnly;cleanup.isWritePending=()=>child?.isWritePending()===true;cleanup.dispose=cleanup;signal?.addEventListener('abort',cleanup,{once:true});return cleanup;
+}

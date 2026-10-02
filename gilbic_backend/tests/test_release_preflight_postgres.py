@@ -191,9 +191,11 @@ def test_preflight_accepts_complete_origin_or_always_enabled_guards(catalog, mod
             )
         )
     assert release_preflight.probe_database(settings) == {
-        "schema": True,
+        # This historical disclosure-only fixture cannot run the treasury runtime.
+        "schema": False,
         "private_grants": True,
         "disclosure_guards": True,
+        "treasury_guards": False,
     }
 
 

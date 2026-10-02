@@ -1,3 +1,5 @@
+import {mountManagementWorkspace} from '../assets/roles/management.js';
+import {mountRoleTask, activateManagementTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { setImmediate } from 'node:timers/promises';
@@ -239,25 +241,32 @@ test('uncertain Client-account creation locks repeat mutation until an authorita
   assert.equal(create.querySelector('button[type="submit"]').disabled, false);
 });
 
-test('Management empty Renewal and Support queues use compact status rows', () => {
-  assert.match(
-    managementSource,
-    /data-management-queue-empty="renewals"/,
-  );
-  assert.match(
-    managementSource,
-    /data-management-queue-empty="support"/,
-  );
-  assert.match(managementSource, /No renewal requests waiting/i);
-  assert.match(managementSource, /No open support requests/i);
-  assert.doesNotMatch(
-    managementSource,
-    /emptyState\('No pending renewal request requires review\.'\)/,
-  );
-  assert.doesNotMatch(
-    managementSource,
-    /emptyState\('No open support request requires review\.'\)/,
-  );
+test('Management empty Renewal and Support queues use actual compact status rows', async (t) => {
+  const controller = new AbortController();
+  t.after(() => controller.abort());
+  const calls = [];
+  const root = new Element();
+  const context = {root, signal:controller.signal,
+    session:{user:{id:CLIENT_A,role:'management'},permissions:['renewal.manage','support.manage']},
+    setNavigation(){},api:{async request(path, options){calls.push({path,options});return {requests:[]};}}};
+  await mountRoleTask(mountManagementWorkspace, context, 'management-clients-loans', 'management-renewals');
+  const renewalRoot = root.querySelector('[data-management-renewal-workflow]');
+  const renewalStatus = renewalRoot.querySelector('[data-management-queue-empty="renewals"]');
+  assert.ok(renewalStatus, 'the returned empty renewal queue is a compact status row');
+  assert.match(renewalStatus.textContent, /No pending renewal requests/);
+  assert.equal(renewalStatus.getAttribute('role'), 'status');
+  assert.equal(renewalRoot.querySelector('.empty-state'), null);
+  await activateManagementTask(context, 'management-operations', 'management-support');
+  const supportRoot = root.querySelector('[data-management-support-list]');
+  const supportStatus = supportRoot.querySelector('[data-management-queue-empty="support"]');
+  assert.ok(supportStatus, 'the returned empty support queue is a compact status row');
+  assert.match(supportStatus.textContent, /No open support requests/);
+  assert.equal(supportStatus.getAttribute('role'), 'status');
+  assert.equal(supportRoot.querySelector('.empty-state'), null);
+  assert.equal(renewalRoot.querySelector('[data-management-queue-empty="renewals"]'), renewalStatus);
+  assert.ok(calls.some(({path}) => path === '/api/v1/management/renewal-workflow?status=pending'));
+  assert.ok(calls.some(({path}) => path === '/api/v1/management/support?status=open&limit=100&offset=0'));
+  assert.ok(calls.every(({options}) => !options?.method || options.method === 'GET'));
 });
 
 test('editing borrower search makes detached selection controls inert and ignores a superseded response', async (t) => {

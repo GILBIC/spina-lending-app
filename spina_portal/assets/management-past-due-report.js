@@ -139,8 +139,13 @@ export function bindManagementPastDueReport(context) {
   const form = context.root.querySelector('#management-past-due-report-search');
   const target = context.root.querySelector('#management-past-due-report-results');
   if (!form || !target) return;
+  const owner=(context.getSession?.()||context.session)?.user?.id;
+  let disposed=false,generation=0;
+  const alive=()=>!disposed&&!context.signal?.aborted&&(!context.getSession||context.getSession()?.user?.id===owner);
 
   const reload = async () => {
+    if(!alive())return false;
+    const version=++generation;
     target.innerHTML = loadingPanel('Loading authoritative Past-Due reporting…');
     try {
       const data = await loadManagementPastDueReport(context.api, {
@@ -150,14 +155,22 @@ export function bindManagementPastDueReport(context) {
         reasonCode: form.querySelector('[name="reason_code"]')?.value ?? '',
         eventKind: form.querySelector('[name="event_kind"]')?.value ?? '',
       });
+      if(!alive()||version!==generation)return false;
       target.innerHTML = managementPastDueReportMarkup(data);
+      return true;
     } catch (error) {
-      target.innerHTML = errorCard(error);
+      if(alive()&&version===generation)target.innerHTML = `${errorCard(error)}<button type="button" class="button button-outline" data-past-due-retry>Retry past-due report</button>`;
+      target.querySelector('[data-past-due-retry]')?.addEventListener('click',()=>void reload(),{once:true});
+      return false;
     }
   };
 
-  form.addEventListener('submit', async (event) => {
+  const submit=async (event) => {
     event.preventDefault();
     await reload();
-  });
+  };
+  form.addEventListener('submit',submit);
+  function dispose(){if(disposed)return;disposed=true;generation++;form.removeEventListener('submit',submit);context.signal?.removeEventListener('abort',dispose);}
+  context.signal?.addEventListener('abort',dispose,{once:true});
+  return {refresh:reload,dispose};
 }

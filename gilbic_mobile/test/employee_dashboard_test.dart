@@ -66,8 +66,8 @@ void main() {
     await _scrollTo(tester, find.byKey(const Key('employee-section-updates')));
     expect(find.byKey(const Key('employee-section-updates')), findsOneWidget);
     expect(find.text('Notifications'), findsOneWidget);
-    expect(find.text('My account & devices'), findsOneWidget);
-    expect(find.text('Connectivity & offline policy'), findsOneWidget);
+    expect(find.text('Profile & security'), findsOneWidget);
+    expect(find.text('Offline & sync'), findsOneWidget);
 
     expect(find.text('Daily Route'), findsNothing);
     expect(find.text('Record Payment'), findsNothing);
@@ -180,8 +180,8 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    await _scrollTo(tester, find.text('Connectivity & offline policy'));
-    expect(find.text('Connectivity & offline policy'), findsOneWidget);
+    await _scrollTo(tester, find.text('Offline & sync'));
+    expect(find.text('Offline & sync'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

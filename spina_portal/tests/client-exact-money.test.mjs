@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {Element} from './helpers/dom.mjs';
 
 import {
   clientRenewalRows,
@@ -28,15 +29,7 @@ test('Client loan card preserves authoritative money beyond IEEE-754 safe precis
 });
 
 test('Client official payment row preserves authoritative amount and balance exactly', async () => {
-  const root = {
-    innerHTML: '',
-    querySelector() {
-      return null;
-    },
-    querySelectorAll() {
-      return [];
-    },
-  };
+  const root = new Element();
   const responses = new Map([
     ['/api/v1/account', { profile: { full_name: 'Exact Client' }, devices: [] }],
     ['/api/v1/client/loans', { loans: [] }],
@@ -68,6 +61,7 @@ test('Client official payment row preserves authoritative amount and balance exa
 
   await mountClientWorkspace({ root, api, setNavigation() {} });
 
+  await new Promise(resolve=>setImmediate(resolve));
   assert.equal(root.innerHTML.match(/₱90,071,992,547,409\.93/g)?.length, 2);
 });
 

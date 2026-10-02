@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Element,fire} from './helpers/dom.mjs';
+const module=await import('../assets/client-payment-details.js').catch(()=>({}));
+const id='10000000-0000-4000-8000-000000000001';
+test('exact detail and matching record copy never calculate allocations or auto-download',()=>{
+ assert.equal(typeof module.renderClientPaymentDetails,'function');const html=module.renderClientPaymentDetails({transaction_id:id,amount:'90071992547409.93',collector_name:'Synthetic',covered_dates:['2026-10-01','2026-10-03'],previous_balance:'3100.00',official_balance:'2205.00',is_voided:true,void_reason:'Duplicate <script>',origin:'collector',note:'Saved note'});assert.match(html,/90,071,992,547,409\.93/);assert.match(html,/2026-10-03/);assert.match(html,/Voided/);assert.match(html,/Saved note/);assert.match(html,/Not recorded/);assert.doesNotMatch(html,/<script>|Principal allocation|Interest allocation/);
+ const root=new Element();root.innerHTML=`<button data-payment-details="${id}">View</button><div data-payment-detail-panel="${id}"></div>`;let downloads=0;module.bindClientPaymentDetails({root,paymentsState:{status:'ready',data:{payments:[{transaction_id:id}]}},onDownload:()=>downloads++});assert.equal(downloads,0);fire(root.querySelector('[data-payment-details]'),'click');assert.match(root.textContent,/Payment record/);assert.equal(downloads,0);fire(root.querySelector('[data-payment-record-copy]'),'click');assert.equal(downloads,1);
+});

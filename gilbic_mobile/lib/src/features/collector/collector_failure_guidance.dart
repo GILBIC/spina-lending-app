@@ -108,21 +108,21 @@ bool _describesPossibleDuplicate(String message, String code) {
 
 String _fallbackFor(CollectorFailureTask task) => switch (task) {
   CollectorFailureTask.loadRoute =>
-    "Gilbic could not load today's route. Check your connection, then tap Try again.",
+    "SPINA could not load today's route. Check your connection, then tap Try again.",
   CollectorFailureTask.recordCollection =>
-    'Gilbic could not confirm this collection. Check your connection, then use Retry for the same entry.',
+    'SPINA could not confirm this collection. Check your connection, then use Retry for the same entry.',
   CollectorFailureTask.recordCombinedCollection =>
-    'Gilbic could not confirm the Regular + 7x7 payment. Check your connection, then use Retry for the same payment.',
+    'SPINA could not confirm the Regular + 7x7 payment. Check your connection, then use Retry for the same payment.',
   CollectorFailureTask.correctCollection =>
-    "Gilbic could not save this correction. Refresh the route, check today's entry, then try again.",
+    "SPINA could not save this correction. Refresh the route, check today's entry, then try again.",
   CollectorFailureTask.loadCorrectionHistory =>
-    'Gilbic could not load correction history. Check your connection, then tap Retry.',
+    'SPINA could not load correction history. Check your connection, then tap Retry.',
   CollectorFailureTask.loadOtherAreaWork =>
-    'Gilbic could not load other-area work. Check your connection, then tap Retry.',
+    'SPINA could not load other-area work. Check your connection, then tap Retry.',
   CollectorFailureTask.loadRemittance =>
-    'Gilbic could not load the remittance summary. Check your connection, then tap Retry.',
+    'SPINA could not load the remittance summary. Check your connection, then tap Retry.',
   CollectorFailureTask.submitRemittance =>
-    'Gilbic could not confirm this remittance. Check your connection, then refresh the summary before trying again.',
+    'SPINA could not confirm this remittance. Check your connection, then refresh the summary before trying again.',
 };
 
 String _conflictFor(CollectorFailureTask task) => switch (task) {

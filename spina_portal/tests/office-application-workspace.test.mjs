@@ -1,7 +1,9 @@
+import {mountRoleTask, activateManagementTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-application-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -57,12 +59,13 @@ for (const role of ['employee', 'management']) {
   test(`${role}: application review navigation connects the exact GET chain alongside CIF and Area`, async (t) => {
     const h = harness(role);
     t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-application-review`;
     assert.deepEqual(h.navigation.find((item) => item.id === navigationId), role === 'management'
       ? {id: navigationId, label: 'Clients & loans'}
-      : {id: navigationId, label: 'Application review', group: 'Daily work'});
+      : {id: navigationId, label: 'Application review', group: 'Office work'});
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="application"]'));
+    if (role === 'management') { await activateManagementTask(h.context, 'management-operations', 'management-area-management'); await activateManagementTask(h.context, 'management-clients-loans', 'management-office'); }
     const cif = h.root.querySelector('[data-office-cif-selection]');
     const area = h.root.querySelector(`#${role}-area-management`);
     const cifBefore = cif.innerHTML, areaBefore = area.innerHTML;
@@ -81,7 +84,7 @@ for (const role of ['employee', 'management']) {
 
   test(`${role}: an unrelated or similar permission cannot expose application review`, async () => {
     const h = harness(role, [`${PERMISSION}.extra`, 'area.manage']);
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     assert.equal(h.navigation.some((item) => item.id === `${role}-application-review`), false);
     assert.equal(h.root.querySelector('[data-office-application-review]'), null);
     assert.equal(h.requests.some((r) => r.path === LOOKUP || r.path === REVIEW), false);
@@ -93,11 +96,11 @@ for (const role of ['employee', 'management']) {
     t.after(() => h.controller.abort());
     let resolve;
     h.holdReview = new Promise((done) => { resolve = done; });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const old = open(h);
     await setImmediate();
     assert.equal(h.requests.filter((r) => r.path === REVIEW).length, 1);
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     resolve(summary());
     await setImmediate();
     assert.equal(old.innerHTML, '');
@@ -110,7 +113,7 @@ for (const role of ['employee', 'management']) {
     t.after(() => h.controller.abort());
     let resolve;
     h.holdReview = new Promise((done) => { resolve = done; });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = open(h);
     await setImmediate();
     h.controller.abort();

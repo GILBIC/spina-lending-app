@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
+import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
@@ -64,7 +66,13 @@ class CollectorClientLedgerSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text('${group.clientCount} clients'),
+                Text(
+                  '${group.clientCount} clients',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: SpinaTheme.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -170,63 +178,96 @@ class _ClientRow extends StatelessWidget {
           onTap: onToggle,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 9, 6, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    '$sequence.',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+                final stacked =
+                    constraints.maxWidth < 370 ||
+                    scale > 1.1 ||
+                    _moneyShort(regularAmount).length > 8 ||
+                    _moneyShort(sevenAmount).length > 8;
+                final identity = Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        '$sequence.',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              client.clientName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(fontWeight: FontWeight.w900),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  client.clientName,
+                                  maxLines: stacked ? null : 1,
+                                  overflow: stacked
+                                      ? null
+                                      : TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelLarge
+                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                              Icon(
+                                expanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                                size: 18,
+                              ),
+                            ],
+                          ),
+                          if (chips.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 3,
+                              children: [
+                                for (final chip in chips) _StatusChip(chip),
+                              ],
                             ),
-                          ),
-                          Icon(
-                            expanded ? Icons.expand_less : Icons.expand_more,
-                            size: 18,
-                          ),
+                          ],
                         ],
                       ),
-                      if (chips.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 3,
-                          children: [
-                            for (final chip in chips) _StatusChip(chip),
-                          ],
-                        ),
-                      ],
+                    ),
+                  ],
+                );
+                final today = _TodayAction(
+                  client: client,
+                  state: action,
+                  onToggle: onToggle,
+                  onRecord: onRecord,
+                  onRecordCombined: onRecordCombined,
+                );
+                if (stacked) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      identity,
+                      const SizedBox(height: 8),
+                      Text(
+                        'REG: ${regularAmount <= 0 ? '—' : _moneyShort(regularAmount)}',
+                      ),
+                      Text(
+                        '7x7: ${sevenAmount <= 0 ? '—' : _moneyShort(sevenAmount)}',
+                      ),
+                      const SizedBox(height: 8),
+                      today,
                     ],
-                  ),
-                ),
-                _AmountCell(amount: regularAmount, width: 52),
-                _AmountCell(amount: sevenAmount, width: 44),
-                SizedBox(
-                  width: 74,
-                  child: _TodayAction(
-                    client: client,
-                    state: action,
-                    onToggle: onToggle,
-                    onRecord: onRecord,
-                    onRecordCombined: onRecordCombined,
-                  ),
-                ),
-              ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: identity),
+                    _AmountCell(amount: regularAmount, width: 52),
+                    _AmountCell(amount: sevenAmount, width: 44),
+                    SizedBox(width: 74, child: today),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -286,8 +327,8 @@ class _TodayAction extends StatelessWidget {
         : Key('record-client-${client.clientId}');
 
     if (state.paying) {
-      return SizedBox(
-        height: 48,
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: FilledButton(
           key: key,
           onPressed: null,
@@ -302,20 +343,22 @@ class _TodayAction extends StatelessWidget {
     }
 
     if (state.requiresAtomicCombinedPosting) {
-      return SizedBox(
-        height: 48,
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: FilledButton(
           key: key,
           onPressed: () => onRecordCombined(client),
           style: _buttonStyle(context),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(state.pendingRetry ? 'Retry' : 'Pay'),
               Text(
                 _moneyShort(state.payableAmount),
-                maxLines: 1,
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
               ),
             ],
           ),
@@ -327,20 +370,27 @@ class _TodayAction extends StatelessWidget {
     final enabled = direct != null && state.blockedReason == null;
     final label = state.label;
     final amount = state.actionAmount;
-    return SizedBox(
-      height: 48,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
       child: FilledButton(
         key: key,
         onPressed: enabled ? () => onRecord(direct) : null,
         style: _buttonStyle(context),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(label),
             if (amount > 0 && (label == 'Pay' || label == 'Retry'))
               Text(
                 _moneyShort(amount),
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: enabled
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: .38),
+                ),
               ),
           ],
         ),
@@ -350,7 +400,7 @@ class _TodayAction extends StatelessWidget {
 
   ButtonStyle _buttonStyle(BuildContext context) => FilledButton.styleFrom(
     padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-    minimumSize: const Size(68, 46),
+    minimumSize: const Size(68, 48),
     textStyle: Theme.of(context).textTheme.labelMedium,
   );
 }
@@ -381,20 +431,16 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: SpinaTheme.brandPinkSoft,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: SpinaTheme.brandPinkDark,
-          fontSize: 9,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+    return SpinaStatusLabel(
+      label: text,
+      tone: switch (text) {
+        'COLLECTED' || 'REMITTED' => SpinaStatusTone.success,
+        'LACKING' ||
+        'UNABLE' ||
+        'PARTIAL' ||
+        'NOT COLLECTED' => SpinaStatusTone.attention,
+        _ => SpinaStatusTone.information,
+      },
     );
   }
 }
@@ -603,10 +649,6 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
     0,
     (highest, entry) => entry.passCount > highest ? entry.passCount : highest,
   );
-  final textBlob = loans
-      .expand((entry) => <String>[entry.status, entry.note, entry.todayNote])
-      .join(' ')
-      .toLowerCase();
 
   if (hasLacking) {
     chips.add('LACKING');
@@ -626,7 +668,12 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
     chips.add('MISSED $missed');
   }
   if (hasAdvance) chips.add('ADV');
-  if (textBlob.contains('gcash')) chips.add('GCASH');
+  if (loans.any(
+    (entry) =>
+        entry.note.trim().isNotEmpty || entry.todayNote.trim().isNotEmpty,
+  )) {
+    chips.add('NOTE');
+  }
   if (desktop7x7) chips.add('7x7 DESK');
   return chips;
 }
@@ -661,19 +708,7 @@ bool _isSevenBySeven(String value) {
 
 String _loanLabel(String value) => _isSevenBySeven(value) ? '7x7' : value;
 
-String _moneyShort(double value) {
-  if ((value - value.roundToDouble()).abs() < 0.005) {
-    return '₱${_groupDigits(value.round().toString())}';
-  }
-  final fixed = value.toStringAsFixed(2).split('.');
-  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
-}
-
-String _groupDigits(String digits) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
-    buffer.write(digits[index]);
-  }
-  return buffer.toString();
-}
+// Legacy route amounts are numeric; preserve the existing validated two-decimal boundary.
+String _moneyShort(double value) => value.isFinite
+    ? formatSpinaMoney(value.toStringAsFixed(2), compact: true)
+    : 'Unavailable';

@@ -484,6 +484,7 @@ queue_counts as (
                     and transaction.is_voided = false
                     and transaction.is_locked = false
                     and transaction.remittance_id is null
+                    and transaction.funding_source = 'collector_cash'
               )
         ) else null end as unresolved_rejected_remittance_count,
         case when settings.include_renewals then (

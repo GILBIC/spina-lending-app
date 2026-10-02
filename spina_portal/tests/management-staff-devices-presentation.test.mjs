@@ -216,6 +216,13 @@ function staffHarness({ permissions = ['device.manage'], request } = {}) {
   return { root, cleanup, detail: root.querySelector('#management-staff-device-detail') };
 }
 
+test('staff detail focuses its heading and Close returns to the exact opener', async()=>{
+ const h=staffHarness({request:async()=>({devices})});
+ const opener=h.root.querySelector('[data-manage-staff-id="staff-1"]');fire(opener,'click');await setImmediate();
+ assert.equal(h.detail.querySelector('[data-managed-device-heading]').focused,true);
+ fire(h.detail.querySelector('[data-managed-device-close]'),'click');assert.equal(opener.focused,true);h.cleanup();
+});
+
 test('staff selection keeps only the latest detail and Close clears selection and detached actions', async () => {
   let first; const requests = [];
   const h = staffHarness({ request(path, options) {

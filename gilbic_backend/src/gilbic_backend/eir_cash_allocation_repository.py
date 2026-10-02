@@ -359,6 +359,7 @@ class PostgresEirCashAllocationRepository:
                 collection_date=row["collection_date"],
                 accepted_at=row["accepted_at"],
                 entry_type=str(row["entry_type"]),
+                funding_source=str(row["funding_source"]),
                 amount=Decimal(row["amount"] or 0),
                 is_voided=bool(row["is_voided"]),
             )
@@ -633,6 +634,7 @@ class PostgresEirCashAllocationRepository:
                 t.collection_date,
                 t.accepted_at,
                 t.entry_type,
+                coalesce(to_jsonb(t)->>'funding_source', 'collector_cash') as funding_source,
                 t.applied_amount as amount,
                 t.amount as cash_received_amount,
                 t.unallocated_amount,

@@ -67,6 +67,16 @@ class PrivateImageStore {
   Future<T> use<T>(XFile file, Future<T> Function(XFile) read) =>
       _enqueue(() => read(file));
 
+  /// Submitted-request recovery can read only a surviving copy owned here.
+  Future<bool> owns(XFile file) => _enqueue(() async {
+    final root = await _root();
+    final owned = await _owned(root, Directory(paths.dirname(file.path)));
+    return owned != null &&
+        paths.equals(owned.path, file.path) &&
+        await FileSystemEntity.type(file.path, followLinks: false) ==
+            FileSystemEntityType.file;
+  });
+
   Future<void> cleanup({String? keepPath}) => _enqueue(() async {
     final root = await _root();
     await for (final entry in root.list(followLinks: false)) {

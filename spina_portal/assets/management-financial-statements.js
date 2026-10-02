@@ -2,6 +2,7 @@ import {
   asArray,
   badge,
   emptyState,
+  errorCard,
   escapeHtml,
   formatDate,
   formatMoney,
@@ -9,8 +10,52 @@ import {
 
 const STATEMENTS_PATH = '/api/v1/management/financial-accounting/statements';
 
-export function loadManagementFinancialStatements(api) {
-  return api.request(STATEMENTS_PATH);
+export function loadManagementFinancialStatements(api, periodId = '') {
+  return api.request(periodId ? `${STATEMENTS_PATH}?period_id=${encodeURIComponent(periodId)}` : STATEMENTS_PATH);
+}
+
+export function mountManagementFinancialStatements({root,api,signal,getSession}) {
+  const owner=getSession?.()?.user?.id;
+  let disposed=false,generation=0,periods=null,periodsPromise=null;
+  const alive=()=>!disposed&&!signal?.aborted&&getSession?.()?.user?.id===owner;
+  const validId=value=>typeof value==='string'&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value);
+  root.innerHTML='<div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements.</p></div></div><label>Accounting period<select data-statement-period><option value="">Server default period</option></select></label><div data-statement-results></div><button type="button" class="button button-outline" data-statement-retry hidden>Retry statements</button>';
+  const select=root.querySelector('[data-statement-period]'),results=root.querySelector('[data-statement-results]'),retry=root.querySelector('[data-statement-retry]');
+  async function loadPeriods() {
+    if(periods)return periods;
+    if(!periodsPromise)periodsPromise=api.request('/api/v1/management/financial-accounting').then(data=>{
+      if(!Array.isArray(data?.fiscal_periods))throw new Error('Accounting periods are unavailable. Retry this read.');
+      periods=data.fiscal_periods.filter(period=>validId(period.period_id));
+      if(alive()) {
+        const selected=select.value;
+        select.innerHTML='<option value="">Server default period</option>'+periods.map(period=>`<option value="${escapeHtml(period.period_id)}">${escapeHtml(period.label||'Accounting period')} · ${escapeHtml(period.status||'status unavailable')}</option>`).join('');
+        select.value=selected;
+      }
+      return periods;
+    }).finally(()=>{periodsPromise=null;});
+    return periodsPromise;
+  }
+  async function refresh({reloadPeriods=true}={}) {
+    if(!alive())return;
+    const version=++generation,selected=select.value||'';
+    if(reloadPeriods)periods=null;
+    results.innerHTML='<p role="status">Loading statements for the selected period…</p>';retry.hidden=true;
+    try {
+      const available=await loadPeriods();
+      if(!alive()||version!==generation)return;
+      if(selected&&!available.some(period=>period.period_id===selected))throw new Error('The selected period is no longer available. Choose a listed period.');
+      if(!available.length){results.innerHTML=emptyState('No accounting period is available. No period was created.');return;}
+      const data=await loadManagementFinancialStatements(api,selected);
+      if(!alive()||version!==generation)return;
+      const id=data?.statements?.period?.period_id;
+      if(!validId(id)||!available.some(period=>period.period_id===id)||(selected&&id!==selected))throw new Error('Statements did not match the selected period. Retry before using these figures.');
+      select.value=id;results.innerHTML=financialStatementsMarkup(data);
+    }catch(error){if(alive()&&version===generation){results.innerHTML=errorCard(error);retry.hidden=false;}}
+  }
+  const request=()=>void refresh(),change=()=>void refresh({reloadPeriods:false});select.addEventListener('change',change);retry.addEventListener('click',request);
+  function dispose(){if(disposed)return;disposed=true;generation++;select.removeEventListener('change',change);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
+  signal?.addEventListener('abort',dispose,{once:true});
+  return{refresh,dispose};
 }
 
 function statementRows(lines) {

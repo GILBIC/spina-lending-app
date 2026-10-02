@@ -166,7 +166,8 @@ test('Audit events remain individual permanent records and use compact business 
   assert.match(first.textContent, /collector/);
   assert.match(first.textContent, /revoked/i);
   assert.match(first.textContent, /Gilbic Clarck San Jose/);
-  assert.equal(first.getAttribute('data-nav-target'), 'management-operations');
+  assert.equal(first.querySelector('[data-nav-target]').getAttribute('data-nav-target'), 'management-operations');
+  assert.equal(first.querySelector('[data-management-destination]').getAttribute('data-management-destination'), 'management-staff');
 
   const financial = root.querySelector('[data-audit-event-key="event-3"]');
   assert.match(financial.textContent, /JE-202609-00000001/);

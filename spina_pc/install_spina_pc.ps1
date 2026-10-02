@@ -23,8 +23,12 @@ function Resolve-SafePortalUri {
         throw "PortalUrl must be an absolute URL."
     }
 
-    $LocalHosts = @("localhost", "127.0.0.1", "::1")
-    if ($Uri.Scheme -ne "https" -and ($Uri.Scheme -ne "http" -or $LocalHosts -notcontains $Uri.IdnHost)) {
+    $LoopbackAddress = $null
+    $IsLoopback = $Uri.IdnHost -eq "localhost" -or (
+        [System.Net.IPAddress]::TryParse($Uri.IdnHost, [ref]$LoopbackAddress) -and
+        [System.Net.IPAddress]::IsLoopback($LoopbackAddress)
+    )
+    if ($Uri.Scheme -ne "https" -and ($Uri.Scheme -ne "http" -or -not $IsLoopback)) {
         throw "Spina requires an HTTPS portal URL. HTTP is allowed only for localhost development."
     }
 

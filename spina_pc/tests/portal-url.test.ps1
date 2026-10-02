@@ -11,18 +11,25 @@ $accepted = @(
     @('https://spina.test', 'https://spina.test'),
     @('http://localhost:8000', 'http://localhost:8000'),
     @('http://127.0.0.1:8000', 'http://127.0.0.1:8000'),
-    @('http://[::1]:8000', 'http://[::1]:8000')
+    @('http://[::1]:8000', 'http://[::1]:8000'),
+    @('http://[0:0:0:0:0:0:0:1]:8000', 'http://[::1]:8000'),
+    @('http://127.0.0.2:8000', 'http://127.0.0.2:8000')
 )
 foreach ($case in $accepted) {
     $actual = Resolve-SafePortalUri -Value $case[0]
-    if ($actual -ne $case[1]) { throw "Unexpected normalized URL for $($case[0]): $actual" }
+    # Windows .NET Framework expands IPv6 text; compare its canonical URI.
+    $expected = ([System.Uri]::new($case[1])).AbsoluteUri.TrimEnd("/")
+    if ($actual -ne $expected) { throw "Unexpected normalized URL for $($case[0]): $actual" }
 }
 
 $rejected = @(
     'ftp://localhost/demo',
     'file://localhost/C:/demo',
     'http://spina.test',
-    'http://127.0.0.2:8000'
+    'http://10.0.0.1:8000',
+    'http://[::2]:8000',
+    'http://0.0.0.0:8000',
+    'http://localhost.example:8000'
 )
 foreach ($value in $rejected) {
     $didReject = $false
@@ -30,4 +37,4 @@ foreach ($value in $rejected) {
     catch { $didReject = $true }
     if (-not $didReject) { throw "Unsupported portal URL was accepted: $value" }
 }
-Write-Output '8 portal URL cases passed.'
+Write-Output "$($accepted.Count + $rejected.Count) portal URL cases passed."

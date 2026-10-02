@@ -3,7 +3,8 @@ import test from 'node:test';
 import {setImmediate} from 'node:timers/promises';
 import {Element,fire} from './helpers/dom.mjs';
 import {mountClientWorkspace} from '../assets/roles/client.js';
-import {mountEmployeeWorkspace} from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-support']);
 
 function decorate(node,parent=null,doc=Object.assign(new EventTarget(),{body:{}})){node.parentElement=parent;node.isConnected=true;node.ownerDocument=doc;node.dataset=Object.fromEntries(Object.entries(node.attributes).filter(([k])=>k.startsWith('data-')).map(([k,v])=>[k.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase()),v]));node.focus=()=>{doc.activeElement=node;};for(const child of node.children)if(typeof child!=='string')decorate(child,node,doc);return doc;}
 async function setup(t,role){
@@ -39,7 +40,7 @@ for(const changed of [false,true])test(`successful Employee reply updates only i
  await h.finish({request:{request_id:'support-1',status:'answered',management_response:'Submitted response'}});
  assert.equal(h.root.querySelectorAll('.employee-support-review')[1],second);assert.equal(second.querySelector('[name="response"]').value,'Other unsent reply');assert.equal(h.doc.activeElement,focused);
  assert.equal(first.querySelector('[name="response"]').value,changed?'A later unsent reply':'');assert.equal(first.hidden,true);for(const count of h.root.querySelectorAll('[data-support-count]'))assert.equal(count.textContent,'1');assert.match(first.parentElement.textContent,/Submitted response/);assert.match(first.parentElement.textContent,/Answered/);
- assert.equal(h.calls.filter(c=>c.path==='/api/v1/account').length,1);assert.equal(first.querySelector('button[type="submit"]').disabled,false);
+ assert.equal(h.calls.filter(c=>c.path==='/api/v1/account').length,0);assert.equal(first.querySelector('button[type="submit"]').disabled,false);
 });
 
 test('resolved Employee reply updates open-work counts without removing another draft',async t=>{

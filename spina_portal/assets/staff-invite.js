@@ -56,6 +56,8 @@ export function staffInviteMarkup(session = {}) {
       </select></label>
       <button class="button button-primary" type="submit">Send invitation</button>
     </form>
+    <p role="status" data-staff-invite-feedback></p>
+    <button type="button" class="button button-outline" data-staff-invite-reconcile hidden>Check invitation account</button>
     <p class="form-help">Access remains controlled by the selected role, server permissions, and device rules.</p>
   </details>`;
 }

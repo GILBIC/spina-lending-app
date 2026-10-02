@@ -201,7 +201,7 @@ test('Management workspace mounts General Journal evidence and protected action 
   assert.match(managementSource, /loadManagementTrialBalance/);
   assert.match(managementSource, /managementGeneralJournalMarkup/);
   assert.match(managementSource, /id="management-general-journal"/);
-  assert.match(managementSource, /hasPermission\(session, 'accounting\.view'\)/);
+  assert.match(managementSource, /can\('accounting\.view'\)/);
   assert.match(managementSource, /mountManagementJournalActions/);
 });
 
@@ -451,6 +451,7 @@ test('Management workspace connects accounting download and disposes it before r
   h.context.session = { user: { role: 'management' }, permissions: ['accounting.view'] };
   h.context.setNavigation = () => {};
   await mountManagementWorkspace(h.context);
+  await h.context.managementTaskController.activate('management-accounting-hub','management-general-journal');
   t.after(() => h.context.accountingExportCleanup?.());
   const form = h.root.querySelector('[data-accounting-export]');
   form.querySelector('[name="start_date"]').value = '2026-09-01';

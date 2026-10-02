@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
 final RegExp _decimalTextPattern = RegExp(r'^[+-]?\d+(?:\.\d+)?$');
@@ -179,26 +180,7 @@ String? optionalDecimalText(Object? value) {
   return text;
 }
 
-String formatClientLoanMoney(String value) {
-  final text = value.trim();
-  final match = RegExp(r'^([+-]?)(\d+)(?:\.(\d+))?$').firstMatch(text);
-  if (match == null) {
-    return text;
-  }
-  final sign = match.group(1) ?? '';
-  final whole = match.group(2) ?? '0';
-  final rawFraction = match.group(3);
-  final fraction = rawFraction == null
-      ? '00'
-      : rawFraction.length == 1
-          ? '${rawFraction}0'
-          : rawFraction;
-  final grouped = whole.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  return '${sign == '-' ? '-' : sign == '+' ? '+' : ''}₱$grouped.$fraction';
-}
+String formatClientLoanMoney(String value) => formatSpinaMoney(value);
 
 String formatClientLoanRate(String value) {
   final text = value.trim();
@@ -208,7 +190,9 @@ String formatClientLoanRate(String value) {
   if (!text.contains('.')) {
     return text;
   }
-  final trimmed = text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  final trimmed = text
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
   return trimmed;
 }
 

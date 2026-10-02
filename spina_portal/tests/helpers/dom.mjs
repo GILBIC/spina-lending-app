@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+const fixtureDocument = new EventTarget();
+fixtureDocument.createElement = tag => new Element(tag);
 
 // Event-capable DOM fixture with parsed children and live innerHTML. Detached
 // elements retain their listeners so integration tests can verify disposal.
@@ -10,6 +12,10 @@ export class Element extends EventTarget {
     this.children = [];
     this.value = attributes.value || '';
     this.disabled = Object.hasOwn(attributes, 'disabled');
+    this.hidden = Object.hasOwn(attributes, 'hidden');
+    this.parentElement = null;
+    this.ownerDocument = fixtureDocument;
+    this.classList={toggle:(name,on)=>{const values=new Set((this.className||'').split(/\s+/).filter(Boolean));if(on??!values.has(name))values.add(name);else values.delete(name);this.className=[...values].join(' ');},contains:name=>(this.className||'').split(/\s+/).includes(name)};
   }
 
   get innerHTML() {
@@ -30,6 +36,8 @@ export class Element extends EventTarget {
           attributes[attribute[1]] = attribute[2] ?? '';
         }
         const element = new Element(tag, attributes);
+        element.parentElement = stack.at(-1);
+        element.ownerDocument = this.ownerDocument;
         stack.at(-1).children.push(element);
         if (!['input', 'br', 'hr', 'img'].includes(tag)) stack.push(element);
       } else stack.at(-1).children.push(text);
@@ -53,6 +61,18 @@ export class Element extends EventTarget {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   removeAttribute(name) { delete this.attributes[name]; }
   focus() { this.focused = true; }
+  scrollIntoView() {}
+  get className() {return this.attributes.class || '';}
+  set className(value) {this.attributes.class=String(value);}
+  get isConnected() {return this._isConnected ?? (this.parentElement ? this.parentElement.isConnected : true);}
+  set isConnected(value) {this._isConnected=value;}
+  get dataset() {return this._dataset || Object.fromEntries(Object.entries(this.attributes).filter(([key])=>key.startsWith('data-')).map(([key,value])=>[key.slice(5).replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));}
+  set dataset(value) {this._dataset=value;}
+  appendChild(child) {child.remove();this.children.push(child);child.parentElement=this;child.ownerDocument=this.ownerDocument;return child;}
+  remove() {if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(child=>child!==this);this.parentElement=null;}
+  replaceWith(child) {const parent=this.parentElement;if(!parent)return;const index=parent.children.indexOf(this);child.remove();parent.children[index]=child;child.parentElement=parent;child.ownerDocument=parent.ownerDocument;this.parentElement=null;}
+  closest(selector) {let node=this;while(node){if(selector==='label' && node.tag==='label')return node;if(selector==='[hidden]' && node.hidden)return node;const attribute=selector.match(/^\[([\w-]+)\]$/);if(attribute&&node.getAttribute(attribute[1])!==null)return node;node=node.parentElement;}return null;}
+  reset() {for(const input of this.querySelectorAll('input')){input.value=input.getAttribute('value') || '';input.checked=false;}for(const input of this.querySelectorAll('textarea'))input.value='';}
 
   querySelectorAll(selector) {
     const match = selector.match(/^([\w-]+)?(?:#([\w-]+)|\.([\w-]+))?(?:\[([\w-]+)(?:="([^"]*)")?\])?$/);

@@ -61,6 +61,7 @@ def create_collector_cash_accountability_router() -> APIRouter:
                         where transaction.collector_user_id = actor.user_id
                           and transaction.entry_type <> 'pass'
                           and transaction.remittance_id is null
+                          and transaction.funding_source = 'collector_cash'
                           and transaction.is_locked = false
                           and transaction.is_voided = false
                     ),

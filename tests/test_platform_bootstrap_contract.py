@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,9 +22,42 @@ def test_windows_installer_requires_portal_url_and_safe_https_boundary() -> None
     assert "PortalUrl" in source
     assert "https" in source.lower()
     assert "localhost" in source.lower()
-    assert "127.0.0.1" in source
+    assert "[System.Net.IPAddress]::IsLoopback" in source
     assert "--app=" in source
     assert "WScript.Shell" in source
+
+
+def test_windows_installer_url_boundary_accepts_only_https_or_loopback_http() -> None:
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell is None:
+        pytest.skip("PowerShell is required for the real Windows URL guard")
+    source = _read("spina_pc/install_spina_pc.ps1")
+    # Run only the URL validator; never execute the shortcut installer.
+    function = source.split("function Resolve-SafePortalUri {", 1)[1].split(
+        "function Find-SupportedBrowser", 1
+    )[0]
+    script = "function Resolve-SafePortalUri {" + function + """
+$ErrorActionPreference = 'Stop'
+foreach ($value in @('https://portal.example.test', 'http://localhost:8000',
+                     'http://127.0.0.1:8000', 'http://127.0.0.2:8000',
+                     'http://[::1]:8000')) {
+    $null = Resolve-SafePortalUri -Value $value
+}
+foreach ($value in @('http://portal.example.test', 'http://192.0.2.1',
+                     'http://[2001:db8::1]', 'file:///tmp/spina', 'relative/path')) {
+    $rejected = $false
+    try { $null = Resolve-SafePortalUri -Value $value } catch { $rejected = $true }
+    if (-not $rejected) { throw 'An unsafe URL crossed the portal boundary.' }
+}
+"""
+    result = subprocess.run(
+        [shell, "-NoProfile", "-NonInteractive", "-Command", script],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_windows_installer_prefers_edge_then_chrome_and_embeds_no_credentials() -> None:

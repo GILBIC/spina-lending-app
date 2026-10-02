@@ -5,14 +5,14 @@ enum CrossRemittanceRecipientCapacity {
   management;
 
   String get apiValue => switch (this) {
-        CrossRemittanceRecipientCapacity.assignedCollector => 'assigned_collector',
-        CrossRemittanceRecipientCapacity.management => 'management',
-      };
+    CrossRemittanceRecipientCapacity.assignedCollector => 'assigned_collector',
+    CrossRemittanceRecipientCapacity.management => 'management',
+  };
 
   String get label => switch (this) {
-        CrossRemittanceRecipientCapacity.assignedCollector => 'Assigned Collector',
-        CrossRemittanceRecipientCapacity.management => 'Management',
-      };
+    CrossRemittanceRecipientCapacity.assignedCollector => 'Assigned Collector',
+    CrossRemittanceRecipientCapacity.management => 'Management',
+  };
 
   static CrossRemittanceRecipientCapacity fromValue(Object? value) {
     return switch (value?.toString().trim().toLowerCase()) {
@@ -63,11 +63,13 @@ class CrossRemittanceTarget {
       recipientUserId: recipientUserId,
       recipientName: recipientName,
       recipientCapacity: capacity,
-      roleName: firstNonEmptyString(<Object?>[data['role_name']]) ?? capacity.label,
+      roleName:
+          firstNonEmptyString(<Object?>[data['role_name']]) ?? capacity.label,
       transactionCount:
           firstNumber(<Object?>[data['transaction_count']])?.toInt() ?? 0,
       clientCount: firstNumber(<Object?>[data['client_count']])?.toInt() ?? 0,
-      totalAmount: firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
+      totalAmount:
+          firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
     );
   }
 }
@@ -75,10 +77,12 @@ class CrossRemittanceTarget {
 enum CrossCollectionCustodyStatus {
   notRemitted,
   awaitingAcceptance,
+  walletApplied,
   accepted;
 
   static CrossCollectionCustodyStatus fromValue(Object? value) {
     return switch (value?.toString().trim().toLowerCase()) {
+      'wallet_applied' => CrossCollectionCustodyStatus.walletApplied,
       'accepted' => CrossCollectionCustodyStatus.accepted,
       'awaiting_acceptance' => CrossCollectionCustodyStatus.awaitingAcceptance,
       _ => CrossCollectionCustodyStatus.notRemitted,
@@ -86,10 +90,12 @@ enum CrossCollectionCustodyStatus {
   }
 
   String get label => switch (this) {
-        CrossCollectionCustodyStatus.notRemitted => 'Not yet remitted',
-        CrossCollectionCustodyStatus.awaitingAcceptance => 'Awaiting acceptance',
-        CrossCollectionCustodyStatus.accepted => 'Accepted',
-      };
+    CrossCollectionCustodyStatus.notRemitted => 'Not yet remitted',
+    CrossCollectionCustodyStatus.awaitingAcceptance => 'Awaiting acceptance',
+    CrossCollectionCustodyStatus.accepted => 'Accepted',
+    CrossCollectionCustodyStatus.walletApplied =>
+      'Recipient funds applied; no Collector cash',
+  };
 }
 
 class CrossCollectionStatus {
@@ -141,8 +147,12 @@ class CrossCollectionStatus {
 
   static CrossCollectionStatus? fromPayload(Object? value) {
     final data = stringMap(value);
-    final transactionId = firstNonEmptyString(<Object?>[data['transaction_id']]);
-    final receiptNumber = firstNonEmptyString(<Object?>[data['receipt_number']]);
+    final transactionId = firstNonEmptyString(<Object?>[
+      data['transaction_id'],
+    ]);
+    final receiptNumber = firstNonEmptyString(<Object?>[
+      data['receipt_number'],
+    ]);
     final clientId = firstNonEmptyString(<Object?>[data['client_id']]);
     final clientName = firstNonEmptyString(<Object?>[data['client_name']]);
     final loanId = firstNonEmptyString(<Object?>[data['loan_id']]);
@@ -164,9 +174,8 @@ class CrossCollectionStatus {
       assignedCollectorUserId: firstNonEmptyString(<Object?>[
         data['assigned_collector_user_id'],
       ]),
-      assignedCollectorName: firstNonEmptyString(<Object?>[
-            data['assigned_collector_name'],
-          ]) ??
+      assignedCollectorName:
+          firstNonEmptyString(<Object?>[data['assigned_collector_name']]) ??
           'Unassigned',
       collectionDate: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['collection_date']]) ?? '',
@@ -178,18 +187,17 @@ class CrossCollectionStatus {
         firstNonEmptyString(<Object?>[data['accepted_at']]) ?? '',
       ),
       isLocked: _boolValue(data['is_locked']),
-      remittanceId:
-          firstNonEmptyString(<Object?>[data['remittance_id']]),
+      remittanceId: firstNonEmptyString(<Object?>[data['remittance_id']]),
       remittanceNumber:
           firstNonEmptyString(<Object?>[data['remittance_number']]) ?? '',
-      custodyStatus:
-          CrossCollectionCustodyStatus.fromValue(data['custody_status']),
+      custodyStatus: CrossCollectionCustodyStatus.fromValue(
+        data['custody_status'],
+      ),
       remittanceRecipientUserId: firstNonEmptyString(<Object?>[
         data['remittance_recipient_user_id'],
       ]),
-      remittanceRecipientName: firstNonEmptyString(<Object?>[
-            data['remittance_recipient_name'],
-          ]) ??
+      remittanceRecipientName:
+          firstNonEmptyString(<Object?>[data['remittance_recipient_name']]) ??
           '',
       submittedAt: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['submitted_at']]) ?? '',

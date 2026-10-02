@@ -96,6 +96,19 @@ activate_deployment() {
   systemctl reload caddy
 }
 
+install_treasury_runtime_guard() {
+  local release="$1"
+  python3 "$release/ops/digitalocean/treasury_runtime_guard.py" "$release" || return 1
+  install -d -m 0755 /opt/spina/guards /etc/systemd/system/spina-api.service.d
+  install -m 0644 "$release/ops/digitalocean/treasury_runtime_guard.py" /opt/spina/guards/treasury_runtime_guard.py
+  # This drop-in deliberately survives restoration of an older service unit.
+  cat > /etc/systemd/system/spina-api.service.d/treasury-funding.conf <<'TREASURY_GUARD'
+[Service]
+ExecStartPre=/usr/bin/python3 /opt/spina/guards/treasury_runtime_guard.py /opt/spina/current
+TREASURY_GUARD
+  chmod 0644 /etc/systemd/system/spina-api.service.d/treasury-funding.conf
+}
+
 rollback_deployment() {
   local backup="$1" path index=0 failed=0
   shift
@@ -421,6 +434,7 @@ ufw --force enable
 ACTIVATION_BACKUP="$(mktemp -d /opt/spina/releases/.activation.XXXXXX)"
 DEPLOYMENT_PATHS=(/opt/spina/current /var/www/spina /etc/systemd/system/spina-api.service /etc/caddy/Caddyfile)
 snapshot_deployment "$ACTIVATION_BACKUP" "${DEPLOYMENT_PATHS[@]}"
+install_treasury_runtime_guard "$RELEASE_DIR" || fail "treasury runtime compatibility guard could not be installed"
 ACTIVATION_STARTED=true
 activate_deployment "$RELEASE_DIR" "${DEPLOYMENT_PATHS[@]}"
 

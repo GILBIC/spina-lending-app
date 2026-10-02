@@ -13,7 +13,9 @@ class ManagementOperationsOverview {
   final List<ManagementOperationAudit> audits;
   final String notice;
 
-  factory ManagementOperationsOverview.fromPayload(Map<String, dynamic> payload) {
+  factory ManagementOperationsOverview.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
     final rawEntries = payload['entries'];
     final rawAudits = payload['audits'];
     if (rawEntries is! List || rawAudits is! List) {
@@ -32,7 +34,8 @@ class ManagementOperationsOverview {
       audits: rawAudits
           .map((item) => ManagementOperationAudit.fromPayload(stringMap(item)))
           .toList(growable: false),
-      notice: _optionalString(payload['notice']) ??
+      notice:
+          _optionalString(payload['notice']) ??
           'Loan Operations is read-only in mobile.',
     );
   }
@@ -67,23 +70,32 @@ class ManagementOperationsSummary {
   final int correctionCount;
   final int voidCount;
 
-  factory ManagementOperationsSummary.fromPayload(Map<String, dynamic> payload) {
+  factory ManagementOperationsSummary.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
     return ManagementOperationsSummary(
       latestCollectionDate: _optionalDate(payload['latest_collection_date']),
       latestDayAmount: _requiredDouble(payload, 'latest_day_amount'),
       latestDayPaymentCount: _requiredInt(payload, 'latest_day_payment_count'),
-      latestDayUnableToPayCount:
-          _requiredInt(payload, 'latest_day_unable_to_pay_count'),
+      latestDayUnableToPayCount: _requiredInt(
+        payload,
+        'latest_day_unable_to_pay_count',
+      ),
       unremittedAmount: _requiredDouble(payload, 'unremitted_amount'),
       unremittedEntryCount: _requiredInt(payload, 'unremitted_entry_count'),
-      pendingRemittanceAmount:
-          _requiredDouble(payload, 'pending_remittance_amount'),
-      pendingRemittanceCount:
-          _requiredInt(payload, 'pending_remittance_count'),
-      receivedRemittanceAmount:
-          _requiredDouble(payload, 'received_remittance_amount'),
-      receivedRemittanceCount:
-          _requiredInt(payload, 'received_remittance_count'),
+      pendingRemittanceAmount: _requiredDouble(
+        payload,
+        'pending_remittance_amount',
+      ),
+      pendingRemittanceCount: _requiredInt(payload, 'pending_remittance_count'),
+      receivedRemittanceAmount: _requiredDouble(
+        payload,
+        'received_remittance_amount',
+      ),
+      receivedRemittanceCount: _requiredInt(
+        payload,
+        'received_remittance_count',
+      ),
       correctionCount: _requiredInt(payload, 'correction_count'),
       voidCount: _requiredInt(payload, 'void_count'),
     );
@@ -131,6 +143,7 @@ class ManagementOperationEntry {
 
   String get statusLabel {
     return switch (status.toLowerCase()) {
+      'wallet_applied' => 'Recipient funds applied',
       'received' => 'Received',
       'submitted' => 'Remittance submitted',
       'voided' => 'Voided',

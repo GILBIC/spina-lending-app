@@ -14,6 +14,7 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_7x7_source_preview_"
 BOOTSTRAP_THROUGH = 109
+CURRENT_SCHEMA_THROUGH = 137
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
@@ -29,7 +30,7 @@ def _configure_shared_safety_helpers() -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
 
 
-def _run_tests(test_database_url: str) -> int:
+def _run_tests(test_database_url: str, test_paths: tuple[Path, ...]) -> int:
     missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
     if missing:
         raise SystemExit(
@@ -58,7 +59,7 @@ def _run_tests(test_database_url: str) -> int:
             "-m",
             "pytest",
             "-q",
-            *(str(path) for path in INTEGRATION_TESTS),
+            *(str(path) for path in test_paths),
         ],
         env=env,
         check=False,
@@ -138,7 +139,27 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        result = _run_tests(test_url)
+        # Preserve the historical 0109 -> 0110 audit-backfill proof before
+        # advancing the schema for today's application repositories.
+        upgrade = TEST_ROOT / "test_borrower_schedule_adjustment_upgrade_postgres.py"
+        historical = (
+            upgrade,
+            TEST_ROOT / "test_seven_by_seven_desktop_server_postgres_parity.py",
+            TEST_ROOT / "test_7x7_source_event_accounting_preview_postgres.py",
+        )
+        result = _run_tests(test_url, historical)
+        if result != 0:
+            raise SystemExit("Historical borrower-schedule upgrade validation failed.")
+        # Historical fixtures deliberately create overlapping area assignments.
+        # Keep their completed migration proof separate from current-schema tests;
+        # do not weaken the later authoritative-area migration to accommodate them.
+        with psycopg.connect(admin_url, autocommit=True) as admin:
+            disposable._drop_database(admin, test_database)
+            admin.execute(sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(test_database)))
+        disposable.BOOTSTRAP_THROUGH = CURRENT_SCHEMA_THROUGH
+        disposable._install_supabase_auth_prerequisite(test_url)
+        disposable._bootstrap_database(test_url)
+        result = _run_tests(test_url, tuple(path for path in INTEGRATION_TESTS if path not in historical))
         if result != 0:
             raise SystemExit(
                 "7x7 source-event / operational parity / mobile acceptance / Extra Principal "

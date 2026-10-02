@@ -11,6 +11,13 @@ const proof = {proof_id:id, loan_id:id, loan_number:'LOAN-1', status:'correction
 const detail = {proof, history:[{version, reviews:[proof.latest_review]}]};
 const capability = {upload_available:true, max_bytes:10485760, allowed_media_types:['image/png'], posts_payment:false};
 
+test('an unverified Management proof list keeps retry without claiming an empty review queue',async()=>{
+ const root=new Element();let fail=true;
+ const dispose=module.mountPaymentProofs({root,mode:'management',api:{async request(){if(fail)throw new Error('Read unavailable');return {proofs:[],has_more:false};}}});
+ await tick();assert.ok(root.querySelector('[data-proof-refresh]'));assert.doesNotMatch(root.textContent,/No payment evidence awaiting review/);assert.match(root.textContent,/Read unavailable/);
+ fail=false;fire(root.querySelector('[data-proof-refresh]'),'click');await tick();assert.match(root.textContent,/No payment evidence awaiting review/);dispose();
+});
+
 test('An uncertain proof upload retries the identical request and bytes without posting a payment', async () => {
   assert.equal(typeof module.mountPaymentProofs, 'function');
   const root = new Element(); const posts = [];
