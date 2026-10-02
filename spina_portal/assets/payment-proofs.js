@@ -12,12 +12,12 @@ function completeDetail(value) {
     && Array.isArray(value?.history) && value.history.some((entry) => entry?.version?.version_number === proof.current_version.version_number);
 }
 
-export function mountPaymentProofs({root, api, loans = [], mode = 'client', signal, saveFile = savePrivateFile}) {
+export function mountPaymentProofs({root, api, loans = [], loansState, registerHandle, mode = 'client', signal, saveFile = savePrivateFile}) {
   mounts.get(root)?.();
   const management = mode === 'management';
   const base = `/api/v1/${management ? 'management' : 'client'}/payment-proofs`;
   const controller = new AbortController(); let disposed = false; let busy = false;
-  let listing = {}; let detail = null; let offset = 0; let attempt = null; let uncertain = false; let removers = [];
+  let listing = {};let loaded=false; let detail = null; let offset = 0; let attempt = null; let uncertain = false; let removers = [];
   const listen = (element, event, fn) => { if (!element) return;
     element.addEventListener(event, fn); removers.push(() => element.removeEventListener(event, fn));
   };
@@ -31,20 +31,22 @@ export function mountPaymentProofs({root, api, loans = [], mode = 'client', sign
     if (disposed) return;
     if ([401,403].includes(error?.status)) {dispose();root.innerHTML = errorCard(error);return;}
     const element = root.querySelector('[data-proof-status]'); if (element) element.innerHTML = errorCard(error);
-    else root.innerHTML = errorCard(error);
+    else {render();root.querySelector('[data-proof-status]').innerHTML=errorCard(error);}
   }
   function lockInputs() {
     for (const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')]) input.disabled = busy || uncertain;
     for (const button of root.querySelectorAll('button')) button.disabled = busy || (uncertain && button.getAttribute('type') !== 'submit');
   }
-  async function load(nextOffset = offset) {
-    if (disposed || busy || uncertain) return; busy = true;
+  async function load(nextOffset = offset, preserveEditor = false) {
+    if (disposed || busy || uncertain || (!preserveEditor&&!discardAllowed())) return; busy = true;
     try {
       const value = await api.request(`${base}?limit=50&offset=${nextOffset}`,{signal:controller.signal});
-      if (disposed) return; offset = nextOffset; listing = value; detail = null; attempt = null; render();
+      if (disposed) return; offset = nextOffset; listing = value;loaded=true; if(preserveEditor&&root.querySelector('form')){status('Records refreshed. Your draft has been retained.');return;}detail = null; attempt = null; render();
     } catch(error) {fail(error);} finally {busy = false;if(!disposed) lockInputs();}
   }
+  function discardAllowed(){const form=root.querySelector('[data-proof-upload]')||root.querySelector('[data-proof-review]');const dirty=form&&(form.querySelector('[name="proofFile"]')?.files?.length||form.querySelector('textarea')?.value);return !dirty||globalThis.confirm?.('Discard this proof draft to open another record?')===true;}
   async function open(id) {
+    if(!discardAllowed())return;
     if(disposed || busy || uncertain || !UUID.test(id)) return; busy = true;lockInputs();
     try {const value=await api.request(`${base}/${id}`,{signal:controller.signal});if(!disposed){detail=value;attempt=null;render();}}
     catch(error){fail(error);}finally{busy=false;if(!disposed)lockInputs();}
@@ -59,6 +61,8 @@ export function mountPaymentProofs({root, api, loans = [], mode = 'client', sign
   async function submit(event) {
     event.preventDefault();if(disposed||busy)return;
     if(!uncertain){
+      if(!management&&!detail?.proof&&loansState&&loansState.status!=='ready'){fail(new Error('Loan records unavailable. Refresh before submitting new proof.'));return;}
+      if(globalThis.navigator?.onLine===false){fail(new Error('Connect to the internet before submitting evidence.'));return;}
       if(management){
         const decision=root.querySelector('[name="decision"]').value;
         const reason=root.querySelector('[name="reason"]').value.trim();
@@ -97,7 +101,7 @@ export function mountPaymentProofs({root, api, loans = [], mode = 'client', sign
     }finally{busy=false;if(!disposed)lockInputs();}
   }
   function render() {
-    clear();const records=asArray(listing.proofs);const proof=detail?.proof;const canUpload=listing.capability?.upload_available===true;
+    clear();const records=asArray(listing.proofs);const proof=detail?.proof;const canUpload=listing.capability?.upload_available===true&&Number.isSafeInteger(listing.capability?.max_bytes)&&listing.capability.max_bytes>0&&(management||!loansState||loansState.status==='ready');
     const paging=`<div class="inline-actions">${offset>0?'<button type="button" data-proof-previous>Previous</button>':''}${listing.has_more?'<button type="button" data-proof-next>Next</button>':''}</div>`;
     if(management&&records.length===0&&!proof){
       root.innerHTML=`<div class="payment-proof-empty-row" data-payment-proof-empty>
@@ -128,14 +132,14 @@ export function mountPaymentProofs({root, api, loans = [], mode = 'client', sign
           <label>Proof file<input type="file" name="proofFile" accept="application/pdf,image/png,image/jpeg" required /></label>
           <label>Note or payment reference<textarea name="note" maxlength="1000"></textarea></label>
           <button type="submit" class="button button-primary">${proof?'Save corrected evidence':'Submit evidence for review'}</button></form>`:''}
-        ${!management&&!canUpload?emptyState(listing.capability?.message||'Proof upload is currently unavailable.') : ''}
+        ${!management&&!canUpload?emptyState(loansState&&loansState.status!=='ready'?'Loan records unavailable. Existing proof history remains available.':!loaded?'Payment-proof records have not loaded. Retry the read.':listing.capability?.message||'Proof upload is currently unavailable.') : ''}
         ${!management&&proof?'<button type="button" class="button button-secondary" data-proof-new>Start a new submission</button>':''}
         <div data-proof-status role="status" aria-live="polite"></div>`;
     }
-    listen(root.querySelector('[data-proof-refresh]'),'click',()=>load());
+    listen(root.querySelector('[data-proof-refresh]'),'click',()=>load(offset,true));
     listen(root.querySelector('[data-proof-previous]'),'click',()=>load(Math.max(0,offset-50)));
     listen(root.querySelector('[data-proof-next]'),'click',()=>load(offset+50));
-    listen(root.querySelector('[data-proof-new]'),'click',()=>{if(busy||uncertain)return;detail=null;attempt=null;render();});
+    listen(root.querySelector('[data-proof-new]'),'click',()=>{if(busy||uncertain||!discardAllowed())return;detail=null;attempt=null;render();});
     for(const button of root.querySelectorAll('[data-proof-detail]'))listen(button,'click',()=>open(button.getAttribute('data-proof-detail')));
     for(const button of root.querySelectorAll('[data-proof-content]'))listen(button,'click',()=>{const number=Number(button.getAttribute('data-proof-content'));
       content(number,asArray(detail.history).find((entry)=>entry.version.version_number===number)?.version.media_type);});
@@ -143,5 +147,5 @@ export function mountPaymentProofs({root, api, loans = [], mode = 'client', sign
   }
   mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});
   if(signal?.aborted){dispose();return dispose;}
-  root.innerHTML=loadingPanel('Loading payment-proof records…');void load();return dispose;
+  render();registerHandle?.({refreshReadOnly:()=>load(offset,true),openRecord:id=>open(id),isUncertain:()=>uncertain||busy,dispose});void load();return dispose;
 }

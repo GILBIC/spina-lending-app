@@ -132,7 +132,9 @@ export function renderClientGcashIntent(intent = {}) {
   </div>`;
 }
 
-export function renderClientGcashPanel({ capability = {}, loans = [], intent = null } = {}) {
+export function renderClientGcashPanel({ capability = {}, loans = [], loansState, capabilityState, intent = null } = {}) {
+  if(capabilityState&&capabilityState.status!=='ready')return '<div class="notice-card warning">Payment configuration unavailable. Retry payment options.</div>';
+  if(loansState&&loansState.status!=='ready')return '<div class="notice-card warning">Loan records unavailable. Retry before selecting a loan for checkout.</div>';
   const activeLoans = asArray(loans).filter(
     (loan) => String(loan?.status ?? loan?.loan_status ?? '').trim().toLowerCase() === 'active',
   );
