@@ -901,7 +901,11 @@ class TreasuryService:
                     if action != "receipt_application_reverse"
                     or "collection.void.unremitted" in live_permissions
                 ]
-                private = is_owner(actor) or account.get("private_history", False)
+                private = is_owner(actor) or (
+                    account.get("private_history", False)
+                    and "treasury.view" in live_permissions
+                    and "treasury.view" in account.get("account_permissions", [])
+                )
                 context_row = conn.execute(
                     "select kind from treasury.contexts where id=%s",
                     (account["ledger_context_id"],),

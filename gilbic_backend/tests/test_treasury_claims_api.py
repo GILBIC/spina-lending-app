@@ -167,3 +167,77 @@ def test_reconciliation_export_contains_matching_ledger_and_rejects_client(treas
 
 
 pytest_plugins = ["treasury_test_support"]
+
+
+def test_workspace_private_snapshot_requires_live_and_account_view_after_revocation(
+    treasury,
+):
+    from gilbic_backend.treasury_models import AccountGrant
+    from test_treasury_reconciliation_postgres import opening
+    from treasury_test_support import actor, connect, grant_live
+
+    f = treasury
+    opening(f, "4321.00")
+    with connect() as conn:
+        reviewer = actor(conn, "synthetic-independent-role-not-seeded")
+        role_id = grant_live(
+            conn, reviewer.user_id, "treasury.view", "treasury.proof.review"
+        )
+    grant = AccountGrant(
+        action="account_grant",
+        request_id=uuid4(),
+        account_id=f["account_id"],
+        expected_version=version(f),
+        user_id=reviewer.user_id,
+        permissions=["treasury.view", "treasury.proof.review"],
+        private_history=True,
+    )
+    f["service"].execute(f["owner"], grant)
+    browser = client(f, reviewer)
+    initial = browser.get("/api/v1/treasury/workspace")
+    account = next(
+        row
+        for row in initial.json()["data"]["accounts"]
+        if row["id"] == str(f["account_id"])
+    )
+    assert account["balance"]["expected_balance"] == "4321.00"
+    with connect() as conn:
+        conn.execute(
+            "delete from core.role_permissions where role_id=%s and permission_code='treasury.view'",
+            (role_id,),
+        )
+    history = browser.get(f"/api/v1/treasury/accounts/{f['account_id']}/events")
+    assert history.status_code == 403
+    response = browser.get("/api/v1/treasury/workspace")
+    assert (
+        response.status_code == 200 and response.headers["cache-control"] == "no-store"
+    )
+    account = next(
+        row
+        for row in response.json()["data"]["accounts"]
+        if row["id"] == str(f["account_id"])
+    )
+    assert "claim_review" in account["actions"]
+    assert account["balance"] is None
+    with connect() as conn:
+        conn.execute(
+            "insert into core.role_permissions(role_id,permission_code) values(%s,'treasury.view')",
+            (role_id,),
+        )
+    f["service"].execute(
+        f["owner"],
+        grant.model_copy(
+            update={
+                "request_id": uuid4(),
+                "expected_version": version(f),
+                "permissions": ["treasury.proof.review"],
+            }
+        ),
+    )
+    scoped = browser.get("/api/v1/treasury/workspace")
+    account = next(
+        row
+        for row in scoped.json()["data"]["accounts"]
+        if row["id"] == str(f["account_id"])
+    )
+    assert "claim_review" in account["actions"] and account["balance"] is None
