@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -374,18 +375,5 @@ class _CashHeldBreakdown extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2).split('.');
-  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
-}
-
-String _groupDigits(String digits) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[index]);
-  }
-  return buffer.toString();
-}
+// Legacy cash/route models are numeric; this preserves their existing display conversion.
+String _money(double value) => value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';

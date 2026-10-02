@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
@@ -625,19 +626,5 @@ bool _isSevenBySeven(String value) {
 
 String _loanLabel(String value) => _isSevenBySeven(value) ? '7x7' : value;
 
-String _moneyShort(double value) {
-  if ((value - value.roundToDouble()).abs() < 0.005) {
-    return '₱${_groupDigits(value.round().toString())}';
-  }
-  final fixed = value.toStringAsFixed(2).split('.');
-  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
-}
-
-String _groupDigits(String digits) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
-    buffer.write(digits[index]);
-  }
-  return buffer.toString();
-}
+// Legacy route amounts are numeric; preserve the existing validated two-decimal boundary.
+String _moneyShort(double value) => value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2), compact: true) : 'Unavailable';

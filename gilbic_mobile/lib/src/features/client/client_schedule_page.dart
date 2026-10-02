@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -170,22 +171,6 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
   }
 }
 
-String _money(String value) {
-  final text = value.trim();
-  final match = RegExp(r'^([+-]?)(\d+)(?:\.(\d+))?$').firstMatch(text);
-  if (match == null) return text;
-  final sign = match.group(1) ?? '';
-  final whole = match.group(2) ?? '0';
-  final fraction = match.group(3);
-  final grouped = whole.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  return '${sign == '-' ? '-' : sign == '+' ? '+' : ''}₱$grouped${fraction == null ? '' : '.$fraction'}';
-}
+String _money(String value) => formatSpinaMoney(value);
 
-String _date(DateTime? value) {
-  if (value == null) return 'Not available';
-  const months = <String>['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return '${months[value.month - 1]} ${value.day}, ${value.year}';
-}
+String _date(DateTime? value) => formatSpinaCalendarDate(value == null ? null : '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}');

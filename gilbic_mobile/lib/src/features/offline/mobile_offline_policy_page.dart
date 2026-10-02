@@ -104,7 +104,7 @@ class MobileOfflinePolicyPage extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.all(18),
                   child: Text(
-                    'If a Collector explicitly submits while online and the connection fails before the result is known, Gilbic does not replay the write by itself. The Collector must choose Retry same entry; that explicit retry reuses the original idempotency key and device sequence so the server can return the original result instead of creating a duplicate.',
+                    'If a Collector explicitly submits while online and the connection fails before the result is known, SPINA does not replay the write by itself. The Collector must choose Retry same entry; that explicit retry reuses the original idempotency key and device sequence so the server can return the original result instead of creating a duplicate.',
                   ),
                 ),
               ),

@@ -1,8 +1,8 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_alerts_audit.dart';
@@ -938,11 +938,11 @@ bool _metricHasAttention(ManagementDashboardMetric metric) {
 }
 
 (String, String) _attentionContent(ManagementDashboardMetric metric) {
-  final amount = _formatMoney(metric.amount ?? '0.00');
+  final amount = formatSpinaMoney(metric.amount);
   return switch (metric.key) {
     ManagementDashboardMetricKey.assignedRemittances => (
       'Remittances',
-      'PHP $amount awaiting receipt',
+      '$amount awaiting receipt',
     ),
     ManagementDashboardMetricKey.protectedRenewals => (
       'Renewal requests',
@@ -984,7 +984,7 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
   ManagementDashboardMetric metric,
 ) {
   final count = metric.count ?? 0;
-  final amount = _formatMoney(metric.amount ?? '0.00');
+  final amount = formatSpinaMoney(metric.amount);
   return switch (metric.key) {
     ManagementDashboardMetricKey.activeClients => (
       '$count',
@@ -1002,17 +1002,17 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
       null,
     ),
     ManagementDashboardMetricKey.outstandingBalance => (
-      'PHP $amount',
+      amount,
       'Outstanding',
       null,
     ),
     ManagementDashboardMetricKey.latestCollections => (
-      'PHP $amount',
+      amount,
       'Collected',
       '$count entries${_asOfText(context, metric.asOfDate)}',
     ),
     ManagementDashboardMetricKey.unremittedCollections => (
-      'PHP $amount',
+      amount,
       'Unremitted cash',
       '$count collection entries',
     ),
@@ -1020,32 +1020,9 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
   };
 }
 
-String _updatedText(BuildContext context, DateTime generatedAt) {
-  final local = spinaBusinessWallClock(generatedAt);
-  final date = MaterialLocalizations.of(context).formatMediumDate(local);
-  final time = TimeOfDay.fromDateTime(local).format(context);
-  return 'Updated $date at $time';
-}
+String _updatedText(BuildContext context, DateTime generatedAt) => 'Updated ${formatSpinaInstant(generatedAt)} (Asia/Manila)';
 
-String _asOfText(BuildContext context, DateTime? asOfDate) {
-  if (asOfDate == null) return '';
-  final calendarDate = DateTime(asOfDate.year, asOfDate.month, asOfDate.day);
-  final date = MaterialLocalizations.of(context).formatMediumDate(calendarDate);
-  return ' • $date';
-}
-
-String _formatMoney(String value) {
-  final parts = value.split('.');
-  final integer = parts.first;
-  final grouped = StringBuffer();
-  for (var index = 0; index < integer.length; index++) {
-    if (index > 0 && (integer.length - index) % 3 == 0) {
-      grouped.write(',');
-    }
-    grouped.write(integer[index]);
-  }
-  return '${grouped.toString()}.${parts[1]}';
-}
+String _asOfText(BuildContext context, DateTime? value) => value == null ? '' : ' • ${formatSpinaCalendarDate('${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}')}';
 
 String _metricDestinationLabel(ManagementDashboardMetricKey key) {
   return switch (key) {

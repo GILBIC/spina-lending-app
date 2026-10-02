@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -76,7 +77,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   void _permissionMessage(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Your current Gilbic access does not allow $feature.'),
+        content: Text('Your current SPINA access does not allow $feature.'),
       ),
     );
   }
@@ -404,7 +405,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     key: const Key('collector-more-sign-out'),
                     icon: Icons.logout_rounded,
                     title: 'Sign out',
-                    subtitle: 'End this Gilbic session on the device',
+                    subtitle: 'End this SPINA session on the device',
                     destructive: true,
                     onTap: () {
                       Navigator.pop(sheetContext);
@@ -535,18 +536,5 @@ class _CollectorToolTile extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2).split('.');
-  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
-}
-
-String _groupDigits(String digits) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[index]);
-  }
-  return buffer.toString();
-}
+// Legacy cash/route models are numeric; this preserves their existing display conversion.
+String _money(double value) => value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';

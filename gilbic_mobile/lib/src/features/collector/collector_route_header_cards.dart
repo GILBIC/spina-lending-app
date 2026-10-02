@@ -1,5 +1,5 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:flutter/material.dart';
-import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 
@@ -115,43 +115,9 @@ String? _activePromiseReminder(CollectorRouteEntry entry) {
   return reminder.isEmpty ? null : reminder;
 }
 
-String _longDate(DateTime value) {
-  final local = value.toLocal();
-  const months = <String>[
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  return '${months[local.month - 1]} ${local.day}, ${local.year}';
-}
+String _longDate(DateTime value) => formatSpinaCalendarDate('${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}');
 
-String _time(DateTime value) {
-  final local = spinaBusinessWallClock(value);
-  return '${local.hour.toString().padLeft(2, '0')}:'
-      '${local.minute.toString().padLeft(2, '0')}';
-}
+String _time(DateTime value) => '${formatSpinaInstant(value)} (Asia/Manila)';
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2).split('.');
-  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
-}
-
-String _groupDigits(String digits) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[index]);
-  }
-  return buffer.toString();
-}
+// Legacy cash/route models are numeric; this preserves their existing display conversion.
+String _money(double value) => value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';
