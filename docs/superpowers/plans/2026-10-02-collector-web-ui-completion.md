@@ -294,25 +294,37 @@ Do not run npm run build again on an unchanged head: it repeats tests. Public-ou
 
 ## Coverage and completion ledger
 
-Every row is pending implementation or assessment at this revision. Replace status with exact evidence only after execution.
+Local product checkpoint `be27eb2601f86cfbc8ab314d868acb3b3ea46063`. This is an implementation candidate, not owner acceptance. Parent coordinates final shared integration, independent review, publication, exact-head CI and external synchronization. No push or production action occurred from this worktree. Original granular test names were consolidated into the suites below; absent proposed files are not claimed as executed.
 
-| Requirement / task | Coverage | Status |
+| Requirement / task | Actual evidence | Status |
 | --- | --- | --- |
-| Task0 | Live refs, original/addendum reconciliation and shared ownership | Pending Codex |
-| C1 / Task1 | Remittance skipped/read-only/error/zero/retry and date/recipient checks | Not implemented |
-| C9 / Task1A | Full items/refunds, history reason, reviewed snapshot, malformed-result reconciliation | Not implemented |
-| C2 / Task2 | Draft/photo nodes, save/read separation, revisions, one guard | Not implemented |
-| C3 / Task3 | Phone Needs attention, labels, exact amount and focus | Not implemented |
-| C4 / Task4 | Compact payment, conditional promise/extra, reviewed Combined Pay | Not implemented |
-| C5 / Task5 | Independent route, guarded lazy tasks, header Refresh/session/privacy | Not implemented |
-| C6 / Task6 | Ordered search/filters and exact nonfinancial row navigation | Not implemented |
-| C10 / Task6A | Route-view-only full schedule/maturity/past-due/payoff/promise | Not implemented |
-| C11 / Task6B | All today's receipts, read-only attribution and exact identity | Not implemented |
-| C7 / Task7 | Clear headings/counts/status and30/60/65 loaded records | Not implemented |
-| C12 / Task7A | Exact renewal route badge, requested/approved/offset/net/lock/note/retry | Not implemented |
-| C13 / Task7B | Own-recipient Mark read, verified destinations and preserved guard/drafts | Not implemented |
-| C14 / Task7C | Older-history/print/recipient/Employee boundaries and explicit gaps | Pending assessment |
-| C8 / Task8 | Full regression,24 core plus expanded layouts, exact-head CI and handoff | Not run |
+| Task0 | Parent live refs/Notion/Create State audit; start9fba375d; isolated branch and shared ownership | Baseline recorded |
+| C1 / Task1 | collector-remittance-state: independent permissions, skipped route, true zero, retries, recipient/date/race validation | Implemented locally |
+| C9 / Task1A | Same suite: full receipt/refund evidence, exact snapshot/UUID checks, malformed lock, terminal/mismatched result kept unconfirmed and saved snapshot cannot repeat | Implemented locally |
+| C2 / Task2 | collector-local-refresh plus workflows/renewals/other-area regressions; browser retains sibling textarea and selected File node | Implemented locally |
+| C3 / Task3 | attention-mobile/discovery plus feedback/focus tests; labeled phone cards inspected320/390 and1440 desktop | Implemented locally |
+| C4 / Task4 | payment-details/contracts/workflows: exact BigInt disclosure, conditional reason/promise, server flags and reviewed Preview/Confirm hash | Implemented locally |
+| C5 / Task5 | local-refresh request absence/route independence/lazy recovery; parent shell5fb925a7 and74dde750; same guard survives refresh | Implemented locally |
+| C6 / Task6 | discovery/local-refresh: exact ordered filtering/attention destination, no payment opening;12 rows/six clients fixture | Implemented locally |
+| C10 / Task6A | readonly-schedule: full exact server summary/rows, review suppresses payoff,120 rows, scope/delayed close/focus | Implemented locally |
+| C11 / Task6B | discovery and browser: all same-loan receipts/IDs/noncontiguous dates, readonly attribution/custody and keyboard Close | Implemented locally |
+| C7 / Task7 | renewal/remittance/activity: clear headings, neutral unknown enums, loaded30/60/65 rather than lifetime counts | Implemented locally |
+| C12 / Task7A | renewal-context/renewals/custody: exact requested/approved/offset/net/lock, route loan matching, separate physical confirmations and retained File | Implemented locally |
+| C13 / Task7B | notification-actions: own exact read result, duplicate click, finite producers/current loaded targets, unknown metadata inert, privacy hooks | Implemented locally; no renewal producer |
+| C14 / Task7C | [Output/permission disposition](2026-10-02-collector-output-permissions.md): executable sources/grants; older history/print gaps | Assessed; unsupported contracts follow-up |
+| C8 / Task8 | Local portal checks/build/public-output and48 synthetic layouts in durable report | Local proof; root final integration/review/CI pending |
+
+Execution checklist for local role scope:
+
+- [x] Tasks0,1,1A: baseline and remittance states/evidence/confirmation.
+- [x] Tasks2,3,4,5: retained drafts/File controls, phone attention, exact disclosure, lazy guarded refresh.
+- [x] Tasks6,6A,6B: ordered route discovery and exact read-only schedule/receipt details.
+- [x] Tasks7,7A,7B,7C: truthful counts/status, renewal context, own Update actions and contract dispositions.
+- [x] Task8 local check/test/build/output and synthetic visual matrix; durable report at checkpoints/current-prs-20261002/collector-report.md.
+- [ ] Task8 parent independent review and final shared Employee/Client/Management integration and service-worker cache version.
+- [ ] Task8 publication to existing Draft486, exact-head three existing CI jobs, GitHub/Notion/Create State synchronization.
+
+Original granular step checkboxes preserve the requested test breakdown. The equivalent-suite map above records actual execution without manufacturing individual named-test runs; remaining final acceptance work stays explicit.
 
 ## Copyable Codex task
 
