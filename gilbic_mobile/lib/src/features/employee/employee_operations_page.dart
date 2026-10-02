@@ -336,7 +336,7 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
                   : Icons.rate_review_outlined,
             ),
             title: Text(
-              '${employeeLabel(event.command['event_type'] as String)} · ${employeeLabel(event.state)}',
+              '${employeeLabel(event.command['event_type'] as String)} · ${switch (event.state) {'accepted' => 'Received by server', 'pending' => 'Saved on this device — awaiting server sync', 'pending_review' || 'review' => 'Needs review', _ => 'Status unavailable'}}',
             ),
             subtitle: Text(
               '${_format(event.command['captured_at'])}\n${event.message}',
