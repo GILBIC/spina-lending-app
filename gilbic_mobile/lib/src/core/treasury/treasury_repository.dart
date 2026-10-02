@@ -1,0 +1,975 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/config/api_config.dart';
+import 'package:gilbic_mobile/src/core/media/private_image_store.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as paths;
+import 'package:path_provider/path_provider.dart';
+
+class TreasuryAccessChanged implements Exception {
+  const TreasuryAccessChanged();
+  @override
+  String toString() =>
+      'Access changed. Reopen this task with your current account.';
+}
+
+class TreasuryUncertain implements Exception {
+  const TreasuryUncertain();
+  @override
+  String toString() =>
+      'The result is unconfirmed. Check this exact request before another submission.';
+}
+
+abstract interface class TreasuryJournal {
+  Future<String?> read();
+  Future<void> write(String value);
+  Future<void> clear();
+}
+
+class SecureTreasuryJournal implements TreasuryJournal {
+  const SecureTreasuryJournal({this.storage = const FlutterSecureStorage()});
+  final FlutterSecureStorage storage;
+  static const key = 'gilbic.treasury.submitted_attempt.v1';
+  @override
+  Future<String?> read() => storage.read(key: key);
+  @override
+  Future<void> write(String value) => storage.write(key: key, value: value);
+  @override
+  Future<void> clear() => storage.delete(key: key);
+}
+
+class MemoryTreasuryJournal implements TreasuryJournal {
+  String? value;
+  @override
+  Future<String?> read() async => value;
+  @override
+  Future<void> write(String next) async {
+    value = next;
+  }
+
+  @override
+  Future<void> clear() async {
+    value = null;
+  }
+}
+
+abstract interface class TreasuryRepository {
+  TreasuryWorkspace? get workspace;
+  String? get pendingRequestId;
+  bool get busy;
+  bool get denied;
+  Future<TreasuryWorkspace> loadWorkspace();
+  Future<void> restoreAttempt();
+  Future<TreasuryPage> list(
+    TreasuryListKind kind, {
+    String? accountId,
+    String? clientId,
+    int limit = 50,
+    int offset = 0,
+  });
+  Future<Map<String, dynamic>> detail(TreasuryListKind kind, String id);
+  Future<Map<String, dynamic>> instructions();
+  Future<TreasuryResult> execute(TreasuryCommand command, {String? targetId});
+  Future<TreasuryResult?> recover();
+  Future<TreasuryResult> retrySame();
+  Future<TreasuryResult> uploadClaim(
+    Map<String, dynamic> metadata,
+    XFile file, {
+    String? claimId,
+  });
+  Future<TreasuryResult> uploadEvidence({
+    required String requestId,
+    required String accountId,
+    required String purpose,
+    required XFile file,
+  });
+  Future<Map<String, dynamic>> preview(
+    String receiptId,
+    Map<String, dynamic> input,
+  );
+  Future<Uint8List> content({
+    String? claimId,
+    int? version,
+    String? evidenceId,
+    required String mediaType,
+    String? digest,
+    int? byteCount,
+  });
+  void dispose();
+}
+
+class SpinaTreasuryRepository implements TreasuryRepository {
+  SpinaTreasuryRepository({
+    required UserSession session,
+    required this.deviceId,
+    http.Client? client,
+    UserSession? Function()? getSession,
+    bool Function()? isOnline,
+    TreasuryJournal? journal,
+    PrivateImageStore? images,
+  }) : _initial = session,
+       _getSession = getSession ?? (() => session),
+       _isOnline = isOnline ?? (() => true),
+       _client = client ?? http.Client(),
+       _ownsClient = client == null,
+       _journal = journal ?? const SecureTreasuryJournal(),
+       _images = images ?? PrivateImageStore(directory: _privateDirectory),
+       _initialScope = _scope(session);
+  final UserSession _initial;
+  final String deviceId;
+  final UserSession? Function() _getSession;
+  final bool Function() _isOnline;
+  final http.Client _client;
+  final bool _ownsClient;
+  final TreasuryJournal _journal;
+  final PrivateImageStore _images;
+  final String _initialScope;
+  TreasuryWorkspace? _workspace;
+  Map<String, dynamic>? _attempt;
+  Map<String, dynamic>? _previewInput, _lastPreview;
+  bool _busy = false, _disposed = false, _denied = false;
+  String? _authorization;
+  @override
+  TreasuryWorkspace? get workspace => _workspace;
+  @override
+  String? get pendingRequestId => _attempt?['request_id'] as String?;
+  @override
+  bool get busy => _busy;
+  @override
+  bool get denied => _denied;
+  static String _scope(UserSession s) => canonicalTreasury({
+    'user': s.userId,
+    'role': s.rawRole,
+    'roles': s.roles,
+    'permissions': s.permissions.toList()..sort(),
+  });
+  static Future<Directory> _privateDirectory() async => Directory(
+    paths.join(
+      await (await getApplicationSupportDirectory()).resolveSymbolicLinks(),
+      'gilbic_treasury_submitted_files_v1',
+    ),
+  );
+  void _current() {
+    final session = _getSession();
+    if (_disposed ||
+        session == null ||
+        session.isExpired ||
+        session.accessToken.isEmpty ||
+        _scope(session) != _initialScope) {
+      _workspace = null;
+      _denied = true;
+      throw const TreasuryAccessChanged();
+    }
+  }
+
+  void _online() {
+    _current();
+    if (!_isOnline()) {
+      throw StateError(
+        'Connect to the internet before sending or checking a request.',
+      );
+    }
+  }
+
+  Future<void> _redact() async {
+    final heldUpload = _attempt?['upload'];
+    _workspace = null;
+    _attempt = null;
+    _lastPreview = null;
+    _previewInput = null;
+    _denied = true;
+    await _journal.clear();
+    if (heldUpload != null) await _images.cleanup();
+  }
+
+  Map<String, String> _headers() => {
+    'Accept': 'application/json',
+    'Authorization': 'Bearer ${_getSession()!.accessToken}',
+    'X-Device-Id': deviceId,
+  };
+  Future<Object?> _request(
+    String path, {
+    String method = 'GET',
+    Object? body,
+    Uint8List? bytes,
+    Map<String, String> headers = const {},
+  }) async {
+    _current();
+    late http.Response response;
+    try {
+      final uri = ApiConfig.endpoint('/api/v1/treasury$path');
+      final h = {
+        ..._headers(),
+        ...headers,
+        if (body != null) 'Content-Type': 'application/json',
+      };
+      response = method == 'GET'
+          ? await _client.get(uri, headers: h)
+          : await _client.post(
+              uri,
+              headers: h,
+              body: bytes ?? (body == null ? null : jsonEncode(body)),
+            );
+    } on Exception {
+      _current();
+      rethrow;
+    }
+    _current();
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    late Map<String, dynamic> payload;
+    try {
+      payload = decodeJsonObject(response.body);
+    } on Exception {
+      throw const TreasuryUncertain();
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final detail = payload['detail'];
+      final detailMap = detail is Map ? detail : const {};
+      throw SpinaApiException(
+        detailMap['message'] as String? ??
+            'The server could not confirm this request. Refresh and review.',
+        statusCode: response.statusCode,
+        code: detailMap['code'] as String?,
+      );
+    }
+    if (payload['success'] != true || !payload.containsKey('data')) {
+      throw const TreasuryUncertain();
+    }
+    return unwrapSpinaData(payload, statusCode: response.statusCode);
+  }
+
+  @override
+  Future<TreasuryWorkspace> loadWorkspace() async {
+    final value = TreasuryWorkspace.fromJson(
+      treasuryObject(await _request('/workspace')),
+      expectedUserId: _initial.userId,
+    );
+    _current();
+    if (_authorization != null && _authorization != value.authorization) {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    _authorization = value.authorization;
+    _workspace = value;
+    return value;
+  }
+
+  void _permitted(String action, String accountId) {
+    _current();
+    final w = _workspace;
+    if (w == null || !w.capability(action)) {
+      throw StateError(
+        'This action is disabled or unavailable for your access.',
+      );
+    }
+    final account = w.account(accountId);
+    if (account == null && action == 'account_configure') return;
+    if (account?.permits(action) != true) throw const TreasuryAccessChanged();
+  }
+
+  @override
+  Future<void> restoreAttempt() async {
+    _current();
+    if (_busy || _attempt != null) return;
+    final raw = await _journal.read();
+    _current();
+    if (raw == null) return;
+    try {
+      final held = treasuryObject(jsonDecode(raw));
+      if (held['contract_version'] != 1 ||
+          held['scope'] != _initialScope ||
+          held['external_device_id'] != deviceId ||
+          held['actor_user_id'] != _workspace?.actor.userId ||
+          held['device_id'] != _workspace?.actor.deviceId ||
+          !treasuryUuid(held['request_id']) ||
+          !treasuryUuid(held['account_id']) ||
+          held['path'] is! String ||
+          held['action'] is! String) {
+        throw const TreasuryAccessChanged();
+      }
+      _attempt = treasuryObject(immutableTreasury(held));
+    } on Exception {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+  }
+
+  @override
+  Future<TreasuryPage> list(
+    TreasuryListKind kind, {
+    String? accountId,
+    String? clientId,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    if (limit < 1 ||
+        limit > 100 ||
+        offset < 0 ||
+        offset > 100000 ||
+        accountId == null && kind != TreasuryListKind.claims) {
+      throw ArgumentError('Choose a valid Treasury page.');
+    }
+    if (accountId != null) {
+      requireTreasuryId(accountId);
+      if ([
+            TreasuryListKind.events,
+            TreasuryListKind.receipts,
+            TreasuryListKind.reconciliations,
+            TreasuryListKind.openings,
+          ].contains(kind) &&
+          _workspace?.account(accountId)?.balance == null) {
+        throw const TreasuryAccessChanged();
+      }
+    }
+    if (clientId != null) requireTreasuryId(clientId);
+    final query = Uri(
+      queryParameters: {
+        'limit': '$limit',
+        'offset': '$offset',
+        if (clientId != null) 'client_id': clientId,
+        if (accountId != null && kind == TreasuryListKind.claims)
+          'account_id': accountId,
+      },
+    ).query;
+    return TreasuryPage.fromJson(
+      treasuryObject(
+        await _request(
+          '${accountId == null || kind == TreasuryListKind.claims ? '' : '/accounts/$accountId'}/${kind.name}?$query',
+        ),
+      ),
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> detail(TreasuryListKind kind, String id) async {
+    if (kind == TreasuryListKind.events || kind == TreasuryListKind.openings) {
+      throw ArgumentError('Choose an available detail.');
+    }
+    requireTreasuryId(id);
+    final data = treasuryObject(await _request('/${kind.name}/$id'));
+    if (data['id'] != id) {
+      throw const FormatException(
+        'The selected record could not be confirmed.',
+      );
+    }
+    return treasuryObject(immutableTreasury(data));
+  }
+
+  @override
+  Future<Map<String, dynamic>> instructions() async {
+    final value = treasuryObject(await _request('/instructions'));
+    if (value['items'] is! List ||
+        value['total_count'] is! int ||
+        (value['items'] as List).length != value['total_count']) {
+      throw const FormatException('Payment instructions are unavailable.');
+    }
+    return value;
+  }
+
+  Map<String, dynamic> _held({
+    required String requestId,
+    required String action,
+    required String accountId,
+    required String path,
+    Map<String, dynamic>? body,
+    String? targetId,
+    Map<String, dynamic>? upload,
+  }) {
+    final account = _workspace!.account(accountId);
+    return {
+      'contract_version': 1,
+      'scope': _initialScope,
+      'external_device_id': deviceId,
+      'actor_user_id': _workspace!.actor.userId,
+      'device_id': _workspace!.actor.deviceId,
+      'request_id': requestId,
+      'action': action,
+      'account_id': accountId,
+      'ledger_context_id':
+          account?.ledgerContextId ?? body?['ledger_context_id'],
+      'path': path,
+      'body': body,
+      'target_id': targetId,
+      'upload': upload,
+    };
+  }
+
+  Future<void> _hold(Map<String, dynamic> value) async {
+    await _journal.write(jsonEncode(value));
+    _current();
+    _attempt = treasuryObject(immutableTreasury(value));
+  }
+
+  TreasuryResult _validate(Object? raw, Map<String, dynamic> held) {
+    try {
+      final value = TreasuryResult.fromJson(treasuryObject(raw));
+      final result = value.result;
+      if (value.raw['request_id'] != held['request_id'] ||
+          value.raw['action'] != held['action'] ||
+          result['actor_user_id'] != held['actor_user_id'] ||
+          result['device_id'] != held['device_id'] ||
+          result['account_id'] != held['account_id'] ||
+          result['ledger_context_id'] != held['ledger_context_id'] ||
+          held['target_id'] != null && value.targetId != held['target_id']) {
+        throw const TreasuryUncertain();
+      }
+      if (value.status == 'saved') {
+        final body = held['body'] as Map?;
+        if (body != null) {
+          final entity = switch (held['action']) {
+            'receipt_verify' => result['receipt'],
+            'disbursement_record' || 'transfer_record' => result['event'],
+            'opening_prepare' => result['opening'],
+            _ => null,
+          };
+          if (body.containsKey('amount') && entity != null &&
+              (entity is! Map || entity['amount'] != body['amount'])) {
+            throw const TreasuryUncertain();
+          }
+          if (held['action'] == 'receipt_verify' &&
+              (result['receipt'] is! Map ||
+               (result['receipt'] as Map)['client_id'] != body['client_id'])) {
+            throw const TreasuryUncertain();
+          }
+          if (held['action'] == 'receipt_apply') {
+            final application = result['application'];
+            final ids = application is Map ? application['transaction_ids'] : null;
+            if (application is! Map || application['status'] != 'recorded' ||
+                application['amount'] != body['total_amount'] || ids is! List ||
+                ids.isEmpty || ids.any((id) => !treasuryUuid(id)) ||
+                ids.toSet().length != ids.length) {
+              throw const TreasuryUncertain();
+            }
+          }
+        }
+        final keys = [
+          'account',
+          'claim',
+          'receipt',
+          'event',
+          'opening',
+          'reconciliation',
+          'transfer',
+          'evidence',
+        ];
+        if (!keys.any(
+          (k) =>
+              result[k] is Map &&
+              (result[k] as Map)['id'] == value.targetId &&
+              ((result[k] as Map)['version'] == null ||
+                  (result[k] as Map)['version'] == value.version),
+        )) {
+          throw const TreasuryUncertain();
+        }
+        final upload = held['upload'];
+        if (upload is Map) {
+          final record = held['action'] == 'evidence_upload'
+              ? result['evidence']
+              : (result['claim'] as Map?)?['current_version'];
+          if (record is! Map ||
+              record['sha256'] != upload['sha256'] ||
+              record['media_type'] != upload['media_type'] ||
+              record['byte_count'] != upload['byte_count']) {
+            throw const TreasuryUncertain();
+          }
+          final metadata = upload['metadata'];
+          if (metadata is Map) {
+            final claim = result['claim'];
+            if (claim is! Map ||
+                claim['account_id'] != metadata['account_id'] ||
+                claim['client_id'] != metadata['client_id'] ||
+                record['amount'] != metadata['amount'] ||
+                record['reference'] != metadata['reference'] ||
+                record['account_version'] != metadata['account_version'] ||
+                canonicalTreasury(record['loan_ids']) !=
+                    canonicalTreasury(metadata['loan_ids'])) {
+              throw const TreasuryUncertain();
+            }
+          } else if (record['account_id'] != held['account_id'] ||
+              record['purpose'] != upload['purpose'])
+            throw const TreasuryUncertain();
+        }
+      }
+      return value;
+    } on Exception {
+      throw const TreasuryUncertain();
+    }
+  }
+
+  Future<TreasuryResult> _send() async {
+    final held = _attempt!;
+    final heldUpload = held['upload'];
+    try {
+      final upload = held['upload'] as Map?;
+      Uint8List? bytes;
+      final headers = <String, String>{};
+      if (upload != null) {
+        final file = XFile(upload['path'] as String);
+        if (!await _images.owns(file)) throw const TreasuryUncertain();
+        bytes = await _images.use(file, (f) => f.readAsBytes());
+        if (bytes!.length != upload['byte_count'] ||
+            sha256.convert(bytes).toString() != upload['sha256']) {
+          throw const TreasuryUncertain();
+        }
+        headers['Content-Type'] = upload['media_type'] as String;
+        if (upload['metadata'] != null) {
+          headers['X-Treasury-Metadata'] = base64Encode(
+            utf8.encode(jsonEncode(upload['metadata'])),
+          );
+        }
+      }
+      _online();
+      final value = _validate(
+        await _request(
+          held['path'] as String,
+          method: 'POST',
+          body: held['body'],
+          bytes: bytes,
+          headers: headers,
+        ),
+        held,
+      );
+      await _journal.clear();
+      _attempt = null;
+      if (heldUpload != null) await _images.cleanup();
+      return value;
+    } on TreasuryAccessChanged {
+      rethrow;
+    } on Exception catch (error) {
+      if (error is SpinaApiException &&
+          error.statusCode != null &&
+          error.statusCode! < 500) {
+        await _journal.clear();
+        _attempt = null;
+        if (heldUpload != null) await _images.cleanup();
+        rethrow;
+      }
+      throw const TreasuryUncertain();
+    }
+  }
+
+  String? _commandTarget(TreasuryCommand command) {
+    final body = command.toJson();
+    return switch (command.action) {
+      TreasuryAction.accountConfigure ||
+      TreasuryAction.accountGrant => command.accountId,
+      TreasuryAction.openingActivate => body['opening_id'] as String,
+      TreasuryAction.claimReview => body['claim_id'] as String,
+      TreasuryAction.receiptApply ||
+      TreasuryAction.receiptApplicationReverse => body['receipt_id'] as String,
+      TreasuryAction.movementClassify ||
+      TreasuryAction.movementCorrect => body['event_id'] as String,
+      TreasuryAction.transferRecord => body['transfer_id'] as String,
+      TreasuryAction.reconciliationObserve ||
+      TreasuryAction.reconciliationMatch ||
+      TreasuryAction.reconciliationClose ||
+      TreasuryAction.reconciliationSupersede =>
+        body['reconciliation_id'] as String,
+      _ => null,
+    };
+  }
+
+  @override
+  Future<TreasuryResult> execute(
+    TreasuryCommand command, {
+    String? targetId,
+  }) async {
+    _online();
+    if (_busy || _attempt != null) {
+      throw StateError(
+        'Check the unchanged pending request before another action.',
+      );
+    }
+    _busy = true;
+    try {
+      await loadWorkspace();
+      _permitted(command.action.code, command.accountId);
+      final account = _workspace!.account(command.accountId);
+      if (account != null &&
+          ![
+            TreasuryAction.receiptApply,
+            TreasuryAction.receiptApplicationReverse,
+          ].contains(command.action) &&
+          account.version != command.expectedVersion) {
+        throw StateError('Account changed. Refresh and review before sending.');
+      }
+      if (command.action == TreasuryAction.receiptApply) {
+        final p = _lastPreview;
+        final body = command.toJson();
+        if (p == null ||
+            p['can_apply'] != true ||
+            p['receipt_id'] != body['receipt_id'] ||
+            p['digest'] != body['digest'] ||
+            p['account_id'] != command.accountId ||
+            p['receipt_version'] != command.expectedVersion ||
+            applicationFields.any(
+              (f) =>
+                  canonicalTreasury(body[f.key]) !=
+                  canonicalTreasury(_previewInput?[f.key]),
+            )) {
+          throw StateError(
+            'Review a current unchanged server allocation before recording.',
+          );
+        }
+      }
+      await _hold(
+        _held(
+          requestId: command.requestId,
+          action: command.action.code,
+          accountId: command.accountId,
+          path: '/actions',
+          body: command.toJson(),
+          targetId: targetId ?? _commandTarget(command),
+        ),
+      );
+      return await _send();
+    } finally {
+      _busy = false;
+    }
+  }
+
+  @override
+  Future<TreasuryResult?> recover() async {
+    _online();
+    if (_busy) throw StateError('A request is already being checked.');
+    if (_attempt == null) return null;
+    _busy = true;
+    try {
+      await loadWorkspace();
+      final held = _attempt!;
+      final heldUpload = held['upload'];
+      final raw = await _request('/requests/${held['request_id']}');
+      if (raw == null) return null;
+      final value = _validate(raw, held);
+      await _journal.clear();
+      _attempt = null;
+      if (heldUpload != null) await _images.cleanup();
+      return value;
+    } finally {
+      _busy = false;
+    }
+  }
+
+  @override
+  Future<TreasuryResult> retrySame() async {
+    _online();
+    if (_busy || _attempt == null) {
+      throw StateError('There is no unchanged request to retry.');
+    }
+    _busy = true;
+    try {
+      await loadWorkspace();
+      _permitted(
+        _attempt!['action'] as String,
+        _attempt!['account_id'] as String,
+      );
+      return await _send();
+    } finally {
+      _busy = false;
+    }
+  }
+
+  Future<TreasuryResult> _upload({
+    required String action,
+    required String requestId,
+    required String accountId,
+    required String path,
+    required XFile file,
+    Map<String, dynamic>? metadata,
+    String? targetId,
+    String? purpose,
+  }) async {
+    _online();
+    if (_busy || _attempt != null) {
+      throw StateError(
+        'Check the unchanged pending request before another upload.',
+      );
+    }
+    _busy = true;
+    try {
+      await loadWorkspace();
+      _permitted(action, accountId);
+      requireTreasuryId(requestId);
+      final type = await treasuryMediaType(file);
+      final retained = await _images.retain(file);
+      final bytes = await _images.use(retained, (f) => f.readAsBytes());
+      _online();
+      await _hold(
+        _held(
+          requestId: requestId,
+          action: action,
+          accountId: accountId,
+          path: path,
+          targetId: targetId,
+          upload: {
+            'path': retained.path,
+            'name': retained.name,
+            'media_type': type,
+            'byte_count': bytes.length,
+            'sha256': sha256.convert(bytes).toString(),
+            'metadata': metadata,
+            'purpose': purpose,
+          },
+        ),
+      );
+      return await _send();
+    } finally {
+      _busy = false;
+    }
+  }
+
+  @override
+  Future<TreasuryResult> uploadClaim(
+    Map<String, dynamic> metadata,
+    XFile file, {
+    String? claimId,
+  }) async {
+    final allowed = [
+      'request_id',
+      'account_id',
+      'account_version',
+      'client_id',
+      'loan_ids',
+      'amount',
+      'reference',
+      'claimed_at',
+      'sender_note',
+      'expected_version',
+    ];
+    if (metadata.keys.any((k) => !allowed.contains(k))) {
+      throw const FormatException('Invalid payment proof metadata.');
+    }
+    for (final key in ['request_id', 'account_id', 'client_id']) {
+      requireTreasuryId(metadata[key]);
+    }
+    TreasuryMoney(metadata['amount'], positive: true);
+    const TreasuryField(
+      'loans',
+      'Loan choices',
+      TreasuryFieldKind.ids,
+    ).parse(metadata['loan_ids']);
+    const TreasuryField(
+      'date',
+      'Sent time',
+      timeKind,
+    ).parse(metadata['claimed_at']);
+    const TreasuryField(
+      'reference',
+      'Reference',
+      textKind,
+      maxLength: 200,
+    ).parse(metadata['reference']);
+    if (metadata['account_version'] is! int ||
+        metadata['account_version'] < 1 ||
+        metadata['sender_note'] != null &&
+            (metadata['sender_note'] is! String ||
+                (metadata['sender_note'] as String).length > 1000)) {
+      throw const FormatException(
+        'Refresh the receiving account and proof details.',
+      );
+    }
+    if (claimId != null) {
+      requireTreasuryId(claimId);
+      if (metadata['expected_version'] is! int ||
+          metadata['expected_version'] < 1) {
+        throw const FormatException('Choose the current proof version.');
+      }
+    }
+    return _upload(
+      action: claimId == null ? 'claim_submit' : 'claim_version',
+      requestId: metadata['request_id'] as String,
+      accountId: metadata['account_id'] as String,
+      path: claimId == null ? '/claims' : '/claims/$claimId/versions',
+      file: file,
+      metadata: treasuryObject(immutableTreasury(metadata)),
+      targetId: claimId,
+    );
+  }
+
+  @override
+  Future<TreasuryResult> uploadEvidence({
+    required String requestId,
+    required String accountId,
+    required String purpose,
+    required XFile file,
+  }) async {
+    if (!['recipient', 'opening', 'statement', 'correction'].contains(purpose)) {
+      throw const FormatException('Choose a valid evidence purpose.');
+    }
+    requireTreasuryId(accountId);
+    return _upload(
+      action: 'evidence_upload',
+      requestId: requestId,
+      accountId: accountId,
+      path:
+          '/evidence?${Uri(queryParameters: {'request_id': requestId, 'account_id': accountId, 'purpose': purpose}).query}',
+      file: file,
+      purpose: purpose,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> preview(
+    String receiptId,
+    Map<String, dynamic> input,
+  ) async {
+    _online();
+    if (_busy || _attempt != null) {
+      throw StateError(
+        'Check the pending request before preparing another allocation.',
+      );
+    }
+    _lastPreview = null;
+    _previewInput = null;
+    requireTreasuryId(receiptId);
+    final body = <String, dynamic>{
+      'expected_version': input['expected_version'],
+    };
+    if (body['expected_version'] is! int || body['expected_version'] < 1) {
+      throw const FormatException('Refresh the verified receipt.');
+    }
+    for (final f in applicationFields) {
+      final parsed = f.parse(input[f.key]);
+      if (parsed != null) body[f.key] = parsed;
+    }
+    await loadWorkspace();
+    final value = treasuryObject(
+      await _request(
+        '/receipts/$receiptId/allocation-preview',
+        method: 'POST',
+        body: body,
+      ),
+    );
+    final account = _workspace!.account(value['account_id'] as String? ?? '');
+    if (value['contract_version'] != 1 ||
+        canonicalTreasury(value['actor']) !=
+            canonicalTreasury(_workspace!.actor.toJson()) ||
+        account?.permits('receipt_apply') != true ||
+        value['ledger_context_id'] != account!.ledgerContextId ||
+        value['receipt_id'] != receiptId ||
+        value['receipt_version'] != body['expected_version'] ||
+        value['mode'] != body['mode'] ||
+        value['total_amount'] != body['total_amount'] ||
+        value['effective_date'] != body['effective_date'] ||
+        canonicalTreasury(value['loans']) != canonicalTreasury(body['loans']) ||
+        value['allocations'] is! List ||
+        value['blockers'] is! List ||
+        value['can_apply'] is! bool ||
+        value['can_apply'] == true &&
+            ((value['allocations'] as List).isEmpty ||
+                (value['blockers'] as List).isNotEmpty)) {
+      throw const TreasuryUncertain();
+    }
+    const TreasuryField(
+      'digest',
+      'Digest',
+      TreasuryFieldKind.digest,
+    ).parse(value['digest']);
+    TreasuryMoney(value['remaining_amount']);
+    for (final raw in value['allocations'] as List) {
+      final row = treasuryObject(raw);
+      if (!(body['loans'] as List).any((l) => l['loan_id'] == row['loan_id']) ||
+          row['covered_dates'] is! List ||
+          row['component'] is! String ||
+          row['loan_type'] is! String ||
+          row['intent'] is! String) {
+        throw const TreasuryUncertain();
+      }
+      for (final k in ['amount', 'applied_amount', 'unallocated_amount']) {
+        TreasuryMoney(row[k]);
+      }
+    }
+    _previewInput = treasuryObject(immutableTreasury(body));
+    _lastPreview = treasuryObject(immutableTreasury(value));
+    return _lastPreview!;
+  }
+
+  @override
+  Future<Uint8List> content({
+    String? claimId,
+    int? version,
+    String? evidenceId,
+    required String mediaType,
+    String? digest,
+    int? byteCount,
+  }) async {
+    _current();
+    if (!['application/pdf', 'image/png', 'image/jpeg'].contains(mediaType)) {
+      throw const FormatException('Unsupported private file.');
+    }
+    final path = claimId != null
+        ? '/claims/${requireTreasuryId(claimId)}/versions/$version/content'
+        : '/evidence/${requireTreasuryId(evidenceId)}/content';
+    if (claimId != null && (version == null || version < 1)) {
+      throw const FormatException('Choose the exact proof version.');
+    }
+    final response = await _client.get(
+      ApiConfig.endpoint('/api/v1/treasury$path'),
+      headers: _headers(),
+    );
+    _current();
+    if ([401, 403].contains(response.statusCode)) {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    final bytes = response.bodyBytes;
+    if (response.statusCode != 200 ||
+        response.headers['content-type']?.split(';').first.trim() !=
+            mediaType ||
+        bytes.isEmpty ||
+        bytes.length > 10485760 ||
+        byteCount != null && bytes.length != byteCount ||
+        digest != null && sha256.convert(bytes).toString() != digest) {
+      throw const FormatException(
+        'The private file is unavailable or incomplete.',
+      );
+    }
+    return bytes;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _workspace = null;
+    _lastPreview = null;
+    _previewInput = null;
+    _attempt = null;
+    if (_ownsClient) _client.close();
+  }
+}
+
+Future<String> treasuryMediaType(XFile file) async {
+  final bytes = await file.readAsBytes();
+  if (bytes.isEmpty || bytes.length > 10485760) {
+    throw const FormatException('Choose a PDF, PNG or JPEG of at most 10 MiB.');
+  }
+  bool starts(List<int> magic) =>
+      bytes.length >= magic.length &&
+      List.generate(magic.length, (i) => bytes[i] == magic[i]).every((v) => v);
+  final type = starts([0x25, 0x50, 0x44, 0x46, 0x2d])
+      ? 'application/pdf'
+      : starts([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      ? 'image/png'
+      : starts([0xff, 0xd8, 0xff])
+      ? 'image/jpeg'
+      : null;
+  if (type == null || file.mimeType != null && file.mimeType != type) {
+    throw const FormatException(
+      'The selected private file has an unsupported type.',
+    );
+  }
+  return type;
+}
