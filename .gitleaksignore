@@ -2,3 +2,7 @@
 # public hostnames and redirects, not a credential. Ignore only this historical
 # finding; full-history scanning and the retained scanner baseline stay intact.
 9b63194214df385c0cd595ddf276cad3be3587ca:tests/test_deployment_recovery.py:generic-api-key:270
+# Reviewed false positive: the constant gilbic.treasury.submitted_attempt.v1 is
+# the name of an encrypted local-storage entry, not an authentication secret.
+# Keep this exact historical fingerprint only; new credentials remain scanned.
+8a472ba431400ce002a1cf5027243575706c22b9:gilbic_mobile/lib/src/core/treasury/treasury_repository.dart:generic-api-key:40
