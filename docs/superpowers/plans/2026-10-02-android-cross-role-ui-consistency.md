@@ -209,20 +209,20 @@ Format only touched Dart files with the existing tooling, then verify them. If b
 
 ## Completion ledger
 
-Every row below is pending at planning handoff. Replace with commit/test/evidence references only after execution.
+Local implementation evidence: [2026-10-02-android-implementation-evidence.md](../2026-10-02-android-implementation-evidence.md). Product/test source 0ba0592b; physical acceptance and integration-owner CI/sync remain separate.
 
 | Task | Review coverage | State |
 | --- | --- | --- |
-| 0 | Baseline, restore/ownership, production-theme fixture | Pending Codex |
-| 1 | A1 channel truth, status meaning and semantic style | Not implemented |
-| 2 | A2 correct actions and visible same-loan recovery | Not implemented |
-| 3 | A3 adaptive readability/touch targets without redesign | Not implemented |
-| 4 | A4 secondary labels, role routing and permission presentation | Not implemented |
-| 5 | A5 exact display/copy/calendar-versus-instant contract | Not implemented |
-| 6 | A6 shared Employee summaries with retained details/history | Not implemented |
-| 7 | A7 offline/uncertainty/privacy distinctions and regression | Not implemented |
-| 8 | A8 36 native widget configurations plus actual device/accessibility evidence | Not run |
-| 9 | A8 integrated checks, exact-head CI/artifact and synchronized handoff | Not run |
+| 0 | Baseline, restore/ownership, production-theme fixture | Implemented: 08c5e03c, fixture4/4 |
+| 1 | A1 channel truth, status meaning and semantic style | Implemented: d0ff0db6, status/ledger regressions |
+| 2 | A2 correct actions and visible same-loan recovery | Implemented: e27b2587; b2cae40f/2948fe61 auth/privacy follow-ups |
+| 3 | A3 adaptive readability/touch targets without redesign | Implemented: c463034; 0ba0592b contrast follow-up |
+| 4 | A4 secondary labels, role routing and permission presentation | Implemented: 4b1c2ab1, permission/navigation regressions |
+| 5 | A5 exact display/copy/calendar-versus-instant contract | Implemented: 45e209cf, exact money/calendar/instant regressions |
+| 6 | A6 shared Employee summaries with retained details/history | Implemented: 16fb08ca, supplied summaries/details/actions |
+| 7 | A7 offline/uncertainty/privacy distinctions and regression | Implemented: 77a7d782, protected offline/financial regressions |
+| 8 | A8 36 native widget configurations plus actual device/accessibility evidence | 44 widget configurations/semantic checks; physical/native-font/dialog acceptance unverified |
+| 9 | A8 integrated checks, exact-head CI/artifact and synchronized handoff | Local analyze/full test passed; integration-owner exact-head CI/artifact/sync pending |
 
 A docs-only Green does not complete this ledger. Owner Red/Green feedback must be resolved to the exact current commit/jobs; partial native evidence stays partial. No new UI screenshot, widget result, TalkBack pass or installed build is claimed by these Markdown files.
 
