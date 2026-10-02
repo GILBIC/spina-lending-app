@@ -1,8 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {createTreasuryClient} from '../assets/treasury-api.js';
 import {validateSurplusCommand,validateSurplusResult,validateSurplusWorkspace,validateSurplusMovement} from '../assets/collector-surplus-contract.js';
 const fixture=JSON.parse(await readFile(new URL('./fixtures/collector-surplus-backend.json',import.meta.url),'utf8'));
+const paidExample=fixture.examples.find(x=>x.kind==='collector_surplus_return_record');
+for(const [label,change] of Object.entries({
+ 'unpaid status':row=>{row.status='reserved';},
+ 'wrong acknowledgment':row=>{row.acknowledgment_id=paidExample.command.action_id;},
+ 'missing event':row=>{delete row.event_id;},
+ 'wrong event version':row=>{row.event_version=paidExample.command.event_version+1;},
+}))test('paid result rejects '+label,()=>{
+ const value=structuredClone(paidExample.response.data),reference=value.result.action_record;
+ const held={options:{body:paidExample.command},actor:paidExample.actor,accountId:value.result.account_id,contextId:value.result.ledger_context_id,collectorId:reference.collector_user_id,reference:structuredClone(reference)};
+ assert.equal(validateSurplusResult(value,held),value);
+ change(value.result.action_record);
+ assert.throws(()=>validateSurplusResult(value,held));
+});
+test('unconfirmed paid response preserves original request through failed recovery and never reposts',async()=>{
+ const original=paidExample.response.data,command=paidExample.command;
+ const source=fixture.examples.find(x=>x.kind==='disbursement_record').response.data.result.source_link.action_record;
+ const workspace=structuredClone(fixture.examples.find(x=>x.kind==='staff-workspace-credits').response.data);
+ workspace.actor=paidExample.actor;
+ workspace.kind='actions';workspace.items=[source];workspace.totals={reserved_amount:source.amount};workspace.total_count=1;workspace.has_more=false;
+ workspace.accounts=workspace.accounts.filter(a=>a.id===command.account_id).map(a=>({...a,version:command.expected_version}));
+ let posts=0,answer=structuredClone(original);answer.result.action_record.status='reserved';
+ const session={user:{id:paidExample.actor.user_id,role:'management',status:'active'},device_id:'synthetic',device_registered:true,permissions:[]};
+ const client=createTreasuryClient({request:async(path,options={})=>{
+  if(path.includes('/collector-surplus/workspace'))return workspace;
+  if(options.financial)posts++;
+  return answer;
+ }},{getSession:()=>session});
+ await client.surplusWorkspace({kind:'actions',mode:'staff'});
+ await assert.rejects(client.execute(command));
+ assert.equal(client.state().status,'uncertain');assert.equal(client.state().requestId,command.request_id);
+ await assert.rejects(client.recover());assert.equal(client.state().status,'uncertain');
+ await assert.rejects(client.execute(command));assert.equal(posts,1);
+ answer=original;
+ assert.equal((await client.recover()).result.disposition,'paid');assert.equal(client.state().status,'idle');assert.equal(posts,1);
+ client.dispose();
+});
 test('strict Web contracts accept serialized disposable-service phases, zero PASS and own projections',()=>{
  assert.equal(fixture.synthetic_only,true);
  const records=new Map();let count=0;
