@@ -123,3 +123,23 @@ test('Management overview copy is operational instead of implementation-oriented
     controller.abort();
   }
 });
+
+// Unknown queues must remain prominent; only verified zero belongs in the disclosure.
+test('only verified zero attention queues are compacted while unknown and nonzero counts remain visible', async t => {
+  const root = new ManagementElement(), controller = new AbortController(); t.after(() => controller.abort());
+  await mountManagementWorkspace({root,signal:controller.signal,session:{user:{role:'management'},permissions:['management.dashboard.view']},setNavigation(){},api:{async request(path){
+    if(path.endsWith('/dashboard-overview'))return {metrics:[
+      {key:'queues.renewals_protected',count:0},
+      {key:'queues.borrower_support',count:null},
+      {key:'activity.unread',count:1},
+    ]};return {profile:{}};
+  }}});
+  const group=root.querySelector('[data-management-metric-group="attention"]');
+  const collapsed=group.querySelector('.management-zero-queues');
+  assert.match(collapsed.textContent,/1 queues with no pending work/);
+  assert.match(collapsed.textContent,/Renewal requests/);
+  assert.doesNotMatch(collapsed.textContent,/Client support|Unread updates/);
+  const cards=group.querySelector('.metric-grid').textContent;
+  assert.match(cards,/Client support.*—/);
+  assert.match(cards,/Unread updates.*1/);
+});

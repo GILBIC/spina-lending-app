@@ -47,6 +47,20 @@ test('zero is accepted explicitly while missing or invalid summary fields remain
   assert.doesNotMatch(format({status:'loading',summary}),/12,345/);
 });
 
+test('null portfolio summary preserves returned loans without inventing totals or failing the read',async t=>{
+  const {mountManagementPortfolio}=await import('../assets/management-portfolio.js');
+  const root=new Element();
+  const handle=mountManagementPortfolio({root,getSession:()=>session,api:{async request(){return {
+    summary:null,loans:[{client_id:'borrower',client_name:'Selected applicant',loan_number:'LOAN-1',principal:'100.00',remaining_balance:'80.00',daily_amount:'10.00'}],
+  };}}});
+  t.after(()=>handle.dispose());
+  await handle.refresh();
+  assert.match(root.querySelector('#management-loan-results').textContent,/Selected applicant/);
+  assert.doesNotMatch(root.textContent,/Portfolio summary unavailable/);
+  assert.doesNotMatch(root.querySelector('.management-loan-summary').textContent,/₱0\.00/);
+  assert.equal(root.querySelector('[data-portfolio-retry]').hidden,true);
+});
+
 test('an older or aborted search cannot replace a newer query response',async t=>{
   const module=await import('../assets/management-portfolio.js').catch(()=>null);assert.ok(module?.mountManagementPortfolio);
   const root=new Element();const pending=[];const controller=new AbortController();t.after(()=>controller.abort());

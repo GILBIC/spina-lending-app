@@ -252,6 +252,39 @@ test('staff account-only inspection cannot fetch or mutate registered devices', 
   assert.equal(requests, 0); h.cleanup();
 });
 
+test('failed initial device read retains Close and returns focus to the selected staff opener',async()=>{
+  const h=staffHarness({request:async()=>{throw new Error('Read unavailable');}});
+  const opener=h.root.querySelector('[data-manage-staff-id="staff-1"]');
+  fire(opener,'click');await setImmediate();
+  assert.match(h.detail.textContent,/Read unavailable/);
+  const close=h.detail.querySelector('[data-managed-device-close]');
+  assert.ok(close,'A failed read must still provide a way to close the panel');
+  fire(close,'click');assert.equal(opener.focused,true);
+  assert.equal(h.detail.getAttribute('hidden'),'');h.cleanup();
+});
+
+test('late staff read neither focuses nor scrolls when the user moved to another control',async t=>{
+  const original=globalThis.document;let resolve;
+  t.after(()=>{globalThis.document=original;});
+  const h=staffHarness({request:()=>new Promise(done=>{resolve=done;})});t.after(h.cleanup);
+  const opener=h.root.querySelector('[data-manage-staff-id="staff-1"]');
+  const elsewhere=h.root.querySelector('[data-manage-staff-id="staff-2"]');
+  globalThis.document={activeElement:opener};let scrolls=0;h.detail.scrollIntoView=()=>scrolls++;
+  fire(opener,'click');globalThis.document.activeElement=elsewhere;
+  resolve({devices});await setImmediate();
+  assert.notEqual(h.detail.querySelector('[data-managed-device-heading]').focused,true);
+  assert.equal(scrolls,0,'A late response must not pull the user away from their current control');
+});
+
+test('Close returns to staff heading if the original opener is no longer present',async()=>{
+  const h=staffHarness({request:async()=>({devices})});
+  const heading=new Element('h3',{'data-management-staff-heading':''});h.root.appendChild(heading);
+  const opener=h.root.querySelector('[data-manage-staff-id="staff-1"]');
+  fire(opener,'click');await setImmediate();opener.remove();
+  fire(h.detail.querySelector('[data-managed-device-close]'),'click');
+  assert.equal(heading.focused,true);h.cleanup();
+});
+
 test('device mutation requires the consequence confirmation and one authoritative reload', async (t) => {
   const previous = globalThis.confirm; let accepted = false; const confirmations = [];
   globalThis.confirm = (message) => { confirmations.push(message); return accepted; };

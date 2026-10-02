@@ -1,7 +1,7 @@
 import {escapeHtml as esc} from './ui.js';
 const steps=[['intake','employee-onboarding','Office intake'],['cif','employee-cif-review','CIF review'],['application','employee-application-review','Application review'],['first-loan','employee-first-loan','First-loan work']];
 export function bindEmployeeOfficeCase({root,navigate,signal}) {
- let disposed=false,intakeReference='',applicationReference='',writing=false;const listeners=[],strips=[],bound=new WeakSet();
+ let disposed=false,intakeReference='',applicationReference='',writing=false,lastStep=null;const listeners=[],strips=[],bound=new WeakSet();
  const section=step=>root.querySelector(`#${steps.find(item=>item[0]===step)?.[1]}`);
  const intake=(node,step)=>node?.querySelector(`[name="${['intake','cif'].includes(step)?'applicationReference':'intakeReference'}"]`);
  const application=(node,step)=>['application','first-loan'].includes(step)?node?.querySelector('[name="applicationReference"]'):null;
@@ -14,7 +14,10 @@ export function bindEmployeeOfficeCase({root,navigate,signal}) {
     writing=false;});}
   if(app&&!bound.has(app)){bound.add(app);on(app,'input',()=>{if(!writing&&input.value.trim()===intakeReference)applicationReference=app.value.trim();});}
  }
- function activate(step){if(disposed||signal?.aborted)return;const node=section(step);if(!node)return;bind(step,node);
+ function activate(step){if(disposed||signal?.aborted)return;const node=section(step);if(!node)return;
+  const previous=section(lastStep),previousApplication=application(previous,lastStep);
+  if(previousApplication&&intakeReference&&intake(previous,lastStep)?.value.trim()===intakeReference)applicationReference=previousApplication.value.trim();
+  lastStep=step;bind(step,node);
   let strip=node.querySelector('[data-office-case-strip]');if(!strip){strip=root.ownerDocument.createElement('aside');strip.setAttribute('data-office-case-strip','');strip.className='notice-card';(node.prepend?node.prepend(strip):node.appendChild(strip));strips.push(strip);}
   const input=intake(node,step),app=application(node,step);
   const conflict=input?.value.trim()&&intakeReference&&input.value.trim()!==intakeReference || app?.value.trim()&&applicationReference&&app.value.trim()!==applicationReference;

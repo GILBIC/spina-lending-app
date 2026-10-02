@@ -138,7 +138,7 @@ function overviewMetrics(metrics) {
   }).join('');
 }
 
-function bindManagementOfficeWorkflow(root) {
+function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskChange=()=>{}} = {}) {
   const workflow = root.querySelector('[data-office-workflow]');
   if (!workflow) return () => {};
 
@@ -152,34 +152,21 @@ function bindManagementOfficeWorkflow(root) {
     const control = panelByStep.get(step)?.querySelector(`[name="${name}"]`);
     return String(control?.value || '').trim();
   };
-  const writeIfEmpty = (step, name, value) => {
-    if (!value) return;
-    const control = panelByStep.get(step)?.querySelector(`[name="${name}"]`);
-    if (control && !String(control.value || '').trim()) control.value = value;
-  };
-  const currentReferences = () => ({
-    intake:
-      read('intake', 'applicationReference')
-      || read('cif', 'applicationReference')
-      || read('application', 'intakeReference')
-      || read('first-loan', 'intakeReference'),
-    application:
-      read('application', 'applicationReference')
-      || read('first-loan', 'applicationReference'),
+  let selectedStep = 'intake';
+  let disposed = false;
+  const feedback = workflow.querySelector('[data-office-case-feedback]');
+  let navigationVersion = 0;
+  const referencesFor = step => ({
+    intake: read(step, ['intake','cif'].includes(step) ? 'applicationReference' : 'intakeReference'),
+    application: ['application','first-loan'].includes(step) ? read(step,'applicationReference') : '',
   });
-
-  function activate(step) {
-    if (!panelByStep.has(step)) return;
-    const references = currentReferences();
-    if (step === 'cif') {
-      writeIfEmpty('cif', 'applicationReference', references.intake);
-    } else if (step === 'application') {
-      writeIfEmpty('application', 'intakeReference', references.intake);
-    } else if (step === 'first-loan') {
-      writeIfEmpty('first-loan', 'intakeReference', references.intake);
-      writeIfEmpty('first-loan', 'applicationReference', references.application);
-    }
-
+  const sameIntake = (a,b) => a.toLowerCase() === b.toLowerCase();
+  function show(step) {
+    if (disposed) return;
+    navigationVersion += 1;
+    beforeTaskChange();
+    selectedStep = step;
+    feedback.innerHTML = '';
     for (const panel of panels) {
       if (panel.getAttribute('data-office-step') === step) panel.removeAttribute('hidden');
       else panel.setAttribute('hidden', '');
@@ -191,6 +178,28 @@ function bindManagementOfficeWorkflow(root) {
         button.removeAttribute('aria-current');
       }
     }
+    afterTaskChange();
+  }
+
+  function activate(step) {
+    if (disposed || !panelByStep.has(step)) return;
+    const source = referencesFor(selectedStep), destination = referencesFor(step);
+    if (step !== 'intake' && source.intake) {
+      const application = source.application || (sameIntake(read('application','intakeReference'),source.intake) ? read('application','applicationReference') : '');
+      const hasApplication = ['application','first-loan'].includes(step);
+      const conflict = destination.intake && !sameIntake(destination.intake,source.intake)
+        || hasApplication && destination.application && (!destination.intake || application && application !== destination.application);
+      if (conflict) {
+        const version = ++navigationVersion;
+        feedback.innerHTML = '<p>This stage already contains a different case or application. Your existing work has been kept. Open it to review or clear it before changing cases.</p><button type="button" class="button button-outline" data-office-show-existing>Show existing case</button>';
+        feedback.querySelector('[data-office-show-existing]').addEventListener('click',()=>{if(version===navigationVersion)show(step);},{once:true});
+        return;
+      }
+      const intakeControl = panelByStep.get(step).querySelector(`[name="${step==='cif'?'applicationReference':'intakeReference'}"]`);
+      if (intakeControl && !destination.intake) intakeControl.value = source.intake;
+      if (step==='first-loan' && !destination.application && application) panelByStep.get(step).querySelector('[name="applicationReference"]').value = application;
+    }
+    show(step);
   }
 
   const removers = buttons.map((button) => {
@@ -200,7 +209,7 @@ function bindManagementOfficeWorkflow(root) {
   });
 
   activate('intake');
-  return () => removers.forEach((remove) => remove());
+  return () => {disposed = true; removers.forEach((remove) => remove());};
 }
 
 function staffRows(accounts, canManageDevices) {
@@ -352,7 +361,10 @@ export function bindStaffDevices(context, accounts) {
       });
     }
     panelCleanup = () => { for (const cleanup of remove) cleanup(); };
-    if(!globalThis.document||globalThis.document.activeElement===focusAtOpen)detail.querySelector('[data-managed-device-heading]')?.focus?.();
+    if(!globalThis.document||globalThis.document.activeElement===focusAtOpen){
+      detail.querySelector('[data-managed-device-heading]')?.focus?.();
+      detail.scrollIntoView?.({ block: 'start' });
+    }
   }
 
   for (const button of context.root.querySelectorAll('[data-manage-staff-id]')) {
@@ -371,7 +383,6 @@ export function bindStaffDevices(context, accounts) {
       select(String(account.id));
       if (!canManageDevices) {
         showPanel(account, [], version);
-        detail.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
         return;
       }
       detail.innerHTML = loadingPanel('Loading registered devices…');
@@ -379,9 +390,13 @@ export function bindStaffDevices(context, accounts) {
         const devices = await loadManagedDevices(context.api, account.id);
         if (!active(version) || selectedId !== String(account.id)) return;
         showPanel(account, devices, version);
-        detail.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       } catch (error) {
-        if (active(version)) detail.innerHTML = errorCard(error);
+        if (active(version)) {
+          detail.innerHTML = `${errorCard(error)}<p class="meta">Close and open this staff account again to retry the read.</p><button class="button button-quiet" type="button" data-managed-device-close>Close</button>`;
+          const closeButton = detail.querySelector('[data-managed-device-close]');
+          closeButton.addEventListener('click', close);
+          panelCleanup = () => closeButton.removeEventListener('click', close);
+        }
       }
     };
     button.addEventListener('click', open);
@@ -444,6 +459,8 @@ export async function mountManagementWorkspace(context) {
       <button class="office-workflow-step" type="button" data-office-step-target="application">3. Application review</button>
       <button class="office-workflow-step" type="button" data-office-step-target="first-loan">4. First loan</button>
     </div>
+    <p class="meta">Enter the intake reference once, then continue through these steps. New applications receive an automatic reference.</p>
+    <div data-office-case-feedback role="status" aria-live="polite"></div>
     <div data-office-step="intake">
       <section id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>
     </div>
@@ -512,7 +529,7 @@ export async function mountManagementWorkspace(context) {
   add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
   add('management-loans','management-clients-loans','Portfolio',async()=>{const h=mountManagementPortfolio({...options('[data-management-portfolio]')});await h.refresh();return h;});
   add('management-office','management-clients-loans','Office applications',()=>{
-    const handlers=[mountOfficeFirstLoan(options('[data-office-first-loan]')),mountOfficeOnboarding(options('[data-office-onboarding]')),mountOfficeCifSelection(options('[data-office-cif-selection]')),mountOfficeApplicationReview(options('[data-office-application-review]')),bindManagementOfficeWorkflow(root)];
+    const handlers=[mountOfficeFirstLoan(options('[data-office-first-loan]')),mountOfficeOnboarding(options('[data-office-onboarding]')),mountOfficeCifSelection(options('[data-office-cif-selection]')),mountOfficeApplicationReview(options('[data-office-application-review]')),bindManagementOfficeWorkflow(root,context)];
     return ()=>handlers.forEach(dispose=>dispose?.());
   },'client_onboarding.requirement.review');
   add('management-renewals','management-clients-loans','Renewals',async()=>{

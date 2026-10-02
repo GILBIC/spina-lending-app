@@ -19,6 +19,13 @@ export function mountManagementSupport({root,api,signal,getSession,onSaved}) {
   const select=root.querySelector('[data-support-status]'),list=root.querySelector('[data-support-list]'),feedback=root.querySelector('[data-support-feedback]'),refreshButton=root.querySelector('[data-support-refresh]'),reconcileButton=root.querySelector('[data-support-reconcile]'),previous=root.querySelector('[data-support-previous]'),next=root.querySelector('[data-support-next]'),page=root.querySelector('[data-support-page]');select.value=status;
   const dirty=()=>Array.from(list.querySelectorAll('[name="response"]')).some(input=>String(input.value||'').length>0);
   const path=(selected=status,start=offset)=>`/api/v1/management/support?status=${selected}&limit=100&offset=${start}`;
+  function deny(error){
+    if(disposed||![401,403].includes(error?.status))return false;
+    for(const input of root.querySelectorAll('textarea'))input.value='';
+    uncertain=null;busy=false;dispose();
+    root.innerHTML='<p role="alert">Support access is unavailable. Reopen your workspace after access is restored.</p>';
+    return true;
+  }
   function controls(){select.disabled=busy||!!uncertain;refreshButton.disabled=busy||!!uncertain;previous.disabled=busy||!!uncertain||offset===0;next.disabled=busy||!!uncertain||returned<100;reconcileButton.hidden=!uncertain;reconcileButton.disabled=busy;page.textContent=`Page ${offset/100+1} · ${returned} returned requests`;}
   function bindRow(node,item) {
     const form=node.querySelector('[data-support-form]');
@@ -40,7 +47,7 @@ export function mountManagementSupport({root,api,signal,getSession,onSaved}) {
         if(!matches(command,data?.request))throw new Error('The saved response could not be confirmed.');
         node.innerHTML=recordMarkup(data.request);bindRow(node,data.request);node.querySelector('[data-support-result]').textContent='Response saved.';
         try{if(await onSaved?.()===false)throw new Error('Overview refresh failed.');}catch{if(alive())node.querySelector('[data-support-result]').textContent='Response saved; overview refresh failed. Refresh Today for current counts.';}
-      }catch(error){if(alive()){
+      }catch(error){if(deny(error))return;if(alive()){
         if(attempted&&(!error.status||error.status>=500)){uncertain={command,node};resultNode.textContent='The save outcome is uncertain. Do not submit again; check the saved response.';}
         else resultNode.textContent=error.message;
       }}finally{busy=false;if(alive())controls();}
@@ -60,7 +67,7 @@ export function mountManagementSupport({root,api,signal,getSession,onSaved}) {
       list.innerHTML=returned?data.requests.map(item=>`<article class="data-card" data-support-record="${escapeHtml(item.request_id)}">${recordMarkup(item)}</article>`).join(''):`<p class="meta" role="status" data-management-queue-empty="support">No ${escapeHtml(status)} support requests were returned.</p>`;
       for(const node of list.querySelectorAll('[data-support-record]'))bindRow(node,data.requests.find(item=>item.request_id===node.getAttribute('data-support-record')));
       feedback.textContent='';return true;
-    }catch(error){if(alive()&&version===generation){list.innerHTML=errorCard(error);feedback.textContent='Support could not be loaded. Use Refresh support to retry.';returned=0;}return false;}
+    }catch(error){if(deny(error))return false;if(alive()&&version===generation){list.innerHTML=errorCard(error);feedback.textContent='Support could not be loaded. Use Refresh support to retry.';returned=0;}return false;}
     finally{busy=false;if(alive())controls();}
   }
   async function reconcile(){
@@ -71,7 +78,7 @@ export function mountManagementSupport({root,api,signal,getSession,onSaved}) {
       const found=data?.requests?.find(item=>item.request_id===pending.command.requestId);
       if(!matches(pending.command,found)){feedback.textContent='The saved response remains unconfirmed. Further submissions remain blocked.';return;}
       pending.node.innerHTML=recordMarkup(found);bindRow(pending.node,found);pending.node.querySelector('[data-support-result]').textContent='Saved response verified from current records.';uncertain=null;feedback.textContent='';
-    }catch{if(alive())feedback.textContent='Could not check the saved response. Further submissions remain blocked.';}
+    }catch(error){if(deny(error))return;if(alive())feedback.textContent='Could not check the saved response. Further submissions remain blocked.';}
     finally{busy=false;if(alive())controls();}
   }
   const listeners=[[select,'change',()=>void refresh({nextStatus:select.value,nextOffset:0})],[refreshButton,'click',()=>void refresh()],[previous,'click',()=>{if(offset&&!busy&&!uncertain)void refresh({nextOffset:offset-100});}],[next,'click',()=>{if(returned===100&&!busy&&!uncertain)void refresh({nextOffset:offset+100});}],[reconcileButton,'click',()=>void reconcile()]];

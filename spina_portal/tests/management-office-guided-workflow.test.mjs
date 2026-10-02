@@ -77,6 +77,30 @@ test('Management office workflow shows one stage at a time and carries reference
     assert.equal(panels[3].querySelector('[name="applicationReference"]').value, 'APP-456');
     assert.equal(buttons[3].getAttribute('aria-current'), 'step');
     assert.equal(buttons[0].getAttribute('aria-current'), null);
+
+    fire(buttons[0], 'click');
+    intakeInput.value = 'INTAKE-OTHER';
+    const firstLoanIntake=panels[3].querySelector('[name="intakeReference"]');
+    fire(buttons[1], 'click');
+    assert.equal(buttons[0].getAttribute('aria-current'), 'step', 'A conflicting case must not silently open the old CIF');
+    assert.match(workflow.querySelector('[data-office-case-feedback]').textContent,/different case/i);
+    assert.equal(firstLoanIntake.value,'INTAKE-123');
+    assert.equal(calls.length,baselineCalls);
+    fire(workflow.querySelector('[data-office-show-existing]'),'click');
+    assert.equal(buttons[1].getAttribute('aria-current'),'step');
+    assert.equal(panels[1].querySelector('[name="applicationReference"]').value,'INTAKE-123');
+
+    fire(buttons[2],'click');
+    firstLoanIntake.value='';
+    panels[3].querySelector('[name="applicationReference"]').value='OTHER-APPLICATION';
+    fire(buttons[3],'click');
+    assert.equal(firstLoanIntake.value,'','A conflicting pair must be checked before either reference is filled');
+    assert.equal(buttons[2].getAttribute('aria-current'),'step');
+    assert.equal(panels[3].querySelector('[name="applicationReference"]').value,'OTHER-APPLICATION');
+    const staleConflict=workflow.querySelector('[data-office-show-existing]');
+    fire(buttons[0],'click');
+    fire(staleConflict,'click');
+    assert.equal(buttons[0].getAttribute('aria-current'),'step','A superseded conflict control cannot change the current stage');
   } finally {
     controller.abort();
   }

@@ -23,6 +23,7 @@ export function managementLoanDetailMarkup(loan) {
 }
 
 export function managementPortfolioSummaryMarkup({status, summary = {}}) {
+  summary = summary && typeof summary === 'object' && !Array.isArray(summary) ? summary : {};
   const ready = status === 'ready';
   const count = value => ready && validCount(value) ? escapeHtml(value) : '—';
   return `<h3>Active portfolio · all clients</h3>

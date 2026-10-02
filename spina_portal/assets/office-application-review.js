@@ -196,6 +196,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   let selectedReview;
   let confirmationCleanup;
   let printCleanup;
+  let creating = false;
 
   function invalidate() {
     currentRequest = {};
@@ -400,7 +401,12 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
     entryCleanup = mountOfficeApplicationEntry({
       root: entryRoot, api, session, signal, clientId,
       applicationReference: applicationInput.value.trim(), review,
-      onSaved() { if (!disposed && currentRequest === token) openReview(); },
+      onSaved(saved) {
+        if (!disposed && currentRequest === token) {
+          applicationInput.value = saved.application_reference;
+          openReview();
+        }
+      },
       onCancel({ reload = false } = {}) {
         if (disposed || currentRequest !== token) return;
         invalidate();
@@ -410,14 +416,20 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   }
 
   async function createApplication() {
-    if (disposed) return;
+    if (disposed || creating) return;
+    if (entryCleanup) {
+      statusRoot.textContent = 'Your application draft is already open below. Continue it, or use its Cancel or Reload action before starting another.';
+      return;
+    }
     invalidate();
     const token = currentRequest;
     const intakeReference = intakeInput.value.trim();
-    if (!intakeReference || !applicationInput.value.trim()) {
-      statusRoot.innerHTML = `<div role="alert">${errorCard(new Error('Enter both the office intake reference and loan application reference.'))}</div>`;
+    if (!intakeReference) {
+      statusRoot.innerHTML = `<div role="alert">${errorCard(new Error('Enter the office intake reference. A new application reference will be generated.'))}</div>`;
       return;
     }
+    creating = true;
+    newButton.disabled = true;
     statusRoot.innerHTML = loadingPanel('Loading application entry…');
     try {
       const selection = await api.request(`/api/v1/management/onboarding/applicants/by-reference/${encodeURIComponent(intakeReference)}/cif-client`);
@@ -427,11 +439,12 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
         || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()) {
         throw new Error('The office intake response is invalid or does not match the entered reference.');
       }
+      if (!applicationInput.value.trim()) applicationInput.value = `LOAN-${crypto.randomUUID()}`;
       openEntry(selection.client_id);
     } catch (error) {
       if (disposed || currentRequest !== token) return;
       statusRoot.innerHTML = `<div role="alert">${errorCard(error, 'Application entry is unavailable.')}</div>`;
-    }
+    } finally { creating = false; if (!disposed) newButton.disabled = false; }
   }
 
   mounts.set(root, dispose);
@@ -447,7 +460,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
   }
   root.innerHTML = `<form class="entry-form">
     <label>Office intake reference<input name="intakeReference" type="text" autocomplete="off" required /></label>
-    <label>Loan application reference<input name="applicationReference" type="text" autocomplete="off" required /></label>
+    <label>Loan application reference<input name="applicationReference" type="text" autocomplete="off" placeholder="Automatic for a new application" required /><span class="meta">Leave blank for New application. Enter a reference only to open an existing application.</span></label>
     <div class="action-row"><button class="button button-primary" type="submit">Open application review</button><button class="button button-outline" type="button">Clear</button><button class="button button-outline" type="button" data-new-application>New application</button></div>
   </form>
   <div data-application-review-status role="status" aria-live="polite"></div>

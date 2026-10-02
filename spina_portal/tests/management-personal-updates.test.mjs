@@ -20,3 +20,29 @@ test('wrong-recipient update content is never shown and abort prevents late noti
  const read=h.refresh();resolve([{...row(1),recipient_user_id:'other',title:'Private other person'}]);await read;assert.doesNotMatch(root.textContent,/Private other person/);
  const late=h.refresh();controller.abort();resolve([row(1)]);await late;assert.doesNotMatch(root.textContent,/Update 1/);
 });
+
+for(const moved of [false,true]) test(`marking read preserves intended focus and reports a failed overview read${moved?' after focus moves':''}`,async t=>{
+ const {mountManagementPersonalUpdates}=await import('../assets/management-personal-updates.js');
+ const root=new Element(),document=root.ownerDocument;let resolve,posts=0;
+ const previous=document.activeElement;t.after(()=>{document.activeElement=previous;});
+ const h=mountManagementPersonalUpdates({root,getSession:()=>({user:{id:owner}}),onRead:async()=>false,api:{async request(path,options){
+  if(options?.method){posts++;return new Promise(done=>resolve=done);}return [row(1),row(2)];
+ }}});t.after(()=>h.dispose());await h.refresh();
+ const button=root.querySelector('[data-update-read]'),other=root.querySelectorAll('[data-update-read]')[1];
+ document.activeElement=button;fire(button,'click');fire(button,'click');
+ if(moved)document.activeElement=other;
+ resolve({...row(1),is_read:true,read_at:'2026-10-03T01:00:00Z'});await tick();
+ assert.equal(posts,1);assert.equal(button.hidden,true);
+ assert.match(root.querySelector('[data-updates-feedback]').textContent,/marked read.*overview refresh failed/i);
+ assert.equal(root.querySelector('[data-update-status]').focused===true,!moved);
+ fire(button,'click');await tick();assert.equal(posts,1,'An already read update never submits again');
+});
+
+test('a wrong notification ID cannot mark the selected update read',async t=>{
+ const {mountManagementPersonalUpdates}=await import('../assets/management-personal-updates.js');
+ const root=new Element();
+ const h=mountManagementPersonalUpdates({root,getSession:()=>({user:{id:owner}}),api:{async request(path,options){return options?.method?{...row(2),is_read:true,read_at:'2026-10-03T01:00:00Z'}:[row(1)];}}});
+ t.after(()=>h.dispose());await h.refresh();fire(root.querySelector('[data-update-read]'),'click');await tick();
+ assert.equal(root.querySelector('[data-update-read]').hidden,false);
+ assert.equal(root.querySelector('[data-update-status]').textContent,'Unread');
+});

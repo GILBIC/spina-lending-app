@@ -125,12 +125,12 @@ test('contradictory signed or duplicated terms results never become confirmed su
   handle.dispose();
 });
 
-test('saved write stays saved if the affected overview read callback fails', async () => {
+for (const failure of ['throw', 'false']) test(`saved write stays saved if the affected overview read callback fails with ${failure}`, async () => {
   let posts=0;
   const {root,handle}=await setup({async request(path,options){
     if(options?.method){posts++;return {request:approved(row(),options.body)};}
     return {requests:[row()]};
-  }},{onSaved:async()=>{throw new Error('read failure');}});
+  }},{onSaved:async()=>{if(failure==='false')return false;throw new Error('read failure');}});
   await confirm(root,fill(root));
   assert.equal(posts,1);assert.equal(handle.isWritePending(),false);
   assert.match(root.textContent,/Terms saved.*Overview refresh failed/);

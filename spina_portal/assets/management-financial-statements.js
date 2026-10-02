@@ -66,9 +66,9 @@ function statementRows(lines) {
   return rows
     .map(
       (line) => `<tr>
-        <td>${escapeHtml(line.account_code || '—')}</td>
-        <td>${escapeHtml(line.account_name || '—')}</td>
-        <td>${formatMoney(line.amount)}</td>
+        <td data-label="Account">${escapeHtml(line.account_code || '—')}</td>
+        <td data-label="Name">${escapeHtml(line.account_name || '—')}</td>
+        <td data-label="Amount">${formatMoney(line.amount)}</td>
       </tr>`,
     )
     .join('');
@@ -78,7 +78,7 @@ function statementTable(title, lines) {
   if (!asArray(lines).length) return '';
   return `<article class="data-card">
     <h3>${escapeHtml(title)}</h3>
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table class="mobile-card-table management-statement-table">
       <thead><tr><th>Account</th><th>Name</th><th>Amount</th></tr></thead>
       <tbody>${statementRows(lines)}</tbody>
     </table></div>
@@ -108,7 +108,7 @@ export function financialStatementsMarkup(payload) {
   const sourceLabel = statements.source === 'posted_general_ledger_only'
     ? 'Posted General Ledger only' : statements.source || 'Authoritative server record';
 
-  return `<div class="list-stack">
+  return `<div class="list-stack management-statements">
     <article class="data-card">
       <div class="section-heading">
         <div>

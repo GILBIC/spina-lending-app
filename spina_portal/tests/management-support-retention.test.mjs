@@ -26,3 +26,21 @@ test('dirty queue filter requires deliberate discard and changed preflight never
  let changed=false,posts=0;const previous=globalThis.confirm;globalThis.confirm=()=>false;
  try{const {root,h}=await setup({async request(path,options){if(options?.method)posts++;return {requests:[{...row(1),status:changed?'answered':'open'}]};}});const form=root.querySelector('[data-support-form]');form.querySelector('[name="response"]').value='Unsent response';const filter=root.querySelector('[data-support-status]');filter.value='resolved';fire(filter,'change');await tick();assert.equal(filter.value,'open');assert.equal(root.querySelector('[data-support-form]'),form);changed=true;fire(form,'submit');await tick();assert.equal(posts,0);assert.match(root.textContent,/changed/);h.dispose();}finally{globalThis.confirm=previous;}
 });
+
+for(const phase of ['preflight','save','reconcile']) for(const status of [401,403]) test(`${status} during Support ${phase} clears private data and makes detached controls inert`,async()=>{
+ let denied=false,calls=0;
+ const {root,h}=await setup({async request(path,options){
+  calls++;
+  if(denied && (phase==='preflight'||phase==='save'&&options?.method||phase==='reconcile'&&path.includes('status=answered')))throw Object.assign(new Error('Private denial details'),{status});
+  if(options?.method)return {};
+  return {requests:[row(1),row(2)]};
+ }});
+ const forms=root.querySelectorAll('[data-support-form]'),draft=forms[1].querySelector('[name="response"]');
+ draft.value='Private unfinished response';forms[0].querySelector('[name="response"]').value='Reply for verification';
+ denied=true;fire(forms[0],'submit');await tick();
+ if(phase==='reconcile'){fire(root.querySelector('[data-support-reconcile]'),'click');await tick();}
+ assert.doesNotMatch(root.textContent,/Question text|Question 1|Private unfinished|Private denial/);
+ assert.match(root.textContent,/access.*unavailable/i);assert.equal(draft.value,'');
+ const before=calls;fire(forms[0],'submit');await tick();await h.refresh();assert.equal(calls,before);
+ assert.equal(root.querySelector('[data-support-form]'),null);h.dispose();
+});
