@@ -1,4 +1,4 @@
-import {badge,emptyState,errorCard,escapeHtml,formatDateTime,hasPermission} from './ui.js';
+import {badge,errorCard,escapeHtml,formatDateTime,hasPermission} from './ui.js';
 
 const statuses=['open','answered','resolved','cancelled'];
 const validId=value=>typeof value==='string'&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value);
@@ -57,7 +57,7 @@ export function mountManagementSupport({root,api,signal,getSession,onSaved}) {
       if(!Array.isArray(data?.requests))throw new Error('Support records are unavailable. Retry this read.');
       if(data.requests.some(item=>!item||item.status!==status||!validId(item.request_id)||!validId(item.client_id)))throw new Error('Some Support records could not be verified. Refresh before reviewing.');
       returned=data.requests.length;
-      list.innerHTML=returned?data.requests.map(item=>`<article class="data-card" data-support-record="${escapeHtml(item.request_id)}">${recordMarkup(item)}</article>`).join(''):emptyState(`No ${status} support requests were returned.`);
+      list.innerHTML=returned?data.requests.map(item=>`<article class="data-card" data-support-record="${escapeHtml(item.request_id)}">${recordMarkup(item)}</article>`).join(''):`<p class="meta" role="status" data-management-queue-empty="support">No ${escapeHtml(status)} support requests were returned.</p>`;
       for(const node of list.querySelectorAll('[data-support-record]'))bindRow(node,data.requests.find(item=>item.request_id===node.getAttribute('data-support-record')));
       feedback.textContent='';return true;
     }catch(error){if(alive()&&version===generation){list.innerHTML=errorCard(error);feedback.textContent='Support could not be loaded. Use Refresh support to retry.';returned=0;}return false;}

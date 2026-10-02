@@ -443,7 +443,7 @@ export function mountManagementRenewals({
       filter.value=status;
       rows.clear();
       nodes.clear();
-      list.innerHTML=items.map(row=>'<article class="data-card" data-renewal-record="'+h(row.request_id)+'">'+recordMarkup(row)+'</article>').join('')||'<p>No '+h(status)+' renewal requests were returned.</p>';
+      list.innerHTML=items.map(row=>'<article class="data-card" data-renewal-record="'+h(row.request_id)+'">'+recordMarkup(row)+'</article>').join('')||'<p class="meta" role="status" data-management-queue-empty="renewals">No '+h(status)+' renewal requests were returned.</p>';
       for(const node of list.querySelectorAll('[data-renewal-record]')){
         const item=items.find(r=>r.request_id===node.getAttribute('data-renewal-record'));
         rows.set(item.request_id,item);

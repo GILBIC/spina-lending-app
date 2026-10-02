@@ -1,3 +1,4 @@
+import {setImmediate} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -70,6 +71,7 @@ for (const { role, mount, permissions } of scenarios) {
       } else {
         assert.equal(navigation[0].group, 'Daily work');
       }
+      if (role === 'management') await setImmediate();
       const today = root.querySelector(`#${role}-overview`);
       if (today.innerHTML.includes('metric-grid')) {
         assert.ok(today.innerHTML.indexOf('daily-actions') < today.innerHTML.indexOf('metric-grid'),
@@ -142,7 +144,7 @@ const failedReads = [
   { role: 'client', mount: mountClientWorkspace, permissions: [], paths: ['/api/v1/client/loans', '/api/v1/client/payments', '/api/v1/client/renewals', '/api/v1/client/support'] },
   { role: 'collector', mount: mountCollectorWorkspace, permissions: ['route.view'], paths: ['/api/v1/collector/routes/today'] },
   { role: 'employee', mount: mountEmployeeWorkspace, permissions: ['support.manage', 'remittance.view'], paths: ['/api/v1/management/support?status=open', '/api/v1/notifications', '/api/v1/activity-notifications'] },
-  { role: 'management', mount: mountManagementWorkspace, permissions: ['renewal.manage', 'support.manage'], paths: ['/api/v1/management/renewals?status=pending', '/api/v1/management/support?status=open'] },
+  { role: 'management', mount: mountManagementWorkspace, permissions: ['management.dashboard.view', 'renewal.manage', 'support.manage'], paths: ['/api/v1/management/dashboard-overview'] },
 ];
 
 for (const { role, mount, permissions, paths } of failedReads) {
@@ -161,6 +163,7 @@ for (const { role, mount, permissions, paths } of failedReads) {
         signal: controller.signal,
         setNavigation() {},
       });
+      if (role === 'management') await setImmediate();
       const today = root.querySelector(`#${role}-overview`);
       assert.ok(today.textContent.includes('Unavailable') || today.textContent.includes('unavailable'));
       assert.match(today.textContent, /could not load|unavailable/i);

@@ -1,3 +1,4 @@
+import {mountRoleTask, managementTestHandle} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
@@ -84,7 +85,7 @@ function officeRequests(h) {
 for (const role of ['employee', 'management']) {
   test(`${role}: permitted workspace connects navigation and the office reference form`, async () => {
     const h = harness(role);
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
 
     const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
     assert.deepEqual(h.navigation.find(({ id }) => id === navigationId), role === 'management'
@@ -93,15 +94,15 @@ for (const role of ['employee', 'management']) {
     if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
     const root = officeSelection(h, role);
     assert.match(root.querySelector('label').textContent, /Office intake reference/);
-    assert.equal(typeof h.context.officeCifCleanup, 'function');
+    assert.equal(typeof (role === 'management' ? managementTestHandle(h.context)?.dispose : h.context.officeCifCleanup), 'function');
     assert.deepEqual(officeRequests(h), []);
-    h.context.officeCifCleanup();
+    if (role === 'management') managementTestHandle(h.context).dispose(); else h.context.officeCifCleanup();
   });
 
   for (const permissions of [[], [`${PERMISSION}.extra`]]) {
     test(`${role}: ${permissions.length ? 'similar' : 'missing'} permission exposes no CIF navigation or lookup`, async () => {
       const h = harness(role, permissions);
-      await mounts[role](h.context);
+      await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
 
       assert.equal(h.navigation.some(({ id }) => id === `${role}-cif-review`), false);
       assert.equal(h.context.root.querySelector('[data-office-cif-selection]'), null);
@@ -112,7 +113,7 @@ for (const role of ['employee', 'management']) {
 
   test(`${role}: submitting the workspace form renders the read-only CIF through the exact GET chain`, async () => {
     const h = harness(role);
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = officeSelection(h, role);
     openReview(root);
     await setImmediate();
@@ -124,13 +125,13 @@ for (const role of ['employee', 'management']) {
     }
     assert.match(root.textContent, /Synthetic Office Applicant/);
     assert.equal(root.querySelectorAll('input').length, 1);
-    h.context.officeCifCleanup();
+    if (role === 'management') managementTestHandle(h.context).dispose(); else h.context.officeCifCleanup();
   });
 
   test(`${role}: remount immediately disposes old selection and ignores detached events and late summary`, async () => {
     const h = harness(role);
     h.summaryPending = deferred();
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const oldRoot = officeSelection(h, role);
     const oldForm = oldRoot.querySelector('form');
     const oldInput = oldRoot.querySelector('input');
@@ -139,7 +140,7 @@ for (const role of ['employee', 'management']) {
     assert.deepEqual(officeRequests(h).map(({ path }) => path), [LOOKUP, SUMMARY]);
 
     h.accountPending = deferred();
-    const remount = mounts[role](h.context);
+    const remount = mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     assert.equal(oldInput.value, '', 'starting workspace remount must clear the previous reference');
     assert.equal(oldRoot.innerHTML, '', 'starting workspace remount must dispose the previous form');
     oldInput.value = REFERENCE;
@@ -159,12 +160,12 @@ for (const role of ['employee', 'management']) {
     assert.equal(h.context.root.innerHTML, current);
     assert.equal(oldRoot.innerHTML, '');
     assert.doesNotMatch(h.context.root.textContent, /Synthetic Office Applicant/);
-    h.context.officeCifCleanup();
+    if (role === 'management') managementTestHandle(h.context).dispose(); else h.context.officeCifCleanup();
   });
 
   test(`${role}: workspace AbortSignal clears the displayed review and detaches its form`, async () => {
     const h = harness(role);
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = officeSelection(h, role);
     const form = root.querySelector('form');
     const input = root.querySelector('input');

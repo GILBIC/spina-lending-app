@@ -1,3 +1,4 @@
+import {mountRoleTask, activateManagementTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
@@ -81,7 +82,8 @@ function posts(h) { return h.requests.filter((r) => r.options.method === 'POST')
 for (const role of ['employee', 'management']) {
   test(`${role}: creates application with exact request values then refreshes authoritative review`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
+    if (role === 'management') { await activateManagementTask(h.context, 'management-operations', 'management-area-management'); await activateManagementTask(h.context, 'management-clients-loans', 'management-office'); }
     const cif = h.root.querySelector('[data-office-cif-selection]').innerHTML;
     const area = h.root.querySelector(`#${role}-area-management`).innerHTML;
     const entry = await newEntry(h);
@@ -101,7 +103,7 @@ for (const role of ['employee', 'management']) {
 
   test(`${role}: appends from reviewed identity and version without modifying earlier facts`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = select(h); fire(root.querySelector('form'), 'submit'); await setImmediate();
     fire(button(root, 'Edit application information'), 'click'); await setImmediate();
     const entry = root.querySelector('[data-application-entry]');
@@ -120,7 +122,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: ${closeAction} after uncertain save reloads the reference and never replays POST`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
     h.saveError = Object.assign(new Error('Connection interrupted'), { status: 0 });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const entry = await newEntry(h); fill(entry); save(entry); await setImmediate();
     assert.equal(button(entry, 'Save application')?.disabled ?? true, true);
     assert.equal(posts(h).length, 1);
@@ -134,7 +136,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: changing reference clears form and ignores a late save callback`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
     let resolve; h.holdSave = new Promise((done) => { resolve = done; });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const entry = await newEntry(h); fill(entry); save(entry); await setImmediate();
     const oldField = input(entry, 'purpose');
     const root = h.root.querySelector('[data-office-application-review]');
@@ -150,7 +152,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: logout clears editor values while a save is pending`, async () => {
     const h = harness(role); let resolve;
     h.holdSave = new Promise((done) => { resolve = done; });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const entry = await newEntry(h); fill(entry); save(entry); await setImmediate();
     const oldField = input(entry, 'purpose'); h.controller.abort();
     resolve(h.saved); await setImmediate();
@@ -161,7 +163,7 @@ for (const role of ['employee', 'management']) {
 
   test(`${role}: stale detached edit button cannot open an editor for a changed selection`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = select(h); fire(root.querySelector('form'), 'submit'); await setImmediate();
     const oldEdit = button(root, 'Edit application information');
     set(root, 'intakeReference', 'Other intake');
