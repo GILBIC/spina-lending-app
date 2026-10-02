@@ -520,9 +520,9 @@ export async function mountManagementWorkspace(context) {
   async function refreshOverview(){
     if(!active())return;const version=++overviewVersion;const target=root.querySelector('[data-management-overview]');
     if(!target)return;
-    if(!canDashboard){target.innerHTML='<p>Management dashboard permission is not assigned.</p>';return;}
-    try{const data=await api.request('/api/v1/management/dashboard-overview');if(active()&&version===overviewVersion){target.innerHTML=`${data.generated_at ? `<p class="meta">Updated ${formatDateTime(data.generated_at)}</p>` : ''}${overviewMetrics(asArray(data.metrics))}`;target.querySelector('[data-my-updates-shortcut]')?.addEventListener('click',async()=>{await context.managementTaskController?.activate('management-account','management-updates');context.navigateTo?.('management-account');});}}
-    catch(error){if(active()&&version===overviewVersion){target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-overview-retry>Retry overview</button>`;target.querySelector('[data-overview-retry]')?.addEventListener('click',()=>void refreshOverview(),{once:true});}}
+    if(!canDashboard){target.innerHTML='<p>Management dashboard permission is not assigned.</p>';return true;}
+    try{const data=await api.request('/api/v1/management/dashboard-overview');if(active()&&version===overviewVersion){target.innerHTML=`${data.generated_at ? `<p class="meta">Updated ${formatDateTime(data.generated_at)}</p>` : ''}${overviewMetrics(asArray(data.metrics))}`;target.querySelector('[data-my-updates-shortcut]')?.addEventListener('click',async()=>{await context.managementTaskController?.activate('management-account','management-updates');context.navigateTo?.('management-account');});return true;}return false;}
+    catch(error){if(active()&&version===overviewVersion){target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-overview-retry>Retry overview</button>`;target.querySelector('[data-overview-retry]')?.addEventListener('click',()=>void refreshOverview(),{once:true});}return false;}
   }
   async function refreshAccount(){
     const version=++accountVersion;const target=root.querySelector('[data-management-account-profile]');
@@ -554,9 +554,9 @@ export async function mountManagementWorkspace(context) {
   add('management-client-accounts','management-clients-loans','Client accounts',()=>bindClientAccountAdmin(context),'account.manage');
   add('management-collection-actions','management-collections','Collection actions',()=>mountManagementCollectionActions({...options('[data-management-collection-actions]'),sessionStore:context.sessionStore}));
   add('management-loan-operations','management-collections','Loan operations & history',async()=>{
-    const h=readTask({target:root.querySelector('#management-loan-operations-results'),load:()=>loadManagementLoanOperations(api),render:managementLoanOperationsMarkup});bindManagementLoanOperations(context);await h.refresh();return h;
+    const h=bindManagementLoanOperations(context);await h.refresh();return h;
   });
-  add('management-past-due-report','management-collections','Past-due report',async()=>{const h=readTask({target:root.querySelector('#management-past-due-report-results'),load:()=>loadManagementPastDueReport(api),render:managementPastDueReportMarkup});bindManagementPastDueReport(context);await h.refresh();return h;},'management.dashboard.view');
+  add('management-past-due-report','management-collections','Past-due report',async()=>{const h=bindManagementPastDueReport(context);await h.refresh();return h;},'management.dashboard.view');
   add('management-financial-statements','management-accounting-hub','Financial statements',async()=>{const h=mountManagementFinancialStatements(options('#management-financial-statements'));await h.refresh();return h;},'accounting.view');
   add('management-general-journal','management-accounting-hub','Journal & Trial Balance',async()=>{
     const target=root.querySelector('[data-management-journal-evidence]');let actions=()=>{},exports=()=>{},version=0;

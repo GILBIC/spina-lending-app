@@ -39,7 +39,7 @@ export function mountManagementSupport({root,api,signal,getSession,onSaved}) {
         if(!alive())return;
         if(!matches(command,data?.request))throw new Error('The saved response could not be confirmed.');
         node.innerHTML=recordMarkup(data.request);bindRow(node,data.request);node.querySelector('[data-support-result]').textContent='Response saved.';
-        try{await onSaved?.();}catch{if(alive())node.querySelector('[data-support-result]').textContent='Response saved; overview refresh failed. Refresh Today for current counts.';}
+        try{if(await onSaved?.()===false)throw new Error('Overview refresh failed.');}catch{if(alive())node.querySelector('[data-support-result]').textContent='Response saved; overview refresh failed. Refresh Today for current counts.';}
       }catch(error){if(alive()){
         if(attempted&&(!error.status||error.status>=500)){uncertain={command,node};resultNode.textContent='The save outcome is uncertain. Do not submit again; check the saved response.';}
         else resultNode.textContent=error.message;

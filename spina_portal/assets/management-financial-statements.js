@@ -35,9 +35,10 @@ export function mountManagementFinancialStatements({root,api,signal,getSession})
     }).finally(()=>{periodsPromise=null;});
     return periodsPromise;
   }
-  async function refresh() {
+  async function refresh({reloadPeriods=true}={}) {
     if(!alive())return;
     const version=++generation,selected=select.value||'';
+    if(reloadPeriods)periods=null;
     results.innerHTML='<p role="status">Loading statements for the selected period…</p>';retry.hidden=true;
     try {
       const available=await loadPeriods();
@@ -51,8 +52,8 @@ export function mountManagementFinancialStatements({root,api,signal,getSession})
       select.value=id;results.innerHTML=financialStatementsMarkup(data);
     }catch(error){if(alive()&&version===generation){results.innerHTML=errorCard(error);retry.hidden=false;}}
   }
-  const request=()=>void refresh();select.addEventListener('change',request);retry.addEventListener('click',request);
-  function dispose(){if(disposed)return;disposed=true;generation++;select.removeEventListener('change',request);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
+  const request=()=>void refresh(),change=()=>void refresh({reloadPeriods:false});select.addEventListener('change',change);retry.addEventListener('click',request);
+  function dispose(){if(disposed)return;disposed=true;generation++;select.removeEventListener('change',change);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});
   return{refresh,dispose};
 }

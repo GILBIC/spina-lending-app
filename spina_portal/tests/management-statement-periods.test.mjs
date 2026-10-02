@@ -20,3 +20,9 @@ test('late statements and aborted reads cannot replace the selected period',asyn
  const first=h.refresh();await tick();const select=root.querySelector('[data-statement-period]');select.value=B;fire(select,'change');await tick();pending[1](pack(B));await tick();pending[0](pack(A));await first;assert.match(root.querySelector('[data-statement-results]').textContent,/September/);
  const last=h.refresh();await tick();controller.abort();pending[2](pack(A));await last;assert.doesNotMatch(root.querySelector('[data-statement-results]').textContent,/August/);
 });
+
+test('explicit refresh discovers changed periods and reports a removed selection without substituting figures',async()=>{
+ const {mountManagementFinancialStatements}=await import('../assets/management-financial-statements.js');const root=new Element();let available=[{period_id:A}],reads=0;
+ const h=mountManagementFinancialStatements({root,getSession:()=>session,api:{async request(path){if(path.endsWith('/financial-accounting')){reads++;return {fiscal_periods:available};}return pack(A);}}});
+ await h.refresh();available=[{period_id:B,label:'September'}];await h.refresh();assert.equal(reads,2);assert.match(root.querySelector('[data-statement-results]').textContent,/no longer available/);assert.doesNotMatch(root.querySelector('[data-statement-results]').textContent,/August/);assert.match(root.querySelector('[data-statement-period]').innerHTML,/September/);h.dispose();
+});
