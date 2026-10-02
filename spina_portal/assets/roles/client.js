@@ -22,31 +22,13 @@ import {
 } from '../client-gcash.js';
 import {
   bindClientScheduleButtons,
-  formatAuthoritativeMoney,
+  formatAuthoritativeMoney, renderClientPayoff, createClientScheduleController, clientInstallmentGuidance, manilaToday,
 } from '../client-schedule.js';
 import { renderClientStatement } from '../client-statement.js';
 import { mountClientDocuments } from '../client-documents.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 
-function clientHomeObligationSummary(schedule) {
-  const penaltyStatus = String(schedule?.penalty_status || '').trim().toLowerCase();
-  if (penaltyStatus === 'management_review_required') {
-    const reason = String(schedule?.management_review_required_reason || '').trim();
-    return `<div class="notice-card" data-client-home-obligation>
-      <strong>Management review required</strong>
-      ${reason ? `<p>${escapeHtml(reason)}</p>` : ''}
-      <p class="meta">Open the authoritative schedule for details.</p>
-    </div>`;
-  }
-  if (!['projected', 'penalty_outstanding', 'cap_exhausted'].includes(penaltyStatus)) {
-    return '';
-  }
-  return `<div class="notice-card" data-client-home-obligation>
-    <strong>Exact payoff</strong>
-    <p>${formatAuthoritativeMoney(schedule?.exact_payoff_total)}</p>
-    <p class="meta">Server-authoritative post-maturity amount. Open the schedule for details.</p>
-  </div>`;
-}
+function clientHomeObligationSummary(schedule) { return renderClientPayoff(schedule); }
 
 export function loanCard(loan, obligationSchedule = null) {
   const type = classifyLoanType(loan.loan_type_name ?? loan.loan_type_code);
@@ -81,26 +63,10 @@ export function loanCard(loan, obligationSchedule = null) {
   </article>`;
 }
 
-export async function loadClientHomeObligationSchedules(api, portfolio) {
-  const candidates = asArray(portfolio?.loans).filter((loan) => {
-    const status = String(loan?.status || loan?.loan_status || '').trim().toLowerCase();
-    const type = classifyLoanType(loan?.loan_type_name ?? loan?.loan_type_code);
-    return status === 'active' && type === 'seven-by-seven' && loan?.loan_id;
-  });
-  const entries = await Promise.all(candidates.map(async (loan) => {
-    const loanId = String(loan.loan_id);
-    try {
-      const schedule = await api.request(
-        `/api/v1/client/loans/${encodeURIComponent(loanId)}/schedule`,
-      );
-      return [loanId, schedule];
-    } catch {
-      return null;
-    }
-  }));
-  return Object.fromEntries(entries.filter(Boolean));
+export async function loadClientHomeObligationSchedules(api, portfolio, controller = createClientScheduleController({api})) {
+ const loans=asArray(portfolio?.loans).filter(loan=>String(loan.status||loan.loan_status).toLowerCase()==='active'&&classifyLoanType(loan.loan_type_name??loan.loan_type_code)==='seven-by-seven'&&loan.loan_id);
+ return Object.fromEntries(await Promise.all(loans.map(async loan=>[loan.loan_id,await controller.load(loan.loan_id)])));
 }
-
 function paymentRows(payments) {
   if (!payments.length) return emptyState('No official payment receipt is available yet.');
   return `<div class="table-wrap"><table class="mobile-card-table client-payment-table">
@@ -785,3 +751,4 @@ export async function mountClientWorkspace(context) {
   bindClientRenewalCancellation(context);
   bindClientRenewalWorkflowActions(context);
 }
+
