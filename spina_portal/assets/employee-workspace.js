@@ -21,7 +21,7 @@ export async function mountEmployeeWorkspace(context) {
  const readStart=id=>{const token=(readVersions.get(id)||0)+1;readVersions.set(id,token);return token;};
  const readCurrent=(id,token)=>active()&&readVersions.get(id)===token;
  const session=()=>context.getSession?context.getSession():context.session;
- const active=()=>!disposed&&!signal?.aborted&&session()?.user?.id===initial?.user?.id;
+ const active=()=>{if(disposed||signal?.aborted)return false;if(session()?.user?.id!==initial?.user?.id){dispose();root.innerHTML='';return false;}return true;};
  const permitted=permission=>active()&&hasPermission(session(),permission);
  const canOffice=hasPermission(initial,'client_onboarding.requirement.review'),canRemittance=hasPermission(initial,'remittance.view'),canSupport=hasPermission(initial,'support.manage'),canCash=hasPermission(initial,'cash_disbursement.prepare');
  const canArea=['area.manage','area.collector.assign','area.client.assign','area.retire'].some(permission=>hasPermission(initial,permission));
