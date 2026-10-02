@@ -58,7 +58,7 @@ export function createManagementTaskController({root, signal, getSession, tasks,
     if(alive() && activation===version)afterTaskChange();
     return alive();
   }
-  const isWritePending=()=>[...states.values()].some(state=>state.handle?.isWritePending?.());
+  const isWritePending=(excludeId)=>[...states.values()].some(state=>state.task.id!==excludeId&&state.handle?.isWritePending?.());
   async function refreshVisible() {
     if(!alive())return false;
     if(isWritePending()) {showToast('Finish or reconcile the current action before refreshing.','error');return false;}

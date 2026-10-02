@@ -1,10 +1,14 @@
-const CACHE_NAME = 'spina-company-shell-v22-current-prs';
+const CACHE_NAME = 'spina-company-shell-v23-treasury';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/assets/app.css',
   '/assets/app.js',
+  '/assets/treasury-api.js',
+  '/assets/treasury-workspace.js',
+  '/assets/treasury-payment-claim.js',
+  '/assets/treasury-role-tasks.js',
   '/assets/api.js',
   '/assets/config.js',
   '/assets/session.js',

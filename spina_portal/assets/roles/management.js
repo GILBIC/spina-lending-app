@@ -1,3 +1,5 @@
+import {mountTreasuryWorkspace} from '../treasury-workspace.js';
+import {createTreasuryRoleGate} from '../treasury-role-tasks.js';
 import {mountManagementRenewals} from '../management-renewals.js';
 import {createManagementTaskController} from '../management-workspace-tasks.js';
 import {mountManagementPortfolio} from '../management-portfolio.js';
@@ -401,7 +403,7 @@ export async function mountManagementWorkspace(context) {
   if(context.signal?.aborted)return;
   context.managementTaskController?.dispose();
   context.accountingExportCleanup = null;
-  const {root,api,session,setNavigation}=context;
+  const {root,api:originalApi,session,setNavigation}=context;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>context.managementTaskController?.isWritePending('management-treasury')===true});const api=treasuryGate.api;context.api=api;
   const getSession=context.getSession || (()=>context.signal?.aborted?null:context.session);
   const active=()=>!context.signal?.aborted && !!getSession();
   const can=permission=>hasPermission(getSession(),permission);
@@ -467,7 +469,8 @@ export async function mountManagementWorkspace(context) {
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Review recorded past-due reasons and amounts by date, area, reason, or event.</p></div></div><form id="management-past-due-report-search" class="past-due-filter-grid"><label>Start date<input type="date" name="start_date" /></label><label>End date<input type="date" name="end_date" /></label><label>Area<input name="area" maxlength="200" placeholder="All areas" /></label><label>Reason<select name="reason_code"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select></label><label>Event<select name="event_kind"><option value="">All events</option><option value="unable_to_pay">Unable to pay</option><option value="partial_payment">Partial payment</option></select></label><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
   ${canViewRemittance ? '<section class="section-card" id="management-remittances"><h2>Remittance review</h2><p>Review cash handovers assigned to your account and their saved history.</p><div data-management-remittance-review></div></section>' : ''}</section>
   <section class="workspace-group" id="management-accounting-hub" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>\n  ${!canViewFinancialStatements && !canViewGeneralJournal && !canPrepareCashDisbursement ? emptyState('No accounting tools are assigned to this account.') : ''}
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>\n  <section class="section-card" id="management-treasury" data-private-panel><div data-management-treasury></div></section>
+  ${!canViewFinancialStatements && !canViewGeneralJournal && !canPrepareCashDisbursement ? emptyState('No accounting tools are assigned to this account.') : ''}
   ${canPrepareCashDisbursement ? '<section class="section-card" id="management-cash-disbursement"><div data-cash-disbursement></div></section>' : ''}
   ${canViewFinancialStatements ? '<section class="section-card" id="management-accounting"><div data-management-accounting></div></section>' : ''}
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
@@ -552,6 +555,7 @@ export async function mountManagementWorkspace(context) {
     const h=mountManagementSupport({...options('[data-management-support-list]'),onSaved:refreshOverview});await h.refresh();return h;
   },'support.manage');
   add('management-alerts','management-operations','Alerts & audit',async()=>{const h=readTask({target:root.querySelector('[data-management-alerts-audit]'),load:()=>api.request('/api/v1/management/alerts-audit?window_days=30&limit=100'),render:managementAlertsAuditMarkup,bind:()=>bindManagementAlertsAudit(root.querySelector('[data-management-alerts-audit]'),{signal:context.signal,navigateTask:async(group,id)=>{const accepted=await context.managementTaskController.activate(group,id);if(accepted)context.navigateTo?.(group);else showToast('That task is not available to this account.','error');}})});await h.refresh();return h;},'management.dashboard.view');
+  add('management-treasury','management-accounting-hub','Cash & GCash',async()=>{treasuryHandle=mountTreasuryWorkspace({...options('[data-management-treasury]'),canStartWrite:treasuryGate.canStartWrite});await treasuryHandle.ready;return {refresh:treasuryHandle.refreshReadOnly,isWritePending:treasuryHandle.isWritePending,dispose:treasuryHandle};});
   add('management-profile','management-account','Profile & security',()=>({refresh:refreshAccount,dispose:mountAccountCredentials(options('[data-account-credentials]'))}));
   add('management-updates','management-account','My updates',async()=>{const handle=mountManagementPersonalUpdates({...options('[data-management-updates]'),onRead:refreshOverview});await handle.refresh();return handle;});
   for(const task of tasks)if(task.id!==task.group)root.querySelector(`#${task.id}`).hidden=true;
