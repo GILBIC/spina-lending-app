@@ -1,0 +1,88 @@
+import {escapeHtml as h,hasPermission,formatExactMoney as money,formatDateTime,metricCard} from './ui.js';
+import {collectorMutation} from './collector-workflow-contract.js';
+
+const amount=value=>typeof value==='string' && /^-?(0|[1-9]\d*)\.\d{2}$/.test(value);
+const id=value=>typeof value==='string' && value.trim().length>0;
+const date=value=>typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+const counts=['transaction_count','payment_count','unable_to_pay_count','covered_payment_count','client_count','refund_due_release_count'];
+const itemKeys=['transaction_id','client_id','loan_id','collection_date','entry_type','amount','receipt_number','accepted_at','note','covered_dates'];
+const refundKeys=['release_id','approval_id','adjustment_id','client_id','loan_id','amount','released_at','evidence_reference','evidence_digest','cash_effect'];
+const pick=(record,keys)=>keys.map(key=>[key,record[key]??null]);
+const snapshot=record=>JSON.stringify([pick(record,[...counts,'total_amount','refund_due_release_total']),record.items.map(item=>pick(item,itemKeys)).sort((a,b)=>String(a[0][1]).localeCompare(String(b[0][1]))),record.refund_due_releases.map(item=>pick(item,refundKeys)).sort((a,b)=>String(a[0][1]).localeCompare(String(b[0][1])))]);
+export function validateCollectorRemittanceEvidence(record) {
+  if(!record || !id(record.collector_user_id) || !date(record.collection_date) || !amount(record.total_amount) || !amount(record.refund_due_release_total) || !counts.every(key=>Number.isSafeInteger(record[key]) && record[key]>=0) || !Array.isArray(record.items) || !Array.isArray(record.refund_due_releases) || record.items.length!==record.transaction_count || record.refund_due_releases.length!==record.refund_due_release_count) return false;
+  const transactions=new Set(),refunds=new Set(),clients=new Set();let payments=0,passes=0,covered=0;
+  for(const item of record.items) {
+    if(!item || !['transaction_id','client_id','loan_id','receipt_number'].every(key=>id(item[key])) || transactions.has(item.transaction_id) || !date(item.collection_date) || item.collection_date!==record.collection_date || !amount(item.amount) || !Array.isArray(item.covered_dates) || item.covered_dates.some(value=>!date(value)) || new Set(item.covered_dates).size!==item.covered_dates.length || !['payment','advance','pass'].includes(item.entry_type))return false;
+    transactions.add(item.transaction_id);clients.add(item.client_id);
+    if(item.entry_type==='pass')passes++;else payments++;
+    if(item.entry_type!=='pass' && (item.entry_type==='advance' || item.covered_dates.length>1))covered++;
+  }
+  for(const item of record.refund_due_releases) {
+    if(!item || !['release_id','approval_id','adjustment_id','client_id','loan_id','evidence_reference','evidence_digest','released_at'].every(key=>id(item[key])) || refunds.has(item.release_id) || !amount(item.amount) || item.cash_effect!=='outflow')return false;
+    refunds.add(item.release_id);clients.add(item.client_id);
+  }
+  return clients.size===record.client_count && passes===record.unable_to_pay_count && payments===record.payment_count && covered===record.covered_payment_count;
+}
+export function collectorRemittanceResultMatches({collectorId,recipientId,collectionDate,preview}) {
+  return result=>id(result?.remittance_id) && id(result.remittance_number) && result.status==='submitted' && result.collector_user_id===collectorId && result.recipient_user_id===recipientId && result.collection_date===collectionDate && validateCollectorRemittanceEvidence(result) && snapshot(result)===snapshot(preview);
+}
+export function remittanceSummaryMarkup(state) {
+  if(state.status!=='ready' || !amount(state.data?.total_amount) || !['transaction_count','client_count','unable_to_pay_count'].every(key=>Number.isSafeInteger(state.data[key]) && state.data[key]>=0))return '<div class="notice-card warning">Remittance summary unavailable.</div>';
+  const data=state.data;
+  return `<div class="metric-grid">${metricCard('Cash total',money(data.total_amount))}${metricCard('Transactions',h(data.transaction_count))}${metricCard('Clients',h(data.client_count))}${metricCard('Unable to pay',h(data.unable_to_pay_count))}</div>`;
+}
+export function renderCollectorRemittanceEvidence(record,{history=false}={}) {
+  if(!validateCollectorRemittanceEvidence(record))return '<div class="notice-card warning">Included evidence unavailable or inconsistent. This summary cannot be reviewed for submission.</div>';
+  return `<div class="collector-remittance-evidence" data-private-panel><p><strong>Authoritative cash total ${money(record.total_amount)}</strong> · Refund cash outflows ${money(record.refund_due_release_total)}</p><h3>Included collection entries</h3>${record.items.map(item=>`<article class="list-item"><strong>${h(item.client_name || 'Client')} · ${h(item.loan_type || 'Loan')}</strong><p>${h(item.entry_type)} · ${money(item.amount)} · Receipt ${h(item.receipt_number)}</p><p>Collection date ${h(item.collection_date)} · Covered dates ${item.covered_dates.map(h).join(', ') || 'None recorded'}</p><p>Accepted ${formatDateTime(item.accepted_at)} · ${h(item.note || 'No note')}</p><small>Transaction ${h(item.transaction_id)} · Loan ${h(item.loan_id)}</small></article>`).join('') || '<p>No collection entries included.</p>'}<h3>Refund cash outflows</h3>${record.refund_due_releases.map(item=>`<article class="list-item"><strong>${h(item.client_name || 'Client')} · ${money(item.amount)}</strong><p>Evidence ${h(item.evidence_reference)} · Released ${formatDateTime(item.released_at)}</p><small>Release ${h(item.release_id)} · Loan ${h(item.loan_id)}</small></article>`).join('') || '<p>No refund cash outflows included.</p>'}${history?`<p>From ${h(record.collector_name || record.collector_user_id)} · To ${h(record.recipient_name || record.recipient_user_id || 'Not recorded')} · ${h(record.status || 'Unknown status')}</p><p>Note: ${h(record.note || 'Not recorded')}</p>${['submitted_at','reviewed_at','received_at','rejected_at'].map(key=>`<p>${h(key.replaceAll('_',' '))}: ${record[key]?formatDateTime(record[key]):'Not recorded'}</p>`).join('')}<p>Rejection reason: ${h(record.rejection_reason || 'Not recorded')}</p><p>Read-only sender record. Pending submission does not transfer cash custody.</p>`:''}</div>`;
+}
+
+export function mountCollectorRemittance({root,api,getSession,getRouteDate,guard,onSaved,signal,beforeTaskChange=()=>{},afterTaskChange=()=>{}}) {
+  let disposed=false,generation=0,inflight=null,reviewed=null,history=[],limit=30;
+  const states={preview:{status:'idle',data:null},recipients:{status:'idle',data:null},history:{status:'idle',data:null}};
+  const current=()=>!disposed && !signal?.aborted && guard.current && Boolean(getSession());
+  root.innerHTML='<h2>Remittance</h2><p>Review all included entries and refund cash outflows before submitting.</p><div data-remittance-summary></div><div data-remittance-recipient-status></div><form id="collector-remittance-form" class="entry-form"><label>Recipient<select name="recipientUserId" required><option value="">Choose recipient</option></select></label><label>Collection date<input name="collectionDate" type="date" readonly /></label><label>Note<textarea name="note" maxlength="500"></textarea></label><details><summary>Included payments and refund cash outflows</summary><div data-remittance-evidence></div></details><label><input type="checkbox" name="reviewed" />I reviewed the included payments and refund cash outflows.</label><p class="notice-card danger" data-collection-feedback role="alert" tabindex="-1" hidden></p><button class="button button-primary" type="submit" disabled>Submit remittance</button></form><h3>History</h3><div data-remittance-history></div><div data-remittance-detail data-private-panel hidden></div>';
+  const form=root.querySelector('#collector-remittance-form'),recipient=form.querySelector('[name="recipientUserId"]'),ack=form.querySelector('[name="reviewed"]'),button=form.querySelector('button[type="submit"]'),feedback=form.querySelector('[data-collection-feedback]');
+  const fail=message=>{feedback.hidden=false;feedback.textContent=message;};
+  function invalidatePreview(){reviewed=null;ack.checked=false;button.disabled=true;}
+  function canSubmit(){const data=states.preview.data;return current() && hasPermission(getSession(),'remittance.create') && !guard.locked && globalThis.navigator?.onLine!==false && states.preview.status==='ready' && data?.collection_date===getRouteDate() && validateCollectorRemittanceEvidence(data) && /[1-9]/.test(data.total_amount) && !data.total_amount.startsWith('-') && states.recipients.status==='ready' && states.recipients.data.some(item=>item.user_id===recipient.value) && ack.checked===true;}
+  function renderHistory(){const target=root.querySelector('[data-remittance-history]'),state=states.history;
+    if(state.status!=='ready'){target.innerHTML=`<p>${state.status==='not_permitted'?'Remittance history permission is required.':state.status==='error'?'Remittance history unavailable.':'Loading remittance history…'}</p>${state.status==='error'?'<button type="button" data-retry-history>Retry history</button>':''}`;target.querySelector('[data-retry-history]')?.addEventListener('click',()=>refresh('history'));return;}
+    target.innerHTML=`<p>Showing ${Math.min(limit,history.length)} of ${history.length} loaded remittances</p>${history.slice(0,limit).map(item=>`<article class="list-item"><strong>${h(item.remittance_number || 'Remittance')}</strong><p>${h(item.collection_date)} · ${h(item.status || 'Unknown status')} · ${money(item.total_amount)}</p><button class="button button-outline" type="button" data-remittance-id="${h(item.remittance_id)}">View saved evidence</button></article>`).join('') || '<p>No remittance history is available.</p>'}${limit<history.length?'<button class="button button-secondary" type="button" data-more-history>Show more</button>':''}`;
+    for(const control of target.querySelectorAll('[data-remittance-id]'))control.addEventListener('click',()=>openRecord(control.getAttribute('data-remittance-id')));
+    target.querySelector('[data-more-history]')?.addEventListener('click',()=>{limit+=30;renderHistory();});
+  }
+  function render(){if(!current())return;const creating=hasPermission(getSession(),'remittance.create');form.hidden=!creating;
+    const summary=root.querySelector('[data-remittance-summary]');summary.innerHTML=!creating?'<p>Remittance history only</p>':states.preview.status==='unavailable' && !getRouteDate()?'<div class="notice-card warning">Route date unavailable — refresh the route to load a remittance summary.</div>':remittanceSummaryMarkup(states.preview);
+    if(creating && ['error','unavailable'].includes(states.preview.status) && getRouteDate()){summary.innerHTML+='<button type="button" data-retry-summary>Retry summary</button>';summary.querySelector('[data-retry-summary]').addEventListener('click',()=>refresh('preview'));}
+    form.querySelector('[name="collectionDate"]').value=getRouteDate() || '';
+    const rs=states.recipients,rsRoot=root.querySelector('[data-remittance-recipient-status]');
+    rsRoot.innerHTML=!creating?'':rs.status==='error'?'<p>Recipients could not load.</p><button type="button" data-retry-recipients>Retry recipients</button>':rs.status==='ready' && !rs.data.length?'<p>No eligible remittance recipient is available.</p>':rs.status==='loading'?'<p>Loading recipients…</p>':'';
+    rsRoot.querySelector('[data-retry-recipients]')?.addEventListener('click',()=>refresh('recipients'));
+    if(rs.status==='ready'){const selected=recipient.value;recipient.innerHTML=`<option value="">Choose recipient</option>${rs.data.map(item=>`<option value="${h(item.user_id)}">${h(item.full_name)} · ${h(item.role_name || '')}</option>`).join('')}`;recipient.value=rs.data.some(item=>item.user_id===selected)?selected:'';}
+    root.querySelector('[data-remittance-evidence]').innerHTML=states.preview.status==='ready'?renderCollectorRemittanceEvidence(states.preview.data):'<p>Evidence unavailable until the summary loads.</p>';
+    renderHistory();button.disabled=!canSubmit();guard.sync();
+  }
+  async function refresh(only){if(!current())return;if(inflight)return inflight;const version=++generation,dateAtStart=getRouteDate();invalidatePreview();
+    const permission={preview:hasPermission(getSession(),'remittance.create'),recipients:hasPermission(getSession(),'remittance.create'),history:hasPermission(getSession(),'remittance.view')};
+    const paths={preview:`/api/v1/collector/remittances/preview?collection_date=${encodeURIComponent(dateAtStart || '')}`,recipients:'/api/v1/collector/remittances/recipients',history:'/api/v1/remittances'};
+    inflight=(async()=>{await Promise.all(Object.keys(states).filter(key=>!only || only===key).map(async key=>{
+      if(!permission[key]){states[key]={status:'not_permitted',data:null};return;}if(key==='preview' && !dateAtStart){states[key]={status:'unavailable',data:null};return;}
+      states[key]={status:'loading',data:null};
+      try{const data=await api.request(paths[key],{signal});if(!current() || version!==generation || dateAtStart!==getRouteDate())return;
+        if((key==='preview' && (!validateCollectorRemittanceEvidence(data) || data.collection_date!==dateAtStart)) || (key!=='preview' && !Array.isArray(data)))throw new Error('The returned remittance data is incomplete.');
+        states[key]={status:'ready',data};if(key==='history')history=data;
+      }catch(error){if(!current() || version!==generation)return;states[key]={status:error.status===403?'not_permitted':'error',data:null,error};if(error.status===403){form.querySelector('[name="note"]').value='';recipient.value='';history=[];root.querySelector('[data-remittance-detail]').innerHTML='';}}
+    }));if(current() && version===generation)render();})().finally(()=>{inflight=null;});render();return inflight;
+  }
+  recipient.addEventListener('change',()=>{invalidatePreview();button.disabled=true;});
+  form.addEventListener('change',()=>{if(ack.checked && canSubmit())reviewed={collectorId:states.preview.data.collector_user_id,recipientId:recipient.value,collectionDate:getRouteDate(),preview:structuredClone(states.preview.data)};button.disabled=!canSubmit();});
+  form.addEventListener('submit',async event=>{event.preventDefault();if(!reviewed || !canSubmit() || !guard.begin())return;const expected=structuredClone(reviewed);button.disabled=true;
+    try{const result=await collectorMutation({api,guard,path:'/api/v1/collector/remittances',options:{method:'POST',body:{recipient_user_id:expected.recipientId,collection_date:expected.collectionDate,note:form.querySelector('[name="note"]').value.trim()}},verify:collectorRemittanceResultMatches(expected)});if(!current())return;invalidatePreview();fail(`Remittance ${result.remittance_number} submitted for recipient review.`);if(hasPermission(getSession(),'remittance.view')){history=[result,...history.filter(item=>item.remittance_id!==result.remittance_id)];states.history={status:'ready',data:history};renderHistory();}await onSaved(result,{source:'remittance'});
+    }catch(error){if(current())fail(guard.locked?'Submission could not be confirmed — check its status before trying again. '+error.message:error.message);}finally{guard.finish();if(current())button.disabled=!canSubmit();}
+  });
+  async function openRecord(remittanceId){if(!current() || !hasPermission(getSession(),'remittance.view'))return false;const item=history.find(item=>item.remittance_id===remittanceId);if(!item)return false;beforeTaskChange();const panel=root.querySelector('[data-remittance-detail]');panel.hidden=false;panel.innerHTML=renderCollectorRemittanceEvidence(item,{history:true})+'<button class="button button-quiet" type="button" data-close-remittance>Close</button>';panel.querySelector('[data-close-remittance]').addEventListener('click',()=>{beforeTaskChange();panel.hidden=true;panel.innerHTML='';afterTaskChange();});afterTaskChange();return true;}
+  function dispose(){disposed=true;generation++;history=[];reviewed=null;for(const key of Object.keys(states))states[key]={status:'unavailable',data:null};root.innerHTML='';signal?.removeEventListener('abort',dispose);}
+  signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();else render();
+  return {refresh,invalidatePreview,openRecord,dispose,get states(){return states;}};
+}
