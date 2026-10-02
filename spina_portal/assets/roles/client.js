@@ -138,6 +138,15 @@ function clientRenewalActions(request, borrowerSigner) {
   };
 }
 
+const clientRenewalStageLabels={
+ signer_readiness_status:{pending:'Verification or signatures pending',ready:'Signers ready',office_required:'Office processing required'},
+ handover_proof_status:{not_submitted:'Not submitted',under_review:'Under review',approved:'Approved',correction_required:'Correction required',flagged:'Flagged for review'},
+ activation_status:{not_released:'Not released',released_pending_management:'Released; awaiting Management verification',active:'Active'},
+};
+function clientRenewalStageLabel(field,value){
+ const labels=clientRenewalStageLabels[field];return Object.hasOwn(labels,value)?labels[value]:`Status unavailable${value?` (${escapeHtml(value)})`:''}`;
+}
+
 export function clientRenewalWorkflowRows(requests) {
   if (!requests.length) return emptyState('No renewal workflow is awaiting your action.');
   return `<div class="list-stack">${requests
@@ -173,9 +182,10 @@ export function clientRenewalWorkflowRows(requests) {
           ${request.renewal_offset_amount != null ? `<div class="detail-item"><span>Old-loan settlement</span><strong>${offsetAmount}</strong></div>` : ''}
           ${request.net_release_amount != null ? `<div class="detail-item"><span>Locked net cash</span><strong>${netAmount}</strong></div>` : ''}
           ${clientDecision ? `<div class="detail-item"><span>Your decision</span><strong>${escapeHtml(clientDecision)}</strong></div>` : ''}
-          ${request.signer_readiness_status ? `<div class="detail-item"><span>Signer status</span><strong>${escapeHtml(request.signer_readiness_status)}</strong></div>` : ''}
+          ${request.signer_readiness_status ? `<div class="detail-item"><span>Signer status</span><strong>${clientRenewalStageLabel('signer_readiness_status',request.signer_readiness_status)}</strong></div>` : ''}
         </div>
         ${request.review_note ? `<div class="notice-card"><strong>Management note:</strong> ${escapeHtml(request.review_note)}</div>` : ''}
+        ${[['Collector note','collector_comment'],['Collector reason','collector_reason_code'],['Management override reason','management_override_reason']].filter(([,field])=>request[field]).map(([label,field])=>`<div class="notice-card"><strong>${label}:</strong> ${escapeHtml(request[field])}</div>`).join('')}
         ${canDecide ? `<div class="inline-actions">
           <button class="button button-primary" type="button" data-client-renewal-decision-request="${escapeHtml(requestId)}" data-client-renewal-decision="accepted">Accept &amp; Continue</button>
           <button class="button button-secondary" type="button" data-client-renewal-decision-request="${escapeHtml(requestId)}" data-client-renewal-decision="declined">Decline</button>
@@ -196,7 +206,7 @@ export function clientRenewalWorkflowRows(requests) {
         </div>` : ''}
         ${request.client_cash_confirmed_at ? `<div class="notice-card">
           <strong>Cash received: Confirmed by you</strong>
-          <p class="meta">Handover proof: ${escapeHtml(request.handover_proof_status || 'pending')} · Activation: ${escapeHtml(request.activation_status || 'pending')}</p>
+          <p class="meta">Handover proof: ${clientRenewalStageLabel('handover_proof_status',request.handover_proof_status)} · Activation: ${clientRenewalStageLabel('activation_status',request.activation_status)}</p>
           ${request.activation_status === 'active' ? '' : '<p>Your renewed loan is not collectible yet while Management verification remains pending.</p>'}
         </div>` : ''}
       </article>`;
@@ -216,7 +226,15 @@ export function clientRenewalPresentation({eligibilityState,requestsState,workfl
  else if(record.cash_given_to_client_at)nextStep='Confirm cash only after you personally receive it.';
  else if(record.office_processing_required===true)nextStep='Continue the required steps at the office.';
  else if(record.status==='approved'&&!record.client_decision)nextStep='Review approved terms and choose your decision.';
- else if(record.client_decision==='accepted')nextStep='Complete your own signer step. Other signers use their own accounts.';
+ else if(record.client_decision==='accepted'){
+  const signers=asArray(record.signers),own=signers.find(signer=>signer.party_role==='borrower');
+  if(!['pending','ready','office_required'].includes(record.signer_readiness_status))nextStep='Signer status unavailable. Refresh to check the current renewal stage.';
+  else if(record.signer_readiness_status==='office_required')nextStep='Continue the required steps at the office.';
+  else if(!own)nextStep='Waiting for Management to register your borrower signer requirement.';
+  else if(own.signed===true)nextStep=record.signer_readiness_status==='pending'&&signers.some(signer=>signer.party_role!=='borrower'&&signer.signed===false)?'Your signer step is complete. Other signers must finish in their own SPINA accounts.':'Your signer step is complete. Waiting for the next office step.';
+  else if(clientRenewalActions(record,own).canSign)nextStep='Complete your own signer step. Other signers use their own accounts.';
+  else nextStep='Waiting for your signer verification before signing. Contact the office for help.';
+ }
  else if(record.status==='pending')nextStep='Your assigned Collector recommends this request before Management decides.';
  else nextStep='Refresh to check the current request stage.';
  return {request,workflow,nextStep,conflict,terminal:conflict?false:terminal(record)};}).filter(card=>(view==='history'?card.terminal:!card.terminal)&&(!selectedRequestId||card.request.request_id===selectedRequestId));
@@ -831,7 +849,7 @@ export async function mountClientWorkspace(context) {
  const presentation=clientRenewalPresentation({eligibilityState:reads.state('renewals'),requestsState:reads.state('renewals'),workflowState:reads.state('renewalWorkflow'),view:renewalView});
  const tabs=`<div class="inline-actions">${['current','eligibility','history'].map(view=>`<button class="button button-secondary" type="button" data-client-renewal-view="${view}" aria-pressed="${renewalView===view}">${view==='current'?'Current requests':view==='eligibility'?'Eligibility':'History'}</button>`).join('')}</div>`;
  const content=renewalView==='eligibility'?(reads.state('renewals').status==='ready'?clientRenewalEligibilityRows(asArray(raw.renewals.loans)):unavailable('renewals')):presentation.status!=='ready'?unavailable('renewals'):presentation.cards.length?presentation.cards.map(card=>`<div data-client-renewal-record="${escapeHtml(card.request.request_id)}"><p class="notice-card"><strong>Next step:</strong> ${escapeHtml(card.nextStep)}</p>${card.workflow?clientRenewalWorkflowRows([{...card.request,...card.workflow}]):clientRenewalRows([card.request],{readOnly:card.conflict})}</div>`).join(''):emptyState(renewalView==='history'?'No completed renewal request is loaded.':'No current renewal request is loaded.');
- setRegion('renewals',tabs+content);setRegion('renewalWorkflow','');for(const button of root.querySelectorAll('[data-client-renewal-view]'))button.addEventListener('click',()=>{renewalView=button.getAttribute('data-client-renewal-view');renderRenewals();});bindClientRenewalCancellation(context);bindClientRenewalWorkflowActions(context);syncClientMutationControls(context);
+ setRegion('renewals',tabs+content);setRegion('renewalWorkflow','');for(const button of root.querySelectorAll('[data-client-renewal-view]'))button.addEventListener('click',()=>{const view=button.getAttribute('data-client-renewal-view');if(!current()||root.querySelector(`[data-client-renewal-view="${view}"]`)!==button)return;const focused=button.ownerDocument.activeElement===button;renewalView=view;renderRenewals();if(focused)root.querySelector(`[data-client-renewal-view="${view}"]`)?.focus({preventScroll:true});});bindClientRenewalCancellation(context);bindClientRenewalWorkflowActions(context);syncClientMutationControls(context);
  }
  const load=(key,options)=>{if(!current()||!paths[key]||(key==='notifications'&&notificationPending.size))return Promise.resolve(reads.state(key));return reads.load(key,async({signal})=>{const value=await api.request(paths[key],{signal});const arrays={loans:'loans',payments:'payments',renewals:'requests',renewalWorkflow:'requests',support:'requests'};if(arrays[key]&&!Array.isArray(value?.[arrays[key]]))throw Error('The protected records response is incomplete. Retry this read.');if(key==='gcash'&&!validClientGcashCapability(value))throw Error('Payment configuration unavailable. Retry this read.');if(key==='notifications'&&!Array.isArray(value))throw Error('The updates response is incomplete.');if(key==='notifications'){const userId=(context.getSession?.()??context.session)?.user?.id;if(userId&&value.some(item=>item.recipient_user_id!==userId))throw Error('The updates do not match this account.');}if(['loans','payments','statement'].includes(key)&&value?.client?.client_id){if(linkedClientId&&value.client.client_id!==linkedClientId){dispose();throw Error('The linked borrower changed. Sign in again.');}linkedClientId=value.client.client_id;}return value;},options);};context.clientLoad=load;
  const schedules=createClientScheduleController({api,reads,signal:controller.signal,isCurrent:current});context.clientSchedules=schedules;childCleanups.push(()=>schedules.dispose());
