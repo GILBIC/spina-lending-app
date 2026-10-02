@@ -298,8 +298,12 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   function editor(action,record=null) {
     if(busy||pending||stale||disposed||!(record?recordAllowed(workspace,record,action):createAllowed(workspace,action)))return;
+    const form=root.querySelector('[data-employee-form]');
+    if(selected?.action===action && selected.record?.id===record?.id){form?.querySelector('[name]')?.focus();return;}
+    if(selected&&form&&editorFields(form)!==selected.initialFields&&globalThis.confirm?.('Discard the unfinished form and open a different action?')!==true)return;
     opener={action,recordId:record?.id};selected={action,record:record?structuredClone(record):null};editorStale=false;render();root.querySelector('[data-employee-editor]')?.scrollIntoView?.({block:'nearest'});root.querySelector('[data-employee-form]')?.querySelector('[name]')?.focus();
   }
+  function editorFields(form){return JSON.stringify(['input','select','textarea'].flatMap(tag=>[...form.querySelectorAll(tag)].map(input=>[tag,input.getAttribute('name'),input.value,Boolean(input.checked)])));}
   function editorMarkup(){
     if(!selected)return '';
     const {action,record}=selected;const form=FORMS[action];let fields=form.fields;
@@ -411,6 +415,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     for(const button of root.querySelectorAll('[data-employee-attendance]'))listen(button,'click',()=>attendance(button.getAttribute('data-employee-attendance')));
     listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;editorStale=false;render();restoreFocus();});
     const form=root.querySelector('[data-employee-form]');
+    if(selected&&form&&!retained)selected.initialFields=editorFields(form);
     listen(form,'submit',event=>{event.preventDefault();if(busy||pending||stale||editorStale||disposed)return;try{void execute(buildCommand(form));}catch(error){message(error,true);focusFeedback();}});
     if(selected)for(const button of root.querySelectorAll('[data-employee-add-row]'))listen(button,'click',()=>{
       if(busy||pending)return;const spec=FORMS[selected.action].fields.find(item=>item.name===button.getAttribute('data-employee-add-row'));
