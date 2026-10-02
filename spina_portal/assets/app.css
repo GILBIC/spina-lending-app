@@ -2260,6 +2260,10 @@ button.management-audit-row { min-height: 48px; }
 #management-cash-disbursement label:has([name="evidence_reference"]) { grid-column: 1 / -1; }
 .management-staff-table td { overflow-wrap: anywhere; }
 .management-statements .section-heading { flex-wrap: wrap; }
+#management-updates .section-heading { flex-wrap: wrap; }
+#management-updates .section-heading h3 { min-width: 0; flex: 1 1 12rem; }
+#management-updates [data-update-status] { flex-shrink: 0; }
+#management-updates [data-update-status] .badge { white-space: nowrap; overflow-wrap: normal; }
 .management-statements .section-heading > div { min-width: 0; flex: 1 1 14rem; }
 .management-statements .badge { flex-shrink: 0; max-width: 100%; overflow-wrap: normal; }
 .management-statement-table td[data-label="Amount"] { white-space: nowrap; overflow-wrap: normal; }
