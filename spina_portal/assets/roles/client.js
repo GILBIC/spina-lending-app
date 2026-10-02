@@ -596,11 +596,12 @@ function bindClientAccountDeviceSecurity(context) {
           api: context.api,
           deviceId,
         });
+        if(!context.clientIsCurrent())return;
         if (!revoked) {button.disabled=false;return;}
         showToast('Device access revoked.', 'success');
         await refreshClientRegion(context, 'account');
       } catch (error) {
-        if(context.clientIsCurrent()) {showToast(error.message, 'error');button.disabled=false;}
+        if(context.clientIsCurrent()) {if([401,403].includes(error.status)){context.clientCleanup();return;}showToast(error.message, 'error');button.disabled=false;}
       }
     });
   }
@@ -609,11 +610,12 @@ function bindClientAccountDeviceSecurity(context) {
 function bindClientNotificationReadActions(context) {
   const signal = context.signal;
   const generation = context.clientWorkspaceGeneration;
+  const currentMount = () => !signal?.aborted && context.clientWorkspaceGeneration === generation && context.clientIsCurrent();
   for (const button of context.root.querySelectorAll('[data-client-notification-read]')) {
     button.addEventListener('click', async () => {
       if (button.disabled || button.hidden || signal?.aborted || !context.clientIsCurrent?.() || globalThis.navigator?.onLine===false) return;
       const notificationId = button.dataset.clientNotificationRead;
-      const current = () => !signal?.aborted && button.isConnected && context.clientWorkspaceGeneration === generation && context.clientIsCurrent();
+      const current = () => currentMount() && button.isConnected;
       let saved = false;
       setButtonBusy(button, true, 'Marking…');
       try {
@@ -627,6 +629,7 @@ function bindClientNotificationReadActions(context) {
         button.parentElement.querySelector('[data-client-notification-status]').innerHTML = badge('Read', 'success');
         showToast('Update marked as read.', 'success');
       } catch (error) {
+        if(currentMount()&&[401,403].includes(error.status)){context.clientCleanup();return;}
         if (current()) showToast(error.message, 'error');
       } finally {
         if (current()) setButtonBusy(button, false);
