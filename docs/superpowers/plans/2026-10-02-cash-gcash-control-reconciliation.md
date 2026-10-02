@@ -6,11 +6,11 @@
 
 **Architecture:** A bounded treasury subledger in the existing backend records each actual movement once. Existing private evidence, loan allocators, custody, release/payroll/expense services and explicit GL posting remain authoritative for their outcomes. All clients use the same role-scoped API; no second local money engine or wallet integration.
 
-**Tech Stack:** Existing FastAPI/Pydantic/psycopg/PostgreSQL, Python >=3.11, ES-module portal, Flutter/Dart and Tkinter/Desktop. Reuse pinned CI/lockfiles; no upgrades. Baseline CI uses Python3.12, Node24 and Flutter3.44.7.
+**Tech Stack:** Existing FastAPI/Pydantic/psycopg/PostgreSQL, Python >=3.11, ES-module portal, Flutter/Dart and the installed Windows Edge/Chrome portal. Reuse pinned CI/lockfiles; no upgrades. Baseline CI uses Python3.12, Node24 and Flutter3.44.7.
 
 **Spec:** [2026-10-02-cash-gcash-control-reconciliation-design.md](../specs/2026-10-02-cash-gcash-control-reconciliation-design.md).
 
-**Status:** Planning-only. Baseline `41a13eb59c9cc1b65a0a6a51f3b73db4a0895013`. Owner requested the plan and PR, not production execution. Tasks0–12 are pending. Actual count, wallet balances and cutoff are not supplied; synthetic fixtures permit implementation, not real activation.
+**Status:** Implemented candidate under final integrated verification. The owner explicitly included #490 in the current PR completion task. Baseline `41a13eb59c9cc1b65a0a6a51f3b73db4a0895013`; local integration includes #485–#489. The coverage ledger below supersedes the original planning statuses. The step checkboxes retain the original requested acceptance granularity and are not a blanket completion claim. Actual count, wallet balances and cutoff are not supplied; synthetic fixtures permit implementation, not real activation. Draft/open/unmerged; no production execution.
 
 ## Global constraints
 
@@ -19,7 +19,7 @@
 - Exact server money and current Regular/7x7/combined/ADV/extra-principal rules; no parallel allocator or invented rates/fees. `automatic_source_posting=false` stays.
 - API and repository enforce actor/device/account/context/object scope. Client own claims, authorized Collector reporting, narrowly delegated staff; no Management-role shortcut.
 - No wallet MPIN/OTP/password, scraping/SMS automation, provider capability bypass or actual money-sending integration.
-- New additive migrations/permissions/endpoints are future implementation work. Test only on an explicitly disposable DB. Feature disabled/unconfigured initially; no real accounts, balances or blanket grants seeded.
+- New additive migrations0136/0137, permissions and endpoints are implemented in this candidate. Test only on an explicitly disposable DB. Feature disabled/unconfigured initially; no real accounts, balances or blanket grants seeded.
 - Owner/pre-registration records, synthetic data and future corporate books stay separate. Count is not automatic income/capital/equity. No deletion or guessed reclassification of history.
 - Online-only financial commands and durable unchanged-request recovery. Keep Android protected attendance separate and retain file/mirror privacy rules.
 - No new framework/global cache/persistence layer/distributed workflow engine/CSV parser/native iOS workstream/package/version/signing change.
@@ -214,20 +214,26 @@ Required DB tests must actually use approved disposable DSN/migrations; collect 
 
 | Task | Required coverage | Handoff status |
 | --- | --- | --- |
-| 0 | Live graph/Desktop seam/migration paths/ownership | Pending Codex |
-| 1 | C1/C2/C11 scoped accounts/context/contracts | Not implemented |
-| 2 | C2/C3 exact events and observed opening | Not implemented |
-| 3 | C4/C11 both submitters/evidence/privacy | Not implemented |
-| 4 | C5 verification/protected allocation | Not implemented |
-| 5 | C6 custody/remittance/GL sources | Not implemented |
-| 6 | C7/C8 actual payouts/transfers/fees/personal | Not implemented |
-| 7 | C9 transaction and balance reconciliation | Not implemented |
-| 8 | C8/C11 correction/recovery/backup/rollback | Not implemented |
-| 9 | C10 Web four-role scope/parity | Not implemented |
-| 10 | C10/C11 native Android | Not implemented |
-| 11 | C6/C10 Desktop/reports | Not implemented |
-| 12 | C1–C12 DB/UI/platform/integration/readiness | Not run |
-| Owner count | Actual opening/aliases/cutoff/permitted use | Not supplied; never guess |
+| 0 | Live graph/Desktop seam/migration paths/ownership | Complete: [contract map](../../operations/cash-gcash-control-contract-map.md), reserved0136/0137, integrated485–489; installed Windows portal is the live Desktop seam. |
+| 1 | C1/C2/C11 scoped accounts/context/contracts | Implemented; strict16 commands, disabled setup, current actor/device/account permissions and private projections tested. Final revoked-view repair under verification. |
+| 2 | C2/C3 exact events and observed opening | Implemented; exact decimal movement components, observed opening, duplicate/reference and pre-cutoff boundaries in Treasury ledger/PostgreSQL tests. No real opening supplied. |
+| 3 | C4/C11 both submitters/evidence/privacy | Implemented; own Client and canonical assigned/delegated Collector claims, private immutable versions, upload/replay integrity and revoked authority tested. |
+| 4 | C5 verification/protected allocation | Implemented; actual Regular/7x7/combined scheduled/ADV/principal engines, digest/stale checks, concurrent same-request outcome, component rollback and protected reversal tested. |
+| 5 | C6 custody/remittance/GL sources | Implemented;0137 trusted funding before notices, immutable source, cash-only custody/readers and blocked unmapped GL. Funding and legacy-reader regressions tested. |
+| 6 | C7/C8 actual payouts/transfers/fees/personal | Implemented manual movement and transfer controls; real protected Payroll/Advance adapters proven. Cash-only expense/release/renewal source completion remains explicitly blocked, as allowed by Task6; no claim of full payout-source parity. |
+| 7 | C9 transaction and balance reconciliation | Implemented; exact component matching, balanced-unresolved distinction, immutable close and private export tested. Final close/write race, dependent supersession and Manila cutoff tests passing; final combined run pending. |
+| 8 | C8/C11 correction/recovery/backup/rollback | Implemented; immutable corrections, replay, actual refund, restored funded application/transfer/close/private bytes proven. Runtime preflight and persistent incompatible-rollback guard tested without host deployment. |
+| 9 | C10 Web four-role scope/parity | Implemented;1,227 portal tests,230 syntax modules/build, actual browser14 behavior checks/12 layouts; final independent privacy/recovery findings being closed. |
+| 10 | C10/C11 native Android | Implemented typed contract and four role entries; final camera/recovery/matrix/analyzer/full-suite verification in progress. |
+| 11 | C6/C10 Desktop/reports | Installed Windows portal reuses canonical API; all four roles tested in actual Edge app mode. Private reconciliation export and source labels tested. No retired Tkinter replacement or physical printer acceptance. |
+| 12 | C1–C12 DB/UI/platform/integration/readiness | Fresh schema0137+59 Treasury tests,79 Treasury/recovery checks,116 allocator/funding/preflight checks and restored225 table fingerprints passed. Full backend/native and exact-head CI pending; no new scanner fingerprints. Supported-source scope and physical acceptance remain explicit. |
+| Owner count | Actual opening/aliases/cutoff/permitted use | Not supplied; never guess. Feature remains disabled/unconfigured. |
+
+Current operation and recovery instructions: [cash-gcash-control.md](../../operations/cash-gcash-control.md).
+The intentionally blocked cash-only source contracts mean the Task12 expense/release
+completion chain is not represented as passing. Backend synthetic acceptance, native
+widgets, Windows browser evidence, physical device acceptance and production rollout
+are separate statuses. Final CI must be checked on the published implementation head.
 
 ## Owner-started Codex task
 
