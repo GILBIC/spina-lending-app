@@ -2331,6 +2331,20 @@ button.management-audit-row { min-height: 48px; }
   border-color: var(--pink-600);
   background: var(--pink-50);
 }
+@media (max-width: 680px) {
+  #client-payments .client-payment-table td { overflow-wrap: anywhere; }
+  #client-payments .client-payment-table [data-payment-details],
+  #client-payments .client-payment-table [data-payment-detail-panel] {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  #client-payments .client-payment-table [data-payment-details] { justify-self: start; }
+  #client-payments .client-payment-table td[data-label="Amount"],
+  #client-payments .client-payment-table td[data-label="Balance"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .2rem;
+  }
+}
 @media (max-width: 360px) {
   #client-loans .client-schedule-table td,
   #client-statement .client-statement-table td {
