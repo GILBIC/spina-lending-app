@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v21';
+const CACHE_NAME = 'spina-company-shell-v22-collector';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
