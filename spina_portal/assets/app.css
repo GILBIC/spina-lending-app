@@ -2243,3 +2243,6 @@ button.management-audit-row { min-height: 48px; }
   .managed-device-summary { align-items: flex-start; }
   .managed-device-card .section-heading { align-items: flex-start; flex-wrap: wrap; }
 }
+#management-staff-device-detail > .section-heading { align-items: flex-start; gap: 12px; }
+#management-staff-device-detail > .section-heading > div { min-width: 0; flex: 1; }
+#management-staff-device-detail [data-managed-device-close] { flex: 0 0 auto; min-width: 64px; white-space: nowrap; }
