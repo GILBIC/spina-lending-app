@@ -313,3 +313,11 @@ test('uncertain reject locks both decisions until exact read-only reconciliation
  await h.handle.refreshReadOnly();assert.equal(h.handle.isUncertain(),true);assert.equal(postCalls(h).length,1);
  h.records=[{...record(),status:'rejected',rejected_by_user_id:RECIPIENT,rejected_at:'2026-10-02T08:00:00Z',rejection_reason:'Cash differs'}];await h.handle.refreshReadOnly();assert.equal(h.handle.isUncertain(),false);assert.equal(reviewButton(h),null);assert.equal(postCalls(h).length,1);
 });
+
+test('view-only recipients can inspect complete received/rejected evidence without decision controls',async(t)=>{
+ const h=await harness({session:{...SESSION,permissions:['remittance.view']},notifications:[{...notice,status:'rejected',is_pending:false}]});t.after(h.dispose);h.records=[{...record(),status:'rejected',reviewed_at:'2026-10-02T08:00:00Z',rejected_at:'2026-10-02T08:00:00Z',rejection_reason:'Cash differs'}];
+ fire(h.root.querySelector('[data-view-remittance]'),'click');await setImmediate();assert.match(h.root.textContent,/RCPT-TEST-001/);assert.match(h.root.textContent,/REFUND-EVIDENCE-001/);assert.match(h.root.textContent,/Rejection reason: Cash differs/);assert.equal(h.root.querySelector('[data-remittance-accept-form]'),null);assert.equal(postCalls(h).length,0);
+});
+test('notices that never loaded do not claim no pending handover and retry only the read',async(t)=>{
+ const h=await harness({notifications:null,currentReads:true});t.after(h.dispose);assert.match(h.root.textContent,/not loaded/);assert.doesNotMatch(h.root.textContent,/No remittance notification/);h.currentNotices=[notice];await h.handle.refreshReadOnly();assert.ok(reviewButton(h));assert.equal(postCalls(h).length,0);
+});
