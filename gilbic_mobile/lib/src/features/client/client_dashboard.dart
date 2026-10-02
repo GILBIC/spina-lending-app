@@ -387,17 +387,10 @@ class _CurrentLoansSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Current loans',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            if (portfolio != null) Chip(label: Text(countLabel)),
-          ],
-        ),
+        Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text('Current loans', style: Theme.of(context).textTheme.titleLarge),
+          if (portfolio != null) Text(countLabel, style: Theme.of(context).textTheme.labelLarge),
+        ]),
         const SizedBox(height: 8),
         if (loading && portfolio == null)
           const Card(
@@ -589,14 +582,18 @@ class _LoanAmountLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = emphasized ? Theme.of(context).textTheme.titleSmall : null;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: Text(label, style: style)),
-        const SizedBox(width: 12),
+    return LayoutBuilder(builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      if (constraints.maxWidth < 350 || scale > 1.2 || value.length > 14) {
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: style), Text(value, style: style),
+        ]);
+      }
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: Text(label, style: style)), const SizedBox(width: 12),
         Text(value, style: style, textAlign: TextAlign.right),
-      ],
-    );
+      ]);
+    });
   }
 }
 

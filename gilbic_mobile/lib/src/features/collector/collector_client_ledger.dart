@@ -167,68 +167,42 @@ class _ClientRow extends StatelessWidget {
     return Column(
       children: [
         InkWell(
-          key: Key('route-client-${client.clientId}'),
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 9, 6, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    '$sequence.',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              client.clientName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                          Icon(
-                            expanded ? Icons.expand_less : Icons.expand_more,
-                            size: 18,
-                          ),
-                        ],
-                      ),
-                      if (chips.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 3,
-                          children: [
-                            for (final chip in chips) _StatusChip(chip),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+          key: Key('route-client-${client.clientId}'), onTap: onToggle,
+          child: Padding(padding: const EdgeInsets.fromLTRB(8, 9, 6, 8),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+              final stacked = constraints.maxWidth < 370 || scale > 1.1 ||
+                  _moneyShort(regularAmount).length > 8 || _moneyShort(sevenAmount).length > 8;
+              final identity = Row(children: [
+                SizedBox(width: 28, child: Text('$sequence.', style: Theme.of(context).textTheme.labelLarge)),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [Expanded(child: Text(client.clientName,
+                    maxLines: stacked ? null : 1, overflow: stacked ? null : TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900))),
+                    Icon(expanded ? Icons.expand_less : Icons.expand_more, size: 18),
+                  ]),
+                  if (chips.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Wrap(spacing: 4, runSpacing: 3, children: [for (final chip in chips) _StatusChip(chip)]),
+                  ],
+                ])),
+              ]);
+              final today = _TodayAction(client: client, state: action, onToggle: onToggle,
+                onRecord: onRecord, onRecordCombined: onRecordCombined);
+              if (stacked) {
+                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  identity, const SizedBox(height: 8),
+                  Text('REG: ${regularAmount <= 0 ? '—' : _moneyShort(regularAmount)}'),
+                  Text('7x7: ${sevenAmount <= 0 ? '—' : _moneyShort(sevenAmount)}'),
+                  const SizedBox(height: 8), today,
+                ]);
+              }
+              return Row(children: [Expanded(child: identity),
                 _AmountCell(amount: regularAmount, width: 52),
                 _AmountCell(amount: sevenAmount, width: 44),
-                SizedBox(
-                  width: 74,
-                  child: _TodayAction(
-                    client: client,
-                    state: action,
-                    onToggle: onToggle,
-                    onRecord: onRecord,
-                    onRecordCombined: onRecordCombined,
-                  ),
-                ),
-              ],
-            ),
+                SizedBox(width: 74, child: today),
+              ]);
+            }),
           ),
         ),
         if (expanded)
@@ -287,8 +261,8 @@ class _TodayAction extends StatelessWidget {
         : Key('record-client-${client.clientId}');
 
     if (state.paying) {
-      return SizedBox(
-        height: 48,
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: FilledButton(
           key: key,
           onPressed: null,
@@ -303,13 +277,14 @@ class _TodayAction extends StatelessWidget {
     }
 
     if (state.requiresAtomicCombinedPosting) {
-      return SizedBox(
-        height: 48,
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: FilledButton(
           key: key,
           onPressed: () => onRecordCombined(client),
           style: _buttonStyle(context),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(state.pendingRetry ? 'Retry' : 'Pay'),
@@ -328,13 +303,14 @@ class _TodayAction extends StatelessWidget {
     final enabled = direct != null && state.blockedReason == null;
     final label = state.label;
     final amount = state.actionAmount;
-    return SizedBox(
-      height: 48,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
       child: FilledButton(
         key: key,
         onPressed: enabled ? () => onRecord(direct) : null,
         style: _buttonStyle(context),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(label),
@@ -351,7 +327,7 @@ class _TodayAction extends StatelessWidget {
 
   ButtonStyle _buttonStyle(BuildContext context) => FilledButton.styleFrom(
     padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-    minimumSize: const Size(68, 46),
+    minimumSize: const Size(68, 48),
     textStyle: Theme.of(context).textTheme.labelMedium,
   );
 }

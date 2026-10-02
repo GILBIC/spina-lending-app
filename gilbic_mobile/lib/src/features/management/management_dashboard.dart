@@ -719,7 +719,10 @@ class _ManagementAttentionGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
-        final columnCount = constraints.maxWidth >= 900
+        final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350
+            ? 2
+            : scale > 1.1 ? 3 : constraints.maxWidth >= 900
             ? 6
             : constraints.maxWidth >= 600
             ? 5
@@ -761,7 +764,8 @@ class _ManagementKpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 10.0;
-        final columnCount = constraints.maxWidth >= 900 ? 3 : 2;
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350 ? 1 : constraints.maxWidth >= 900 ? 3 : 2;
         final cardWidth =
             (constraints.maxWidth - (spacing * (columnCount - 1))) /
             columnCount;
@@ -793,8 +797,8 @@ class _ManagementKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = _kpiContent(context, metric);
-    return SizedBox(
-      height: 104,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 104),
       child: Card(
         key: Key('management-overview-metric-${metric.key.name}'),
         margin: EdgeInsets.zero,
@@ -812,27 +816,16 @@ class _ManagementKpiCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      content.$1,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
+                  Text(content.$1, style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 2),
                   Text(
                     content.$2,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                   if (content.$3 != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       content.$3!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -856,9 +849,9 @@ class _ManagementAttentionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = _attentionContent(metric);
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
+    return ConstrainedBox(
       key: Key('management-overview-metric-${metric.key.name}'),
-      height: 92,
+      constraints: const BoxConstraints(minHeight: 92),
       child: Semantics(
         button: true,
         label:
@@ -907,8 +900,6 @@ class _ManagementAttentionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       content.$1,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
@@ -1155,7 +1146,10 @@ class _ManagementModuleGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
-        final columnCount = constraints.maxWidth >= 900
+        final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350
+            ? 2
+            : scale > 1.1 ? 3 : constraints.maxWidth >= 900
             ? 6
             : constraints.maxWidth >= 600
             ? 5
@@ -1191,9 +1185,9 @@ class _ManagementModuleShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
+    return ConstrainedBox(
       key: Key(module.action.keyName),
-      height: 92,
+      constraints: const BoxConstraints(minHeight: 92),
       child: Semantics(
         button: true,
         label: '${module.title}. ${module.description}',
@@ -1225,8 +1219,6 @@ class _ManagementModuleShortcut extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       module.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
