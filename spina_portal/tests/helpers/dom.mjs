@@ -15,6 +15,7 @@ export class Element extends EventTarget {
     this.hidden = Object.hasOwn(attributes, 'hidden');
     this.parentElement = null;
     this.ownerDocument = fixtureDocument;
+    this.classList={toggle:(name,on)=>{const values=new Set((this.className||'').split(/\s+/).filter(Boolean));if(on??!values.has(name))values.add(name);else values.delete(name);this.className=[...values].join(' ');},contains:name=>(this.className||'').split(/\s+/).includes(name)};
   }
 
   get innerHTML() {
@@ -60,6 +61,7 @@ export class Element extends EventTarget {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   removeAttribute(name) { delete this.attributes[name]; }
   focus() { this.focused = true; }
+  scrollIntoView() {}
   get className() {return this.attributes.class || '';}
   set className(value) {this.attributes.class=String(value);}
   get isConnected() {return this._isConnected ?? (this.parentElement ? this.parentElement.isConnected : true);}
@@ -69,7 +71,7 @@ export class Element extends EventTarget {
   appendChild(child) {child.remove();this.children.push(child);child.parentElement=this;child.ownerDocument=this.ownerDocument;return child;}
   remove() {if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(child=>child!==this);this.parentElement=null;}
   replaceWith(child) {const parent=this.parentElement;if(!parent)return;const index=parent.children.indexOf(this);child.remove();parent.children[index]=child;child.parentElement=parent;child.ownerDocument=parent.ownerDocument;this.parentElement=null;}
-  closest(selector) {let node=this;while(node){if(selector==='label' && node.tag==='label')return node;if(selector==='[hidden]' && node.hidden)return node;if(selector==='[inert]' && node.getAttribute('inert')!==null)return node;node=node.parentElement;}return null;}
+  closest(selector) {let node=this;while(node){if(selector==='label' && node.tag==='label')return node;if(selector==='[hidden]' && node.hidden)return node;const attribute=selector.match(/^\[([\w-]+)\]$/);if(attribute&&node.getAttribute(attribute[1])!==null)return node;node=node.parentElement;}return null;}
   reset() {for(const input of this.querySelectorAll('input')){input.value=input.getAttribute('value') || '';input.checked=false;}for(const input of this.querySelectorAll('textarea'))input.value='';}
 
   querySelectorAll(selector) {
