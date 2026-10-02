@@ -1,3 +1,4 @@
+import {mountManagementPortfolio} from '../management-portfolio.js';
 import { mountManagementCollectionActions } from '../management-collection-actions.js';
 import { mountManagementJournalActions } from '../management-journal-actions.js';
 import { mountManagementAccounting } from '../management-accounting.js';
@@ -123,67 +124,6 @@ function overviewMetrics(metrics) {
       <div class="metric-grid">${cards}</div>
     </section>`;
   }).join('');
-}
-
-function managementLoanTypeLabel(loan) {
-  const raw = String(loan.loan_type_name || loan.loan_type_code || 'Loan').trim();
-  const normalized = raw.toLowerCase().replaceAll('-', '').replaceAll('_', '').replaceAll(' ', '');
-  return normalized === '7x7' || normalized === 'sevenbyseven' ? '7x7' : raw || 'Loan';
-}
-
-function managementClientLoanGroups(loans) {
-  const groups = new Map();
-  for (const loan of loans) {
-    const key = String(
-      loan.client_id
-      || loan.client_code
-      || `${loan.client_name || ''}|${loan.client_area || ''}`,
-    );
-    if (!groups.has(key)) groups.set(key, { client: loan, loans: [] });
-    groups.get(key).loans.push(loan);
-  }
-  return [...groups.values()];
-}
-
-function managementLoanItem(loan) {
-  const typeLabel = managementLoanTypeLabel(loan);
-  const typeTone = typeLabel === '7x7' ? 'info' : 'warning';
-  return `<article class="client-loan-item" data-client-loan-item>
-    <div class="client-loan-item-heading">
-      <div class="inline-actions">
-        ${badge(typeLabel, typeTone)}
-        <strong>${escapeHtml(loan.loan_number || 'Loan')}</strong>
-      </div>
-      <div class="inline-actions">
-        ${badge(loan.loan_status || 'unknown')}
-        ${loan.is_overdue ? '<span class="badge danger">Overdue</span>' : ''}
-      </div>
-    </div>
-    <div class="detail-grid client-loan-detail-grid">
-      <div class="detail-item"><span>Principal</span><strong>${formatMoney(loan.principal)}</strong></div>
-      <div class="detail-item"><span>Official balance</span><strong>${formatMoney(loan.remaining_balance)}</strong></div>
-      <div class="detail-item"><span>Daily amount</span><strong>${formatMoney(loan.daily_amount)}</strong></div>
-      <div class="detail-item"><span>Due</span><strong>${formatDate(loan.due_date)}</strong></div>
-    </div>
-  </article>`;
-}
-
-function loanTable(data) {
-  const loans = asArray(data.loans);
-  if (!loans.length) return emptyState('No loan matches the current search.');
-  const groups = managementClientLoanGroups(loans);
-  return `<div class="client-loan-groups">${groups.map(({ client, loans: clientLoans }) => `
-    <section class="client-loan-group" data-client-loan-group="${escapeHtml(client.client_id || client.client_code || '')}">
-      <header class="client-loan-group-header">
-        <div>
-          <h3>${escapeHtml(client.client_name || 'Client')}</h3>
-          <p class="meta">${escapeHtml(client.client_code || 'No client code')}${client.client_area ? ` · ${escapeHtml(client.client_area)}` : ''}</p>
-        </div>
-        <span class="badge info">${clientLoans.length} ${clientLoans.length === 1 ? 'loan' : 'loans'}</span>
-      </header>
-      <div class="client-loan-items">${clientLoans.map(managementLoanItem).join('')}</div>
-    </section>
-  `).join('')}</div>`;
 }
 
 function bindManagementOfficeWorkflow(root) {
@@ -479,26 +419,6 @@ function bindSupport(context) {
   }
 }
 
-function bindLoanSearch(context) {
-  const form = context.root.querySelector('#management-loan-search');
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const target = context.root.querySelector('#management-loan-results');
-    const button = form.querySelector('button[type="submit"]');
-    setButtonBusy(button, true, 'Searching…');
-    target.innerHTML = '<div class="loading-panel"><div class="spinner"></div></div>';
-    try {
-      const loans = await context.api.request(`/api/v1/management/loans?q=${encodeURIComponent(String(data.get('query') || '').trim())}&status=${encodeURIComponent(String(data.get('status') || 'active'))}`);
-      target.innerHTML = loanTable(loans);
-    } catch (error) {
-      target.innerHTML = errorCard(error);
-    } finally {
-      setButtonBusy(button, false);
-    }
-  });
-}
-
 export async function mountManagementWorkspace(context) {
   if (context.signal?.aborted) return;
   const journalEvidenceVersion = context.journalEvidenceVersion = (context.journalEvidenceVersion || 0) + 1;
@@ -632,7 +552,7 @@ export async function mountManagementWorkspace(context) {
       <section id="management-first-loan"><h2>First-loan approval and office release</h2><p class="meta">Selected references are carried forward for convenience and revalidated by the protected first-loan workflow.</p><div data-office-first-loan></div></section>
     </div>
   </section>` : ''}
-  <section class="section-card" id="management-loans" data-screen-share-section><div class="section-heading"><div><h2>Clients & loans</h2><p>Search the official portfolio. A Client may have both Regular and 7x7 loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" aria-label="Search clients and loans" placeholder="Client name, code, area, or loan number" /><select name="status" aria-label="Loan status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid management-loan-summary">${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Outstanding balance', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue loans', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
+  <section class="section-card" id="management-loans" data-screen-share-section><div data-management-portfolio></div></section>
   ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
   ${canReviewPaymentProof ? '<section class="section-card" id="management-payment-proofs"><h2>Payment evidence review</h2><div data-management-payment-proofs></div></section>' : ''}
   ${canManageAccounts ? `<section class="section-card" id="management-client-accounts"><div class="section-heading"><div><h2>Client accounts</h2><p>Select an existing borrower record, enter the borrower's email, and let SPINA generate the credentials.</p></div></div>${clientAccountAdminMarkup()}</section>` : ''}
@@ -696,7 +616,9 @@ export async function mountManagementWorkspace(context) {
   if (canCollectionActions) context.collectionActionsCleanup = mountManagementCollectionActions({root: root.querySelector('[data-management-collection-actions]'), api, session, sessionStore: context.sessionStore, signal: context.signal});
   if (canViewFinancialStatements) context.managementAccountingCleanup = await mountManagementAccounting({root: root.querySelector('[data-management-accounting]'), api, session, signal: context.signal});
   if (context.signal?.aborted) return;
-  bindLoanSearch(context);
+  context.portfolioCleanup?.();
+  const portfolio = mountManagementPortfolio({root: root.querySelector('[data-management-portfolio]'), api, signal: context.signal, initialResult: loans, getSession: context.getSession || (() => context.session)});
+  context.portfolioCleanup = portfolio.dispose;
   bindManagementLoanOperations(context);
   bindManagementPastDueReport(context);
   if (canViewGeneralJournal) {

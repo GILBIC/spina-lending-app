@@ -45,6 +45,7 @@ const SHELL_ASSETS = [
   '/assets/office-application-review.js',
   '/assets/office-application-entry.js',
   '/assets/management-financial-statements.js',
+  '/assets/management-portfolio.js',
   '/assets/management-general-journal.js',
   '/assets/management-collection-actions.js',
   '/assets/management-journal-actions.js',
