@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {Element as DOMElement} from './helpers/dom.mjs';
 import { MemoryStorage, SessionStore } from '../assets/session.js';
 
 let instance = 0;
@@ -12,6 +13,8 @@ function deferred() {
 }
 
 class Element {
+  get innerHTML() {return this.collectorDOM?.innerHTML ?? this.markup ?? '';}
+  set innerHTML(value) {this.markup=value;this.collectorDOM=String(value).includes('data-collector-today')?new DOMElement():null;if(this.collectorDOM)this.collectorDOM.innerHTML=value;}
   constructor() {
     this.innerHTML = '';
     this.textContent = '';
@@ -28,12 +31,13 @@ class Element {
     return this.listeners.get(name)?.({ preventDefault() {}, target: this });
   }
   querySelector(selector) {
+    if(this.collectorDOM)return this.collectorDOM.querySelector(selector);
     if (selector === 'input[name="username"]') return { focus() {} };
     if (selector === '#management-loan-search') return new Element();
     if (selector === '[data-screen-panel]') return this.screenPanel ??= { open: false };
     return null;
   }
-  querySelectorAll() { return []; }
+  querySelectorAll(selector) { return this.collectorDOM?.querySelectorAll(selector) || []; }
   replaceChildren() { this.innerHTML = ''; }
   focus() {}
 }

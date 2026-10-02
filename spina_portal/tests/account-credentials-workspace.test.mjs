@@ -24,7 +24,7 @@ function harness(role, permissions = []) {
 for (const role of Object.keys(mounts)) {
   test(`${role}: own password controls are reachable from Account without administrative permissions`, async () => {
     const h = harness(role);
-    await mounts[role](h);
+    await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-account');
     const section = h.root.querySelector(`#${role}-account`);
     assert.ok(section, 'every staff workspace must have an Account section');
     assert.ok(h.navigation.some((item) => item.id === `${role}-account`));
@@ -38,13 +38,13 @@ for (const role of Object.keys(mounts)) {
 
   test(`${role}: workspace refresh clears old secret inputs and disables detached form submission`, async () => {
     const h = harness(role);
-    await mounts[role](h);
+    await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-account');
     const controls = h.root.querySelector('[data-account-credentials]');
     assert.ok(controls, 'credential controls must be mounted');
     const form = controls.querySelector('[data-credential-own-form]');
     const input = form.querySelector('input[type="password"]');
     input.value = 'synthetic-password-to-clear';
-    await mounts[role](h);
+    await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-account');
     assert.equal(input.value, '');
     assert.equal(controls.innerHTML, '');
     const before = h.calls.length;
@@ -58,7 +58,7 @@ for (const role of Object.keys(mounts)) {
 test('Employee and Management reset tools are mounted only with the exact credential permission', async () => {
   for (const [role, permission] of [['employee', 'client.credential.manage'], ['management', 'account.manage']]) {
     const h = harness(role, [permission]);
-    await mounts[role](h);
+    await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-account');
     assert.ok(h.root.querySelector('[data-account-credentials]')?.querySelector('[data-credential-search-form]'));
     h.controller.abort();
   }

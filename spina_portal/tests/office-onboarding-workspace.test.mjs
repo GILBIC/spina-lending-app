@@ -22,7 +22,7 @@ for (const role of ['employee', 'management', 'collector']) {
   const suffix = role === 'collector' ? 'visit-case' : 'case';
   const prefix = role === 'collector' ? 'collector' : 'management';
   test(`${role}: exact onboarding permission connects only its scoped case lookup`, async () => {
-    const h = harness(role, [permission]); await mounts[role](h);
+    const h = harness(role, [permission]); await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     const area = h.root.querySelector(selector); assert.ok(area);
     assert.ok(h.navigation.some(item => item.id === (role === 'management' ? 'management-clients-loans' : `${role}-onboarding`)));
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="intake"]'));
@@ -37,16 +37,16 @@ for (const role of ['employee', 'management', 'collector']) {
   });
   test(`${role}: unrelated and similarly named permissions do not expose onboarding`, async () => {
     const permissions = [`${permission}.extra`, role === 'collector' ? OFFICE : VISIT];
-    const h = harness(role, permissions); await mounts[role](h);
+    const h = harness(role, permissions); await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     assert.equal(h.root.querySelector(selector), null);
     assert.equal(h.navigation.some(item => item.id === `${role}-onboarding`), false);
     assert.equal(availableRoleActions(role, permissions).some(item => item.key === `${role}-onboarding`), false);
     assert.equal(h.calls.some(path => path.includes('/onboarding/')), false); h.controller.abort();
   });
   test(`${role}: workspace refresh disposes the old lookup before rendering the replacement`, async () => {
-    const h = harness(role, [permission]); await mounts[role](h);
+    const h = harness(role, [permission]); await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     const area = h.root.querySelector(selector), input = area.querySelector('[name="applicationReference"]'), form = area.querySelector('[data-case-lookup]');
-    input.value = 'Private old reference'; await mounts[role](h);
+    input.value = 'Private old reference'; await mounts[role](h);if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     assert.equal(area.innerHTML, ''); assert.equal(input.value, '');
     const count = h.calls.length; fire(form, 'submit'); await setImmediate(); assert.equal(h.calls.length, count);
     assert.equal(h.root.querySelector(selector).querySelector('[name="applicationReference"]').value, ''); h.controller.abort();
