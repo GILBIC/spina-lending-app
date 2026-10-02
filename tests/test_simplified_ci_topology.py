@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 PRIMARY = WORKFLOWS / "spina-ci.yml"
-MOBILE_API_CONFIG = ROOT / "gilbic_mobile" / "lib" / "src" / "core" / "config" / "api_config.dart"
+MOBILE_API_CONFIG = (
+    ROOT / "gilbic_mobile" / "lib" / "src" / "core" / "config" / "api_config.dart"
+)
 PRODUCTION_API_URL = "https://spina.157-230-250-111.sslip.io"
 RETIRED = (
     "spina-code-quality.yml",
@@ -18,14 +19,29 @@ RETIRED = (
 )
 
 
-def test_primary_ci_has_three_clear_hosted_lanes() -> None:
+def test_primary_ci_preserves_three_gates_with_parallel_backend_work() -> None:
     source = PRIMARY.read_text(encoding="utf-8")
 
     assert "name: SPINA CI" in source
     assert "\n  backend:\n" in source
     assert "\n  client-apps:\n" in source
     assert "\n  financial-database:\n" in source
-    assert source.count("runs-on: ubuntu-latest") == 3
+    assert "\n  backend-quality:\n" in source
+    assert "\n  backend-tests:\n" in source
+    assert source.count("runs-on: ubuntu-latest") == 5
+    assert "needs: [backend-quality, backend-tests]" in source
+    assert 'test "$QUALITY_RESULT" = success' in source
+    assert 'test "$TEST_RESULT" = success' in source
+    assert "fail-fast: false" in source
+    assert "shard: [0, 1, 2, 3, 4, 5, 6, 7]" in source
+    assert 'SPINA_TEST_SHARD_COUNT: "8"' in source
+    assert "python -m coverage combine --keep" in source
+    assert "data.read()" in source
+    assert "if not any(data.lines(filename)" in source
+    assert (
+        "spina-ci-backend-${{ github.event.pull_request.head.sha || github.sha }}"
+        in source
+    )
     assert "runs-on: [self-hosted" not in source
     assert "services:\n      postgres:" in source
     assert 'GITLEAKS_VERSION: "8.30.1"' in source
@@ -56,6 +72,7 @@ def test_hosted_ci_uses_current_node_24_action_runtimes() -> None:
         "actions/setup-node@v7.0.0",
         "actions/setup-java@v6.0.0",
         "actions/upload-artifact@v7.0.0",
+        "actions/download-artifact@v8.0.1",
     ):
         assert action in source
     for retired in (
@@ -82,9 +99,7 @@ def test_retired_broad_workflows_are_removed() -> None:
 
 
 def test_protected_database_maintenance_is_manual_only() -> None:
-    source = (WORKFLOWS / "spina-protected-maintenance.yml").read_text(
-        encoding="utf-8"
-    )
+    source = (WORKFLOWS / "spina-protected-maintenance.yml").read_text(encoding="utf-8")
     trigger_block = source.split("\njobs:", 1)[0]
 
     assert "workflow_dispatch:" in trigger_block
