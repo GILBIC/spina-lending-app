@@ -15,5 +15,11 @@ export function buildEmployeeWorkdaySummary({workspace,now=new Date()}) {
  const own=key=>array(workspace?.[key]).filter(record=>employeeId&&record.employee_id===employeeId);
  const payroll=own('payroll').filter(record=>['approved','partially_paid','paid'].includes(record.status)).sort((a,b)=>String(b.payload.period_end||b.payload.week_start||'').localeCompare(String(a.payload.period_end||a.payload.week_start||''))||String(b.payload.payroll_kind||'').localeCompare(String(a.payload.payroll_kind||''))||b.version-a.version);
  const status=employeeId?'loaded':'unavailable';
- return {workDate,attendance:{status,...attendanceGuidance({events:own('attendance'),employeeId,workDate}),records:own('attendance').filter(record=>employeeWorkDate(record.payload?.captured_at)===workDate)},tasks:{status,records:own('tasks')},requests:{status,records:own('requests')},payroll:{status:array(workspace?.setup_missing).length?'setup_incomplete':status,record:payroll[0]||null}};
+ const records=own('attendance').filter(record=>employeeWorkDate(record.payload?.captured_at)===workDate);
+ const guidance=attendanceGuidance({events:records,employeeId,workDate});
+ const days=own('attendance_days').filter(day=>day.work_date===workDate),day=days.length===1?days[0]:null;
+ const needsReview=guidance.needsReview||days.length>1||Boolean(day&&(day.status!=='accepted'||array(day.issues).length))||Boolean(records.length&&!day);
+ const attendance={status,...guidance,records,dayReview:{status:employeeId?(day?'loaded':'not_loaded'):'unavailable',record:day},needsReview,primaryActions:needsReview||!employeeId?[]:guidance.primaryActions};
+ if(!employeeId)attendance.label='Employee attendance is unavailable';
+ return {workDate,attendance,tasks:{status,records:own('tasks')},requests:{status,records:own('requests')},payroll:{status:array(workspace?.setup_missing).length?'setup_incomplete':status,record:payroll[0]||null}};
 }

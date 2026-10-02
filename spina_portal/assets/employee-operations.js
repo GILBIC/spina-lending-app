@@ -1,5 +1,5 @@
 import {asArray, badge, emptyState, errorCard, escapeHtml as esc, loadingPanel, titleCase} from './ui.js';
-import {attendanceGuidance,employeeWorkDate} from './employee-workday.js';
+import {buildEmployeeWorkdaySummary,employeeWorkDate} from './employee-workday.js';
 import {mountEmployeePayslipPrint,payslipPrintable} from './employee-payslip-print.js';
 
 const BASE = '/api/v1/employee-operations';
@@ -214,7 +214,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   mounts.get(root)?.();
   const controller=new AbortController();let disposed=false;let busy=false;let stale=false;let workspace=null;let selected=null;let removers=[];let pending=pendingBySession.get(session)||null;
   const feedbackId=`employee-feedback-${crypto.randomUUID()}`;let opener=null;
-  let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null;
+  let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null,dayTimer=null,expiredDate=null;
   let dateFrom=employeeWorkDate(now()),dateTo=dateFrom,allDates=false;
   const focusCleanups=new Set();
   function retainEditorFocus(){
@@ -228,14 +228,24 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       target.focus({preventScroll:true});if(Number.isInteger(selection[0])&&Number.isInteger(selection[1]))target.setSelectionRange?.(...selection);
     };
   }
-  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
+  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;expireGuidance();beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
+  function expireGuidance(){
+    if(disposed||!loadedDate||loadedDate===employeeWorkDate(now()))return;
+    const guidance=root.querySelector('[data-employee-guidance]');if(guidance)guidance.textContent='Date changed. Refresh employee records before using attendance guidance.';
+    for(const button of root.querySelectorAll('[data-employee-suggested]')){button.removeAttribute('data-employee-suggested');button.className='button button-secondary';}
+    if(expiredDate!==loadedDate){expiredDate=loadedDate;onReadState?.({status:'stale'});}
+  }
+  function watchWorkDate(){
+    clearTimeout(dayTimer);const [year,month,day]=loadedDate.split('-').map(Number);
+    dayTimer=setTimeout(expireGuidance,Math.max(1,Date.UTC(year,month-1,day+1)-8*3600000-new Date(now()).getTime()));dayTimer?.unref?.();
+  }
   function dateVisible(day){return allDates||day>=dateFrom&&day<=dateTo;}
   const currentScope=()=>getSession()?.user?.id===session?.user?.id;
   const printing=mountEmployeePayslipPrint({root,signal:controller.signal,getCurrentScope:()=>currentScope()&&workspace?{userId:workspace.actor.user_id,employeeId:workspace.actor.employee_id,deviceId:workspace.actor.device_id}:null,loadWorkspace:async()=>{beforeTaskChange?.();const value=await api.request(`${BASE}/workspace`,{signal:controller.signal});return validateWorkspace(value,getSession());}});
   const editorMatches=command=>selected&&command.action===selected.action&&(!selected.record || command.id===selected.record.id || command.original_payroll_id===selected.record.id || command.original_history_id===selected.record.id);
   const listen=(element,event,handler)=>{if(element){element.addEventListener(event,handler);removers.push(()=>element.removeEventListener(event,handler));}};
   function clear(){for(const remove of removers)remove();removers=[];for(const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')])input.value='';root.innerHTML='';}
-  function dispose(){if(disposed)return;disposed=true;for(const stop of focusCleanups)stop();controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
+  function dispose(){if(disposed)return;disposed=true;clearTimeout(dayTimer);globalThis.removeEventListener?.('focus',expireGuidance);root.ownerDocument?.removeEventListener?.('visibilitychange',expireGuidance);for(const stop of focusCleanups)stop();controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
   function message(text,error=false){const element=root.querySelector('[data-employee-status]');if(element){if(error)element.innerHTML=errorCard(text);else element.textContent=text;}}
   function focusFeedback(){root.querySelector('[data-employee-status]')?.focus();}
   function restoreFocus(){
@@ -253,7 +263,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     opener=null;
   }
   function denied(error){if([401,403].includes(error?.status)){pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);return true;}return false;}
-  function connection(){if(disposed)return;lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
+  function connection(){if(disposed)return;expireGuidance();lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
   function lock(){
     const offline=globalThis.navigator?.onLine===false;
     for(const node of [...root.querySelectorAll('button'),...root.querySelectorAll('input'),...root.querySelectorAll('select'),...root.querySelectorAll('textarea')]) {
@@ -274,7 +284,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       const next=validateWorkspace(value,getSession());
       if(workspace && (next.actor.employee_id!==workspace.actor.employee_id || next.actor.device_id!==workspace.actor.device_id)){setPending(null);selected=null;clear();}
       workspace=next;stale=false;
-      loadedDate=employeeWorkDate(now());
+      loadedDate=employeeWorkDate(now());expiredDate=null;watchWorkDate();
       if(recover&&pending&&matchesResult(workspace.last_result,pending)) {successMessage=workspace.last_result.message;if(editorMatches(pending))selected=null;setPending(null);}
       if(selected){
         if(selected.record){const current=Object.keys(COLLECTIONS).flatMap(key=>workspace[key]).find(record=>record.id===selected.record.id&&record.employee_id===selected.record.employee_id);
@@ -376,6 +386,10 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     const recordCounts=Object.fromEntries(['requests','tasks','advances','shortages','payroll'].map(key=>[key,presentation==='employee'&&!workspace.actor.employee_id?'Unavailable':personal(key).length]));
     const dateHasRecords=workspace.attendance_days.some(day=>dateVisible(day.work_date))||workspace.attendance.some(record=>dateVisible(employeeWorkDate(record.payload.captured_at)));
     const dateEmpty=presentation==='employee'&&!dateHasRecords?`<p data-employee-date-empty data-employee-view="workday">${allDates?'No attendance records loaded.':dateFrom===dateTo?'No record for this date.':'No records for this date range.'}</p>`:'';
+    const guidance=buildEmployeeWorkdaySummary({workspace,now:`${loadedDate}T00:00:00+08:00`}).attendance;
+    const nextLabels={clock_in:'Clock in',break_start:'Start break',break_end:'End break',clock_out:'Clock out'};
+    const suggested=pending?[]:guidance.primaryActions;
+    const guidanceText=guidance.status!=='loaded'?'Attendance guidance is unavailable until your employee account is linked.':pending?'Check the previous submission before recording another event.':guidance.needsReview?'Needs review. Inspect the recorded events and use Request attendance correction when needed.':suggested.length?`Suggested next: ${suggested.map(action=>nextLabels[action]).join(' or ')}.`:'Day recorded.';
     const setupNotice=workspace.setup_missing.length?`<div class="notice-card warning employee-setup-notice">
       <h3>Employee setup incomplete</h3>
       <p>Some employee or payroll information still needs setup before all records are available.</p>
@@ -397,7 +411,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       ${dateEmpty}
       ${presentation==='employee'?`<nav class="inline-actions" aria-label="Work and pay views">${Object.entries(VIEWS).map(([id,label])=>`<button class="button button-outline" type="button" data-employee-view-button="${id}">${label}</button>`).join('')}</nav>`:''}
       ${presentation==='employee'?`<section data-employee-view="workday"><h3>Loaded attendance dates</h3><label>From<input type="date" name="attendanceFrom" value="${esc(dateFrom)}" /></label><label>Through<input type="date" name="attendanceTo" value="${esc(dateTo)}" /></label><button class="button button-outline" type="button" data-employee-all-dates>${allDates?'Show current date':'Show all loaded dates'}</button><p>This filters loaded records. It does not fetch or delete earlier days.</p></section>`:''}
-      ${workspace.capabilities.can_self_service?`<section class="employee-time" data-employee-view="workday"><h3>My attendance</h3><p>${esc(attendanceGuidance({events:workspace.attendance,employeeId:workspace.actor.employee_id,workDate:loadedDate}).label)}</p><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
+      ${workspace.capabilities.can_self_service?`<section class="employee-time" data-employee-view="workday"><h3>My attendance</h3><p>${esc(guidance.label)}</p><p data-employee-guidance>${esc(guidanceText)}</p><p>Server day review: ${esc(guidance.dayReview.record?titleCase(guidance.dayReview.record.status):'No day review loaded for this date')}.</p><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button ${suggested.includes(value)?'button-primary':'button-secondary'}" type="button" data-employee-attendance="${value}" ${suggested.includes(value)?`data-employee-suggested="${value}"`:''}>${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
       <div class="employee-command-groups">${groups.map(group=>`<section><h3>${esc(presentation==='employee'?VIEWS[group]:group)}</h3><div class="inline-actions">${available.filter(([action,form])=>(presentation==='employee'?actionView(action):form.group)===group).map(([action,form])=>`<button type="button" class="button button-outline" data-employee-create="${action}">${esc(form.label)}</button>`).join('')}</div></section>`).join('')}</div>
       <div id="${feedbackId}" data-employee-status role="status" aria-live="polite" tabindex="-1"></div>
       ${pending?'<div class="notice-card warning"><h3>Confirm previous submission</h3><p>The same request identity is retained. Check its result before creating any other change.</p><button type="button" class="button button-secondary" data-employee-check>Check saved result</button><button type="button" class="button button-outline" data-employee-retry>Retry same unchanged request</button></div>':''}
@@ -436,7 +450,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     connection();
     restoreEditorFocus();
   }
-  mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
+  mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('focus',expireGuidance);root.ownerDocument?.addEventListener?.('visibilitychange',expireGuidance);globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
   if(signal?.aborted){dispose();return dispose;}
   onController?.({refresh:options=>load({recover:options?.recover===true}),selectView,isWritePending:()=>busy||Boolean(pending),dispose});
   root.innerHTML=loadingPanel('Loading private employee records…');void load();return dispose;
