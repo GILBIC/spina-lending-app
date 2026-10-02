@@ -353,6 +353,8 @@ function syncClientMutationControls(context) {
   const select=renewal.querySelector('[name="loanId"]');const ready=context.clientReads?.state('renewals').status==='ready';
   const eligible=ready?asArray(context.clientRaw?.renewals?.loans).filter(loan=>loan.eligible===true&&!loan.pending_request_id):[];
   select.disabled=!ready||!eligible.length;
+  const selectionStatus=renewal.querySelector('[data-client-renewal-selection-status]');const missing=ready&&select.value&&!eligible.some(loan=>loan.loan_id===select.value);
+  if(selectionStatus){selectionStatus.hidden=!missing;selectionStatus.textContent=missing?'The previously selected loan is no longer eligible. Choose another eligible loan before sending this draft.':'';}
   renewal.querySelector('button[type="submit"]').disabled=!eligible.some(loan=>loan.loan_id===select.value)||mutations.pending()||mutations.blocked('renewal:create:'+select.value);
  }
  const status=context.root.querySelector('[data-client-mutation-status]');if(status){status.hidden=!mutations.uncertain();status.textContent=mutations.uncertain()?'A submission could not be confirmed. Check the saved record with the office before trying again. Refresh reads do not authorize another attempt.':'';}
@@ -516,7 +518,8 @@ function renderWorkspace(root, model, raw, errors) {
     <details data-client-renewal-editor>
       <summary>Submit a renewal request</summary>
       <form id="client-renewal-form" class="entry-form">
-        <label>Eligible loan<select name="loanId" required>${renewalLoans.map((loan) => `<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number)} · ${escapeHtml(loan.loan_type_name)}</option>`).join('')}</select></label>
+        <label>Eligible loan<select name="loanId" required aria-describedby="client-renewal-selection-status">${renewalLoans.map((loan) => `<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number)} · ${escapeHtml(loan.loan_type_name)}</option>`).join('')}</select></label>
+        <p class="meta" id="client-renewal-selection-status" data-client-renewal-selection-status role="status" hidden></p>
         <label>Requested amount<input name="requestedAmount" inputmode="decimal" required placeholder="0.00" /></label>
         <label>Message<textarea name="message" maxlength="1000" placeholder="Optional reason or request details"></textarea></label>
         <button class="button button-primary" type="submit">Send renewal request</button>
@@ -781,7 +784,7 @@ export async function mountClientWorkspace(context) {
   if(select&&state.status==='ready'){
    const selected=select.value;const eligible=asArray(raw.renewals.loans).filter(loan=>loan.eligible===true&&!loan.pending_request_id);
    const missing=selected&&!eligible.some(loan=>loan.loan_id===selected);
-   select.innerHTML='<option value="">Choose an eligible loan</option>'+(missing?`<option value="${escapeHtml(selected)}" disabled>Previously selected loan is no longer eligible. Choose another loan.</option>`:'')+eligible.map(loan=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('');
+   select.innerHTML='<option value="">Choose an eligible loan</option>'+(missing?`<option value="${escapeHtml(selected)}" disabled>Previous loan unavailable</option>`:'')+eligible.map(loan=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('');
    select.value=selected;
   }
   syncClientMutationControls(context);return;

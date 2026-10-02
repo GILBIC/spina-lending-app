@@ -283,9 +283,14 @@ test('renewal selection survives loading, failure and reordered recovery; missin
   assert.notEqual(select.value, loanId, 'invalidated eligibility must not retarget the draft');
   assert.equal(submit.disabled, true);
   assert.equal(select.disabled, false, 'an explicit valid replacement remains available');
-  assert.match(held.renewal.textContent, /no longer eligible|unavailable|choose/i);
+  const selectionStatus = held.renewal.querySelector('[data-client-renewal-selection-status]');
+  assert.ok(selectionStatus, 'the missing-selection explanation must be outside the native option');
+  assert.equal(selectionStatus.hidden, false);
+  assert.match(selectionStatus.textContent, /no longer eligible.*Choose another eligible loan/);
+  assert.equal(select.getAttribute('aria-describedby'), selectionStatus.getAttribute('id'));
   select.value = loanId; fire(select, 'change');
   assert.equal(submit.disabled, false);
+  assert.equal(selectionStatus.hidden, true);
   assertSiblingDrafts(h, held);
   assert.equal(h.calls.filter(call => call.options.method === 'POST').length, 0);
 });
