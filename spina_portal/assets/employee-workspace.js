@@ -18,7 +18,7 @@ export async function mountEmployeeWorkspace(context) {
  if(context.signal?.aborted)return;
  context.employeeWorkspaceCleanup?.();
  const {root,api:originalApi,signal,setNavigation}=context,initial=context.session,controller=new AbortController(),jobs=new Map(),cleanups=[];
- let disposed=false,supportDenied=false,visible='employee-overview',operationsHandle=null,remittanceHandle=null,treasuryHandle=null,areaHandle=null,updateItems=[],updateLimit=50;
+ let disposed=false,supportDenied=false,updatesDenied=false,updatesLoading=false,visible='employee-overview',operationsHandle=null,remittanceHandle=null,treasuryHandle=null,areaHandle=null,updateItems=[],updateLimit=50;
  const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>Boolean(operationsHandle?.isWritePending?.()||(remittanceHandle?.isLegacyWritePending?.()??remittanceHandle?.isWritePending?.())||context.employeeSupportPending),getRoleWriteOwner:path=>path.startsWith('/api/v1/employee-operations/')?operationsHandle:(path.startsWith('/api/v1/remittances/')||path.startsWith('/api/v1/notifications/'))&&remittanceHandle?{isWritePending:()=>remittanceHandle.isWritePending()||remittanceHandle.isUncertain()}:null}),api=treasuryGate.api;context.api=api;
  const readVersions=new Map();
  const readStart=id=>{const token=(readVersions.get(id)||0)+1;readVersions.set(id,token);return token;};
@@ -52,8 +52,30 @@ export async function mountEmployeeWorkspace(context) {
 
  function localError(target,error,retry){if(!active()||!target)return;target.innerHTML=`${errorCard(error)}<button class="button button-secondary" type="button" data-employee-local-retry>Retry this read</button>`;target.querySelector('[data-employee-local-retry]')?.addEventListener('click',retry);}
  async function notices(){if(!permitted('remittance.view'))throw Object.assign(new Error('Remittance access is unavailable.'),{status:403});const value=await api.request('/api/v1/notifications',{signal:controller.signal});if(!Array.isArray(value))throw new Error('Remittance notices could not be verified.');return value;}
- function renderUpdates(){const target=root.querySelector('[data-employee-updates]');target.innerHTML=`<p>Showing ${Math.min(updateLimit,updateItems.length)} of ${updateItems.length} loaded updates</p>${activityRows(updateItems,updateLimit)}${updateLimit<updateItems.length?'<button class="button button-secondary" type="button" data-employee-updates-more>Show more</button>':''}`;target.querySelector('[data-employee-updates-more]')?.addEventListener('click',()=>{if(!active())return;updateLimit+=50;renderUpdates();});root.querySelector('[data-employee-loaded-updates]').textContent=`${updateItems.length} loaded account updates. This is not an unread count.`;}
- async function loadUpdates(){const token=readStart('updates');try{const value=await api.request('/api/v1/activity-notifications',{signal:controller.signal});if(!readCurrent('updates',token))return;if(!Array.isArray(value))throw new Error('Account updates could not be verified.');updateItems=value;renderUpdates();}catch(error){if(readCurrent('updates',token))localError(root.querySelector('[data-employee-updates]'),error,loadUpdates);}}
+ function renderUpdates(){
+  const target=root.querySelector('[data-employee-updates]');context.beforeTaskChange?.();
+  target.innerHTML=`<p data-employee-updates-count role="status" tabindex="-1">Showing ${Math.min(updateLimit,updateItems.length)} of ${updateItems.length} loaded updates</p>${activityRows(updateItems,updateLimit)}<button class="button button-secondary" type="button" data-employee-updates-more>Show more</button>`;
+  const more=target.querySelector('[data-employee-updates-more]');more.hidden=updateLimit>=updateItems.length;
+  more.addEventListener('click',()=>{
+   if(!active()||updatesDenied||updatesLoading||target.querySelector('[data-employee-updates-more]')!==more||more.hidden)return;
+   context.beforeTaskChange?.();const from=updateLimit;updateLimit+=50;
+   const holder=root.ownerDocument.createElement('div');holder.innerHTML=activityRows(updateItems.slice(from,updateLimit),50);
+   for(const row of holder.querySelectorAll('.timeline-item'))target.querySelector('.timeline').appendChild(row);
+   const count=target.querySelector('[data-employee-updates-count]');count.textContent=`Showing ${Math.min(updateLimit,updateItems.length)} of ${updateItems.length} loaded updates`;
+   more.hidden=updateLimit>=updateItems.length;if(more.hidden)count.focus({preventScroll:true});context.afterTaskChange?.();
+  });
+  root.querySelector('[data-employee-loaded-updates]').textContent=`${updateItems.length} loaded account updates. This is not an unread count.`;context.afterTaskChange?.();
+ }
+ async function loadUpdates(){
+  if(!active()||updatesDenied)return;const token=readStart('updates');updatesLoading=true;
+  try{const value=await api.request('/api/v1/activity-notifications',{signal:controller.signal});if(!readCurrent('updates',token)||updatesDenied)return;if(!Array.isArray(value))throw new Error('Account updates could not be verified.');updateItems=value;updatesLoading=false;renderUpdates();}
+  catch(error){if(!readCurrent('updates',token)||updatesDenied)return;updateItems=[];updateLimit=50;updatesLoading=false;context.beforeTaskChange?.();
+   const target=root.querySelector('[data-employee-updates]');
+   if([401,403].includes(error?.status)){updatesDenied=true;target.innerHTML='<p>Updates access is unavailable. Reopen the workspace after your access is restored.</p>';root.querySelector('[data-employee-loaded-updates]').textContent='Updates access is unavailable.';}
+   else{localError(target,error,loadUpdates);root.querySelector('[data-employee-loaded-updates]').textContent='Updates could not load. Retry the Updates read.';}
+   context.afterTaskChange?.();
+  }
+ }
  function denySupport(error={status:403}){
   if(![401,403].includes(error?.status))return false;if(!active()||supportDenied)return true;
   supportDenied=true;context.beforeTaskChange?.();const target=root.querySelector('[data-employee-support]');

@@ -16,7 +16,7 @@ function activityRows(items,limit=50) {
   return `<div class="timeline">${items
     .slice(0, limit)
     .map(
-      (item) => `<article class="timeline-item">
+      (item) => `<article class="timeline-item" data-employee-update-id="${escapeHtml(item.notification_id || '')}">
         <strong>${escapeHtml(item.title || item.notification_type || 'SPINA update')}</strong>
         <span>${escapeHtml(item.message || '')}</span>
         <span class="meta">${escapeHtml(item.sender_name || '')}${item.created_at ? ` · ${formatDateTime(item.created_at)}` : ''}</span>
