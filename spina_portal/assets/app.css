@@ -2292,3 +2292,22 @@ button.management-audit-row { min-height: 48px; }
  [data-employee-print-region] h1,[data-employee-print-region] h2 { break-after:avoid; }
  [data-employee-print-region] tr,[data-employee-print-region] dl div { break-inside:avoid; }
 }
+
+/* Client record labels remain readable at narrow widths and enlarged text. */
+#client-loans .client-schedule td,
+#client-statement .client-statement-table td,
+#client-payments .client-payment-details strong {
+  overflow-wrap: anywhere;
+}
+#client-loans [aria-pressed="true"],
+#client-renewals [aria-pressed="true"] {
+  border-color: var(--pink-600);
+  background: var(--pink-50);
+}
+@media (max-width: 360px) {
+  #client-loans .client-schedule-table td,
+  #client-statement .client-statement-table td {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .2rem;
+  }
+}

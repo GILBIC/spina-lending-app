@@ -111,7 +111,7 @@ test('Client Web renewal signature requires explicit confirmation and posts only
   const api = {
     async request(path, options) {
       calls.push({ path, options });
-      return { request: { request_id: 'request/2' } };
+      return { request: { request_id: 'request/2', signers:[{signer_id:'signer/2',party_role:'borrower',signed:true}] } };
     },
   };
 
@@ -136,7 +136,7 @@ test('Client Web cash confirmation requires explicit confirmation before protect
   const api = {
     async request(path, options) {
       calls.push({ path, options });
-      return { request: { request_id: 'request/3', client_cash_confirmed_at: 'now' } };
+      return { request: { request_id: 'request/3', client_cash_confirmed_at: '2026-10-02T01:00:00Z' } };
     },
   };
 
@@ -155,7 +155,7 @@ test('Client Web cash confirmation requires explicit confirmation before protect
 });
 
 test('Client workspace consumes the protected renewal-workflow endpoint', () => {
-  assert.match(clientRoleSource, /settledRequest\(api, '\/api\/v1\/client\/renewal-workflow'/);
+  assert.match(clientRoleSource, /renewalWorkflow:'\/api\/v1\/client\/renewal-workflow'/);
   assert.match(clientRoleSource, /clientRenewalWorkflowRows\(/);
   assert.match(clientRoleSource, /bindClientRenewalWorkflowActions\(context\)/);
 });

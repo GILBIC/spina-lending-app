@@ -93,8 +93,8 @@ for (const { role, mount, permissions } of scenarios) {
 
 for (const request of [
   { request_id: 'renewal-decision', status: 'approved' },
-  { request_id: 'renewal-sign', status: 'approved', client_decision: 'accepted', signers: [{
-    signer_id: 'borrower-signer', party_role: 'borrower', signed: false,
+  { request_id: 'renewal-sign', status: 'approved', client_decision: 'accepted', signer_readiness_status:'pending',office_processing_required:false,signers: [{
+    signer_id: 'borrower-signer', party_role: 'borrower', signed: false, has_app:true,
     government_id_verified: true, selfie_verified: true,
   }] },
   { request_id: 'renewal-cash', status: 'approved', client_decision: 'accepted',
@@ -111,6 +111,7 @@ for (const request of [
       } },
       setNavigation() {},
     });
+    await setImmediate();
     const today = root.querySelector('#client-overview');
     assert.ok(today.querySelector('[data-nav-target="client-renewals"]'));
     assert.match(today.textContent, /1 action for you/);

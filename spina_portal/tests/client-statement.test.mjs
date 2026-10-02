@@ -57,7 +57,7 @@ test('Client statement renders exact server loan and payment values', async () =
   assert.doesNotMatch(html, /progress/i);
   assert.doesNotMatch(html, /next payment/i);
   assert.doesNotMatch(html, /overdue/i);
-  assert.doesNotMatch(html, /download/i);
+  assert.match(html, /Download statement copy/);
 });
 
 test('Client workspace consumes the protected statement endpoint', async () => {

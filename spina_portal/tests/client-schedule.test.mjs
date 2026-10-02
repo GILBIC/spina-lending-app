@@ -27,7 +27,7 @@ test('Client schedule renderer shows only authoritative server schedule values',
         },
       },
     ],
-  });
+  }, {view:'all',today:'2026-09-12'});
 
   assert.match(html, /Authoritative SPINA schedule/);
   assert.match(html, /Oct 10, 2026/);
@@ -52,7 +52,7 @@ test('Client schedule renderer preserves exact server money text', () => {
         details: { remaining_amount: '90071992547409.90' },
       },
     ],
-  });
+  }, {view:'all',today:'2026-09-12'});
 
   assert.match(html, /₱90,071,992,547,409\.91/);
   assert.match(html, /₱90,071,992,547,409\.90/);
@@ -73,14 +73,14 @@ test('Client schedule renderer escapes server notes before displaying them', () 
         },
       },
     ],
-  });
+  }, {view:'all',today:'2026-09-12'});
 
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/);
 });
 
 test('Client schedule button loads the protected per-loan schedule on demand', async () => {
-  const panel = { hidden: true, innerHTML: '' };
+  const panel = { hidden: true, innerHTML: '', querySelector:()=>null, querySelectorAll:()=>[] };
   const button = {
     dataset: { clientScheduleLoan: 'loan/1' },
     disabled: false,
@@ -111,7 +111,7 @@ test('Client schedule button loads the protected per-loan schedule on demand', a
     async request(path) {
       requestedPath = path;
       return {
-        loan_type: 'Regular',
+        loan_id:'loan/1', read_only:true, loan_type: 'Regular',
         is_7x7: false,
         contractual_maturity: '2026-10-10',
         operational_maturity: '2026-10-12',
@@ -129,5 +129,5 @@ test('Client schedule button loads the protected per-loan schedule on demand', a
   assert.equal(panel.hidden, false);
   assert.match(panel.innerHTML, /Authoritative SPINA schedule/);
   assert.equal(button.disabled, false);
-  assert.equal(button.textContent, 'Refresh schedule');
+  assert.equal(button.textContent, 'Schedule open');
 });

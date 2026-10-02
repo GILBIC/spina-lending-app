@@ -27,6 +27,8 @@ const SHELL_ASSETS = [
   '/assets/staff-invite.js',
   '/assets/management-devices.js',
   '/assets/client-schedule.js',
+  '/assets/client-workspace-state.js',
+  '/assets/client-payment-details.js',
   '/assets/client-gcash.js',
   '/assets/client-statement.js',
   '/assets/employee-operations.js',

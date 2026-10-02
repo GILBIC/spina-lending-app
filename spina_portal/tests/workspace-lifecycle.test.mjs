@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Element as ParsedElement } from './helpers/dom.mjs';
+import {Element as ParsedElement} from './helpers/dom.mjs';
+class ClientElement extends ParsedElement {
+ constructor(){super();this.dataset={};this.classList={toggle(){}};}
+ querySelectorAll(selector){const nodes=super.querySelectorAll(selector);for(const node of nodes){node.classList={toggle(){}};node.dataset={};}return nodes;}
+}
+
 import { MemoryStorage, SessionStore } from '../assets/session.js';
 import {workspace,SELF} from './helpers/employee-workspace.mjs';
 
@@ -57,7 +62,7 @@ async function harness(t, role, roles = [role]) {
     'workspace-title', 'signed-in-role', 'signed-in-name', 'connection-status',
     'environment-label', 'refresh-workspace', 'logout-button', 'login-form',
     'workspace-choice', 'workspace-choice-label', 'screen-sharing-controls',
-  ]) elements.set(id, new Element());
+  ]) elements.set(id, role==='client'&&id==='role-content'?new ClientElement():new Element());
   if(role==='employee'){elements.set('role-content',new ParsedElement());elements.set('role-navigation',new ParsedElement());}
   const events = new EventTarget();
   const sessionStorage = new MemoryStorage();
@@ -165,6 +170,7 @@ for (const role of ['employee', 'management', 'client']) {
     assert.equal(h.accounts.length, 2);
     h.accounts[1].resolve(json({ profile: { full_name: 'Current office account' },devices:[] }));
     await refresh;
+    if(role==='client')await tick();
     const current = h.elements.get('role-content').innerHTML;
     assert.match(current, /Current office account/);
     h.accounts[0].resolve(json({ profile: { full_name: 'Stale private account' } }));
