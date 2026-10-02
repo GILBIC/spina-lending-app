@@ -573,9 +573,98 @@ export function renderAreaManagementShell({
   </section>`;
 }
 
+const areaMounts = new WeakMap();
+
 export async function mountAreaManagement(context) {
-  const { root, api, session = {} } = context;
-  root.innerHTML = loadingPanel('Loading authoritative Area structure…');
+  const { root, api: originalApi, signal } = context;
+  const getSession = context.getSession || (() => context.session || {});
+  const session = getSession();
+  const scope = () => JSON.stringify([getSession()?.user?.id, ...[
+    'area.manage', 'area.collector.assign', 'area.client.assign', 'area.retire',
+  ].map(permission => hasPermission(getSession(), permission))]);
+  const initialScope = scope();
+  const controller = new AbortController();
+  let disposed = false, loaded = false, loading = null;
+  const handle = { dispose, refresh: load, refreshReadOnly: load };
+
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    controller.abort();
+    signal?.removeEventListener('abort', dispose);
+    if (areaMounts.get(root) !== handle) return;
+    areaMounts.delete(root);
+    for (const selector of ['input', 'textarea', 'select', 'button']) {
+      for (const input of root.querySelectorAll(selector)) {
+        if (selector !== 'button') input.value = '';
+        input.checked = false;
+        input.disabled = true;
+      }
+    }
+    root.innerHTML = '';
+  }
+
+  function current() {
+    if (disposed || signal?.aborted || areaMounts.get(root) !== handle) return false;
+    if (scope() !== initialScope) { dispose(); return false; }
+    return true;
+  }
+
+  const on = (type, listener, target = root) => {
+    target?.addEventListener(type, event => current() ? listener(event) : undefined, { signal: controller.signal });
+  };
+  const api = { async request(path, options = {}) {
+    if (!current()) throw new DOMException('Area workspace was closed.', 'AbortError');
+    try {
+      const result = await originalApi.request(path, { ...options, signal: controller.signal });
+      if (!current()) throw new DOMException('Area workspace was closed.', 'AbortError');
+      return result;
+    } catch (error) {
+      if (current() && [401, 403].includes(error?.status)) {
+        dispose();
+        root.innerHTML = '<p role="status">Area access is unavailable. Reopen the workspace after your access is restored.</p>';
+      }
+      throw error;
+    }
+  } };
+
+  function failed(error) {
+    if (!current()) return false;
+    root.innerHTML = `${errorCard(error, 'Area Management is temporarily unavailable.')}<button type="button" class="button button-outline" data-area-retry>Retry Area Management</button>`;
+    const retry = root.querySelector('[data-area-retry]');
+    on('click', () => { if (root.querySelector('[data-area-retry]') === retry) void load(); }, retry);
+    return false;
+  }
+
+  function load() {
+    // Once mounted, the existing editor owns its reads. Header refresh must not
+    // replace an Area draft or replay a business action.
+    if (!current() || loaded) return Promise.resolve(false);
+    if (loading) return loading;
+    context.beforeTaskChange?.();
+    root.innerHTML = loadingPanel('Loading authoritative Area structure…');
+    loading = mountAreaEditor({ root, api, session, on, current }).then(result => {
+      if (!current()) return false;
+      if (result?.error) return failed(result.error);
+      loaded = true;
+      return true;
+    }).catch(failed).finally(() => {
+      loading = null;
+      if (current()) context.afterTaskChange?.();
+    });
+    return loading;
+  }
+
+  if (signal?.aborted) { disposed = true; return handle; }
+  areaMounts.get(root)?.dispose();
+  areaMounts.set(root, handle);
+  signal?.addEventListener('abort', dispose, { once: true });
+  context.registerHandle?.(handle);
+  await load();
+  return handle;
+}
+
+async function mountAreaEditor({ root, api, session, on, current }) {
 
   const canManageAreas = hasPermission(session, 'area.manage');
   const canAssignCollector = hasPermission(session, 'area.collector.assign');
@@ -590,9 +679,9 @@ export async function mountAreaManagement(context) {
     : Promise.resolve({ data: { collectors: [] }, error: null });
   const [areasResult, collectorsResult] = await Promise.all([areasRequest, collectorsRequest]);
 
+  if (!current()) return;
   if (areasResult.error) {
-    root.innerHTML = errorCard(areasResult.error, 'Area Management is temporarily unavailable.');
-    return;
+    return { error: areasResult.error };
   }
 
   const nodes = Array.isArray(areasResult.data?.areas) ? areasResult.data.areas : [];
@@ -612,6 +701,7 @@ export async function mountAreaManagement(context) {
   };
 
   const render = () => {
+    if (!current()) return;
     root.innerHTML = renderAreaManagementShell({
       tree: state.tree,
       selectedAreaId: state.selectedAreaId,
@@ -667,7 +757,7 @@ export async function mountAreaManagement(context) {
 
   render();
 
-  root.addEventListener('click', async (event) => {
+  on('click', async (event) => {
     const orderControl = event.target?.closest?.('[data-area-order]');
     if (orderControl) {
       if (!canManageAreas) return;
@@ -983,7 +1073,7 @@ export async function mountAreaManagement(context) {
     render();
   });
 
-  root.addEventListener('dragstart', (event) => {
+  on('dragstart', (event) => {
     if (!canManageAreas) return;
     const row = event.target?.closest?.('[data-area-id]');
     if (!row) return;
@@ -994,7 +1084,7 @@ export async function mountAreaManagement(context) {
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
   });
 
-  root.addEventListener('dragover', (event) => {
+  on('dragover', (event) => {
     if (!canManageAreas || !state.draggingAreaId) return;
     const targetRow = event.target?.closest?.('[data-area-id]');
     if (!targetRow) return;
@@ -1004,7 +1094,7 @@ export async function mountAreaManagement(context) {
     event.preventDefault();
   });
 
-  root.addEventListener('drop', async (event) => {
+  on('drop', async (event) => {
     if (!canManageAreas || !state.draggingAreaId) return;
     const targetRow = event.target?.closest?.('[data-area-id]');
     const source = findArea(state.tree, state.draggingAreaId);
@@ -1024,7 +1114,7 @@ export async function mountAreaManagement(context) {
     await submitSiblingOrder(source.parent_area_id || null, orderedAreaIds);
   });
 
-  root.addEventListener('submit', async (event) => {
+  on('submit', async (event) => {
     if (event.target?.matches?.('[data-area-client-search-form]')) {
       event.preventDefault();
       if (!canAssignClient || !state.clientTransferEditor) return;
@@ -1196,7 +1286,7 @@ export async function mountAreaManagement(context) {
     }
   });
 
-  root.addEventListener('change', (event) => {
+  on('change', (event) => {
     if (event.target?.matches?.('[data-area-move-parent-select]')) {
       if (!state.moveEditor) return;
       state.moveEditor.selectedParentAreaId = event.target.value || '';
@@ -1213,7 +1303,7 @@ export async function mountAreaManagement(context) {
     render();
   });
 
-  root.addEventListener('input', (event) => {
+  on('input', (event) => {
     if (!event.target?.matches?.('[data-area-search]')) return;
     state.query = event.target.value || '';
     render();
