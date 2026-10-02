@@ -29,6 +29,7 @@ import {
 import {
   financialStatementsMarkup,
   loadManagementFinancialStatements,
+  mountManagementFinancialStatements,
 } from '../management-financial-statements.js';
 import {
   bindManagementAccountingExport,
@@ -546,7 +547,7 @@ export async function mountManagementWorkspace(context) {
     const h=readTask({target:root.querySelector('#management-loan-operations-results'),load:()=>loadManagementLoanOperations(api),render:managementLoanOperationsMarkup});bindManagementLoanOperations(context);await h.refresh();return h;
   });
   add('management-past-due-report','management-collections','Past-due report',async()=>{const h=readTask({target:root.querySelector('#management-past-due-report-results'),load:()=>loadManagementPastDueReport(api),render:managementPastDueReportMarkup});bindManagementPastDueReport(context);await h.refresh();return h;},'management.dashboard.view');
-  add('management-financial-statements','management-accounting-hub','Financial statements',async()=>{const h=readTask({target:root.querySelector('#management-financial-statements'),load:()=>loadManagementFinancialStatements(api),render:financialStatementsMarkup});await h.refresh();return h;},'accounting.view');
+  add('management-financial-statements','management-accounting-hub','Financial statements',async()=>{const h=mountManagementFinancialStatements(options('#management-financial-statements'));await h.refresh();return h;},'accounting.view');
   add('management-general-journal','management-accounting-hub','Journal & Trial Balance',async()=>{
     const target=root.querySelector('[data-management-journal-evidence]');let actions=()=>{},exports=()=>{},version=0;
     const refresh=async()=>{const generation=++version;const [journals,trialBalance]=await Promise.all([loadManagementGeneralJournal(api),loadManagementTrialBalance(api)]);if(!active()||generation!==version)return;exports();target.innerHTML=managementGeneralJournalMarkup({journals,trialBalance});exports=bindManagementAccountingExport(context);context.accountingExportCleanup=exports;return journals;};
