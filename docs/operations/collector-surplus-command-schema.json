@@ -1,0 +1,2942 @@
+{
+  "$defs": {
+    "AccountConfigure": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 0,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "account_configure",
+          "title": "Action",
+          "type": "string"
+        },
+        "ledger_context_id": {
+          "format": "uuid",
+          "title": "Ledger Context Id",
+          "type": "string"
+        },
+        "context": {
+          "enum": [
+            "owner_operations",
+            "corporate_legal",
+            "synthetic"
+          ],
+          "title": "Context",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "physical_cash",
+            "gcash",
+            "bank",
+            "transit"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "alias": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Alias",
+          "type": "string"
+        },
+        "ownership": {
+          "enum": [
+            "owner_personal",
+            "owner_business",
+            "corporate",
+            "synthetic"
+          ],
+          "title": "Ownership",
+          "type": "string"
+        },
+        "custodian_user_id": {
+          "format": "uuid",
+          "title": "Custodian User Id",
+          "type": "string"
+        },
+        "masked_identifier": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Masked Identifier",
+          "type": "string"
+        },
+        "payment_instructions": {
+          "default": "",
+          "maxLength": 1000,
+          "title": "Payment Instructions",
+          "type": "string"
+        },
+        "designated_receiving": {
+          "default": false,
+          "title": "Designated Receiving",
+          "type": "boolean"
+        },
+        "active": {
+          "default": true,
+          "title": "Active",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "ledger_context_id",
+        "context",
+        "kind",
+        "alias",
+        "ownership",
+        "custodian_user_id"
+      ],
+      "title": "AccountConfigure",
+      "type": "object"
+    },
+    "AccountGrant": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "account_grant",
+          "title": "Action",
+          "type": "string"
+        },
+        "user_id": {
+          "format": "uuid",
+          "title": "User Id",
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "enum": [
+              "treasury.account.manage",
+              "treasury.view",
+              "treasury.proof.submit.assigned",
+              "treasury.proof.review",
+              "treasury.receipt.verify",
+              "treasury.payment.apply",
+              "treasury.disbursement.record",
+              "treasury.transfer.record",
+              "treasury.reconcile",
+              "treasury.adjust",
+              "treasury.collector_surplus.receive",
+              "treasury.collector_surplus.resolve",
+              "treasury.collector_surplus.settle",
+              "treasury.collector_surplus.view"
+            ],
+            "type": "string"
+          },
+          "maxItems": 14,
+          "title": "Permissions",
+          "type": "array"
+        },
+        "private_history": {
+          "default": false,
+          "title": "Private History",
+          "type": "boolean"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "user_id",
+        "permissions"
+      ],
+      "title": "AccountGrant",
+      "type": "object"
+    },
+    "ClaimReview": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "claim_review",
+          "title": "Action",
+          "type": "string"
+        },
+        "claim_id": {
+          "format": "uuid",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "claim_version": {
+          "minimum": 1,
+          "title": "Claim Version",
+          "type": "integer"
+        },
+        "decision": {
+          "enum": [
+            "reviewed",
+            "correction_required",
+            "rejected"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "claim_id",
+        "claim_version",
+        "decision",
+        "reason"
+      ],
+      "title": "ClaimReview",
+      "type": "object"
+    },
+    "CollectorCountAccept": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_count_accept",
+          "title": "Action",
+          "type": "string"
+        },
+        "count_id": {
+          "format": "uuid",
+          "title": "Count Id",
+          "type": "string"
+        },
+        "count_version": {
+          "minimum": 1,
+          "title": "Count Version",
+          "type": "integer"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "physical_receipt_acknowledged": {
+          "title": "Physical Receipt Acknowledged",
+          "type": "boolean"
+        },
+        "credit_application_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Application Id"
+        },
+        "credit_application_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Application Version"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "count_id",
+        "count_version",
+        "source_digest",
+        "physical_receipt_acknowledged"
+      ],
+      "title": "CollectorCountAccept",
+      "type": "object"
+    },
+    "CollectorCountRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_count_record",
+          "title": "Action",
+          "type": "string"
+        },
+        "remittance_id": {
+          "format": "uuid",
+          "title": "Remittance Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "counted_amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Counted Amount",
+          "type": "string"
+        },
+        "counted_at": {
+          "format": "date-time",
+          "title": "Counted At",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "recipient_attestation": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Recipient Attestation",
+          "type": "string"
+        },
+        "review_acknowledged": {
+          "title": "Review Acknowledged",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "remittance_id",
+        "source_digest",
+        "counted_amount",
+        "counted_at",
+        "evidence_id",
+        "recipient_attestation",
+        "review_acknowledged"
+      ],
+      "title": "CollectorCountRecord",
+      "type": "object"
+    },
+    "CollectorCustodyExceptionRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_custody_exception_record",
+          "title": "Action",
+          "type": "string"
+        },
+        "count_id": {
+          "format": "uuid",
+          "title": "Count Id",
+          "type": "string"
+        },
+        "count_version": {
+          "minimum": 1,
+          "title": "Count Version",
+          "type": "integer"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "retained_amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Retained Amount",
+          "type": "string"
+        },
+        "retained_at": {
+          "format": "date-time",
+          "title": "Retained At",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "holder_attestation": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Holder Attestation",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "count_id",
+        "count_version",
+        "source_digest",
+        "retained_amount",
+        "retained_at",
+        "evidence_id",
+        "holder_attestation",
+        "reason"
+      ],
+      "title": "CollectorCustodyExceptionRecord",
+      "type": "object"
+    },
+    "CollectorCustodyExceptionReturnAcknowledge": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "format": "uuid",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "action_version": {
+          "minimum": 1,
+          "title": "Action Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_version": {
+          "minimum": 1,
+          "title": "Event Version",
+          "type": "integer"
+        },
+        "reviewed_amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Reviewed Amount",
+          "type": "string"
+        },
+        "confirmation": {
+          "enum": [
+            "received",
+            "not_received"
+          ],
+          "title": "Confirmation",
+          "type": "string"
+        },
+        "acknowledged_at": {
+          "format": "date-time",
+          "title": "Acknowledged At",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "action": {
+          "const": "collector_custody_exception_return_acknowledge",
+          "title": "Action",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "exception_id": {
+          "format": "uuid",
+          "title": "Exception Id",
+          "type": "string"
+        },
+        "exception_version": {
+          "minimum": 1,
+          "title": "Exception Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action_id",
+        "action_version",
+        "event_id",
+        "event_version",
+        "reviewed_amount",
+        "confirmation",
+        "acknowledged_at",
+        "reason",
+        "action",
+        "request_id",
+        "exception_id",
+        "exception_version"
+      ],
+      "title": "CollectorCustodyExceptionReturnAcknowledge",
+      "type": "object"
+    },
+    "CollectorCustodyExceptionReturnPrepare": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_custody_exception_return_prepare",
+          "title": "Action",
+          "type": "string"
+        },
+        "exception_id": {
+          "format": "uuid",
+          "title": "Exception Id",
+          "type": "string"
+        },
+        "exception_version": {
+          "minimum": 1,
+          "title": "Exception Version",
+          "type": "integer"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "exception_id",
+        "exception_version",
+        "amount",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "CollectorCustodyExceptionReturnPrepare",
+      "type": "object"
+    },
+    "CollectorSurplusActionCancel": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_action_cancel",
+          "title": "Action",
+          "type": "string"
+        },
+        "action_id": {
+          "format": "uuid",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "action_version": {
+          "minimum": 1,
+          "title": "Action Version",
+          "type": "integer"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "action_id",
+        "action_version",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "CollectorSurplusActionCancel",
+      "type": "object"
+    },
+    "CollectorSurplusApplicationPrepare": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_application_prepare",
+          "title": "Action",
+          "type": "string"
+        },
+        "credit_id": {
+          "format": "uuid",
+          "title": "Credit Id",
+          "type": "string"
+        },
+        "credit_version": {
+          "minimum": 1,
+          "title": "Credit Version",
+          "type": "integer"
+        },
+        "collector_request_id": {
+          "format": "uuid",
+          "title": "Collector Request Id",
+          "type": "string"
+        },
+        "collector_request_version": {
+          "minimum": 1,
+          "title": "Collector Request Version",
+          "type": "integer"
+        },
+        "remittance_id": {
+          "format": "uuid",
+          "title": "Remittance Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "credit_id",
+        "credit_version",
+        "collector_request_id",
+        "collector_request_version",
+        "remittance_id",
+        "source_digest",
+        "amount",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "CollectorSurplusApplicationPrepare",
+      "type": "object"
+    },
+    "CollectorSurplusApplicationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "credit_id": {
+          "format": "uuid",
+          "title": "Credit Id",
+          "type": "string"
+        },
+        "credit_version": {
+          "minimum": 1,
+          "title": "Credit Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_application_request",
+          "title": "Action",
+          "type": "string"
+        },
+        "remittance_id": {
+          "format": "uuid",
+          "title": "Remittance Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "credit_id",
+        "credit_version",
+        "action",
+        "remittance_id",
+        "source_digest",
+        "amount",
+        "reason"
+      ],
+      "title": "CollectorSurplusApplicationRequest",
+      "type": "object"
+    },
+    "CollectorSurplusOpeningActivate": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_opening_activate",
+          "title": "Action",
+          "type": "string"
+        },
+        "anchor_id": {
+          "format": "uuid",
+          "title": "Anchor Id",
+          "type": "string"
+        },
+        "anchor_version": {
+          "minimum": 1,
+          "title": "Anchor Version",
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "anchor_id",
+        "anchor_version",
+        "reason"
+      ],
+      "title": "CollectorSurplusOpeningActivate",
+      "type": "object"
+    },
+    "CollectorSurplusOpeningPrepare": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_opening_prepare",
+          "title": "Action",
+          "type": "string"
+        },
+        "collector_user_id": {
+          "format": "uuid",
+          "title": "Collector User Id",
+          "type": "string"
+        },
+        "opening_id": {
+          "format": "uuid",
+          "title": "Opening Id",
+          "type": "string"
+        },
+        "opening_version": {
+          "minimum": 1,
+          "title": "Opening Version",
+          "type": "integer"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "overlap_review_acknowledged": {
+          "title": "Overlap Review Acknowledged",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "collector_user_id",
+        "opening_id",
+        "opening_version",
+        "amount",
+        "evidence_id",
+        "overlap_review_acknowledged",
+        "reason"
+      ],
+      "title": "CollectorSurplusOpeningPrepare",
+      "type": "object"
+    },
+    "CollectorSurplusRecognize": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "source_review_acknowledged": {
+          "title": "Source Review Acknowledged",
+          "type": "boolean"
+        },
+        "action": {
+          "const": "collector_surplus_recognize",
+          "title": "Action",
+          "type": "string"
+        },
+        "case_id": {
+          "format": "uuid",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "case_version": {
+          "minimum": 1,
+          "title": "Case Version",
+          "type": "integer"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "source_review_acknowledged",
+        "action",
+        "case_id",
+        "case_version",
+        "amount",
+        "source_digest",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "CollectorSurplusRecognize",
+      "type": "object"
+    },
+    "CollectorSurplusResolveSource": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_resolve_source",
+          "title": "Action",
+          "type": "string"
+        },
+        "case_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Id"
+        },
+        "case_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Version"
+        },
+        "credit_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Id"
+        },
+        "credit_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Version"
+        },
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "source_id",
+        "source_digest",
+        "amount",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "CollectorSurplusResolveSource",
+      "type": "object"
+    },
+    "CollectorSurplusReturnAcknowledge": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "format": "uuid",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "action_version": {
+          "minimum": 1,
+          "title": "Action Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_version": {
+          "minimum": 1,
+          "title": "Event Version",
+          "type": "integer"
+        },
+        "reviewed_amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Reviewed Amount",
+          "type": "string"
+        },
+        "confirmation": {
+          "enum": [
+            "received",
+            "not_received"
+          ],
+          "title": "Confirmation",
+          "type": "string"
+        },
+        "acknowledged_at": {
+          "format": "date-time",
+          "title": "Acknowledged At",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "credit_id": {
+          "format": "uuid",
+          "title": "Credit Id",
+          "type": "string"
+        },
+        "credit_version": {
+          "minimum": 1,
+          "title": "Credit Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_return_acknowledge",
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "action_version",
+        "event_id",
+        "event_version",
+        "reviewed_amount",
+        "confirmation",
+        "acknowledged_at",
+        "reason",
+        "request_id",
+        "credit_id",
+        "credit_version",
+        "action"
+      ],
+      "title": "CollectorSurplusReturnAcknowledge",
+      "type": "object"
+    },
+    "CollectorSurplusReturnPrepare": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_return_prepare",
+          "title": "Action",
+          "type": "string"
+        },
+        "credit_id": {
+          "format": "uuid",
+          "title": "Credit Id",
+          "type": "string"
+        },
+        "credit_version": {
+          "minimum": 1,
+          "title": "Credit Version",
+          "type": "integer"
+        },
+        "collector_request_id": {
+          "format": "uuid",
+          "title": "Collector Request Id",
+          "type": "string"
+        },
+        "collector_request_version": {
+          "minimum": 1,
+          "title": "Collector Request Version",
+          "type": "integer"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "credit_id",
+        "credit_version",
+        "collector_request_id",
+        "collector_request_version",
+        "amount",
+        "destination",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "CollectorSurplusReturnPrepare",
+      "type": "object"
+    },
+    "CollectorSurplusReturnRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_return_record",
+          "title": "Action",
+          "type": "string"
+        },
+        "action_id": {
+          "format": "uuid",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "action_version": {
+          "minimum": 1,
+          "title": "Action Version",
+          "type": "integer"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_version": {
+          "minimum": 1,
+          "title": "Event Version",
+          "type": "integer"
+        },
+        "acknowledgment_id": {
+          "format": "uuid",
+          "title": "Acknowledgment Id",
+          "type": "string"
+        },
+        "acknowledgment_version": {
+          "minimum": 1,
+          "title": "Acknowledgment Version",
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "action_id",
+        "action_version",
+        "event_id",
+        "event_version",
+        "acknowledgment_id",
+        "acknowledgment_version",
+        "reason"
+      ],
+      "title": "CollectorSurplusReturnRecord",
+      "type": "object"
+    },
+    "CollectorSurplusReturnRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "credit_id": {
+          "format": "uuid",
+          "title": "Credit Id",
+          "type": "string"
+        },
+        "credit_version": {
+          "minimum": 1,
+          "title": "Credit Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "collector_surplus_return_request",
+          "title": "Action",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "credit_id",
+        "credit_version",
+        "action",
+        "amount",
+        "destination",
+        "reason"
+      ],
+      "title": "CollectorSurplusReturnRequest",
+      "type": "object"
+    },
+    "CombinedExtraAllocationChoice": {
+      "enum": [
+        "seven_by_seven_advance",
+        "seven_by_seven_extra_principal",
+        "regular_advance",
+        "regular_principal_reduction"
+      ],
+      "title": "CombinedExtraAllocationChoice",
+      "type": "string"
+    },
+    "CombinedPastDueFollowup": {
+      "additionalProperties": false,
+      "properties": {
+        "reason_code": {
+          "$ref": "#/$defs/PastDueReasonCode"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Note",
+          "type": "string"
+        },
+        "promised_payment_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Promised Payment Date"
+        },
+        "promised_amount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Promised Amount"
+        }
+      },
+      "required": [
+        "reason_code"
+      ],
+      "title": "CombinedPastDueFollowup",
+      "type": "object"
+    },
+    "Destination": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "physical_cash",
+            "gcash",
+            "bank"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "recipient_reference": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Recipient Reference"
+        }
+      },
+      "required": [
+        "kind",
+        "recipient_reference"
+      ],
+      "title": "Destination",
+      "type": "object"
+    },
+    "DisbursementRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "disbursement_record",
+          "title": "Action",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "fee": {
+          "default": "0.00",
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Fee",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference"
+        },
+        "effective_at": {
+          "format": "date-time",
+          "title": "Effective At",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "recipient_attestation": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Recipient Attestation",
+          "type": "string"
+        },
+        "direction": {
+          "default": "debit",
+          "enum": [
+            "credit",
+            "debit"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "purpose": {
+          "enum": [
+            "unclassified",
+            "personal",
+            "loan_release",
+            "renewal",
+            "payroll",
+            "salary_advance",
+            "expense",
+            "refund",
+            "owner_contribution",
+            "owner_withdrawal",
+            "deposit",
+            "collector_surplus_return",
+            "collector_custody_exception_return"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "source_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Version"
+        },
+        "payee_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payee Id"
+        },
+        "destination_confirmed": {
+          "default": false,
+          "title": "Destination Confirmed",
+          "type": "boolean"
+        },
+        "destination_evidence_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destination Evidence Id"
+        },
+        "payee_acknowledgment": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payee Acknowledgment"
+        },
+        "receipt_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Receipt Id"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "amount",
+        "provider",
+        "reference",
+        "effective_at",
+        "evidence_id",
+        "recipient_attestation",
+        "purpose",
+        "reason"
+      ],
+      "title": "DisbursementRecord",
+      "type": "object"
+    },
+    "LoanChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "loan_id": {
+          "format": "uuid",
+          "title": "Loan Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 0,
+          "title": "Expected Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "loan_id",
+        "expected_version"
+      ],
+      "title": "LoanChoice",
+      "type": "object"
+    },
+    "MovementClassify": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "movement_classify",
+          "title": "Action",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_version": {
+          "minimum": 1,
+          "title": "Event Version",
+          "type": "integer"
+        },
+        "classification": {
+          "enum": [
+            "personal",
+            "owner_contribution",
+            "owner_withdrawal",
+            "unclassified"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "event_id",
+        "event_version",
+        "classification",
+        "reason"
+      ],
+      "title": "MovementClassify",
+      "type": "object"
+    },
+    "MovementCorrect": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "movement_correct",
+          "title": "Action",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_version": {
+          "minimum": 1,
+          "title": "Event Version",
+          "type": "integer"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "correction": {
+          "const": "false_observation",
+          "title": "Correction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "event_id",
+        "event_version",
+        "evidence_id",
+        "reason",
+        "correction"
+      ],
+      "title": "MovementCorrect",
+      "type": "object"
+    },
+    "ObservationRow": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference"
+        },
+        "direction": {
+          "enum": [
+            "credit",
+            "debit"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "effective_at": {
+          "format": "date-time",
+          "title": "Effective At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "reference",
+        "direction",
+        "amount",
+        "effective_at"
+      ],
+      "title": "ObservationRow",
+      "type": "object"
+    },
+    "OpeningActivate": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "opening_activate",
+          "title": "Action",
+          "type": "string"
+        },
+        "opening_id": {
+          "format": "uuid",
+          "title": "Opening Id",
+          "type": "string"
+        },
+        "opening_version": {
+          "minimum": 1,
+          "title": "Opening Version",
+          "type": "integer"
+        },
+        "confirmed": {
+          "const": true,
+          "title": "Confirmed",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "opening_id",
+        "opening_version",
+        "confirmed",
+        "reason"
+      ],
+      "title": "OpeningActivate",
+      "type": "object"
+    },
+    "OpeningPrepare": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "opening_prepare",
+          "title": "Action",
+          "type": "string"
+        },
+        "cutoff": {
+          "format": "date-time",
+          "title": "Cutoff",
+          "type": "string"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "personal_amount": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Personal Amount"
+        },
+        "third_party_amount": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Third Party Amount"
+        },
+        "transit_amount": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transit Amount"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "cutoff",
+        "amount",
+        "evidence_id",
+        "reason"
+      ],
+      "title": "OpeningPrepare",
+      "type": "object"
+    },
+    "PastDueReasonCode": {
+      "enum": [
+        "no_cash",
+        "client_absent",
+        "business_slow",
+        "sick_hospital",
+        "emergency",
+        "promised_to_pay_later",
+        "other"
+      ],
+      "title": "PastDueReasonCode",
+      "type": "string"
+    },
+    "PaymentAllocationIntent": {
+      "enum": [
+        "scheduled",
+        "no_collection_voluntary",
+        "extra_as_advance",
+        "extra_as_principal_reduction",
+        "voluntary_extra"
+      ],
+      "title": "PaymentAllocationIntent",
+      "type": "string"
+    },
+    "ReceiptApplicationReverse": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "receipt_application_reverse",
+          "title": "Action",
+          "type": "string"
+        },
+        "receipt_id": {
+          "format": "uuid",
+          "title": "Receipt Id",
+          "type": "string"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "receipt_id",
+        "application_id",
+        "reason"
+      ],
+      "title": "ReceiptApplicationReverse",
+      "type": "object"
+    },
+    "ReceiptApply": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "single",
+            "combined"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "total_amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Total Amount",
+          "type": "string"
+        },
+        "loans": {
+          "items": {
+            "$ref": "#/$defs/LoanChoice"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Loans",
+          "type": "array"
+        },
+        "intent": {
+          "$ref": "#/$defs/PaymentAllocationIntent",
+          "default": "scheduled"
+        },
+        "covered_dates": {
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "maxItems": 366,
+          "title": "Covered Dates",
+          "type": "array"
+        },
+        "extra_choice": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CombinedExtraAllocationChoice"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "regular_past_due_followup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CombinedPastDueFollowup"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "effective_date": {
+          "format": "date",
+          "title": "Effective Date",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "receipt_apply",
+          "title": "Action",
+          "type": "string"
+        },
+        "receipt_id": {
+          "format": "uuid",
+          "title": "Receipt Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "total_amount",
+        "loans",
+        "effective_date",
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "receipt_id",
+        "digest"
+      ],
+      "title": "ReceiptApply",
+      "type": "object"
+    },
+    "ReceiptVerify": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "receipt_verify",
+          "title": "Action",
+          "type": "string"
+        },
+        "client_id": {
+          "format": "uuid",
+          "title": "Client Id",
+          "type": "string"
+        },
+        "claim_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Claim Id"
+        },
+        "claim_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Claim Version"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "effective_at": {
+          "format": "date-time",
+          "title": "Effective At",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "recipient_attestation": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Recipient Attestation",
+          "type": "string"
+        },
+        "reason": {
+          "default": "Manually verified recipient-side transaction.",
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "client_id",
+        "amount",
+        "provider",
+        "reference",
+        "effective_at",
+        "evidence_id",
+        "recipient_attestation"
+      ],
+      "title": "ReceiptVerify",
+      "type": "object"
+    },
+    "ReconciliationClose": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "reconciliation_id": {
+          "format": "uuid",
+          "title": "Reconciliation Id",
+          "type": "string"
+        },
+        "reconciliation_version": {
+          "minimum": 1,
+          "title": "Reconciliation Version",
+          "type": "integer"
+        },
+        "opening_id": {
+          "format": "uuid",
+          "title": "Opening Id",
+          "type": "string"
+        },
+        "movement_watermark": {
+          "minimum": 0,
+          "title": "Movement Watermark",
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "action": {
+          "const": "reconciliation_close",
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "reconciliation_id",
+        "reconciliation_version",
+        "opening_id",
+        "movement_watermark",
+        "reason",
+        "action"
+      ],
+      "title": "ReconciliationClose",
+      "type": "object"
+    },
+    "ReconciliationMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "reconciliation_match",
+          "title": "Action",
+          "type": "string"
+        },
+        "reconciliation_id": {
+          "format": "uuid",
+          "title": "Reconciliation Id",
+          "type": "string"
+        },
+        "reconciliation_version": {
+          "minimum": 1,
+          "title": "Reconciliation Version",
+          "type": "integer"
+        },
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "component": {
+          "default": "total",
+          "enum": [
+            "total",
+            "principal",
+            "fee"
+          ],
+          "title": "Component",
+          "type": "string"
+        },
+        "exception_reason": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exception Reason"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "reconciliation_id",
+        "reconciliation_version",
+        "observation_id",
+        "event_id"
+      ],
+      "title": "ReconciliationMatch",
+      "type": "object"
+    },
+    "ReconciliationObserve": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "reconciliation_observe",
+          "title": "Action",
+          "type": "string"
+        },
+        "reconciliation_id": {
+          "format": "uuid",
+          "title": "Reconciliation Id",
+          "type": "string"
+        },
+        "coverage_start": {
+          "format": "date-time",
+          "title": "Coverage Start",
+          "type": "string"
+        },
+        "cutoff": {
+          "format": "date-time",
+          "title": "Cutoff",
+          "type": "string"
+        },
+        "actual_balance": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Actual Balance",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "complete_history": {
+          "title": "Complete History",
+          "type": "boolean"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/ObservationRow"
+          },
+          "maxItems": 500,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "reconciliation_id",
+        "coverage_start",
+        "cutoff",
+        "actual_balance",
+        "evidence_id",
+        "complete_history",
+        "rows"
+      ],
+      "title": "ReconciliationObserve",
+      "type": "object"
+    },
+    "ReconciliationSupersede": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "reconciliation_id": {
+          "format": "uuid",
+          "title": "Reconciliation Id",
+          "type": "string"
+        },
+        "reconciliation_version": {
+          "minimum": 1,
+          "title": "Reconciliation Version",
+          "type": "integer"
+        },
+        "opening_id": {
+          "format": "uuid",
+          "title": "Opening Id",
+          "type": "string"
+        },
+        "movement_watermark": {
+          "minimum": 0,
+          "title": "Movement Watermark",
+          "type": "integer"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "action": {
+          "const": "reconciliation_supersede",
+          "title": "Action",
+          "type": "string"
+        },
+        "prior_reconciliation_id": {
+          "format": "uuid",
+          "title": "Prior Reconciliation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "reconciliation_id",
+        "reconciliation_version",
+        "opening_id",
+        "movement_watermark",
+        "reason",
+        "action",
+        "prior_reconciliation_id"
+      ],
+      "title": "ReconciliationSupersede",
+      "type": "object"
+    },
+    "TransferRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "account_id": {
+          "format": "uuid",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "expected_version": {
+          "minimum": 1,
+          "title": "Expected Version",
+          "type": "integer"
+        },
+        "action": {
+          "const": "transfer_record",
+          "title": "Action",
+          "type": "string"
+        },
+        "transfer_id": {
+          "format": "uuid",
+          "title": "Transfer Id",
+          "type": "string"
+        },
+        "leg": {
+          "enum": [
+            "source",
+            "destination"
+          ],
+          "title": "Leg",
+          "type": "string"
+        },
+        "other_account_id": {
+          "format": "uuid",
+          "title": "Other Account Id",
+          "type": "string"
+        },
+        "other_account_version": {
+          "minimum": 1,
+          "title": "Other Account Version",
+          "type": "integer"
+        },
+        "amount": {
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Amount",
+          "type": "string"
+        },
+        "fee": {
+          "default": "0.00",
+          "pattern": "^(0|[1-9][0-9]{0,15})\\.[0-9]{2}$",
+          "title": "Fee",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "effective_at": {
+          "format": "date-time",
+          "title": "Effective At",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "recipient_attestation": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Recipient Attestation",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "account_id",
+        "expected_version",
+        "action",
+        "transfer_id",
+        "leg",
+        "other_account_id",
+        "other_account_version",
+        "amount",
+        "provider",
+        "reference",
+        "effective_at",
+        "evidence_id",
+        "recipient_attestation",
+        "reason"
+      ],
+      "title": "TransferRecord",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "account_configure": "#/$defs/AccountConfigure",
+      "account_grant": "#/$defs/AccountGrant",
+      "claim_review": "#/$defs/ClaimReview",
+      "collector_count_accept": "#/$defs/CollectorCountAccept",
+      "collector_count_record": "#/$defs/CollectorCountRecord",
+      "collector_custody_exception_record": "#/$defs/CollectorCustodyExceptionRecord",
+      "collector_custody_exception_return_acknowledge": "#/$defs/CollectorCustodyExceptionReturnAcknowledge",
+      "collector_custody_exception_return_prepare": "#/$defs/CollectorCustodyExceptionReturnPrepare",
+      "collector_surplus_action_cancel": "#/$defs/CollectorSurplusActionCancel",
+      "collector_surplus_application_prepare": "#/$defs/CollectorSurplusApplicationPrepare",
+      "collector_surplus_application_request": "#/$defs/CollectorSurplusApplicationRequest",
+      "collector_surplus_opening_activate": "#/$defs/CollectorSurplusOpeningActivate",
+      "collector_surplus_opening_prepare": "#/$defs/CollectorSurplusOpeningPrepare",
+      "collector_surplus_recognize": "#/$defs/CollectorSurplusRecognize",
+      "collector_surplus_resolve_source": "#/$defs/CollectorSurplusResolveSource",
+      "collector_surplus_return_acknowledge": "#/$defs/CollectorSurplusReturnAcknowledge",
+      "collector_surplus_return_prepare": "#/$defs/CollectorSurplusReturnPrepare",
+      "collector_surplus_return_record": "#/$defs/CollectorSurplusReturnRecord",
+      "collector_surplus_return_request": "#/$defs/CollectorSurplusReturnRequest",
+      "disbursement_record": "#/$defs/DisbursementRecord",
+      "movement_classify": "#/$defs/MovementClassify",
+      "movement_correct": "#/$defs/MovementCorrect",
+      "opening_activate": "#/$defs/OpeningActivate",
+      "opening_prepare": "#/$defs/OpeningPrepare",
+      "receipt_application_reverse": "#/$defs/ReceiptApplicationReverse",
+      "receipt_apply": "#/$defs/ReceiptApply",
+      "receipt_verify": "#/$defs/ReceiptVerify",
+      "reconciliation_close": "#/$defs/ReconciliationClose",
+      "reconciliation_match": "#/$defs/ReconciliationMatch",
+      "reconciliation_observe": "#/$defs/ReconciliationObserve",
+      "reconciliation_supersede": "#/$defs/ReconciliationSupersede",
+      "transfer_record": "#/$defs/TransferRecord"
+    },
+    "propertyName": "action"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/AccountConfigure"
+    },
+    {
+      "$ref": "#/$defs/AccountGrant"
+    },
+    {
+      "$ref": "#/$defs/OpeningPrepare"
+    },
+    {
+      "$ref": "#/$defs/OpeningActivate"
+    },
+    {
+      "$ref": "#/$defs/ClaimReview"
+    },
+    {
+      "$ref": "#/$defs/ReceiptVerify"
+    },
+    {
+      "$ref": "#/$defs/ReceiptApply"
+    },
+    {
+      "$ref": "#/$defs/DisbursementRecord"
+    },
+    {
+      "$ref": "#/$defs/TransferRecord"
+    },
+    {
+      "$ref": "#/$defs/MovementClassify"
+    },
+    {
+      "$ref": "#/$defs/MovementCorrect"
+    },
+    {
+      "$ref": "#/$defs/ReceiptApplicationReverse"
+    },
+    {
+      "$ref": "#/$defs/ReconciliationObserve"
+    },
+    {
+      "$ref": "#/$defs/ReconciliationMatch"
+    },
+    {
+      "$ref": "#/$defs/ReconciliationClose"
+    },
+    {
+      "$ref": "#/$defs/ReconciliationSupersede"
+    },
+    {
+      "$ref": "#/$defs/CollectorCountRecord"
+    },
+    {
+      "$ref": "#/$defs/CollectorCountAccept"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusRecognize"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusReturnRequest"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusApplicationRequest"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusReturnAcknowledge"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusReturnPrepare"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusApplicationPrepare"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusReturnRecord"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusActionCancel"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusResolveSource"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusOpeningPrepare"
+    },
+    {
+      "$ref": "#/$defs/CollectorSurplusOpeningActivate"
+    },
+    {
+      "$ref": "#/$defs/CollectorCustodyExceptionRecord"
+    },
+    {
+      "$ref": "#/$defs/CollectorCustodyExceptionReturnPrepare"
+    },
+    {
+      "$ref": "#/$defs/CollectorCustodyExceptionReturnAcknowledge"
+    }
+  ]
+}

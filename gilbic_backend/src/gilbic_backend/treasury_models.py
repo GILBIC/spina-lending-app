@@ -18,6 +18,7 @@ from pydantic import (
     StrictInt,
     StringConstraints,
     TypeAdapter,
+    model_validator,
 )
 from spina_mobile_collections.contracts import PaymentAllocationIntent
 
@@ -68,6 +69,10 @@ Permission = Literal[
     "treasury.transfer.record",
     "treasury.reconcile",
     "treasury.adjust",
+    "treasury.collector_surplus.receive",
+    "treasury.collector_surplus.resolve",
+    "treasury.collector_surplus.settle",
+    "treasury.collector_surplus.view",
 ]
 
 
@@ -110,7 +115,7 @@ class AccountConfigure(Command):
 class AccountGrant(Command):
     action: Literal["account_grant"]
     user_id: UUID
-    permissions: list[Permission] = Field(max_length=10)
+    permissions: list[Permission] = Field(max_length=14)
     private_history: StrictBool = False
     enabled: StrictBool = True
 
@@ -225,6 +230,8 @@ class DisbursementRecord(Command):
         "owner_contribution",
         "owner_withdrawal",
         "deposit",
+        "collector_surplus_return",
+        "collector_custody_exception_return",
     ]
     source_id: UUID | None = None
     source_version: Version | None = None
@@ -325,6 +332,231 @@ class ReconciliationSupersede(ReconciliationCloseFields):
     prior_reconciliation_id: UUID
 
 
+class SettlementPreview(StrictModel):
+    account_id: UUID
+    expected_version: Version
+    credit_application_id: UUID | None = None
+    credit_application_version: Version | None = None
+
+
+class CollectorCountRecord(Command):
+    action: Literal["collector_count_record"]
+    remittance_id: UUID
+    source_digest: Digest
+    counted_amount: Money
+    counted_at: Instant
+    evidence_id: UUID
+    recipient_attestation: Text
+    review_acknowledged: StrictBool
+
+
+class CollectorCountAccept(Command):
+    action: Literal["collector_count_accept"]
+    count_id: UUID
+    count_version: Version
+    source_digest: Digest
+    physical_receipt_acknowledged: StrictBool
+    credit_application_id: UUID | None = None
+    credit_application_version: Version | None = None
+
+
+class CollectorSurplusRecognize(Command):
+    source_review_acknowledged: StrictBool
+    action: Literal["collector_surplus_recognize"]
+    case_id: UUID
+    case_version: Version
+    amount: PositiveMoney
+    source_digest: Digest
+    evidence_id: UUID
+    reason: Text
+
+
+class Destination(StrictModel):
+    kind: Literal["physical_cash", "gcash", "bank"]
+    recipient_reference: Reference | None
+
+    @model_validator(mode="after")
+    def method_reference(self):
+        if (self.kind == "physical_cash") != (self.recipient_reference is None):
+            raise ValueError(
+                "Cash has no wallet identifier; wallet/bank requires a private recipient reference."
+            )
+        return self
+
+
+class OwnCreditCommand(StrictModel):
+    request_id: UUID
+    credit_id: UUID
+    credit_version: Version
+
+
+class CollectorSurplusReturnRequest(OwnCreditCommand):
+    action: Literal["collector_surplus_return_request"]
+    amount: PositiveMoney
+    destination: Destination
+    reason: Text
+
+
+class CollectorSurplusApplicationRequest(OwnCreditCommand):
+    action: Literal["collector_surplus_application_request"]
+    remittance_id: UUID
+    source_digest: Digest
+    amount: PositiveMoney
+    reason: Text
+
+
+class AcknowledgmentFields(StrictModel):
+    action_id: UUID
+    action_version: Version
+    event_id: UUID
+    event_version: Version
+    reviewed_amount: PositiveMoney
+    confirmation: Literal["received", "not_received"]
+    acknowledged_at: Instant
+    reason: Text
+
+
+class CollectorSurplusReturnAcknowledge(OwnCreditCommand, AcknowledgmentFields):
+    action: Literal["collector_surplus_return_acknowledge"]
+
+
+class CollectorSurplusReturnPrepare(Command):
+    action: Literal["collector_surplus_return_prepare"]
+    credit_id: UUID
+    credit_version: Version
+    collector_request_id: UUID
+    collector_request_version: Version
+    amount: PositiveMoney
+    destination: Destination
+    evidence_id: UUID
+    reason: Text
+
+
+class CollectorSurplusApplicationPrepare(Command):
+    action: Literal["collector_surplus_application_prepare"]
+    credit_id: UUID
+    credit_version: Version
+    collector_request_id: UUID
+    collector_request_version: Version
+    remittance_id: UUID
+    source_digest: Digest
+    amount: PositiveMoney
+    evidence_id: UUID
+    reason: Text
+
+
+class CollectorSurplusReturnRecord(Command):
+    action: Literal["collector_surplus_return_record"]
+    action_id: UUID
+    action_version: Version
+    event_id: UUID
+    event_version: Version
+    acknowledgment_id: UUID
+    acknowledgment_version: Version
+    reason: Text
+
+
+class CollectorSurplusActionCancel(Command):
+    action: Literal["collector_surplus_action_cancel"]
+    action_id: UUID
+    action_version: Version
+    evidence_id: UUID
+    reason: Text
+
+
+class CollectorSurplusResolveSource(Command):
+    action: Literal["collector_surplus_resolve_source"]
+    case_id: UUID | None = None
+    case_version: Version | None = None
+    credit_id: UUID | None = None
+    credit_version: Version | None = None
+    source_id: UUID
+    source_digest: Digest
+    amount: PositiveMoney
+    evidence_id: UUID
+    reason: Text
+
+    @model_validator(mode="after")
+    def one_target(self):
+        if (self.case_id is None) == (self.credit_id is None):
+            raise ValueError("Select exactly one case or credit.")
+        if (
+            self.case_id
+            and self.case_version is None
+            or self.credit_id
+            and self.credit_version is None
+        ):
+            raise ValueError("Exact target version is required.")
+        return self
+
+
+class CollectorSurplusOpeningPrepare(Command):
+    action: Literal["collector_surplus_opening_prepare"]
+    collector_user_id: UUID
+    opening_id: UUID
+    opening_version: Version
+    amount: PositiveMoney
+    evidence_id: UUID
+    overlap_review_acknowledged: StrictBool
+    reason: Text
+
+
+class CollectorSurplusOpeningActivate(Command):
+    action: Literal["collector_surplus_opening_activate"]
+    anchor_id: UUID
+    anchor_version: Version
+    reason: Text
+
+
+class CollectorCustodyExceptionRecord(Command):
+    action: Literal["collector_custody_exception_record"]
+    count_id: UUID
+    count_version: Version
+    source_digest: Digest
+    retained_amount: PositiveMoney
+    retained_at: Instant
+    evidence_id: UUID
+    holder_attestation: Text
+    reason: Text
+
+
+class CollectorCustodyExceptionReturnPrepare(Command):
+    action: Literal["collector_custody_exception_return_prepare"]
+    exception_id: UUID
+    exception_version: Version
+    amount: PositiveMoney
+    evidence_id: UUID
+    reason: Text
+
+
+class CollectorCustodyExceptionReturnAcknowledge(AcknowledgmentFields):
+    action: Literal["collector_custody_exception_return_acknowledge"]
+    request_id: UUID
+    exception_id: UUID
+    exception_version: Version
+
+
+SurplusCommand = Annotated[
+    CollectorCountRecord
+    | CollectorCountAccept
+    | CollectorSurplusRecognize
+    | CollectorSurplusReturnRequest
+    | CollectorSurplusApplicationRequest
+    | CollectorSurplusReturnAcknowledge
+    | CollectorSurplusReturnPrepare
+    | CollectorSurplusApplicationPrepare
+    | CollectorSurplusReturnRecord
+    | CollectorSurplusActionCancel
+    | CollectorSurplusResolveSource
+    | CollectorSurplusOpeningPrepare
+    | CollectorSurplusOpeningActivate
+    | CollectorCustodyExceptionRecord
+    | CollectorCustodyExceptionReturnPrepare
+    | CollectorCustodyExceptionReturnAcknowledge,
+    Field(discriminator="action"),
+]
+
+
 TreasuryCommand = Annotated[
     AccountConfigure
     | AccountGrant
@@ -341,7 +573,8 @@ TreasuryCommand = Annotated[
     | ReconciliationObserve
     | ReconciliationMatch
     | ReconciliationClose
-    | ReconciliationSupersede,
+    | ReconciliationSupersede
+    | SurplusCommand,
     Field(discriminator="action"),
 ]
 COMMAND_ADAPTER = TypeAdapter(TreasuryCommand)
