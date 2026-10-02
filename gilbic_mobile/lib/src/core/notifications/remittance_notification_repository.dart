@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'dart:convert';
 
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -28,7 +29,7 @@ abstract interface class RemittanceNotificationRepository {
 class SpinaRemittanceNotificationRepository
     implements RemittanceNotificationRepository {
   SpinaRemittanceNotificationRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -82,16 +83,55 @@ class SpinaRemittanceNotificationRepository
     required String deviceId,
     required String notificationId,
   }) async {
+    final current = await loadNotifications(session, deviceId: deviceId);
+    final notification = current
+        .where((row) => row.notificationId == notificationId)
+        .firstOrNull;
+    if (notification == null) {
+      throw const SpinaApiException(
+        'This notification is unavailable.',
+        code: 'invalid_notification_response',
+      );
+    }
     final data = await _request(
       session,
       deviceId: deviceId,
-      method: 'POST',
+      method: 'GET',
       uri: ApiConfig.endpoint(
-        '/api/mobile/v1/notifications/$notificationId/accept-remittance',
+        '/api/mobile/v1/treasury/collector-surplus/remittances/${notification.remittanceId}/receiving-contract',
       ),
-      body: const <String, Object?>{'review_acknowledged': true},
     );
-    return RemittanceAcceptanceResult.fromPayload(data);
+    final contract = RemittanceReceivingContract.fromPayload(
+      data,
+      remittanceId: notification.remittanceId,
+      recipientUserId: session.userId,
+    );
+    if (!contract.legacyReceiveAllowed) {
+      throw const SpinaApiException(
+        'Use the current actual cash count review.',
+        code: 'collector_count_required',
+      );
+    }
+    final result = RemittanceAcceptanceResult.fromPayload(
+      await _request(
+        session,
+        deviceId: deviceId,
+        method: 'POST',
+        uri: ApiConfig.endpoint(
+          '/api/mobile/v1/notifications/$notificationId/accept-remittance',
+        ),
+        body: const {'review_acknowledged': true},
+      ),
+    );
+    if (result.remittanceId != notification.remittanceId ||
+        result.notification.notificationId != notificationId ||
+        result.status != 'received') {
+      throw const SpinaApiException(
+        'The exact notification acceptance is unconfirmed.',
+        code: 'invalid_notification_response',
+      );
+    }
+    return result;
   }
 
   Future<Object?> _request(

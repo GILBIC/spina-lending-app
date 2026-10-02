@@ -10,6 +10,7 @@ import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/media/private_image_store.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
+import 'package:gilbic_mobile/src/core/treasury/collector_surplus_models.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as paths;
@@ -108,7 +109,31 @@ abstract interface class TreasuryRepository {
   void dispose();
 }
 
-class SpinaTreasuryRepository implements TreasuryRepository {
+abstract interface class CollectorSurplusRepository
+    implements TreasuryRepository {
+  CollectorSurplusWorkspace? get surplusWorkspace;
+  Future<CollectorSurplusWorkspace> loadCollectorSurplus({
+    CollectorSurplusKind kind = CollectorSurplusKind.credits,
+    String? accountId,
+    String? mode,
+    int limit = 50,
+    int offset = 0,
+  });
+  Future<Map<String, dynamic>> collectorSurplusDetail(
+    CollectorSurplusKind kind,
+    String id,
+  );
+  Future<CollectorSettlementPreview> collectorSettlementPreview(
+    String remittanceId,
+    String accountId,
+  );
+  Future<ClientDocumentFile> exportCollectorSurplus({
+    CollectorSurplusKind kind = CollectorSurplusKind.credits,
+    String? accountId,
+  });
+}
+
+class SpinaTreasuryRepository implements CollectorSurplusRepository {
   SpinaTreasuryRepository({
     required UserSession session,
     required this.deviceId,
@@ -135,6 +160,12 @@ class SpinaTreasuryRepository implements TreasuryRepository {
   final PrivateImageStore _images;
   final String _initialScope;
   TreasuryWorkspace? _workspace;
+  CollectorSurplusWorkspace? _surplus;
+  String? _surplusAuthorization;
+  String? _surplusMode;
+  CollectorSettlementPreview? _settlementPreview;
+  @override
+  CollectorSurplusWorkspace? get surplusWorkspace => _surplus;
   Map<String, dynamic>? _attempt;
   Map<String, dynamic>? _previewInput, _lastPreview;
   bool _busy = false, _disposed = false, _denied = false;
@@ -183,6 +214,8 @@ class SpinaTreasuryRepository implements TreasuryRepository {
 
   Future<void> _redact() async {
     _workspace = null;
+    _surplus = null;
+    _settlementPreview = null;
     _attempt = null;
     _lastPreview = null;
     _previewInput = null;
@@ -296,8 +329,14 @@ class SpinaTreasuryRepository implements TreasuryRepository {
       if (held['contract_version'] != 1 ||
           held['scope'] != _initialScope ||
           held['external_device_id'] != deviceId ||
-          held['actor_user_id'] != _workspace?.actor.userId ||
-          held['device_id'] != _workspace?.actor.deviceId ||
+          held['actor_user_id'] !=
+              (held['surplus'] == true
+                  ? _surplus?.actor.userId
+                  : _workspace?.actor.userId) ||
+          held['device_id'] !=
+              (held['surplus'] == true
+                  ? _surplus?.actor.deviceId
+                  : _workspace?.actor.deviceId) ||
           !treasuryUuid(held['request_id']) ||
           !treasuryUuid(held['account_id']) ||
           held['path'] is! String ||
@@ -473,8 +512,374 @@ class SpinaTreasuryRepository implements TreasuryRepository {
     _attempt = treasuryObject(immutableTreasury(value));
   }
 
+  @override
+  Future<CollectorSurplusWorkspace> loadCollectorSurplus({
+    CollectorSurplusKind kind = CollectorSurplusKind.credits,
+    String? accountId,
+    String? mode,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    if (limit < 1 || limit > 100 || offset < 0 || offset > 100000) {
+      throw ArgumentError('Choose a valid history page.');
+    }
+    if (accountId != null) requireTreasuryId(accountId);
+    final changedMode = mode != null && mode != _surplusMode;
+    if (mode != null && !['own', 'staff'].contains(mode)) {
+      throw ArgumentError('Choose an authorized mode.');
+    }
+    if (changedMode && _attempt != null) {
+      throw StateError('Recover the pending phase before changing mode.');
+    }
+    final requestedMode = mode ?? _surplusMode;
+    final query = Uri(
+      queryParameters: {
+        'kind': kind.name,
+        'limit': '$limit',
+        'offset': '$offset',
+        if (accountId != null) 'account_id': accountId,
+        if (requestedMode != null) 'mode': requestedMode,
+      },
+    ).query;
+    final value = CollectorSurplusWorkspace(
+      treasuryObject(await _request('/collector-surplus/workspace?$query')),
+      expectedUserId: _initial.userId,
+      kind: kind,
+      limit: limit,
+      offset: offset,
+    );
+    _current();
+    if (!changedMode &&
+        accountId == null &&
+        _surplusAuthorization != null &&
+        _surplusAuthorization != value.authorization) {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    if (accountId == null) _surplusAuthorization = value.authorization;
+    if (requestedMode != null && value.mode != requestedMode) {
+      throw const TreasuryAccessChanged();
+    }
+    _surplusMode = requestedMode;
+    _surplus = value;
+    return value;
+  }
+
+  @override
+  Future<Map<String, dynamic>> collectorSurplusDetail(
+    CollectorSurplusKind kind,
+    String id,
+  ) async {
+    requireTreasuryId(id);
+    if (kind == CollectorSurplusKind.remittances ||
+        kind == CollectorSurplusKind.openings) {
+      throw ArgumentError('Use the current authorized workspace record.');
+    }
+    final row = treasuryObject(
+      await _request(
+        '/collector-surplus/${kind.name}/$id${_surplusMode == null ? '' : '?mode=$_surplusMode'}',
+      ),
+    );
+    if (row['id'] != id) {
+      throw const FormatException('The selected surplus record changed.');
+    }
+    validateCollectorRecord(
+      row,
+      kind,
+      ownUserId: _surplus?.mode == 'own' ? _initial.userId : null,
+    );
+    return treasuryObject(immutableTreasury(row));
+  }
+
+  @override
+  Future<CollectorSettlementPreview> collectorSettlementPreview(
+    String remittanceId,
+    String accountId,
+  ) async {
+    _online();
+    requireTreasuryId(remittanceId);
+    final w = await loadCollectorSurplus(
+      kind: CollectorSurplusKind.remittances,
+      accountId: accountId,
+    );
+    final account = w.account(accountId);
+    if (account == null) throw const TreasuryAccessChanged();
+    final value = CollectorSettlementPreview(
+      treasuryObject(
+        await _request(
+          '/collector-surplus/remittances/$remittanceId/preview',
+          method: 'POST',
+          body: {
+            'account_id': account.id,
+            'expected_version': account.version,
+            'credit_application_id': null,
+            'credit_application_version': null,
+          },
+        ),
+      ),
+      userId: w.actor.userId,
+      deviceId: w.actor.deviceId,
+      remittanceId: remittanceId,
+      account: account,
+    );
+    _settlementPreview = value;
+    return value;
+  }
+
+  void _collectorPermitted(TreasuryAction action, String accountId) {
+    _current();
+    final w = _surplus;
+    if (w == null || !w.capability(collectorCapability(action))) {
+      throw StateError(
+        'This surplus action is disabled or unavailable for your current authority.',
+      );
+    }
+    if (collectorOwnActions.contains(action)) {
+      if (w.mode != 'own') throw const TreasuryAccessChanged();
+    } else if (w.mode != 'staff' ||
+        w.account(accountId)?.permits(collectorCapability(action)) != true) {
+      throw const TreasuryAccessChanged();
+    }
+  }
+
+  Future<TreasuryResult> _executeCollectorSurplus(
+    TreasuryCommand command,
+  ) async {
+    _online();
+    if (_busy || _attempt != null) {
+      throw StateError(
+        'Check the exact pending request before another submission.',
+      );
+    }
+    _busy = true;
+    try {
+      final w = await loadCollectorSurplus();
+      final body = command.toJson();
+      final records = <String, dynamic>{};
+      for (final entry in <String, CollectorSurplusKind>{
+        'credit': CollectorSurplusKind.credits,
+        'case': CollectorSurplusKind.cases,
+        'count': CollectorSurplusKind.counts,
+        'exception': CollectorSurplusKind.exceptions,
+        'action': CollectorSurplusKind.actions,
+        'collector_request': CollectorSurplusKind.requests,
+      }.entries) {
+        final id = body['${entry.key}_id'];
+        if (id == null) continue;
+        final row = await collectorSurplusDetail(entry.value, id as String);
+        if (row['version'] != body['${entry.key}_version']) {
+          throw StateError('The source changed. Refresh and review again.');
+        }
+        records[entry.key == 'action'
+                ? 'action_record'
+                : entry.key == 'collector_request'
+                ? 'request'
+                : entry.key] =
+            row;
+      }
+      if (command.action == TreasuryAction.collectorSurplusOpeningActivate) {
+        Map<String, dynamic>? anchor;
+        for (var offset = 0; offset <= 100000; offset += 100) {
+          final page = await loadCollectorSurplus(
+            kind: CollectorSurplusKind.openings,
+            accountId: command.accountId,
+            mode: 'staff',
+            limit: 100,
+            offset: offset,
+          );
+          anchor = page.page.items
+              .where((r) => r['id'] == body['anchor_id'])
+              .firstOrNull;
+          if (anchor != null || !page.page.hasMore) break;
+        }
+        if (anchor == null ||
+            anchor['version'] != body['anchor_version'] ||
+            anchor['status'] != 'draft') {
+          throw StateError(
+            'The opening anchor changed. Refresh and review again.',
+          );
+        }
+        records['opening_anchor'] = anchor;
+      }
+      if (command.action == TreasuryAction.collectorSurplusOpeningPrepare) {
+        final choices = w.raw['opening_choices'] as List? ?? [];
+        if (!choices.whereType<Map>().any(
+          (o) =>
+              o['id'] == body['opening_id'] &&
+              o['version'] == body['opening_version'] &&
+              o['account_id'] == command.accountId &&
+              o['status'] == 'active',
+        )) {
+          throw StateError(
+            'The active opening changed. Refresh and review again.',
+          );
+        }
+        if (!(w.raw['collector_choices'] as List).whereType<Map>().any(
+          (c) => c['id'] == body['collector_user_id'],
+        )) {
+          throw const TreasuryAccessChanged();
+        }
+      }
+      Map<String, dynamic>? origin =
+          records['credit'] as Map<String, dynamic>? ??
+          records['exception'] as Map<String, dynamic>?;
+      final accountId = collectorOwnActions.contains(command.action)
+          ? requireTreasuryId(
+              origin?['origin_account_id'] ?? origin?['account_id'],
+            )
+          : command.accountId;
+      _collectorPermitted(command.action, accountId);
+      final account = w.account(accountId);
+      if (!collectorOwnActions.contains(command.action) &&
+          account?.version != command.expectedVersion) {
+        throw StateError('Account changed. Refresh and review before sending.');
+      }
+      final context = collectorOwnActions.contains(command.action)
+          ? requireTreasuryId(origin?['ledger_context_id'])
+          : account!.ledgerContextId;
+      for (final row in records.values.whereType<Map<String, dynamic>>()) {
+        if (row['ledger_context_id'] != null &&
+            row['ledger_context_id'] != context) {
+          throw const TreasuryAccessChanged();
+        }
+      }
+      if (body['action_id'] != null && body['event_id'] != null) {
+        final a = records['action_record'] as Map;
+        if (a['event_id'] != body['event_id'] ||
+            a['event_version'] != body['event_version'] ||
+            body['reviewed_amount'] != null &&
+                a['amount'] != body['reviewed_amount']) {
+          throw StateError(
+            'Review the unchanged actual return event and principal.',
+          );
+        }
+      }
+      if (command.action == TreasuryAction.collectorCountRecord ||
+          command.action == TreasuryAction.collectorCountAccept) {
+        final count = records['count'] as Map?;
+        final remittance = body['remittance_id'] ?? count?['remittance_id'];
+        final reviewed = _settlementPreview;
+        if (command.action == TreasuryAction.collectorCountRecord &&
+            (reviewed == null ||
+                reviewed.raw['remittance_id'] != remittance ||
+                reviewed.digest != body['source_digest'])) {
+          throw StateError(
+            'Review the current receiving snapshot before counting.',
+          );
+        }
+        final fresh = await collectorSettlementPreview(
+          remittance as String,
+          accountId,
+        );
+        if (!fresh.canCount ||
+            fresh.digest != body['source_digest'] ||
+            fresh.raw['account_version'] != command.expectedVersion) {
+          throw StateError(
+            'Sources changed or count is blocked. Review again.',
+          );
+        }
+        records['remittance'] = {
+          'id': remittance,
+          'collector_user_id': fresh.raw['collector_user_id'],
+        };
+        if (count != null && count['disposition'] != 'counted_ready') {
+          throw StateError('A short count cannot accept the full remittance.');
+        }
+      }
+      if (body['source_digest'] != null &&
+          records['case'] != null &&
+          records['case']['source_digest'] != body['source_digest']) {
+        throw StateError('The identification source changed. Review again.');
+      }
+      await _hold({
+        'contract_version': 1,
+        'surplus': true,
+        'surplus_mode': w.mode,
+        'scope': _initialScope,
+        'external_device_id': deviceId,
+        'actor_user_id': w.actor.userId,
+        'device_id': w.actor.deviceId,
+        'request_id': command.requestId,
+        'action': command.action.code,
+        'account_id': accountId,
+        'ledger_context_id': context,
+        'path': '/actions',
+        'body': body,
+        'surplus_records': records,
+        'upload': null,
+      });
+      return await _send();
+    } finally {
+      _busy = false;
+    }
+  }
+
+  @override
+  Future<ClientDocumentFile> exportCollectorSurplus({
+    CollectorSurplusKind kind = CollectorSurplusKind.credits,
+    String? accountId,
+  }) async {
+    final w = await loadCollectorSurplus(kind: kind, accountId: accountId);
+    final query = Uri(
+      queryParameters: {
+        'kind': kind.name,
+        if (accountId != null) 'account_id': accountId,
+        if (_surplusMode != null) 'mode': _surplusMode!,
+      },
+    ).query;
+    final response = await _client.get(
+      ApiConfig.endpoint('/api/v1/treasury/collector-surplus/export?$query'),
+      headers: _headers(),
+    );
+    _current();
+    if ([401, 403].contains(response.statusCode)) {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    if (response.statusCode != 200 ||
+        response.headers['content-type']?.split(';').first !=
+            'application/json') {
+      throw const FormatException('The private report is unavailable.');
+    }
+    final envelope = treasuryObject(
+      jsonDecode(utf8.decode(response.bodyBytes)),
+    );
+    if (envelope['success'] != true) {
+      throw const FormatException('The private report is unavailable.');
+    }
+    final exported = treasuryObject(envelope['data']);
+    final page = exported['items'];
+    if (exported['collector_surplus_contract_version'] != 1 ||
+        exported['mode'] != w.mode ||
+        treasuryObject(exported['actor'])['user_id'] != w.actor.userId ||
+        treasuryObject(exported['actor'])['device_id'] != w.actor.deviceId ||
+        exported['kind'] != kind.name ||
+        page is! List ||
+        exported['has_more'] != false ||
+        exported['total_count'] != page.length) {
+      throw const FormatException('The private report scope is incomplete.');
+    }
+    validateCollectorProjection({
+      'items': page,
+      'totals': exported['totals'],
+    }, ownUserId: w.mode == 'own' ? _initial.userId : null);
+    for (final row in page) {
+      validateCollectorRecord(
+        treasuryObject(row),
+        kind,
+        ownUserId: w.mode == 'own' ? _initial.userId : null,
+      );
+    }
+    return ClientDocumentFile(
+      filename: 'collector-excess-${kind.name}.json',
+      bytes: Uint8List.fromList(response.bodyBytes),
+      mediaType: 'application/json',
+    );
+  }
+
   TreasuryResult _validate(Object? raw, Map<String, dynamic> held) {
     try {
+      if (held['surplus'] == true) return validateCollectorOutcome(raw, held);
       final value = TreasuryResult.fromJson(treasuryObject(raw));
       final result = value.result;
       if (value.raw['request_id'] != held['request_id'] ||
@@ -499,6 +904,9 @@ class SpinaTreasuryRepository implements TreasuryRepository {
               entity != null &&
               (entity is! Map || entity['amount'] != body['amount'])) {
             throw const TreasuryUncertain();
+          }
+          if (held['collector_source'] is Map) {
+            validateCollectorDebitOutcome(value, held);
           }
           if (held['action'] == 'receipt_verify' &&
               (result['receipt'] is! Map ||
@@ -655,6 +1063,9 @@ class SpinaTreasuryRepository implements TreasuryRepository {
     TreasuryCommand command, {
     String? targetId,
   }) async {
+    if (isCollectorSurplusAction(command.action)) {
+      return _executeCollectorSurplus(command);
+    }
     _online();
     if (_busy || _attempt != null) {
       throw StateError(
@@ -693,16 +1104,42 @@ class SpinaTreasuryRepository implements TreasuryRepository {
           );
         }
       }
-      await _hold(
-        _held(
-          requestId: command.requestId,
-          action: command.action.code,
-          accountId: command.accountId,
-          path: '/actions',
-          body: command.toJson(),
-          targetId: targetId ?? _commandTarget(command),
-        ),
+      Map<String, dynamic>? collectorSource;
+      final submittedBody = command.toJson();
+      if (command.action == TreasuryAction.disbursementRecord &&
+          [
+            'collector_surplus_return',
+            'collector_custody_exception_return',
+          ].contains(submittedBody['purpose'])) {
+        await loadCollectorSurplus(mode: 'staff');
+        collectorSource = await collectorSurplusDetail(
+          CollectorSurplusKind.actions,
+          requireTreasuryId(submittedBody['source_id']),
+        );
+        if (collectorSource['version'] != submittedBody['source_version'] ||
+            collectorSource['status'] != 'reserved' ||
+            collectorSource['amount'] != submittedBody['amount'] ||
+            collectorSource['collector_user_id'] != submittedBody['payee_id'] ||
+            collectorSource['paying_account_id'] != command.accountId ||
+            collectorSource['ledger_context_id'] != account?.ledgerContextId ||
+            submittedBody['direction'] != 'debit') {
+          throw StateError(
+            'The approved return changed. Refresh and review before recording an actual observation.',
+          );
+        }
+      }
+      final pending = _held(
+        requestId: command.requestId,
+        action: command.action.code,
+        accountId: command.accountId,
+        path: '/actions',
+        body: submittedBody,
+        targetId: targetId ?? _commandTarget(command),
       );
+      if (collectorSource != null) {
+        pending['collector_source'] = collectorSource;
+      }
+      await _hold(pending);
       return await _send();
     } finally {
       _busy = false;
@@ -716,7 +1153,11 @@ class SpinaTreasuryRepository implements TreasuryRepository {
     if (_attempt == null) return null;
     _busy = true;
     try {
-      await loadWorkspace();
+      if (_attempt!['surplus'] == true) {
+        await loadCollectorSurplus();
+      } else {
+        await loadWorkspace();
+      }
       final held = _attempt!;
       final heldUpload = held['upload'];
       final raw = await _request('/requests/${held['request_id']}');
@@ -739,11 +1180,18 @@ class SpinaTreasuryRepository implements TreasuryRepository {
     }
     _busy = true;
     try {
-      await loadWorkspace();
-      _permitted(
-        _attempt!['action'] as String,
-        _attempt!['account_id'] as String,
-      );
+      if (_attempt!['surplus'] == true) {
+        await loadCollectorSurplus();
+        // Recovery is read-only even after entry disable. Explicit resend still requires current capability.
+        final action = TreasuryAction.fromCode(_attempt!['action'] as String);
+        _collectorPermitted(action, _attempt!['account_id'] as String);
+      } else {
+        await loadWorkspace();
+        _permitted(
+          _attempt!['action'] as String,
+          _attempt!['account_id'] as String,
+        );
+      }
       return await _send();
     } finally {
       _busy = false;
@@ -1056,6 +1504,8 @@ class SpinaTreasuryRepository implements TreasuryRepository {
   void dispose() {
     _disposed = true;
     _workspace = null;
+    _surplus = null;
+    _settlementPreview = null;
     _lastPreview = null;
     _previewInput = null;
     _attempt = null;

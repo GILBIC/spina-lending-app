@@ -14,8 +14,10 @@ class RemittanceRecipient {
   static RemittanceRecipient? fromPayload(Object? value) {
     final data = stringMap(value);
     final userId = firstNonEmptyString(<Object?>[data['user_id'], data['id']]);
-    final fullName =
-        firstNonEmptyString(<Object?>[data['full_name'], data['name']]);
+    final fullName = firstNonEmptyString(<Object?>[
+      data['full_name'],
+      data['name'],
+    ]);
     if (userId == null || fullName == null) {
       return null;
     }
@@ -24,7 +26,7 @@ class RemittanceRecipient {
       fullName: fullName,
       roleName:
           firstNonEmptyString(<Object?>[data['role_name'], data['role']]) ??
-              'Recipient',
+          'Recipient',
     );
   }
 }
@@ -106,9 +108,9 @@ class RemittanceSummary {
     final rawItems = data['items'];
     final items = rawItems is Iterable
         ? rawItems
-            .map(RemittanceItem.fromPayload)
-            .whereType<RemittanceItem>()
-            .toList(growable: false)
+              .map(RemittanceItem.fromPayload)
+              .whereType<RemittanceItem>()
+              .toList(growable: false)
         : const <RemittanceItem>[];
     final exactCoveredDateCount = items.fold<int>(
       0,
@@ -128,10 +130,12 @@ class RemittanceSummary {
       paymentCount: firstNumber(<Object?>[data['payment_count']])?.toInt() ?? 0,
       unableToPayCount:
           firstNumber(<Object?>[data['unable_to_pay_count']])?.toInt() ?? 0,
-      coveredPaymentCount:
-          exactCoveredDateCount > 0 ? exactCoveredDateCount : serverCoveredCount,
+      coveredPaymentCount: exactCoveredDateCount > 0
+          ? exactCoveredDateCount
+          : serverCoveredCount,
       clientCount: firstNumber(<Object?>[data['client_count']])?.toInt() ?? 0,
-      totalAmount: firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
+      totalAmount:
+          firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
       items: items,
     );
   }
@@ -232,11 +236,47 @@ List<DateTime> _dateList(Object? value) {
   if (value is! Iterable) {
     return const <DateTime>[];
   }
-  final dates = value
-      .map((item) => DateTime.tryParse(item.toString()))
-      .whereType<DateTime>()
-      .toSet()
-      .toList(growable: false)
-    ..sort((left, right) => left.compareTo(right));
+  final dates =
+      value
+          .map((item) => DateTime.tryParse(item.toString()))
+          .whereType<DateTime>()
+          .toSet()
+          .toList(growable: false)
+        ..sort((left, right) => left.compareTo(right));
   return dates;
+}
+
+/// Explicit server gate; absence or an old response never permits legacy cash acceptance.
+class RemittanceReceivingContract {
+  const RemittanceReceivingContract({
+    required this.remittanceId,
+    required this.recipientUserId,
+    required this.countRequired,
+    required this.legacyReceiveAllowed,
+  });
+  factory RemittanceReceivingContract.fromPayload(
+    Object? value, {
+    required String remittanceId,
+    required String recipientUserId,
+  }) {
+    final row = stringMap(value);
+    if (row['collector_surplus_contract_version'] != 1 ||
+        row['remittance_id'] != remittanceId ||
+        row['recipient_user_id'] != recipientUserId ||
+        row['count_required'] is! bool ||
+        row['legacy_receive_allowed'] is! bool ||
+        row['count_required'] == row['legacy_receive_allowed']) {
+      throw const FormatException(
+        'Update required: the current receiving contract is unavailable. Cash acceptance is disabled.',
+      );
+    }
+    return RemittanceReceivingContract(
+      remittanceId: remittanceId,
+      recipientUserId: recipientUserId,
+      countRequired: row['count_required'] as bool,
+      legacyReceiveAllowed: row['legacy_receive_allowed'] as bool,
+    );
+  }
+  final String remittanceId, recipientUserId;
+  final bool countRequired, legacyReceiveAllowed;
 }

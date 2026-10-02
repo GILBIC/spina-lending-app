@@ -59,6 +59,65 @@ class TreasuryMoney {
 }
 
 enum TreasuryAction {
+  collectorSurplusReturnReverse(
+    'collector_surplus_return_reverse',
+    'Record observed return reversal',
+  ),
+  collectorCountAccept('collector_count_accept', 'Count accept'),
+  collectorCountRecord('collector_count_record', 'Count record'),
+  collectorCustodyExceptionRecord(
+    'collector_custody_exception_record',
+    'Custody exception record',
+  ),
+  collectorCustodyExceptionReturnAcknowledge(
+    'collector_custody_exception_return_acknowledge',
+    'Custody exception return acknowledge',
+  ),
+  collectorCustodyExceptionReturnPrepare(
+    'collector_custody_exception_return_prepare',
+    'Custody exception return prepare',
+  ),
+  collectorSurplusActionCancel(
+    'collector_surplus_action_cancel',
+    'Surplus action cancel',
+  ),
+  collectorSurplusApplicationPrepare(
+    'collector_surplus_application_prepare',
+    'Surplus application prepare',
+  ),
+  collectorSurplusApplicationRequest(
+    'collector_surplus_application_request',
+    'Surplus application request',
+  ),
+  collectorSurplusOpeningActivate(
+    'collector_surplus_opening_activate',
+    'Surplus opening activate',
+  ),
+  collectorSurplusOpeningPrepare(
+    'collector_surplus_opening_prepare',
+    'Surplus opening prepare',
+  ),
+  collectorSurplusRecognize('collector_surplus_recognize', 'Surplus recognize'),
+  collectorSurplusResolveSource(
+    'collector_surplus_resolve_source',
+    'Surplus resolve source',
+  ),
+  collectorSurplusReturnAcknowledge(
+    'collector_surplus_return_acknowledge',
+    'Surplus return acknowledge',
+  ),
+  collectorSurplusReturnPrepare(
+    'collector_surplus_return_prepare',
+    'Surplus return prepare',
+  ),
+  collectorSurplusReturnRecord(
+    'collector_surplus_return_record',
+    'Surplus return record',
+  ),
+  collectorSurplusReturnRequest(
+    'collector_surplus_return_request',
+    'Surplus return request',
+  ),
   accountConfigure('account_configure', 'Configure account'),
   accountGrant('account_grant', 'Account access'),
   openingPrepare('opening_prepare', 'Prepare observed opening'),
@@ -110,6 +169,7 @@ enum TreasuryFieldKind {
   observations,
   followup,
   digest,
+  destination,
 }
 
 class TreasuryField {
@@ -136,6 +196,25 @@ class TreasuryField {
       throw FormatException('$label is required.');
     }
     switch (kind) {
+      case TreasuryFieldKind.destination:
+        final row = treasuryObject(value);
+        if (row.keys.any((k) => !['kind', 'recipient_reference'].contains(k)) ||
+            !['physical_cash', 'gcash', 'bank'].contains(row['kind']) ||
+            !row.containsKey('recipient_reference')) {
+          throw const FormatException(
+            'Review the exact recipient destination.',
+          );
+        }
+        final ref = row['recipient_reference'];
+        if (ref != null &&
+                (ref is! String || ref.trim().isEmpty || ref.length > 200) ||
+            row['kind'] != 'physical_cash' && ref == null) {
+          throw const FormatException(
+            'Recipient reference is required for wallet or bank.',
+          );
+        }
+        return immutableTreasury(row);
+
       case TreasuryFieldKind.id:
         return requireTreasuryId(value);
       case TreasuryFieldKind.money:
@@ -308,6 +387,10 @@ const treasuryPermissionCodes = [
   'treasury.transfer.record',
   'treasury.reconcile',
   'treasury.adjust',
+  'treasury.collector_surplus.receive',
+  'treasury.collector_surplus.resolve',
+  'treasury.collector_surplus.settle',
+  'treasury.collector_surplus.view',
 ];
 const idKind = TreasuryFieldKind.id,
     textKind = TreasuryFieldKind.text,
@@ -395,6 +478,348 @@ const transactionFields = [
   reasonField,
 ];
 final Map<TreasuryAction, List<TreasuryField>> treasuryFields = {
+  TreasuryAction.collectorSurplusReturnReverse: [
+    TreasuryField('action_id', 'Action id', TreasuryFieldKind.id),
+    TreasuryField(
+      'action_version',
+      'Action version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField(
+      'provider',
+      'Provider',
+      TreasuryFieldKind.text,
+      maxLength: 200,
+    ),
+    TreasuryField(
+      'reference',
+      'Reference',
+      TreasuryFieldKind.text,
+      maxLength: 200,
+    ),
+    TreasuryField('effective_at', 'Effective at', TreasuryFieldKind.instant),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'recipient_attestation',
+      'Recipient attestation',
+      TreasuryFieldKind.text,
+      maxLength: 1000,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorCountAccept: [
+    TreasuryField('count_id', 'Count id', TreasuryFieldKind.id),
+    TreasuryField('count_version', 'Count version', TreasuryFieldKind.integer),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField(
+      'physical_receipt_acknowledged',
+      'Physical receipt acknowledged',
+      TreasuryFieldKind.boolean,
+    ),
+    TreasuryField(
+      'credit_application_id',
+      'Credit application id',
+      TreasuryFieldKind.id,
+      required: false,
+    ),
+    TreasuryField(
+      'credit_application_version',
+      'Credit application version',
+      TreasuryFieldKind.integer,
+      required: false,
+    ),
+  ],
+  TreasuryAction.collectorCountRecord: [
+    TreasuryField('remittance_id', 'Remittance id', TreasuryFieldKind.id),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField('counted_amount', 'Counted amount', TreasuryFieldKind.money),
+    TreasuryField('counted_at', 'Counted at', TreasuryFieldKind.instant),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'recipient_attestation',
+      'Recipient attestation',
+      TreasuryFieldKind.text,
+      maxLength: 1000,
+    ),
+    TreasuryField(
+      'review_acknowledged',
+      'Review acknowledged',
+      TreasuryFieldKind.boolean,
+    ),
+  ],
+  TreasuryAction.collectorCustodyExceptionRecord: [
+    TreasuryField('count_id', 'Count id', TreasuryFieldKind.id),
+    TreasuryField('count_version', 'Count version', TreasuryFieldKind.integer),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField(
+      'retained_amount',
+      'Retained amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField('retained_at', 'Retained at', TreasuryFieldKind.instant),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'holder_attestation',
+      'Holder attestation',
+      TreasuryFieldKind.text,
+      maxLength: 1000,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorCustodyExceptionReturnAcknowledge: [
+    TreasuryField('action_id', 'Action id', TreasuryFieldKind.id),
+    TreasuryField(
+      'action_version',
+      'Action version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('event_id', 'Event id', TreasuryFieldKind.id),
+    TreasuryField('event_version', 'Event version', TreasuryFieldKind.integer),
+    TreasuryField(
+      'reviewed_amount',
+      'Reviewed amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField(
+      'confirmation',
+      'Confirmation',
+      TreasuryFieldKind.choice,
+      choices: ['received', 'not_received'],
+    ),
+    TreasuryField(
+      'acknowledged_at',
+      'Acknowledged at',
+      TreasuryFieldKind.instant,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+    TreasuryField('exception_id', 'Exception id', TreasuryFieldKind.id),
+    TreasuryField(
+      'exception_version',
+      'Exception version',
+      TreasuryFieldKind.integer,
+    ),
+  ],
+  TreasuryAction.collectorCustodyExceptionReturnPrepare: [
+    TreasuryField('exception_id', 'Exception id', TreasuryFieldKind.id),
+    TreasuryField(
+      'exception_version',
+      'Exception version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusActionCancel: [
+    TreasuryField('action_id', 'Action id', TreasuryFieldKind.id),
+    TreasuryField(
+      'action_version',
+      'Action version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusApplicationPrepare: [
+    TreasuryField('credit_id', 'Credit id', TreasuryFieldKind.id),
+    TreasuryField(
+      'credit_version',
+      'Credit version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField(
+      'collector_request_id',
+      'Collector request id',
+      TreasuryFieldKind.id,
+    ),
+    TreasuryField(
+      'collector_request_version',
+      'Collector request version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('remittance_id', 'Remittance id', TreasuryFieldKind.id),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusApplicationRequest: [
+    TreasuryField('credit_id', 'Credit id', TreasuryFieldKind.id),
+    TreasuryField(
+      'credit_version',
+      'Credit version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('remittance_id', 'Remittance id', TreasuryFieldKind.id),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusOpeningActivate: [
+    TreasuryField('anchor_id', 'Anchor id', TreasuryFieldKind.id),
+    TreasuryField(
+      'anchor_version',
+      'Anchor version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusOpeningPrepare: [
+    const TreasuryField(
+      'anchor_kind',
+      'Opening classification',
+      TreasuryFieldKind.choice,
+      required: false,
+      choices: ['credit', 'pending_excess'],
+      defaultValue: 'credit',
+    ),
+    TreasuryField(
+      'collector_user_id',
+      'Collector user id',
+      TreasuryFieldKind.id,
+    ),
+    TreasuryField('opening_id', 'Opening id', TreasuryFieldKind.id),
+    TreasuryField(
+      'opening_version',
+      'Opening version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'overlap_review_acknowledged',
+      'Overlap review acknowledged',
+      TreasuryFieldKind.boolean,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusRecognize: [
+    TreasuryField(
+      'source_review_acknowledged',
+      'Source review acknowledged',
+      TreasuryFieldKind.boolean,
+    ),
+    TreasuryField('case_id', 'Case id', TreasuryFieldKind.id),
+    TreasuryField('case_version', 'Case version', TreasuryFieldKind.integer),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusResolveSource: [
+    TreasuryField('case_id', 'Case id', TreasuryFieldKind.id, required: false),
+    TreasuryField(
+      'case_version',
+      'Case version',
+      TreasuryFieldKind.integer,
+      required: false,
+    ),
+    TreasuryField(
+      'credit_id',
+      'Credit id',
+      TreasuryFieldKind.id,
+      required: false,
+    ),
+    TreasuryField(
+      'credit_version',
+      'Credit version',
+      TreasuryFieldKind.integer,
+      required: false,
+    ),
+    TreasuryField('source_id', 'Source id', TreasuryFieldKind.id),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusReturnAcknowledge: [
+    TreasuryField('action_id', 'Action id', TreasuryFieldKind.id),
+    TreasuryField(
+      'action_version',
+      'Action version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('event_id', 'Event id', TreasuryFieldKind.id),
+    TreasuryField('event_version', 'Event version', TreasuryFieldKind.integer),
+    TreasuryField(
+      'reviewed_amount',
+      'Reviewed amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField(
+      'confirmation',
+      'Confirmation',
+      TreasuryFieldKind.choice,
+      choices: ['received', 'not_received'],
+    ),
+    TreasuryField(
+      'acknowledged_at',
+      'Acknowledged at',
+      TreasuryFieldKind.instant,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+    TreasuryField('credit_id', 'Credit id', TreasuryFieldKind.id),
+    TreasuryField(
+      'credit_version',
+      'Credit version',
+      TreasuryFieldKind.integer,
+    ),
+  ],
+  TreasuryAction.collectorSurplusReturnPrepare: [
+    TreasuryField('credit_id', 'Credit id', TreasuryFieldKind.id),
+    TreasuryField(
+      'credit_version',
+      'Credit version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField(
+      'collector_request_id',
+      'Collector request id',
+      TreasuryFieldKind.id,
+    ),
+    TreasuryField(
+      'collector_request_version',
+      'Collector request version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('destination', 'Destination', TreasuryFieldKind.destination),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusReturnRecord: [
+    TreasuryField('action_id', 'Action id', TreasuryFieldKind.id),
+    TreasuryField(
+      'action_version',
+      'Action version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('event_id', 'Event id', TreasuryFieldKind.id),
+    TreasuryField('event_version', 'Event version', TreasuryFieldKind.integer),
+    TreasuryField(
+      'acknowledgment_id',
+      'Acknowledgment id',
+      TreasuryFieldKind.id,
+    ),
+    TreasuryField(
+      'acknowledgment_version',
+      'Acknowledgment version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.collectorSurplusReturnRequest: [
+    TreasuryField('credit_id', 'Credit id', TreasuryFieldKind.id),
+    TreasuryField(
+      'credit_version',
+      'Credit version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('amount', 'Amount', TreasuryFieldKind.positiveMoney),
+    TreasuryField('destination', 'Destination', TreasuryFieldKind.destination),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
   TreasuryAction.accountConfigure: const [
     TreasuryField('ledger_context_id', 'Ledger context ID', idKind),
     TreasuryField(
@@ -545,6 +970,8 @@ final Map<TreasuryAction, List<TreasuryField>> treasuryFields = {
         'salary_advance',
         'expense',
         'refund',
+        'collector_surplus_return',
+        'collector_custody_exception_return',
         'owner_contribution',
         'owner_withdrawal',
         'deposit',
@@ -709,11 +1136,18 @@ class TreasuryCommand {
   TreasuryCommand(
     this.action, {
     required String requestId,
-    required String accountId,
-    required int expectedVersion,
+    String? accountId,
+    int? expectedVersion,
     required Map<String, dynamic> fields,
   }) {
-    if (expectedVersion < (action == TreasuryAction.accountConfigure ? 0 : 1)) {
+    final own = collectorOwnActions.contains(action);
+    if (own && (accountId != null || expectedVersion != null)) {
+      throw const FormatException("Own requests carry no account authority.");
+    }
+    if (!own &&
+        (expectedVersion == null ||
+            expectedVersion <
+                (action == TreasuryAction.accountConfigure ? 0 : 1))) {
       throw const FormatException('Refresh the current account version.');
     }
     final schema = treasuryFields[action]!;
@@ -723,8 +1157,8 @@ class TreasuryCommand {
     final body = <String, dynamic>{
       'action': action.code,
       'request_id': requireTreasuryId(requestId),
-      'account_id': requireTreasuryId(accountId),
-      'expected_version': expectedVersion,
+      if (!own) 'account_id': requireTreasuryId(accountId),
+      if (!own) 'expected_version': expectedVersion,
     };
     for (final f in schema) {
       final value = f.parse(fields[f.key]);
@@ -735,6 +1169,24 @@ class TreasuryCommand {
     }
     if (action == TreasuryAction.openingActivate && body['confirmed'] != true) {
       throw const FormatException('Confirm the actual observed opening.');
+    }
+    for (final key in [
+      'review_acknowledged',
+      'physical_receipt_acknowledged',
+      'source_review_acknowledged',
+      'overlap_review_acknowledged',
+    ]) {
+      if (body.containsKey(key) && body[key] != true) {
+        throw FormatException('Explicit $key review is required.');
+      }
+    }
+    if (action == TreasuryAction.collectorSurplusResolveSource &&
+        ((body['case_id'] == null) == (body['credit_id'] == null) ||
+            (body['case_id'] == null) != (body['case_version'] == null) ||
+            (body['credit_id'] == null) != (body['credit_version'] == null))) {
+      throw const FormatException(
+        'Choose one exact case or credit with its version.',
+      );
     }
     _body = treasuryObject(immutableTreasury(body));
   }
@@ -947,3 +1399,22 @@ class TreasuryResult {
   int get version => raw['version'] as int;
   Map<String, dynamic> get result => raw['result'] as Map<String, dynamic>;
 }
+
+const collectorOwnActions = {
+  TreasuryAction.collectorSurplusReturnRequest,
+  TreasuryAction.collectorSurplusApplicationRequest,
+  TreasuryAction.collectorSurplusReturnAcknowledge,
+  TreasuryAction.collectorCustodyExceptionReturnAcknowledge,
+};
+bool isCollectorSurplusAction(TreasuryAction action) =>
+    action.code.startsWith('collector_');
+String collectorCapability(TreasuryAction action) => switch (action) {
+  TreasuryAction.collectorCountRecord => 'count_record',
+  TreasuryAction.collectorCountAccept => 'count_accept',
+  TreasuryAction.collectorCustodyExceptionRecord => 'exception_record',
+  TreasuryAction.collectorCustodyExceptionReturnPrepare =>
+    'exception_return_prepare',
+  TreasuryAction.collectorCustodyExceptionReturnAcknowledge =>
+    'exception_acknowledge',
+  _ => action.code.replaceFirst('collector_surplus_', ''),
+};
