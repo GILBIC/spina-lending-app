@@ -1,4 +1,14 @@
 // Private, mount-owned reads. No data survives disposal or an authority change.
+// Buttons and GET regions may be replaced; pending and uncertain writes may not.
+export function createClientMutationController() {
+  const states=new Map();let disposed=false;
+  const blocked=key=>disposed || states.has(key);
+  return {blocked,state:key=>states.get(key),pending:()=>[...states.values()].includes('pending'),uncertain:()=>[...states.values()].includes('uncertain'),
+    begin(key){if(blocked(key))return false;states.set(key,'pending');return true;},
+    complete(key,{remember=true}={}){if(!disposed){if(remember)states.set(key,'saved');else states.delete(key);}},
+    fail(key,error){if(disposed)return;if(error?.code==='network_uncertain'||error?.code==='client_result_unverified'||error?.status===0||error?.status>=500)states.set(key,'uncertain');else states.delete(key);},
+    dispose(){disposed=true;states.clear();}};
+}
 export function createClientReadController({signal, isCurrent = () => true, onChange = () => {}} = {}) {
   const entries = new Map();
   const controller = new AbortController();
