@@ -12,10 +12,10 @@ function reviewable(notice, actorId) {
     && notice.sender_user_id !== actorId && notice.status === 'pending' && notice.is_pending === true;
 }
 
-function validDetail(record, notice, actorId) {
+function validDetail(record, notice, actorId, pendingOnly = true) {
   return record?.remittance_id === notice.remittance_id && record.recipient_user_id === actorId
     && record.collector_user_id === notice.sender_user_id && record.collector_user_id !== actorId
-    && record.status === 'submitted' && text(record.remittance_number)
+    && (pendingOnly ? record.status === 'submitted' : ['submitted','received','rejected'].includes(record.status)) && text(record.remittance_number)
     && date(record.collection_date) && money(record.total_amount)
     && count(record.transaction_count) && record.transaction_count > 0
     && Array.isArray(record.items) && record.items.length === record.transaction_count
@@ -60,7 +60,7 @@ export function rejectedRemittanceMatches(result, record, actorId, reason) {
     && result.rejection_reason === reason.trim();
 }
 
-function detailMarkup(record) {
+function detailMarkup(record, decisionAllowed = true) {
   return `<article class="data-card">
     <h3>Review ${escapeHtml(record.remittance_number)}</h3>
     <p>From ${escapeHtml(record.collector_name)} to ${escapeHtml(record.recipient_name)} · ${escapeHtml(record.collection_date)}</p>
@@ -82,15 +82,17 @@ function detailMarkup(record) {
       <p>Evidence: ${escapeHtml(item.evidence_reference)} · Released: ${escapeHtml(item.released_at)}</p>
     </article>`).join('')}</div>` : '<p>No refund cash outflow is included.</p>'}
     ${record.note ? `<p>Handover note: ${escapeHtml(record.note)}</p>` : ''}
+    <p>Submitted: ${escapeHtml(record.submitted_at || 'Not recorded')} · Reviewed: ${escapeHtml(record.reviewed_at || 'Not recorded')} · Received: ${escapeHtml(record.received_at || 'Not recorded')} · Rejected: ${escapeHtml(record.rejected_at || 'Not recorded')}</p>
+    ${record.rejection_reason ? `<p>Rejection reason: ${escapeHtml(record.rejection_reason)}</p>` : ''}
     <p>Cash stays under the sender's responsibility until you physically receive it and SPINA confirms acceptance.</p>
-    <form class="entry-form" data-remittance-accept-form>
+    ${decisionAllowed ? `<form class="entry-form" data-remittance-accept-form>
       <label><input type="checkbox" name="reviewedPayments" /> I reviewed every included payment, receipt, covered date and refund cash outflow.</label>
       <label><input type="checkbox" name="physicallyReceived" /> I physically received and counted the cash matching the server cash total.</label>
       <button class="button button-primary" type="submit" data-remittance-accept disabled>Accept cash custody</button>
       <label>Reason for rejecting this remittance <textarea name="rejectionReason" maxlength="500"></textarea></label>
       <label><input type="checkbox" name="confirmRejection" /> Reject ${escapeHtml(record.remittance_number)}: cash remains with the sender and this handover cannot be accepted.</label>
       <button class="button button-secondary" type="button" data-remittance-reject disabled>Reject remittance</button>
-    </form>
+    </form>` : '<p>This is a read-only remittance record. No custody decision is available.</p>'}
     <button class="button button-secondary" type="button" data-remittance-close>Close review</button>
   </article>`;
 }
@@ -99,6 +101,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   getSession = () => session, registerHandle, isOnline = () => globalThis.navigator?.onLine !== false }) {
   if (!root) return () => {};
   let notices = asArray(notifications).filter((notice) => notice && typeof notice === 'object');
+  let noticesLoaded = Array.isArray(notifications);
   const actorId = session?.user?.id;
   const canReceive = hasPermission(session, 'remittance.receive');
   const controller = new AbortController();
@@ -182,17 +185,20 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       ${badge(notice.status || 'unknown')}
       <p>${escapeHtml(notice.collection_date || '')} · ${escapeHtml(notice.transaction_count ?? '—')} transactions · ${escapeHtml(notice.client_count ?? '—')} clients</p>
       ${canReceive && !finalized.has(notice.notification_id) && reviewable(notice, actorId) ? `<button class="button button-secondary" type="button" data-review-notification="${escapeHtml(notice.notification_id)}" data-review-index="${index}">Review remittance</button>` : ''}
-    </article>`).join('') : emptyState('No remittance notification is waiting for this Employee.');
+      ${notice.recipient_user_id === actorId && UUID.test(notice.remittance_id) && UUID.test(notice.sender_user_id) ? `<button class="button button-outline" type="button" data-view-remittance="${index}">View full remittance record</button>` : ''}
+    </article>`).join('') : emptyState(noticesLoaded ? 'No remittance notification is waiting for this account.' : 'Remittance notices have not loaded. Use Refresh to retry this read.');
     for (const button of rows.querySelectorAll('[data-review-notification]')) {
       on(button, 'click', () => {opener = button; openReview(notices[Number(button.getAttribute('data-review-index'))]);});
     }
+    for(const button of rows.querySelectorAll('[data-view-remittance]'))on(button,'click',()=>{opener=button;openReview(notices[Number(button.getAttribute('data-view-remittance'))],true);});
     updateButtons();
   }
 
-  async function openReview(notice) {
-    if (!active() || locked || loading || submitting || !reviewable(notice, actorId)) return;
-    if(finalized.has(notice.notification_id))return;
-    if (!authorized(true)) {denied();return;}
+  async function openReview(notice, readOnly = false) {
+    if (!active() || loading || submitting || (!readOnly && (locked || !reviewable(notice, actorId)))) return;
+    if(!readOnly && finalized.has(notice.notification_id))return;
+    if (!authorized(!readOnly)) {denied();return;}
+    if(readOnly && (notice?.recipient_user_id!==actorId || !UUID.test(notice.remittance_id) || !UUID.test(notice.sender_user_id)))return;
     clearDetail();
     if (offline()) return;
     loading = true;
@@ -203,13 +209,14 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       const records = await api.request('/api/v1/remittances', { signal: controller.signal });
       if (!active() || current !== generation) return;
       const matches = asArray(records).filter((record) => record?.remittance_id === notice.remittance_id);
-      if (matches.length !== 1 || !validDetail(matches[0], notice, actorId)) {
+      if (matches.length !== 1 || !validDetail(matches[0], notice, actorId,!readOnly)) {
         message.textContent = 'The complete pending remittance could not be verified. Use Refresh to check its current status.';
         return;
       }
-      detail.innerHTML = detailMarkup(matches[0]);
+      detail.innerHTML = detailMarkup(matches[0],!readOnly);
       const reviewedEvidence = JSON.stringify(matches[0]);
       message.textContent = 'Review the complete list, then confirm physical cash receipt.';
+      if(readOnly){message.textContent='Full remittance evidence, read only.';on(detail.querySelector('[data-remittance-close]'),'click',()=>{if(submitting)return;clearDetail();updateButtons();opener?.focus?.();});detail.querySelector('[data-remittance-close]')?.focus();return;}
       const reviewed = detail.querySelector('[name="reviewedPayments"]');
       const received = detail.querySelector('[name="physicallyReceived"]');
       const reason = detail.querySelector('[name="rejectionReason"]');
@@ -324,7 +331,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
         if(!verified){message.textContent='Decision remains unconfirmed. No write will be repeated; check again or contact the authorized reviewer.';return;}
         finalized.add(notice.notification_id);pendingDecision=null;locked=false;clearDetail();message.textContent='The saved decision is confirmed by the current server records.';
       }else message.textContent='Current remittance notices loaded.';
-      notices=updated;onNoticesChanged?.(notices);renderNotices();
+      notices=updated;noticesLoaded=true;onNoticesChanged?.(notices);renderNotices();
     }catch(error){if(!active())return;if([401,403].includes(error?.status))denied();else message.textContent='Remittance notices could not refresh. Use Refresh to retry the read.';}
     finally{loading=false;if(active())updateButtons();}
   }
@@ -345,7 +352,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
 
   signal?.addEventListener('abort', cleanup, { once: true });
   on(root.querySelector('[data-remittance-retry]'),'click',refreshReadOnly);
-  registerHandle?.({refreshReadOnly,openRecord:async(id)=>{const notice=notices.find(item=>item?.remittance_id===id||item?.notification_id===id);if(notice)await openReview(notice);},isUncertain:()=>locked,isWritePending:()=>submitting,dispose:cleanup});
+  registerHandle?.({refreshReadOnly,openRecord:async(id)=>{const notice=notices.find(item=>item?.remittance_id===id||item?.notification_id===id);if(notice)await openReview(notice,!canReceive||!reviewable(notice,actorId));},isUncertain:()=>locked,isWritePending:()=>submitting,dispose:cleanup});
   if (signal?.aborted || !hasPermission(session, 'remittance.view')) cleanup();
   else renderNotices();
   return cleanup;
