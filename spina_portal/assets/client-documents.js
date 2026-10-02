@@ -94,11 +94,13 @@ export function mountClientDocuments({root, api, loans = [], payments = [], loan
   return dispose;
 }
 
-export async function downloadClientRecordCopy({api,kind,transactionId,signal,saveFile=savePrivateFile}) {
+export async function downloadClientRecordCopy({api,kind,transactionId,signal,isCurrent=()=>true,saveFile=savePrivateFile}) {
  if(!['statement','payment'].includes(kind)||kind==='payment'&&!UUID.test(transactionId))throw Error('A valid authorized record is required.');
- if(signal?.aborted)return;
+ if(!isCurrent()||signal?.aborted)return;
  const path=kind==='statement'?'/api/v1/client/statement/document':`/api/v1/client/payments/${encodeURIComponent(transactionId)}/document`;
- const blob=requirePrivateFile(await api.request(path,{responseType:'blob',signal}),'application/pdf');
- if(!signal?.aborted)saveFile(blob,kind==='statement'?'statement-of-account-record-copy.pdf':`payment-record-${transactionId}.pdf`);
+ const bytes=await api.request(path,{responseType:'blob',signal});
+ if(!isCurrent()||signal?.aborted)return;
+ const blob=requirePrivateFile(bytes,'application/pdf');
+ saveFile(blob,kind==='statement'?'statement-of-account-record-copy.pdf':`payment-record-${transactionId}.pdf`);
 }
 
