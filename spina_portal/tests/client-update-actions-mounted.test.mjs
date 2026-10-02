@@ -19,7 +19,7 @@ async function mount(t,count=65){
  let notes=Array.from({length:count},(_,i)=>note(i)),handle;
  const context={root,signal:controller.signal,getSession:()=>session,setNavigation(){},navigateTo:id=>navigated.push(id),registerWorkspaceHandle:value=>handle=value,api:{async request(path,options={}){
   calls.push({path,options});if(options.method){const pending=deferred();writes.push({path,options,...pending});return pending.promise;}
-  if(path==='/api/v1/activity-notifications')return structuredClone(notes);
+  if(path==='/api/v1/activity-notifications')return structuredClone(await notes);
   if(path==='/api/v1/client/payments')return {payments:[{transaction_id:transaction,receipt_number:'SYNTHETIC',amount:'12.34'},{transaction_id:otherTransaction,receipt_number:'SYNTHETIC',amount:'12.34'}]};
   if(path==='/api/v1/account')return {profile:{full_name:'Synthetic'}};
   if(path==='/api/v1/client/loans')return {loans:[]};
@@ -64,9 +64,9 @@ test('verified Mark as read recomputes loaded unread count locally and focuses o
  assert.equal(h.calls.length,before+1);assert.equal(h.region().querySelectorAll('.timeline-item').length,30);assert.equal(h.file.value,'synthetic.png');
 });
 
-for(const redraw of ['show-more','refresh'])test(`pending Mark as read survives ${redraw}, rejects duplicate replacement clicks and reconciles only its exact loaded ID`,async t=>{
+for(const redraw of ['show-more','payment-read redraw'])test(`pending Mark as read survives ${redraw}, rejects duplicate replacement clicks and reconciles only its exact loaded ID`,async t=>{
  const h=await mount(t),old=h.button(uid(1));fire(old,'click');await flush();
- if(redraw==='show-more'){h.more().focus();fire(h.more(),'click');}else await h.context.clientLoad('notifications',{refresh:true});old.isConnected=false;
+ if(redraw==='show-more'){h.more().focus();fire(h.more(),'click');}else await h.context.clientLoad('payments',{refresh:true});old.isConnected=false;
  const current=h.button(uid(1));assert.notEqual(current,old);current.disabled=false;fire(current,'click');await flush();assert.equal(h.writes.length,1,'the same pending ID must not submit twice after redraw');
  h.support.focus();h.complete();await flush();assert.equal(h.context.clientRaw.notifications[0].is_read,true);assert.equal(current.hidden,true);
  assert.match(current.parentElement.querySelector('[data-client-notification-status]').textContent,/Read/);assert.match(h.region().textContent,/65 loaded updates · 64 unread/);
@@ -79,8 +79,8 @@ for(const result of ['wrong-ID','wrong-recipient','unread','failed'])test(`${res
  await flush();assert.equal(h.context.clientRaw.notifications[0].is_read,false);assert.match(h.region().textContent,/65 loaded updates · 65 unread/);assert.equal(h.button(uid(1)).hidden,false);assert.equal(h.button(uid(1)).disabled,false);assert.equal(h.file.value,'synthetic.png');
 });
 
-test('a verified late result cannot resurrect a removed loaded notification',async t=>{
- const h=await mount(t),old=h.button(uid(1));fire(old,'click');await flush();h.setNotes([note(1)]);await h.context.clientLoad('notifications',{refresh:true});old.isConnected=false;h.complete();await flush();
+test('a verified late result cannot resurrect an ID absent from the current loaded array',async t=>{
+ const h=await mount(t),old=h.button(uid(1));fire(old,'click');await flush();h.context.clientRaw.notifications=[note(1)];await h.context.clientLoad('payments',{refresh:true});old.isConnected=false;h.complete();await flush();
  assert.deepEqual(h.context.clientRaw.notifications.map(item=>item.notification_id),[uid(2)]);assert.match(h.region().textContent,/1 loaded updates · 1 unread/);assert.equal(h.button(uid(1)),null);assert.equal(h.toasts.length,0);
 });
 
@@ -123,4 +123,34 @@ for(const loss of ['owner','abort'])test(`a pending verified update cannot alter
  if(loss==='owner'){h.session.user.id=uid(999);h.context.clientIsCurrent();}else h.controller.abort();
  h.root.innerHTML='<input name="replacement" />';const replacement=h.root.querySelector('input');replacement.value='Replacement draft';h.complete();await flush();
  assert.equal(h.root.querySelector('input'),replacement);assert.equal(replacement.value,'Replacement draft');assert.equal(h.toasts.length,0);
+});
+
+
+for(const outcome of ['saved','failed'])test(`pending Mark as read blocks overlapping notification reads and allows explicit refresh after ${outcome}`,async t=>{
+ const h=await mount(t),button=h.button(uid(1)),before=h.calls.filter(call=>call.path==='/api/v1/activity-notifications').length;
+ fire(button,'click');await flush();const snapshot=deferred();h.setNotes(snapshot.promise);
+ const read=h.context.clientLoad('notifications',{refresh:true});await flush();
+ assert.equal(h.calls.filter(call=>call.path==='/api/v1/activity-notifications').length,before,'an overlapping old notification GET must not start');
+ assert.equal(h.button(uid(1)),button);assert.equal(h.context.clientReads.state('notifications').status,'ready');await read;
+ assert.equal(await h.handle.refreshVisible(),false);assert.match(h.toasts.at(-1),/update.*marked.*read.*Refresh after/i);
+ // Paging and an independent payment read still work and retain the pending exact ID.
+ fire(h.more(),'click');await h.context.clientLoad('payments',{refresh:true});assert.equal(h.button(uid(1)).disabled,true);
+ if(outcome==='saved')h.complete();else h.writes[0].reject(Object.assign(Error('Synthetic temporary failure'),{status:503}));await flush();
+ assert.equal(h.context.clientRaw.notifications[0].is_read,outcome==='saved');assert.match(h.region().textContent,outcome==='saved'?/65 loaded updates · 64 unread/:/65 loaded updates · 65 unread/);
+ const currentNotes=Array.from({length:65},(_,i)=>({...note(i),is_read:outcome==='saved'&&i===0}));h.setNotes(currentNotes);snapshot.resolve(Array.from({length:65},(_,i)=>note(i)));
+ await h.context.clientLoad('notifications',{refresh:true});assert.equal(h.calls.filter(call=>call.path==='/api/v1/activity-notifications').length,before+1);
+ assert.equal(h.context.clientRaw.notifications[0].is_read,outcome==='saved');assert.equal(h.writes.length,1);assert.equal(h.file.value,'synthetic.png');assert.equal(h.support.value,'Keep Support');
+});
+
+test('a notification GET already loading makes retained Mark as read controls inert until current rows return',async t=>{
+ const h=await mount(t),old=h.button(uid(1)),snapshot=deferred();h.setNotes(snapshot.promise);const read=h.context.clientLoad('notifications',{refresh:true});
+ fire(old,'click');await flush();assert.equal(h.writes.length,0);snapshot.resolve([note(0)]);await read;
+ fire(h.button(uid(1)),'click');await flush();assert.equal(h.writes.length,1);h.complete();await flush();assert.equal(h.context.clientRaw.notifications[0].is_read,true);
+});
+
+
+test('the pending notification read guard rechecks authority before returning any retained private state',async t=>{
+ const h=await mount(t);fire(h.button(uid(1)),'click');await flush();h.session.user.id=uid(999);
+ const state=await h.context.clientLoad('notifications',{refresh:true});assert.equal(state.status,'idle');assert.equal(state.data,null);assert.equal(h.root.innerHTML,'');assert.equal(h.file.value,'');
+ h.complete();await flush();assert.equal(h.root.innerHTML,'');
 });

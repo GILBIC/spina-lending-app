@@ -70,7 +70,8 @@ for (const action of actions) for (const status of [401, 403]) {
 for (const status of [401, 403]) test(`Updates ${status} still clears its current mount after the submitting row is replaced`, async t => {
   const h = await mount(t), button = h.root.querySelector('[data-client-notification-read]');
   fire(button, 'click'); await flush();
-  await h.context.clientLoad('notifications', {refresh:true});
+  // A payment read still redraws Updates while its independent Mark as read is pending.
+  await h.context.clientLoad('payments', {refresh:true});
   button.isConnected = false;
   assert.notEqual(h.root.querySelector('[data-client-notification-read]'), button);
   h.reject(status); await flush();
