@@ -26,7 +26,7 @@ export function validateCollectorRemittanceEvidence(record) {
   return clients.size===record.client_count && passes===record.unable_to_pay_count && payments===record.payment_count && covered===record.covered_payment_count;
 }
 export function collectorRemittanceResultMatches({collectorId,recipientId,collectionDate,preview}) {
-  return result=>id(result?.remittance_id) && id(result.remittance_number) && result.status==='submitted' && result.collector_user_id===collectorId && result.recipient_user_id===recipientId && result.collection_date===collectionDate && validateCollectorRemittanceEvidence(result) && snapshot(result)===snapshot(preview);
+  return result=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(result?.remittance_id || '') && id(result.remittance_number) && result.status==='submitted' && result.collector_user_id===collectorId && result.recipient_user_id===recipientId && result.collection_date===collectionDate && validateCollectorRemittanceEvidence(result) && snapshot(result)===snapshot(preview);
 }
 export function remittanceSummaryMarkup(state) {
   if(state.status!=='ready' || !amount(state.data?.total_amount) || !['transaction_count','client_count','unable_to_pay_count'].every(key=>Number.isSafeInteger(state.data[key]) && state.data[key]>=0))return '<div class="notice-card warning">Remittance summary unavailable.</div>';
