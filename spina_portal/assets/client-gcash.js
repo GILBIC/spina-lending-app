@@ -1,4 +1,4 @@
-import { asArray, escapeHtml, setButtonBusy, showToast } from './ui.js';
+import { asArray, clearButtonBusyFocus, escapeHtml, setButtonBusy, showToast } from './ui.js';
 import { classifyLoanType } from './collector-contract.js';
 import { formatAuthoritativeMoney } from './client-schedule.js';
 
@@ -132,24 +132,34 @@ export function renderClientGcashIntent(intent = {}) {
   </div>`;
 }
 
-export function renderClientGcashPanel({ capability = {}, loans = [], loansState, capabilityState, intent = null } = {}) {
-  if(capabilityState&&capabilityState.status!=='ready')return '<div class="notice-card warning">Payment configuration unavailable. Retry payment options.</div>';
-  if(loansState&&loansState.status!=='ready')return '<div class="notice-card warning">Loan records unavailable. Retry before selecting a loan for checkout.</div>';
+export function validClientGcashCapability(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && typeof value.payment_available === 'boolean';
+}
+
+function paymentOptionsState({ capability, loans, loansState, capabilityState }) {
+  if (capabilityState && capabilityState.status !== 'ready') return { available: false, message: capabilityState.status === 'loading' ? 'Loading payment configuration…' : 'Payment configuration unavailable. Retry payment options.', retry: capabilityState.status === 'loading' ? null : 'gcash' };
+  if (!validClientGcashCapability(capability)) return { available: false, message: 'Payment configuration unavailable. Retry payment options.', retry: 'gcash' };
+  if (!capability.payment_available) return { available: false, message: `GCash checkout not connected. ${capability.message || capability.official_payment_rule || 'Ask your collector or office for the approved payment instructions.'}` };
+  if (loansState && loansState.status !== 'ready') return { available: false, message: loansState.status === 'loading' ? 'Loading loan records before checkout…' : 'Loan records unavailable. Retry before selecting a loan for checkout.', retry: loansState.status === 'loading' ? null : 'loans' };
   const activeLoans = asArray(loans).filter(
     (loan) => String(loan?.status ?? loan?.loan_status ?? '').trim().toLowerCase() === 'active',
   );
+  return { available: activeLoans.length > 0, activeLoans, message: activeLoans.length ? '' : 'GCash checkout available. No active loan is available for payment.' };
+}
+
+function paymentOptionsNotice(state) {
+  return state.message ? `<div class="notice-card ${state.available ? '' : 'warning'}" role="status">${escapeHtml(state.message)}${state.retry ? `<button class="button button-secondary" type="button" data-gcash-read-retry="${state.retry}">Retry ${state.retry === 'loans' ? 'loan records' : 'payment options'}</button>` : ''}</div>` : '';
+}
+
+export function renderClientGcashPanel({ capability = {}, loans = [], loansState, capabilityState, intent = null } = {}) {
+  const state = paymentOptionsState({ capability, loans, loansState, capabilityState });
+  if (!state.available) return `<div data-client-gcash-panel><div data-client-gcash-read-state>${paymentOptionsNotice(state)}</div></div>`;
+  const { activeLoans } = state;
   const message = escapeHtml(
     capability.message ||
       capability.official_payment_rule ||
       'Ask your collector or office for the approved payment instructions.',
   );
-  if (capability.payment_available !== true) {
-    return `<div data-client-gcash-panel class="notice-card warning"><strong>GCash checkout not connected</strong><br>${message}</div>`;
-  }
-  if (!activeLoans.length) {
-    return `<div data-client-gcash-panel class="notice-card"><strong>GCash checkout available</strong><br>No active loan is available for payment.</div>`;
-  }
-
   const regularLoans = activeLoans.filter(
     (loan) => classifyLoanType(loan.loan_type_name ?? loan.loan_type_code) === 'regular',
   );
@@ -163,6 +173,7 @@ export function renderClientGcashPanel({ capability = {}, loans = [], loansState
 
   return `<div data-client-gcash-panel>
     <div class="notice-card"><strong>Pay with GCash</strong><br>${message}</div>
+    <div data-client-gcash-read-state></div>
     <form id="client-gcash-form" class="entry-form">
       ${renderLoanGroup('Regular', regularLoans)}
       ${renderLoanGroup('7x7', sevenBySevenLoans)}
@@ -187,30 +198,78 @@ function readSelections(form) {
 }
 
 export function bindClientGcashPanel(context) {
-  const { root, api, signal } = context;const current=()=>!signal?.aborted&&(context.clientIsCurrent?.()??true);
+  const { root, api, signal } = context;
+  let disposed = false, saving = false;
+  const removers = [], retryRemovers = [];
+  const current = () => !disposed && !signal?.aborted && (context.clientIsCurrent?.() ?? true);
   const form = root.querySelector('#client-gcash-form');
   const statusPanel = root.querySelector('[data-client-gcash-status]');
-  if (!form || !statusPanel) return;
+  const button = form?.querySelector('button[type="submit"]');
+  const listen = (element, type, handler, list = removers) => {
+    if (!element) return;
+    element.addEventListener(type, handler);
+    list.push(() => element.removeEventListener(type, handler));
+  };
+  function updateReadState() {
+    if (!current()) return;
+    for (const remove of retryRemovers.splice(0)) remove();
+    if (context.clientReads) {
+      const loansState = context.clientReads.state('loans'), capabilityState = context.clientReads.state('gcash');
+      const state = paymentOptionsState({ loansState, capabilityState, loans: loansState.data?.loans, capability: capabilityState.data });
+      if (state.available && form && !readSelections(form).every(selection => state.activeLoans.some(loan => loan.loan_id === selection.loanId))) {
+        state.available = false;
+        state.message = 'Your selected loan is no longer available for checkout. Your draft is retained; review current loans before continuing.';
+      }
+      const notice = root.querySelector('[data-client-gcash-read-state]');
+      if (notice) notice.innerHTML = paymentOptionsNotice(state);
+      if (button) button.disabled = saving || !state.available;
+    }
+    for (const retry of root.querySelectorAll('[data-gcash-read-retry]')) listen(retry, 'click', () => {
+      if (current()) void context.clientLoad?.(retry.getAttribute('data-gcash-read-retry'), { refresh: true });
+    }, retryRemovers);
+  }
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    for (const remove of [...removers, ...retryRemovers]) remove();
+    signal?.removeEventListener('abort', dispose);
+    clearButtonBusyFocus(button);
+    for (const input of form?.querySelectorAll('input') || []) { input.value = ''; input.checked = false; input.disabled = true; }
+    if (button) button.disabled = true;
+    if (statusPanel) { const code = statusPanel.querySelector('[data-gcash-payment-code]'); if (code) code.value = ''; statusPanel.innerHTML = ''; }
+  }
+  function denied(error) {
+    if (![401, 403].includes(error?.status)) return false;
+    context.clientCleanup?.();
+    dispose();
+    return true;
+  }
+  signal?.addEventListener('abort', dispose, { once: true });
+  const handle = { updateReadState, dispose };
+  if (signal?.aborted) { dispose(); return handle; }
+  updateReadState();
+  if (!form || !statusPanel) return handle;
 
-  const actions = createClientGcashActions({ api });
+  const actions = createClientGcashActions({ api: { request: (path, options = {}) => api.request(path, { ...options, signal }) } });
 
   const bindIntentControls = (intent = null) => {
     const codeField = statusPanel.querySelector('[data-gcash-payment-code]');
     if (codeField && typeof intent?.qr_value === 'string') codeField.value = intent.qr_value;
     const copyStatus = statusPanel.querySelector('[data-gcash-copy-status]');
-    statusPanel.querySelector('[data-gcash-copy-code]')?.addEventListener('click', async () => {
-      if (!codeField?.value) return;
+    listen(statusPanel.querySelector('[data-gcash-copy-code]'), 'click', async () => {
+      if (!current() || !codeField?.value) return;
       try {
         await globalThis.navigator.clipboard.writeText(codeField.value);
-        copyStatus.textContent = 'Payment code copied. Follow the provider’s payment instructions.';
+        if (current()) copyStatus.textContent = 'Payment code copied. Follow the provider’s payment instructions.';
       } catch {
+        if (!current()) return;
         codeField.focus();
         codeField.select?.();
         copyStatus.textContent = 'Select and copy the payment code above.';
       }
     });
     const refreshButton = statusPanel.querySelector('[data-gcash-refresh-intent]');
-    refreshButton?.addEventListener('click', async () => {
+    listen(refreshButton, 'click', async () => {
       const intentId = String(refreshButton.getAttribute('data-gcash-refresh-intent') || '').trim();
       if (!intentId||refreshButton.disabled||!current()) return;
       setButtonBusy(refreshButton, true, 'Refreshing…');
@@ -219,28 +278,34 @@ export function bindClientGcashPanel(context) {
         if(!current())return;statusPanel.innerHTML = renderClientGcashIntent(intent);
         bindIntentControls(intent);
       } catch (error) {
+        if (!current()) return;
+        if (denied(error)) return;
         showToast(error?.message || 'GCash status could not be refreshed.', 'error');
         setButtonBusy(refreshButton, false);
       }
     });
   };
 
-  form.addEventListener('submit', async (event) => {
+  listen(form, 'submit', async (event) => {
     event.preventDefault();
-    const button = form.querySelector('button[type="submit"]');
-    if(button.disabled)return;const loansState=context.clientReads?.state('loans');const capabilityState=context.clientReads?.state('gcash');if(loansState&&(loansState.status!=='ready'||capabilityState?.status!=='ready'||capabilityState.data?.payment_available!==true)){showToast('Refresh loan records and payment options before checkout.','error');return;}
+    if(!current()||saving||button.disabled)return;const loansState=context.clientReads?.state('loans');const capabilityState=context.clientReads?.state('gcash');if(loansState&&(loansState.status!=='ready'||capabilityState?.status!=='ready'||!validClientGcashCapability(capabilityState.data)||capabilityState.data.payment_available!==true)){showToast('Refresh loan records and payment options before checkout.','error');return;}
     if(loansState&&!readSelections(form).every(selection=>asArray(loansState.data?.loans).some(loan=>loan.loan_id===selection.loanId&&String(loan.status||loan.loan_status).toLowerCase()==='active'))){showToast('This loan selection has changed. Review current loans before checkout.','error');return;}
-    setButtonBusy(button, true, 'Preparing GCash…');
+    saving = true;setButtonBusy(button, true, 'Preparing GCash…');
     try {
       const intent = await actions.start(readSelections(form));
+      if (!current()) return;
       statusPanel.innerHTML = renderClientGcashIntent(intent);
       bindIntentControls(intent);
       showToast('GCash checkout prepared. Complete it with the provider, then refresh status.', 'success');
     } catch (error) {
+      if (!current()) return;
+      if (denied(error)) return;
       showToast(error?.message || 'GCash checkout could not be started.', 'error');
     } finally {
-      setButtonBusy(button, false);
+      saving = false;
+      if (current()) { setButtonBusy(button, false); updateReadState(); }
     }
   });
   bindIntentControls();
+  return handle;
 }
