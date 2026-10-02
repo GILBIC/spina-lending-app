@@ -267,6 +267,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                         );
                       },
                     ),
+                  if (widget.session.hasPermission('employee.portal.view'))
                   _CollectorToolTile(
                     key: const Key('collector-more-employee-operations'),
                     icon: Icons.badge_outlined,
@@ -283,6 +284,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       );
                     },
                   ),
+                  if (_canReadRenewals)
                   _CollectorToolTile(
                     key: const Key('collector-more-renewals'),
                     icon: Icons.autorenew_rounded,
@@ -294,6 +296,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _openRenewals();
                     },
                   ),
+                  if (widget.session.hasPermission('collection.create'))
                   _CollectorToolTile(
                     key: const Key('collector-more-other-area'),
                     icon: Icons.person_search_outlined,
@@ -374,7 +377,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                   _CollectorToolTile(
                     key: const Key('collector-more-offline'),
                     icon: Icons.cloud_off_outlined,
-                    title: 'Connectivity & offline',
+                    title: 'Offline & sync',
                     subtitle: 'Saved routes, connection and retry rules',
                     onTap: () {
                       Navigator.pop(sheetContext);
@@ -460,7 +463,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
               _openMore();
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.route_outlined),
             selectedIcon: Icon(Icons.route_rounded),
@@ -473,7 +476,9 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
             label: 'Master review',
           ),
           NavigationDestination(
-            icon: Icon(Icons.account_balance_outlined),
+            enabled: widget.session.hasPermission('remittance.view'),
+            tooltip: widget.session.hasPermission('remittance.view') ? 'Remit' : 'Remit unavailable: remittance access is not assigned',
+            icon: const Icon(Icons.account_balance_outlined),
             selectedIcon: Icon(Icons.account_balance_rounded),
             label: 'Remit',
           ),

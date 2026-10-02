@@ -1511,13 +1511,13 @@ const _managementSections = <_ManagementSection>[
         'Review your own Management account, session, device, and live-server requirements.',
     modules: <_ManagementModule>[
       _ManagementModule(
-        'My account & devices',
+        'Profile & security',
         'Profile, current session, registered devices, and sign-out controls',
         Icons.admin_panel_settings_outlined,
         action: _ManagementAction.myAccountDevices,
       ),
       _ManagementModule(
-        'Connectivity & offline policy',
+        'Offline & sync',
         'See which Management data and actions require the live server',
         Icons.cloud_off_outlined,
         action: _ManagementAction.offlinePolicy,
