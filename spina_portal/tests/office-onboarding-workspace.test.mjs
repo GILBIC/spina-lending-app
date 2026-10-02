@@ -1,8 +1,10 @@
+import {mountRoleTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
 import { availableRoleActions } from '../assets/roles.js';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-onboarding']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { mountCollectorWorkspace } from '../assets/roles/collector.js';
 import { Element, fire } from './helpers/dom.mjs';
@@ -22,7 +24,7 @@ for (const role of ['employee', 'management', 'collector']) {
   const suffix = role === 'collector' ? 'visit-case' : 'case';
   const prefix = role === 'collector' ? 'collector' : 'management';
   test(`${role}: exact onboarding permission connects only its scoped case lookup`, async () => {
-    const h = harness(role, [permission]); await mounts[role](h);
+    const h = harness(role, [permission]); await mountRoleTask(mounts[role], h, 'management-clients-loans', 'management-office');if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     const area = h.root.querySelector(selector); assert.ok(area);
     assert.ok(h.navigation.some(item => item.id === (role === 'management' ? 'management-clients-loans' : `${role}-onboarding`)));
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="intake"]'));
@@ -37,16 +39,16 @@ for (const role of ['employee', 'management', 'collector']) {
   });
   test(`${role}: unrelated and similarly named permissions do not expose onboarding`, async () => {
     const permissions = [`${permission}.extra`, role === 'collector' ? OFFICE : VISIT];
-    const h = harness(role, permissions); await mounts[role](h);
+    const h = harness(role, permissions); await mountRoleTask(mounts[role], h, 'management-clients-loans', 'management-office');if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     assert.equal(h.root.querySelector(selector), null);
     assert.equal(h.navigation.some(item => item.id === `${role}-onboarding`), false);
     assert.equal(availableRoleActions(role, permissions).some(item => item.key === `${role}-onboarding`), false);
     assert.equal(h.calls.some(path => path.includes('/onboarding/')), false); h.controller.abort();
   });
   test(`${role}: workspace refresh disposes the old lookup before rendering the replacement`, async () => {
-    const h = harness(role, [permission]); await mounts[role](h);
+    const h = harness(role, [permission]); await mountRoleTask(mounts[role], h, 'management-clients-loans', 'management-office');if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     const area = h.root.querySelector(selector), input = area.querySelector('[name="applicationReference"]'), form = area.querySelector('[data-case-lookup]');
-    input.value = 'Private old reference'; await mounts[role](h);
+    input.value = 'Private old reference'; await mountRoleTask(mounts[role], h, 'management-clients-loans', 'management-office');if(role==='collector')await h.collectorWorkspaceHandle.activate('collector-onboarding');
     assert.equal(area.innerHTML, ''); assert.equal(input.value, '');
     const count = h.calls.length; fire(form, 'submit'); await setImmediate(); assert.equal(h.calls.length, count);
     assert.equal(h.root.querySelector(selector).querySelector('[name="applicationReference"]').value, ''); h.controller.abort();

@@ -19,8 +19,11 @@ export function requirePrivateFile(blob, expectedMediaType) {
   return blob;
 }
 
-export function mountClientDocuments({root, api, loans = [], payments = [], signal, saveFile = savePrivateFile}) {
+export function mountClientDocuments({root, api, loans = [], payments = [], loansState, paymentsState, onRetry, signal, saveFile = savePrivateFile}) {
   mounts.get(root)?.();
+  if(loansState) loans=loansState.status==='ready'?asArray(loansState.data?.loans):[];
+  if(paymentsState) payments=paymentsState.status==='ready'?asArray(paymentsState.data?.payments):[];
+  const unavailable=(state,label,key)=>state&&state.status!=='ready'?`<div class="notice-card warning">${label} records ${state.status==='error'?'unavailable':'loading'}. <button type="button" data-document-retry="${key}">Retry</button></div>`:null;
   const controller = new AbortController(); let disposed = false; const removers = [];
   const listen = (element, event, fn) => {
     element.addEventListener(event, fn); removers.push(() => element.removeEventListener(event, fn));
@@ -50,13 +53,14 @@ export function mountClientDocuments({root, api, loans = [], payments = [], sign
   root.innerHTML = `<p>Download your original released loan packet, or current statement and payment record copies. A record copy reflects corrections and voids recorded when it is downloaded.</p>
     <button type="button" class="button button-secondary" data-statement-copy>Download statement copy (PDF)</button>
     <h3>Released loan documents</h3>
-    ${loans.length ? loans.map((loan) => `<article class="list-item"><strong>${escapeHtml(loan.loan_number || 'Loan')}</strong>
+    ${unavailable(loansState,'Loan','loans') || (loans.length ? loans.map((loan) => `<article class="list-item"><strong>${escapeHtml(loan.loan_number || 'Loan')}</strong>
       <button type="button" class="button button-secondary" data-load-documents="${escapeHtml(loan.loan_id)}">Find issued documents</button>
-      <div data-loan-documents="${escapeHtml(loan.loan_id)}"></div></article>`).join('') : emptyState('No linked loan is available.')}
+      <div data-loan-documents="${escapeHtml(loan.loan_id)}"></div></article>`).join('') : emptyState('No linked loan is available.'))}
     <h3>Payment record copies</h3>
-    ${payments.length ? payments.map((payment) => `<article class="list-item"><span>${escapeHtml(payment.receipt_number || 'Payment record')}${payment.is_voided ? ' · Voided' : ''}</span>
-      <button type="button" class="button button-secondary" data-payment-copy="${escapeHtml(payment.transaction_id)}">Download record copy (PDF)</button></article>`).join('') : emptyState('No official payment is recorded yet.')}
+    ${unavailable(paymentsState,'Payment','payments') || (payments.length ? payments.map((payment) => `<article class="list-item"><span>${escapeHtml(payment.receipt_number || 'Payment record')}${payment.is_voided ? ' · Voided' : ''}</span>
+      <button type="button" class="button button-secondary" data-payment-copy="${escapeHtml(payment.transaction_id)}">Download record copy (PDF)</button></article>`).join('') : emptyState('No official payment is recorded yet.'))}
     <div data-document-status role="status" aria-live="polite"></div>`;
+  for(const button of root.querySelectorAll('[data-document-retry]'))listen(button,'click',()=>onRetry?.(button.getAttribute('data-document-retry')));
   const statement = root.querySelector('[data-statement-copy]');
   listen(statement, 'click', () => download(statement, '/api/v1/client/statement/document', 'statement-of-account-record-copy.pdf'));
   for (const button of root.querySelectorAll('[data-payment-copy]')) {
@@ -89,3 +93,12 @@ export function mountClientDocuments({root, api, loans = [], payments = [], sign
   }
   return dispose;
 }
+
+export async function downloadClientRecordCopy({api,kind,transactionId,signal,saveFile=savePrivateFile}) {
+ if(!['statement','payment'].includes(kind)||kind==='payment'&&!UUID.test(transactionId))throw Error('A valid authorized record is required.');
+ if(signal?.aborted)return;
+ const path=kind==='statement'?'/api/v1/client/statement/document':`/api/v1/client/payments/${encodeURIComponent(transactionId)}/document`;
+ const blob=requirePrivateFile(await api.request(path,{responseType:'blob',signal}),'application/pdf');
+ if(!signal?.aborted)saveFile(blob,kind==='statement'?'statement-of-account-record-copy.pdf':`payment-record-${transactionId}.pdf`);
+}
+

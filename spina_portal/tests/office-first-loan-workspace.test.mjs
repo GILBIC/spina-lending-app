@@ -1,8 +1,10 @@
+import {mountRoleTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
 import { availableRoleActions } from '../assets/roles.js';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-first-loan']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -17,7 +19,7 @@ for (const [role, mount] of [['employee', mountEmployeeWorkspace], ['management'
   }
 
   test(`${role}: exact permission connects first-loan workspace without background financial requests`, async () => {
-    const h = harness(); await mount(h);
+    const h = harness(); await mountRoleTask(mount, h, 'management-clients-loans', 'management-office');
     const area = h.root.querySelector('[data-office-first-loan]'); assert.ok(area);
     assert.ok(h.navigation.some(item => item.id === (role === 'management' ? 'management-clients-loans' : `${role}-first-loan`)));
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="first-loan"]'));
@@ -31,7 +33,7 @@ for (const [role, mount] of [['employee', mountEmployeeWorkspace], ['management'
   });
 
   test(`${role}: unrelated permission exposes no first-loan workflow`, async () => {
-    const h = harness([`${permission}.extra`, 'account.manage']); await mount(h);
+    const h = harness([`${permission}.extra`, 'account.manage']); await mountRoleTask(mount, h, 'management-clients-loans', 'management-office');
     assert.equal(h.root.querySelector('[data-office-first-loan]'), null);
     assert.equal(h.navigation.some(item => item.id === `${role}-first-loan`), false);
     assert.equal(availableRoleActions(role, h.session.permissions).some(item => item.key === `${role}-first-loan`), false);
@@ -39,9 +41,9 @@ for (const [role, mount] of [['employee', mountEmployeeWorkspace], ['management'
   });
 
   test(`${role}: refresh erases old first-loan references and detaches previous actions`, async () => {
-    const h = harness(); await mount(h);
+    const h = harness(); await mountRoleTask(mount, h, 'management-clients-loans', 'management-office');
     const area = h.root.querySelector('[data-office-first-loan]'), form = area.querySelector('form'), input = area.querySelector('[name="intakeReference"]');
-    input.value = 'Private reference'; await mount(h);
+    input.value = 'Private reference'; await mountRoleTask(mount, h, 'management-clients-loans', 'management-office');
     assert.equal(input.value, ''); assert.equal(area.innerHTML, '');
     const count = h.calls.length; fire(form, 'submit'); await setImmediate(); assert.equal(h.calls.length, count);
     h.controller.abort();

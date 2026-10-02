@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {Element as ParsedElement} from './helpers/dom.mjs';
+class ClientElement extends ParsedElement {
+ constructor(){super();this.dataset={};this.classList={toggle(){}};}
+ querySelectorAll(selector){const nodes=super.querySelectorAll(selector);for(const node of nodes){node.classList={toggle(){}};node.dataset={};}return nodes;}
+}
+
 import { MemoryStorage, SessionStore } from '../assets/session.js';
+import {workspace,SELF} from './helpers/employee-workspace.mjs';
 
 let instance = 0;
 const tick = () => new Promise((resolve) => setImmediate(resolve));
@@ -11,8 +18,9 @@ function deferred() {
   return { promise, resolve };
 }
 
-class Element {
+class Element extends ParsedElement {
   constructor() {
+    super();
     this.innerHTML = '';
     this.textContent = '';
     this.dataset = {};
@@ -31,9 +39,12 @@ class Element {
     if (selector === 'input[name="username"]') return { focus() {} };
     if (selector === '#management-loan-search') return new Element();
     if (selector === '[data-screen-panel]') return this.screenPanel ??= { open: false };
-    return null;
+    return super.querySelector(selector);
   }
-  querySelectorAll() { return []; }
+  querySelectorAll(selector) {
+    if (selector === '[data-nav-target]' || selector.includes(',') || /^\[[^\]]+\]\[/.test(selector)) return [];
+    return super.querySelectorAll(selector);
+  }
   replaceChildren() { this.innerHTML = ''; }
   focus() {}
 }
@@ -51,13 +62,14 @@ async function harness(t, role, roles = [role]) {
     'workspace-title', 'signed-in-role', 'signed-in-name', 'connection-status',
     'environment-label', 'refresh-workspace', 'logout-button', 'login-form',
     'workspace-choice', 'workspace-choice-label', 'screen-sharing-controls',
-  ]) elements.set(id, new Element());
+  ]) elements.set(id, role==='client'&&id==='role-content'?new ClientElement():new Element());
+  if(role==='employee'){elements.set('role-content',new ParsedElement());elements.set('role-navigation',new ParsedElement());}
   const events = new EventTarget();
   const sessionStorage = new MemoryStorage();
   const localStorage = new MemoryStorage();
   const session = {
     access_token: 'synthetic-session', refresh_token: 'synthetic-refresh',
-    user: { id: 'synthetic-user', role, roles, permissions: [], full_name: 'Office user' },
+    user: { id: role==='employee'?SELF:'synthetic-user', role, roles, permissions: [], full_name: 'Office user' },
   };
   sessionStorage.setItem(SessionStore.SESSION_KEY, JSON.stringify(session));
   const accounts = [];
@@ -75,6 +87,7 @@ async function harness(t, role, roles = [role]) {
     fetch: async (url) => {
       if (url.endsWith('/auth/me')) return json({ user: session.user });
       if (url.endsWith('/auth/logout')) return logoutResponse.promise;
+      if(role==='employee'&&url.endsWith('/employee-operations/workspace'))return json(workspace());
       if (url.endsWith('/account')) {
         const result = deferred();
         accounts.push(result);
@@ -96,6 +109,11 @@ async function harness(t, role, roles = [role]) {
     }
   });
   await import(`../assets/app.js?lifecycle=${++instance}`);
+  if(role==='employee'){
+    for(let count=0;count<30&&!elements.get('role-navigation').querySelector('[data-nav-target="employee-account"]');count+=1)await tick();
+    await tick();
+    const event=new Event('click');Object.defineProperty(event,'target',{value:elements.get('role-navigation').querySelector('[data-nav-target="employee-account"]')});elements.get('role-navigation').dispatchEvent(event);
+  }
   for (let count = 0; count < 30 && accounts.length === 0; count += 1) await tick();
   assert.equal(accounts.length, 1, 'boot must reach the real office workspace');
   return { elements, events, accounts, logoutResponse };
@@ -148,15 +166,18 @@ for (const role of ['employee', 'management', 'client']) {
   test(`${role}: a newer refresh cannot be overwritten by the older workspace response`, async (t) => {
     const h = await harness(t, role);
     const refresh = h.elements.get('refresh-workspace').emit('click');
+    await tick();
     assert.equal(h.accounts.length, 2);
-    h.accounts[1].resolve(json({ profile: { full_name: 'Current office account' } }));
+    h.accounts[1].resolve(json({ profile: { full_name: 'Current office account' },devices:[] }));
     await refresh;
+    if(role==='client')await tick();
     const current = h.elements.get('role-content').innerHTML;
     assert.match(current, /Current office account/);
     h.accounts[0].resolve(json({ profile: { full_name: 'Stale private account' } }));
     await tick();
     await tick();
-    assert.equal(h.elements.get('role-content').innerHTML, current);
+    assert.match(h.elements.get('role-content').textContent, /Current office account/);
+    assert.doesNotMatch(h.elements.get('role-content').textContent, /Stale private account/);
     assert.doesNotMatch(current, /Office intake reference/);
   });
 }

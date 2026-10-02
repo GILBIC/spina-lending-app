@@ -52,7 +52,7 @@ import {mountManagementWorkspace} from '../assets/roles/management.js';
 test('Management workspace wires permitted collection actions and disposes old controls on remount',async t=>{
  const root=new Element(),controller=new AbortController(),calls=[],navigation=[];
  const context={root,signal:controller.signal,session:{user:{role:'management'},permissions:['lending.contract_collection.activate']},setNavigation:items=>navigation.push(items),api:{request:async(path,options={})=>{calls.push({path,options});return path.endsWith('/contract-collection-activation')?{permission:true,loans:[{loan_id:LOAN,client_name:'Borrower',loan_number:'LN-1',can_activate:true}]}:{};}}};
- t.after(()=>controller.abort());await mountManagementWorkspace(context);await tick();
+ t.after(()=>controller.abort());await mountManagementWorkspace(context);await context.managementTaskController.activate('management-collections','management-collection-actions');await tick();
  assert.ok(navigation[0].some(item=>item.id==='management-collections'));const oldForm=root.querySelector('[data-contract-activate]');assert.ok(oldForm);set(oldForm,'activation_note','Old view');
  context.session={user:{role:'management'},permissions:[]};await mountManagementWorkspace(context);fire(oldForm,'submit');await tick();
  assert.equal(root.querySelector('[data-management-collection-actions]'),null);assert.equal(calls.some(call=>call.options.method==='POST'),false);

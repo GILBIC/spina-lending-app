@@ -26,7 +26,7 @@ test('custody-only workspace exposes and loads Renewal handover navigation',asyn
   const controller=new AbortController();const root=new Element();root.dataset={};const calls=[];let navigation=[];
   const context={root,session:{user:{role:'collector',roles:['collector']},permissions:['renewal.cash_custody.assigned']},signal:controller.signal,setNavigation:items=>{navigation=items;},api:{request:async path=>{calls.push(path);return path==='/api/v1/collector/renewals'?{requests:[record]}:{};}}};
   try {
-    await mountCollectorWorkspace(context);await setImmediate();
+    await mountCollectorWorkspace(context);assert.equal(calls.filter(path=>path==='/api/v1/collector/renewals').length,0);await context.collectorWorkspaceHandle.activate('collector-renewals');await setImmediate();
     assert.ok(navigation.some(item=>item.id==='collector-renewals'));
     assert.ok(root.querySelector('#collector-renewals')?.querySelector('[data-renewal-action="cash-received"]'));
     assert.equal(calls.filter(path=>path==='/api/v1/collector/renewals').length,1);
