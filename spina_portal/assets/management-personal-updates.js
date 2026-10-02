@@ -6,6 +6,7 @@ export function mountManagementPersonalUpdates({root,api,signal,getSession,onRea
   const owner=getSession()?.user?.id;
   let disposed=false,generation=0,cap=30,records=[];
   const busy=new Set();
+  const focusCleanups=new Set();
   const alive=()=>!disposed&&!signal?.aborted&&getSession()?.user?.id===owner;
   root.innerHTML='<p>Personal updates for this account. Marking an update read does not alter permanent audit history.</p><button type="button" class="button button-outline" data-updates-refresh>Refresh updates</button><p role="status" data-updates-feedback></p><p class="meta" data-updates-count></p><div class="list-stack" data-updates-list></div><button type="button" class="button button-outline" data-updates-more hidden>Show 30 more updates</button>';
   const list=root.querySelector('[data-updates-list]'),feedback=root.querySelector('[data-updates-feedback]'),count=root.querySelector('[data-updates-count]'),more=root.querySelector('[data-updates-more]'),refreshButton=root.querySelector('[data-updates-refresh]');
@@ -23,15 +24,23 @@ export function mountManagementPersonalUpdates({root,api,signal,getSession,onRea
       button?.addEventListener('click',async()=>{
         const id=button.getAttribute('data-update-read'),item=records.find(record=>record.notification_id===id);
         if(!alive()||busy.has(id)||!item||item.is_read)return;
+        const document=root.ownerDocument;
+        let restoreFocus=document?.activeElement===button;
+        const moved=event=>{if(event.type!=='focusin'||event.target!==button)restoreFocus=false;};
+        const stopFocus=()=>{for(const type of ['focusin','pointerdown','keydown'])document?.removeEventListener(type,moved,true);focusCleanups.delete(stopFocus);};
+        if(restoreFocus){for(const type of ['focusin','pointerdown','keydown'])document.addEventListener(type,moved,true);focusCleanups.add(stopFocus);}
         const version=generation;busy.add(id);button.disabled=true;feedback.textContent='';
         try {
           const result=await api.request(`/api/v1/activity-notifications/${encodeURIComponent(id)}/read`,{method:'POST'});
           if(!alive()||generation!==version)return;
           if(result?.notification_id!==id||result?.recipient_user_id!==owner||result.is_read!==true||!result.read_at)throw new Error('This update could not be confirmed as read. Refresh Updates or try again.');
-          item.is_read=true;item.read_at=result.read_at;row.querySelector('[data-update-status]').innerHTML=badge('Read');button.hidden=true;reveal();
-          try{await onRead?.();}catch{if(alive())feedback.textContent='Update marked read; overview refresh failed. Refresh Today for current totals.';}
+          item.is_read=true;item.read_at=result.read_at;
+          const status=row.querySelector('[data-update-status]');status.innerHTML=badge('Read');status.setAttribute('tabindex','-1');button.hidden=true;reveal();
+          if(restoreFocus&&(document.activeElement===button||document.activeElement===document.body))status.focus();
+          feedback.textContent='Update marked read.';
+          try{if(await onRead?.()===false)throw new Error('Overview refresh failed.');}catch{if(alive())feedback.textContent='Update marked read; overview refresh failed. Refresh Today for current totals.';}
         }catch(error){if(alive()&&generation===version)feedback.textContent=error.message;}
-        finally{busy.delete(id);if(alive())button.disabled=false;}
+        finally{stopFocus();busy.delete(id);if(alive())button.disabled=false;}
       });
     }
     reveal();
@@ -49,7 +58,7 @@ export function mountManagementPersonalUpdates({root,api,signal,getSession,onRea
   }
   const read=()=>void refresh(),showMore=()=>{if(alive()){cap+=30;reveal();}};
   refreshButton.addEventListener('click',read);more.addEventListener('click',showMore);
-  function dispose(){if(disposed)return;disposed=true;generation++;refreshButton.removeEventListener('click',read);more.removeEventListener('click',showMore);signal?.removeEventListener('abort',dispose);}
+  function dispose(){if(disposed)return;disposed=true;generation++;for(const stop of focusCleanups)stop();refreshButton.removeEventListener('click',read);more.removeEventListener('click',showMore);signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});
   return{refresh,dispose,isWritePending:()=>busy.size>0};
 }
