@@ -2,6 +2,14 @@ import {escapeHtml as h,hasPermission} from './ui.js';
 import {formatAuthoritativeMoney as formatMoney} from './client-schedule.js';
 import {collectorMutation} from './collector-workflow-contract.js';
 
+const knownStatus={pending:'Pending',approved:'Approved',rejected:'Rejected',declined:'Declined',not_submitted:'Not submitted',under_review:'Under review',completed:'Completed',activated:'Activated',not_started:'Not started'};
+const statusLabel=value=>knownStatus[value] || `Unknown status (${String(value || 'not recorded')})`;
+const cash=value=>typeof value==='string' && /^\d+\.\d{2}$/.test(value)?formatMoney(value):'Unavailable';
+export function collectorRenewalSummary(item,session) {
+  const next=collectorRenewalActions(item,session)[0];
+  return `<h3 tabindex="-1">${h(item.client_name)} · ${h(item.loan_number || item.loan_id || '')}</h3><p>${h(statusLabel(item.status))} · Handover proof ${h(statusLabel(item.handover_proof_status))}</p><div class="detail-grid">${[['Requested amount','requested_amount'],['Approved principal','approved_principal'],['Renewal offset','renewal_offset_amount'],['Net cash to client','net_release_amount']].map(([label,key])=>`<div class="detail-item"><span>${label}</span><strong>${cash(item[key])}</strong></div>`).join('')}</div><p>${item.amount_locked_at?`Cash amount locked at ${h(item.amount_locked_at)}`:'Cash amount not locked — shown amounts remain provisional.'}</p><p>Client message: ${h(item.client_message || 'Not recorded')}</p><p>Collector recommendation: ${h(item.collector_recommendation || 'Not submitted')} · ${h(item.collector_comment || '')}</p><p>Management note: ${h(item.review_note || 'Not recorded')}</p><p>${item.office_processing_required?'Office processing required. ':''}Signer readiness: ${h(item.signer_readiness_status || 'Not recorded')} · Activation: ${h(statusLabel(item.activation_status))}</p><p>${item.client_cash_confirmed_at?'Client cash receipt confirmed.':'Client confirmation remains a separate step.'}</p><p>Next stage: ${h(next?{'recommendation':'Collector recommendation','cash-received':'Confirm physical cash received','cash-given':'Confirm physical cash given','handover-photo':'Submit handover photo'}[next]:item.status==='approved'?'Waiting for the next authorized office or client step.':'Review the current request status.')}</p>`;
+}
+
 export function collectorRenewalActions(item,session) {
   const actions=[];
   if(item.status === 'pending' && !item.collector_recommendation && hasPermission(session,'renewal.recommend.assigned')) actions.push('recommendation');
@@ -15,52 +23,32 @@ export function collectorRenewalActions(item,session) {
 
 export function renderCollectorRenewals(items,session) {
   if(!items.length) return '<p>No assigned renewal request is available.</p>';
-  return items.map(item=>`<article class="list-item"><h3>${h(item.client_name)} · ${h(item.loan_number || '')}</h3><p>${h(item.status)} · Cash to client ${item.net_release_amount == null ? 'Unavailable' : formatMoney(item.net_release_amount)} · Handover proof ${h(item.handover_proof_status || 'not submitted')}</p><p>${item.client_cash_confirmed_at ? 'Client cash receipt confirmed.' : 'Client confirmation remains a separate step.'}</p>${collectorRenewalActions(item,session).map(action=>`<form class="entry-form" data-renewal-id="${h(item.request_id)}" data-renewal-action="${action}">${action === 'recommendation' ? '<label>Recommendation<select name="recommendation"><option value="recommend">Recommend</option><option value="do_not_recommend">Do not recommend</option></select></label><label>Reason<select name="reasonCode"><option value="Good payment history">Good payment history</option><option value="Near or fully completed term">Near or fully completed term</option><option value="Stable field collection pattern">Stable field collection pattern</option><option value="Good client history">Good client history</option><option value="Frequent missed payments">Frequent missed payments</option><option value="Payment capacity concern">Payment capacity concern</option><option value="Field verification concern">Field verification concern</option><option value="Client conduct concern">Client conduct concern</option><option value="Other">Other</option></select></label><label>Comment<textarea name="comment" maxlength="1000"></textarea></label>' : action === 'handover-photo' ? '<label>Handover photo<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required /></label><p>JPEG, PNG or WebP, up to 8 MB. Management reviews the photo.</p>' : `<label><input name="physicalConfirmation" type="checkbox" required />I physically ${action === 'cash-received' ? 'received this cash from Management' : 'gave this cash to the client'}.</label>`}<button type="submit" class="button button-primary">${{'recommendation':'Send recommendation','cash-received':'Confirm cash received','cash-given':'Confirm cash given','handover-photo':'Submit handover photo'}[action]}</button></form>`).join('')}</article>`).join('');
+  return items.map(item=>`<article class="list-item" data-renewal-card="${h(item.request_id)}"><div data-renewal-summary>${collectorRenewalSummary(item,session)}</div>${collectorRenewalActions(item,session).map(action=>`<form class="entry-form" data-renewal-id="${h(item.request_id)}" data-renewal-action="${action}">${action === 'recommendation' ? '<label>Recommendation<select name="recommendation"><option value="recommend">Recommend</option><option value="do_not_recommend">Do not recommend</option></select></label><label>Reason<select name="reasonCode"><option value="Good payment history">Good payment history</option><option value="Near or fully completed term">Near or fully completed term</option><option value="Stable field collection pattern">Stable field collection pattern</option><option value="Good client history">Good client history</option><option value="Frequent missed payments">Frequent missed payments</option><option value="Payment capacity concern">Payment capacity concern</option><option value="Field verification concern">Field verification concern</option><option value="Client conduct concern">Client conduct concern</option><option value="Other">Other</option></select></label><label>Comment<textarea name="comment" maxlength="1000"></textarea></label>' : action === 'handover-photo' ? '<label>Handover photo<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required /></label><p>JPEG, PNG or WebP, up to 8 MB. Management reviews the photo.</p>' : `<label><input name="physicalConfirmation" type="checkbox" required />I physically ${action === 'cash-received' ? 'received this cash from Management' : 'gave this cash to the client'}.</label>`}<button type="submit" class="button button-primary">${{'recommendation':'Send recommendation','cash-received':'Confirm cash received','cash-given':'Confirm cash given','handover-photo':'Submit handover photo'}[action]}</button></form>`).join('')}</article>`).join('');
 }
 
-export function mountCollectorRenewals({root,api,session,guard,onSaved,signal}) {
-  let disposed=false;
-  const current=()=>!disposed && guard.current && !signal?.aborted;
-  root.innerHTML='<p>Loading assigned renewals…</p>';
-  const load=async()=>{
-    try {
-      const data=await api.request('/api/v1/collector/renewals');
-      if(!current()) return;
-      const items=Array.isArray(data?.requests) ? data.requests : [];
-      root.innerHTML=renderCollectorRenewals(items,session)+'<div data-renewal-status role="status"></div>';
-      const status=message=>{if(current()) root.querySelector('[data-renewal-status]').textContent=message;};
-      for(const form of root.querySelectorAll('[data-renewal-action]')) form.addEventListener('submit',async event=>{
-        event.preventDefault();if(!current() || !guard.begin()) return;
-        try {
-          const id=form.getAttribute('data-renewal-id');const action=form.getAttribute('data-renewal-action');
-          const item=items.find(item=>item.request_id===id);
-          if(!item || !collectorRenewalActions(item,session).includes(action)) throw new Error('Refresh the renewal before acting.');
-          const options={method:'POST',financial:true};
-          if(action === 'recommendation') {
-            const recommendation=form.querySelector('[name="recommendation"]').value;
-            const reason=form.querySelector('[name="reasonCode"]').value;
-            const comment=form.querySelector('[name="comment"]').value.trim();
-            if((recommendation === 'do_not_recommend' || reason.toLowerCase() === 'other') && comment.length<3) throw new Error('Explain this recommendation in the comment.');
-            options.body={recommendation,reason_code:reason,comment};
-          } else if(action === 'handover-photo') {
-            const file=form.querySelector('[name="photo"]').files?.[0];
-            if(!file || !['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size>8*1024*1024) throw new Error('Choose a JPEG, PNG or WebP photo up to 8 MB.');
-            options.rawBody=file;options.headers={'Content-Type':file.type,'X-File-Name':encodeURIComponent(file.name)};
-          } else {
-            if(!form.querySelector('[name="physicalConfirmation"]').checked) throw new Error('Confirm the physical cash handover first.');
-            options.body={};
-          }
-          const result=await collectorMutation({api,guard,path:`/api/v1/collector/renewals/${encodeURIComponent(id)}/${action}`,options,verify:result=>action==='handover-photo' ? result.status==='under_review' : result.request?.request_id===id});
-          if(current()) await onSaved(result);
-        } catch(error) {if(current())status(error.message);}
-        finally {guard.finish();}
-      });
-      guard.sync();
-    } catch(error) {if(current()) root.textContent=error.message;}
-  };
-  if(hasPermission(session,'renewal.recommend.assigned') || hasPermission(session,'renewal.cash_custody.assigned')) load();else root.textContent='Assigned renewal permission is required.';
-  function dispose(){disposed=true;signal?.removeEventListener('abort',dispose);}
-  signal?.addEventListener('abort',dispose,{once:true});
-  if(signal?.aborted) dispose();
-  return dispose;
+export function mountCollectorRenewals({root,api,session,getSession=()=>session,guard,onSaved,signal,registerHandle=()=>{},beforeTaskChange=()=>{},afterTaskChange=()=>{}}) {
+  let disposed=false,version=0,inflight=null,items=[],limit=30;const cards=new Map(),savedActions=new Set();
+  const allowed=()=>hasPermission(getSession(),'renewal.recommend.assigned') || hasPermission(getSession(),'renewal.cash_custody.assigned');
+  const current=()=>!disposed && guard.current && !signal?.aborted && Boolean(getSession());
+  root.innerHTML='<h2>Renewal handover</h2><p>Cash custody and Client confirmation remain separate.</p><div data-renewal-read-status></div><p data-renewal-count></p><div data-renewal-list></div><button class="button button-secondary" type="button" data-more-renewals hidden>Show more</button><div data-renewal-status role="status"></div>';
+  const list=root.querySelector('[data-renewal-list]');const status=message=>{if(current())root.querySelector('[data-renewal-status]').textContent=message;};
+  const bindingKey=item=>JSON.stringify([item.request_id,item.loan_id,item.status,item.collector_recommendation,item.client_decision,item.amount_locked_at,item.approved_principal,item.renewal_offset_amount,item.net_release_amount,item.cash_released_to_collector_at,item.collector_cash_received_at,item.cash_given_to_client_at,item.handover_proof_status]);
+  function bind(card,item){const expected=bindingKey(item);for(const form of card.querySelectorAll('[data-renewal-action]'))form.addEventListener('submit',async event=>{
+    event.preventDefault();const action=form.getAttribute('data-renewal-action'),actionId=item.request_id+':'+action;if(!current() || !allowed() || savedActions.has(actionId) || card.stale || !guard.begin())return;
+    try{const latest=items.find(record=>record.request_id===item.request_id);if(!latest || bindingKey(latest)!==expected || !collectorRenewalActions(latest,getSession()).includes(action))throw new Error('Refresh the renewal before acting.');const options={method:'POST',financial:true};
+      if(action==='recommendation'){const recommendation=form.querySelector('[name="recommendation"]').value,reason=form.querySelector('[name="reasonCode"]').value,comment=form.querySelector('[name="comment"]').value.trim();if((recommendation==='do_not_recommend' || reason.toLowerCase()==='other') && comment.length<3)throw new Error('Explain this recommendation in the comment.');options.body={recommendation,reason_code:reason,comment};}
+      else if(action==='handover-photo'){const file=form.querySelector('[name="photo"]').files?.[0];if(!file || !['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size>8*1024*1024)throw new Error('Choose a JPEG, PNG or WebP photo up to 8 MB.');options.rawBody=file;options.headers={'Content-Type':file.type,'X-File-Name':encodeURIComponent(file.name)};}
+      else{if(!form.querySelector('[name="physicalConfirmation"]').checked)throw new Error('Confirm the physical cash handover first.');options.body={};}
+      const result=await collectorMutation({api,guard,path:`/api/v1/collector/renewals/${encodeURIComponent(item.request_id)}/${action}`,options,verify:result=>action==='handover-photo'?result.status==='under_review':result.request?.request_id===item.request_id});if(!current())return;savedActions.add(actionId);for(const control of form.querySelectorAll('button'))control.disabled=true;status('Saved. Latest renewal is loading.');await onSaved(result,{source:'renewal'});if(current())await refresh();
+    }catch(error){if(current())status(error.message);}finally{guard.finish();}
+  });}
+  function newCard(item){const wrapper=root.ownerDocument.createElement('div');wrapper.innerHTML=renderCollectorRenewals([item],getSession());const card=wrapper.querySelector('[data-renewal-card]');card.bindingKey=bindingKey(item);bind(card,item);return card;}
+  function display(){root.querySelector('[data-renewal-count]').textContent=`Showing ${Math.min(limit,items.length)} of ${items.length} loaded renewal requests`;const more=root.querySelector('[data-more-renewals]');more.hidden=limit>=items.length;const shown=new Set(items.slice(0,limit).map(item=>item.request_id));for(const [id,card] of cards)card.hidden=!shown.has(id);}
+  function reconcile(){beforeTaskChange();const ids=new Set(items.map(item=>item.request_id));for(const [id,card] of cards)if(!ids.has(id)){card.remove();cards.delete(id);}for(const item of items){let card=cards.get(item.request_id);if(!card){card=newCard(item);cards.set(item.request_id,card);list.appendChild(card);}else{card.querySelector('[data-renewal-summary]').innerHTML=collectorRenewalSummary(item,getSession());if(card.bindingKey!==bindingKey(item)){card.stale=true;for(const control of card.querySelectorAll('button'))control.disabled=true;if(!card.querySelector('[data-review-renewal]')){const review=root.ownerDocument.createElement('div');review.innerHTML='<p>Renewal changed — review again. Reviewing the updated request clears only this request’s draft and selected photo.</p><button class="button button-outline" type="button" data-review-renewal>Review updated request</button>';card.appendChild(review);review.querySelector('[data-review-renewal]').addEventListener('click',()=>{beforeTaskChange();const latest=items.find(record=>record.request_id===item.request_id);if(!current() || !latest)return;const replacement=newCard(latest);card.replaceWith(replacement);cards.set(item.request_id,replacement);display();guard.sync();afterTaskChange();});}}}for(const form of card.querySelectorAll('[data-renewal-action]'))if(savedActions.has(item.request_id+':'+form.getAttribute('data-renewal-action')))for(const button of form.querySelectorAll('button'))button.disabled=true;}display();guard.sync();afterTaskChange();}
+  async function refresh(){if(!current())return;if(inflight)return inflight;if(!allowed()){beforeTaskChange();list.innerHTML='';cards.clear();items=[];root.querySelector('[data-renewal-read-status]').textContent='Assigned renewal permission is required.';afterTaskChange();return;}const generation=++version;root.querySelector('[data-renewal-read-status]').textContent='Loading assigned renewals…';inflight=(async()=>{try{const data=await api.request('/api/v1/collector/renewals',signal?{signal}:undefined);if(!current() || generation!==version)return;if(!Array.isArray(data?.requests) || data.requests.some(item=>!item?.request_id) || new Set(data.requests.map(item=>item.request_id)).size!==data.requests.length)throw new Error('Assigned renewal response is incomplete.');items=data.requests;root.querySelector('[data-renewal-read-status]').textContent=items.length?'':'No assigned renewal request is available.';reconcile();}catch(error){if(!current() || generation!==version)return;const read=root.querySelector('[data-renewal-read-status]');read.innerHTML='<p>Renewal queue could not refresh. '+h(error.message)+'</p><button class="button button-outline" type="button" data-retry-renewals>Retry renewals</button>';read.querySelector('[data-retry-renewals]').addEventListener('click',refresh);if(error.status===403){beforeTaskChange();list.innerHTML='';cards.clear();items=[];afterTaskChange();}}})().finally(()=>{inflight=null;});return inflight;}
+  root.querySelector('[data-more-renewals]').addEventListener('click',()=>{limit+=30;display();});
+  async function openRequest(requestId){if(!current() || !allowed())return false;if(inflight)await inflight;const index=items.findIndex(item=>item.request_id===requestId);if(index<0)return false;limit=Math.max(limit,Math.ceil((index+1)/30)*30);display();const card=cards.get(requestId);card.querySelector('h3')?.focus({preventScroll:true});card.scrollIntoView?.({block:'center'});return true;}
+  function dispose(){disposed=true;version++;items=[];cards.clear();savedActions.clear();registerHandle(null);root.innerHTML='';signal?.removeEventListener('abort',dispose);}
+  registerHandle({openRequest,refresh});signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();else refresh();return dispose;
 }
+
