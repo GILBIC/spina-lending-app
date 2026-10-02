@@ -318,6 +318,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          flutter precache --universal
           flutter pub get --enforce-lockfile
           flutter analyze --fatal-infos
           flutter test

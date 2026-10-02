@@ -4,32 +4,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
+import 'android_fixture_fonts.dart';
 
 Future<void>? _loadedFonts;
 Future<void> _loadAndroidFonts() => _loadedFonts ??= () async {
   final configuration =
       jsonDecode(await File('.dart_tool/package_config.json').readAsString())
           as Map<String, dynamic>;
-  final root = configuration['flutterRoot'] as String?;
-  if (root == null) throw StateError('Flutter SDK path unavailable');
-  final directory = Uri.parse(
-    '$root/',
-  ).resolve('bin/cache/artifacts/material_fonts/');
+  final files = androidFixtureFontFiles(configuration);
+  // Finish file reads before registering futures with FontLoader. A failed
+  // artifact read must not leave another unhandled font future behind.
+  final bytes = files.map((file) => file.readAsBytesSync()).toList();
   final roboto = FontLoader('Roboto');
-  for (final weight in ['regular', 'medium', 'bold', 'black', 'light']) {
-    roboto.addFont(
-      File.fromUri(
-        directory.resolve('roboto-$weight.ttf'),
-      ).readAsBytes().then(ByteData.sublistView),
-    );
+  for (final data in bytes.take(5)) {
+    roboto.addFont(Future.value(ByteData.sublistView(data)));
   }
   await roboto.load();
   final icons = FontLoader('MaterialIcons');
-  icons.addFont(
-    File.fromUri(
-      directory.resolve('materialicons-regular.otf'),
-    ).readAsBytes().then(ByteData.sublistView),
-  );
+  icons.addFont(Future.value(ByteData.sublistView(bytes.last)));
   await icons.load();
 }();
 
@@ -41,7 +33,20 @@ Future<void> pumpAndroidRoleFixture(
   bool disableAnimations = false,
   EdgeInsets viewInsets = EdgeInsets.zero,
 }) async {
-  await tester.runAsync(_loadAndroidFonts);
+  Object? fontError;
+  StackTrace? fontStack;
+  await tester.runAsync(() async {
+    try {
+      await _loadAndroidFonts().timeout(const Duration(seconds: 30));
+    } catch (error, stack) {
+      _loadedFonts = null;
+      fontError = error;
+      fontStack = stack;
+    }
+  });
+  if (fontError != null) {
+    Error.throwWithStackTrace(fontError!, fontStack!);
+  }
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
