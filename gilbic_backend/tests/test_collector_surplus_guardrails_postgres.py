@@ -22,6 +22,31 @@ surplus = surplus_support.surplus
 treasury = treasury_test_support.treasury
 
 
+def test_unpaid_cancellation_releases_reservation_without_cash(surplus):
+    t = surplus
+    action_row, credit_row = surplus_support.prepared(t)
+    before = cash_delta(t)
+    result = command(
+        t,
+        "collector_surplus_action_cancel",
+        action_id=action_row["id"],
+        action_version=action_row["version"],
+        evidence_id=t["evidence_id"],
+        reason="Synthetic approved return cancelled before any actual debit",
+    )
+    assert result["status"] == "saved"
+    assert result["result"]["disposition"] == "cancelled"
+    assert result["result"]["action_record"]["event_id"] is None
+    with connect() as conn:
+        current = conn.execute(
+            "select payload from treasury.collector_credits where id=%s",
+            (credit_row["id"],),
+        ).fetchone()["payload"]
+    assert current["reserved_amount"] == "0.00"
+    assert current["available_amount"] == current["outstanding_amount"] == "100.00"
+    assert cash_delta(t) == before
+
+
 def own_request(credit_row, request_id=None):
     return COMMAND_ADAPTER.validate_python(
         {
