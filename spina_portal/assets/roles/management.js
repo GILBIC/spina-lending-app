@@ -352,7 +352,10 @@ export function bindStaffDevices(context, accounts) {
       });
     }
     panelCleanup = () => { for (const cleanup of remove) cleanup(); };
-    if(!globalThis.document||globalThis.document.activeElement===focusAtOpen)detail.querySelector('[data-managed-device-heading]')?.focus?.();
+    if(!globalThis.document||globalThis.document.activeElement===focusAtOpen){
+      detail.querySelector('[data-managed-device-heading]')?.focus?.();
+      detail.scrollIntoView?.({ block: 'start' });
+    }
   }
 
   for (const button of context.root.querySelectorAll('[data-manage-staff-id]')) {
@@ -371,7 +374,6 @@ export function bindStaffDevices(context, accounts) {
       select(String(account.id));
       if (!canManageDevices) {
         showPanel(account, [], version);
-        detail.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
         return;
       }
       detail.innerHTML = loadingPanel('Loading registered devices…');
@@ -379,9 +381,13 @@ export function bindStaffDevices(context, accounts) {
         const devices = await loadManagedDevices(context.api, account.id);
         if (!active(version) || selectedId !== String(account.id)) return;
         showPanel(account, devices, version);
-        detail.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       } catch (error) {
-        if (active(version)) detail.innerHTML = errorCard(error);
+        if (active(version)) {
+          detail.innerHTML = `${errorCard(error)}<p class="meta">Close and open this staff account again to retry the read.</p><button class="button button-quiet" type="button" data-managed-device-close>Close</button>`;
+          const closeButton = detail.querySelector('[data-managed-device-close]');
+          closeButton.addEventListener('click', close);
+          panelCleanup = () => closeButton.removeEventListener('click', close);
+        }
       }
     };
     button.addEventListener('click', open);
