@@ -217,16 +217,16 @@ Do not follow this with npm run build on an unchanged head; it repeats the tests
 | Task | Planning state | Required proof |
 | --- | --- | --- |
 | 0 Baseline/ownership | Pending Codex | Current refs, shared owner/order, baseline checks |
-| 1 Payoff/schedule | Not implemented | Error/recovery, exact loan and values, review-required/races |
-| 2 Dependent reads | Not implemented | Failed versus empty, local retries, capability/replay safety |
-| 3 Draft/file retention | Not implemented | Node/File identity, save/read separation, stale/scope cleanup |
-| 4 Mobile/long records | Not implemented | Readable phone values, all120 rows, Close/filter focus |
-| 5 Independent loading | Not implemented | Deferred reads, current scope, safe Refresh and shared hook |
-| 6 Installment guidance | Not implemented | No arithmetic, row semantics, coverage and Manila rollover |
-| 7 Details/downloads | Not implemented | Exact transaction, existing private PDFs, content/ownership |
-| 8 Updates/actions | Not implemented | All65, safe targets, producer mapping and explicit gaps |
-| 9 Renewal presentation | Not implemented | Distinct stages, exact request join, confirmed actions |
-| 10 Integrated acceptance | Not run | Portal/PWA/privacy/browser/PDF, exact-head CI, sync |
+| 1 Payoff/schedule | Implemented:71fbbf3e | Error/recovery, exact loan and values, review-required/races |
+| 2 Dependent reads | Implemented:d30a325c | Failed versus empty, local retries, capability/replay safety |
+| 3 Draft/file retention | Implemented:9f973a74 | Node/File identity, save/read separation, stale/scope cleanup |
+| 4 Mobile/long records | Implemented:9f973a74 | Readable phone values, all120 rows, Close/filter focus |
+| 5 Independent loading | Implemented:9f973a74 + shared shell70426697 | Deferred reads, current scope, safe Refresh and shared hook |
+| 6 Installment guidance | Implemented:9f973a74 | No arithmetic, row semantics, coverage and Manila rollover |
+| 7 Details/downloads | Implemented:9f973a74 | Exact transaction, existing private PDFs, content/ownership |
+| 8 Updates/actions | Implemented:9f973a74; metadata gaps recorded | All65, safe targets, producer mapping and explicit gaps |
+| 9 Renewal presentation | Implemented:9f973a74 | Distinct stages, exact request join, confirmed actions |
+| 10 Integrated acceptance | Local portal/build/browser/PDF verified; root integration/CI/sync pending | Portal/PWA/privacy/browser/PDF, exact-head CI, sync |
 
 ## Explicit scope dispositions
 
@@ -235,3 +235,11 @@ Existing statement/payment PDFs are reused, not missing backend work. Live payme
 ## Copyable Codex task
 
 Implement Client Web UI completion on this Draft PR's existing branch. Read this plan and its linked design, live main/open PRs, frozen Master #296, latest Notion checkpoint and Create State before editing. Complete Tasks0–10 in order with failing behavioral tests before fixes, focused passing checks and reviewable commits. Coordinate shared app/ui/CSS/PWA/proof changes with #485–#487; do not overwrite their work, create a duplicate PR or add another router. Preserve own-data authority, exact server money, per-loan identity, proof/provider/official-payment distinctions, pending-request recovery, confirmations, credential restrictions and private-screen boundaries. Keep drafts/File inputs without new browser persistence; reuse existing PDF endpoints. Make unsupported notification/transaction metadata an explicit contract gap rather than a guessed shortcut. Update this checklist and GitHub/Notion/Create State after meaningful progress. Keep Draft/open/unmerged: no mark-ready, merge, deployment/delivery/migrations, production credentials/uploads/payments, real renewal signing/cash confirmation/capture, or Master acceptance changes. Finish with exact head, results, visual/document evidence, integration status, remaining gaps and next owner action.
+
+## Implementation checkpoint — 2 October 2026
+
+Product execution commits:71fbbf3e, d30a325c, 9f973a74; optional shared shell imported as70426697. Mount-local resource state, schedule/payoff recovery, retained forms/files, lazy reads, mobile records, saved-row guidance, exact payment details/current PDF shortcuts, progressive Updates and one-card renewal hierarchy are implemented. Local evidence:1042 portal tests before shared shell;16 focused shell/lifecycle/loading tests after import. Synthetic Chromium33 core samples (11 destinations ×1440/390/320), schedule20→120, Close focus, real File identity across proof GET/Support/renewal actions, payment details, Updates65,200%zoom/reduced motion and changed-account disposal passed without console errors. Existing Client PDF/document/payment/loan backend tests66 passed; synthetic voided PDF exact text and rendered layout checked.
+
+The root integration owner handles combined-role review, final cache version, exact-head remote CI, PR push/body and external checkpoints. This checkpoint does not mark integrated acceptance complete. Detailed local ledger/artifacts are retained by the root under checkpoints/current-prs-20261002/client-report.md and client-browser/. No production/native acceptance, merge/deploy/mark-ready or Master296 edits occurred.
+
+Contract gaps: only client_payment_posted (SQL0013) and client_payment_voided (collection_void_repository) have verified transaction shortcuts. Proof/renewal/Support notification IDs require an approved producer contract; arbitrary metadata and URLs remain read-only. Missing financial allocation fields remain Not recorded; existing current PDFs are reused. Provider enablement/settlement, public registration and Client self-password service remain outside scope.
