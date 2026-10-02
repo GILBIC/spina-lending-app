@@ -197,7 +197,7 @@ void main() {
 
     expect(
       find.text(
-        'Gilbic could not load other-area work. Check your connection, then tap Retry.',
+        'SPINA could not load other-area work. Check your connection, then tap Retry.',
       ),
       findsOneWidget,
     );

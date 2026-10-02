@@ -336,7 +336,12 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
                   : Icons.rate_review_outlined,
             ),
             title: Text(
-              '${employeeLabel(event.command['event_type'] as String)} · ${switch (event.state) {'accepted' => 'Received by server', 'pending' => 'Saved on this device — awaiting server sync', 'pending_review' || 'review' => 'Needs review', _ => 'Status unavailable'}}',
+              '${employeeLabel(event.command['event_type'] as String)} · ${switch (event.state) {
+                'accepted' => 'Received by server',
+                'pending' => 'Saved on this device — awaiting server sync',
+                'pending_review' || 'needs_attention' => 'Needs review',
+                _ => 'Status unavailable',
+              }}',
             ),
             subtitle: Text(
               '${_format(event.command['captured_at'])}\n${event.message}',
@@ -426,7 +431,11 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
         ? stringMap(record['payload'])
         : record;
     final id = record['employee_id'] as String?;
-    final presentation = presentEmployeeRecord(collection, record, _workspace!.employeeName(id));
+    final presentation = presentEmployeeRecord(
+      collection,
+      record,
+      _workspace!.employeeName(id),
+    );
     final actions = stringList(record['allowed_actions'])
         .where(
           (action) =>
@@ -441,11 +450,17 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
           '$collection-${record['id'] ?? '$id-${record['work_date']}'}',
         ),
         title: Text(presentation.title),
-        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SpinaStatusLabel(label: presentation.status, tone: SpinaStatusTone.information),
-          for (final field in presentation.summaryFields.entries)
-            Text('${employeeLabel(field.key)}: ${field.value}'),
-        ]),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SpinaStatusLabel(
+              label: presentation.status,
+              tone: SpinaStatusTone.information,
+            ),
+            for (final field in presentation.summaryFields.entries)
+              Text('${employeeLabel(field.key)}: ${field.value}'),
+          ],
+        ),
         childrenPadding: const EdgeInsets.all(14),
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -453,9 +468,12 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
             title: const Text('Details'),
             expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final key in presentation.detailKeys) _value(key, payload[key]),
-              if (record['version'] != null) _value('version', record['version']),
-              if (record['updated_at'] != null) _value('updated_at', record['updated_at']),
+              for (final key in presentation.detailKeys)
+                _value(key, payload[key]),
+              if (record['version'] != null)
+                _value('version', record['version']),
+              if (record['updated_at'] != null)
+                _value('updated_at', record['updated_at']),
               if (record['id'] != null) _value('record_id', record['id']),
             ],
           ),

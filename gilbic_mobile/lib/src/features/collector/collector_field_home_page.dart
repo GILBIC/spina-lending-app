@@ -269,46 +269,47 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       },
                     ),
                   if (widget.session.hasPermission('employee.portal.view'))
-                  _CollectorToolTile(
-                    key: const Key('collector-more-employee-operations'),
-                    icon: Icons.badge_outlined,
-                    title: 'My attendance, pay & requests',
-                    subtitle:
-                        'Private employee records, breaks, tasks and salary advances',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _open(
-                        EmployeeOperationsPage(
-                          session: widget.session,
-                          deviceIdentityProvider: widget.deviceIdentityProvider,
-                        ),
-                      );
-                    },
-                  ),
+                    _CollectorToolTile(
+                      key: const Key('collector-more-employee-operations'),
+                      icon: Icons.badge_outlined,
+                      title: 'My attendance, pay & requests',
+                      subtitle:
+                          'Private employee records, breaks, tasks and salary advances',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _open(
+                          EmployeeOperationsPage(
+                            session: widget.session,
+                            deviceIdentityProvider:
+                                widget.deviceIdentityProvider,
+                          ),
+                        );
+                      },
+                    ),
                   if (_canReadRenewals)
-                  _CollectorToolTile(
-                    key: const Key('collector-more-renewals'),
-                    icon: Icons.autorenew_rounded,
-                    title: 'Renewal requests',
-                    subtitle:
-                        'Recommend assigned clients and track terms, signers, cash and proof',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _openRenewals();
-                    },
-                  ),
+                    _CollectorToolTile(
+                      key: const Key('collector-more-renewals'),
+                      icon: Icons.autorenew_rounded,
+                      title: 'Renewal requests',
+                      subtitle:
+                          'Recommend assigned clients and track terms, signers, cash and proof',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _openRenewals();
+                      },
+                    ),
                   if (widget.session.hasPermission('collection.create'))
-                  _CollectorToolTile(
-                    key: const Key('collector-more-other-area'),
-                    icon: Icons.person_search_outlined,
-                    title: 'Other-area collection',
-                    subtitle:
-                        'Record an allowed payment outside your assigned route',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _openOtherArea();
-                    },
-                  ),
+                    _CollectorToolTile(
+                      key: const Key('collector-more-other-area'),
+                      icon: Icons.person_search_outlined,
+                      title: 'Other-area collection',
+                      subtitle:
+                          'Record an allowed payment outside your assigned route',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _openOtherArea();
+                      },
+                    ),
                   _CollectorToolTile(
                     key: const Key('collector-more-payment-updates'),
                     icon: Icons.receipt_long_outlined,
@@ -437,6 +438,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
               onOpenCashToReceive: _openCashToReceive,
               onOpenCashToClient: _openCashToClient,
               onCashReleaseAlert: _showCashReleaseAlert,
+              onSignOut: widget.onSignOut,
             ),
           ),
           Expanded(
@@ -450,43 +452,57 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              break;
-            case 1:
-              _openMasterReview();
-            case 2:
-              _openRemittance();
-            case 3:
-              _openMore();
-          }
-        },
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.route_outlined),
-            selectedIcon: Icon(Icons.route_rounded),
-            label: 'Route',
-          ),
-          NavigationDestination(
-            key: Key('collector-master-review-tab'),
-            icon: Icon(Icons.fact_check_outlined),
-            selectedIcon: Icon(Icons.fact_check_rounded),
-            label: 'Master review',
-          ),
-          NavigationDestination(
-            enabled: widget.session.hasPermission('remittance.view'),
-            tooltip: widget.session.hasPermission('remittance.view') ? 'Remit' : 'Remit unavailable: remittance access is not assigned',
-            icon: const Icon(Icons.account_balance_outlined),
-            selectedIcon: Icon(Icons.account_balance_rounded),
-            label: 'Remit',
-          ),
-          NavigationDestination(
-            key: Key('collector-more-tab'),
-            icon: Icon(Icons.more_horiz_rounded),
-            label: 'More',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!widget.session.hasPermission('remittance.view'))
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Text(
+                'Remit unavailable: remittance access is not assigned',
+              ),
+            ),
+          NavigationBar(
+            selectedIndex: 0,
+            onDestinationSelected: (index) {
+              switch (index) {
+                case 0:
+                  break;
+                case 1:
+                  _openMasterReview();
+                case 2:
+                  _openRemittance();
+                case 3:
+                  _openMore();
+              }
+            },
+            destinations: [
+              NavigationDestination(
+                icon: Icon(Icons.route_outlined),
+                selectedIcon: Icon(Icons.route_rounded),
+                label: 'Route',
+              ),
+              NavigationDestination(
+                key: Key('collector-master-review-tab'),
+                icon: Icon(Icons.fact_check_outlined),
+                selectedIcon: Icon(Icons.fact_check_rounded),
+                label: 'Master review',
+              ),
+              NavigationDestination(
+                enabled: widget.session.hasPermission('remittance.view'),
+                tooltip: widget.session.hasPermission('remittance.view')
+                    ? 'Remit'
+                    : 'Remit unavailable: remittance access is not assigned',
+                icon: const Icon(Icons.account_balance_outlined),
+                selectedIcon: Icon(Icons.account_balance_rounded),
+                label: 'Remit',
+              ),
+              NavigationDestination(
+                key: Key('collector-more-tab'),
+                icon: Icon(Icons.more_horiz_rounded),
+                label: 'More',
+              ),
+            ],
           ),
         ],
       ),
@@ -537,4 +553,5 @@ class _CollectorToolTile extends StatelessWidget {
 }
 
 // Legacy cash/route models are numeric; this preserves their existing display conversion.
-String _money(double value) => value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';
+String _money(double value) =>
+    value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';

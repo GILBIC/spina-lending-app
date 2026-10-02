@@ -55,7 +55,9 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
     } on SpinaApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } on Object {
-      if (mounted) setState(() => _error = 'Payment schedule could not be loaded.');
+      if (mounted) {
+        setState(() => _error = 'Payment schedule could not be loaded.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -113,8 +115,14 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
                   const Divider(height: 24),
                   _line('Loan', schedule.loanNumber),
                   _line('Type', schedule.loanType),
-                  _line('Contractual maturity', _date(schedule.contractualMaturity)),
-                  _line('Current operational completion', _date(schedule.operationalMaturity)),
+                  _line(
+                    'Contractual maturity',
+                    _date(schedule.contractualMaturity),
+                  ),
+                  _line(
+                    'Current operational completion',
+                    _date(schedule.operationalMaturity),
+                  ),
                   _line('Past due', _money(schedule.pastDueAmount)),
                   _line('Schedule status', schedule.maturityStatus),
                 ],
@@ -146,7 +154,10 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(_date(row.paymentDate), style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              _date(row.paymentDate),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             Text(row.status),
             const SizedBox(height: 8),
             _line('Required amount', _money(row.amount)),
@@ -173,4 +184,8 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
 
 String _money(String value) => formatSpinaMoney(value);
 
-String _date(DateTime? value) => formatSpinaCalendarDate(value == null ? null : '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}');
+String _date(DateTime? value) => formatSpinaCalendarDate(
+  value == null
+      ? null
+      : '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}',
+);

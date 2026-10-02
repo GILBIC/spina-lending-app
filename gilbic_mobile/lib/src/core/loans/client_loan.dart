@@ -190,7 +190,9 @@ String formatClientLoanRate(String value) {
   if (!text.contains('.')) {
     return text;
   }
-  final trimmed = text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  final trimmed = text
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
   return trimmed;
 }
 

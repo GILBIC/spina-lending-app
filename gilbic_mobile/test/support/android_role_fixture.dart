@@ -7,19 +7,28 @@ Future<void> pumpAndroidRoleFixture(
   required Widget home,
   required Size size,
   required TextScaler textScaler,
+  bool disableAnimations = false,
+  EdgeInsets viewInsets = EdgeInsets.zero,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(MaterialApp(
-    theme: SpinaTheme.light.copyWith(platform: TargetPlatform.android),
-    builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        size: size,
-        devicePixelRatio: 1,
-        textScaler: textScaler,
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: SpinaTheme.light.copyWith(platform: TargetPlatform.android),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          size: size,
+          devicePixelRatio: 1,
+          textScaler: textScaler,
+          disableAnimations: disableAnimations,
+          viewInsets: viewInsets,
+        ),
+        child: child!,
       ),
-      child: child!,
+      home: RepaintBoundary(
+        key: const Key('android-role-capture'),
+        child: home,
+      ),
     ),
-    home: home,
-  ));
+  );
 }

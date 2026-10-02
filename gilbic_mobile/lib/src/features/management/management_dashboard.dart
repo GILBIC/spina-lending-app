@@ -137,9 +137,11 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     } on Object catch (error) {
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
-        _overviewError = error is SpinaApiException
-            ? error.message
-            : refresh
+        if (error is SpinaApiException &&
+            (error.statusCode == 401 || error.statusCode == 403)) {
+          _overview = null;
+        }
+        _overviewError = refresh
             ? 'The live Management overview could not be refreshed.'
             : 'The live Management overview could not be loaded.';
         _overviewStatusCode = error is SpinaApiException
@@ -690,6 +692,10 @@ class _ManagementOverviewInitialError extends StatelessWidget {
                       icon: const Icon(Icons.login),
                       label: const Text('Sign in again'),
                     )
+                  : statusCode == 403
+                  ? const Text(
+                      'Access unavailable. Return to Profile & security or contact Management.',
+                    )
                   : OutlinedButton.icon(
                       key: const Key('management-overview-retry'),
                       onPressed: onRetry,
@@ -722,7 +728,9 @@ class _ManagementAttentionGrid extends StatelessWidget {
         final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
         final columnCount = scale > 1.5 || constraints.maxWidth < 350
             ? 2
-            : scale > 1.1 ? 3 : constraints.maxWidth >= 900
+            : scale > 1.1
+            ? 3
+            : constraints.maxWidth >= 900
             ? 6
             : constraints.maxWidth >= 600
             ? 5
@@ -765,7 +773,11 @@ class _ManagementKpiGrid extends StatelessWidget {
       builder: (context, constraints) {
         const spacing = 10.0;
         final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final columnCount = scale > 1.5 || constraints.maxWidth < 350 ? 1 : constraints.maxWidth >= 900 ? 3 : 2;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350
+            ? 1
+            : constraints.maxWidth >= 900
+            ? 3
+            : 2;
         final cardWidth =
             (constraints.maxWidth - (spacing * (columnCount - 1))) /
             columnCount;
@@ -816,7 +828,10 @@ class _ManagementKpiCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(content.$1, style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    content.$1,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     content.$2,
@@ -1020,9 +1035,12 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
   };
 }
 
-String _updatedText(BuildContext context, DateTime generatedAt) => 'Updated ${formatSpinaInstant(generatedAt)} (Asia/Manila)';
+String _updatedText(BuildContext context, DateTime generatedAt) =>
+    'Updated ${formatSpinaInstant(generatedAt)} (Asia/Manila)';
 
-String _asOfText(BuildContext context, DateTime? value) => value == null ? '' : ' • ${formatSpinaCalendarDate('${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}')}';
+String _asOfText(BuildContext context, DateTime? value) => value == null
+    ? ''
+    : ' • ${formatSpinaCalendarDate('${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}')}';
 
 String _metricDestinationLabel(ManagementDashboardMetricKey key) {
   return switch (key) {
@@ -1126,7 +1144,9 @@ class _ManagementModuleGrid extends StatelessWidget {
         final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
         final columnCount = scale > 1.5 || constraints.maxWidth < 350
             ? 2
-            : scale > 1.1 ? 3 : constraints.maxWidth >= 900
+            : scale > 1.1
+            ? 3
+            : constraints.maxWidth >= 900
             ? 6
             : constraints.maxWidth >= 600
             ? 5

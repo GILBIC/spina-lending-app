@@ -104,7 +104,7 @@ void main() {
 
     expect(
       find.text(
-        'Gilbic could not load correction history. Check your connection, then tap Retry.',
+        'SPINA could not load correction history. Check your connection, then tap Retry.',
       ),
       findsOneWidget,
     );

@@ -69,7 +69,8 @@ class _ClientDashboardState extends State<ClientDashboard> {
       _scheduleLoading.clear();
       _scheduleUnavailable.clear();
       _loanRepository = widget.loanRepository ?? SpinaClientLoanRepository();
-      _scheduleRepository = widget.scheduleRepository ?? SpinaClientScheduleRepository();
+      _scheduleRepository =
+          widget.scheduleRepository ?? SpinaClientScheduleRepository();
       unawaited(_loadPortfolio());
     }
   }
@@ -107,7 +108,10 @@ class _ClientDashboardState extends State<ClientDashboard> {
     try {
       final identity = await widget.deviceIdentityProvider.load();
       if (!_current(generation)) return;
-      final portfolio = await repository.loadPortfolio(session, deviceId: identity.installationId);
+      final portfolio = await repository.loadPortfolio(
+        session,
+        deviceId: identity.installationId,
+      );
       if (!_current(generation)) return;
       setState(() {
         _portfolio = portfolio;
@@ -115,7 +119,9 @@ class _ClientDashboardState extends State<ClientDashboard> {
         _scheduleUnavailable.clear();
         _loading = false;
       });
-      for (final loan in portfolio.activeLoans.where((loan) => loan.isSevenBySeven)) {
+      for (final loan in portfolio.activeLoans.where(
+        (loan) => loan.isSevenBySeven,
+      )) {
         unawaited(_loadScheduleForLoan(loan.loanId));
       }
     } on Object catch (error) {
@@ -127,7 +133,10 @@ class _ClientDashboardState extends State<ClientDashboard> {
 
   Future<void> _loadScheduleForLoan(String loanId) async {
     if (_scheduleLoading.contains(loanId) ||
-        !(_portfolio?.activeLoans.any((loan) => loan.loanId == loanId) ?? false)) return;
+        !(_portfolio?.activeLoans.any((loan) => loan.loanId == loanId) ??
+            false)) {
+      return;
+    }
     final generation = _generation;
     final session = widget.session;
     final repository = _scheduleRepository;
@@ -135,21 +144,34 @@ class _ClientDashboardState extends State<ClientDashboard> {
       _scheduleLoading.add(loanId);
       _scheduleUnavailable.remove(loanId);
     });
-    bool valid() => _current(generation) &&
+    bool valid() =>
+        _current(generation) &&
         (_portfolio?.activeLoans.any((loan) => loan.loanId == loanId) ?? false);
     try {
       final identity = await widget.deviceIdentityProvider.load();
       if (!valid()) return;
-      final schedule = await repository.loadSchedule(session,
-        deviceId: identity.installationId, loanId: loanId);
+      final schedule = await repository.loadSchedule(
+        session,
+        deviceId: identity.installationId,
+        loanId: loanId,
+      );
       if (!valid()) return;
       if (schedule.loanId != loanId) {
-        throw const SpinaApiException('Schedule identity unavailable', code: 'invalid_client_schedule_payload');
+        throw const SpinaApiException(
+          'Schedule identity unavailable',
+          code: 'invalid_client_schedule_payload',
+        );
       }
-      setState(() => _homeObligationSchedules = {..._homeObligationSchedules, loanId: schedule});
+      setState(
+        () => _homeObligationSchedules = {
+          ..._homeObligationSchedules,
+          loanId: schedule,
+        },
+      );
     } on Object catch (error) {
       if (!valid()) return;
-      if (error is SpinaApiException && (error.statusCode == 401 || error.statusCode == 403)) {
+      if (error is SpinaApiException &&
+          (error.statusCode == 401 || error.statusCode == 403)) {
         _failedRead(error, generation);
       } else {
         setState(() => _scheduleUnavailable.add(loanId));
@@ -286,7 +308,11 @@ class _ClientDashboardState extends State<ClientDashboard> {
                   homeObligationSchedules: _homeObligationSchedules,
                   loading: _loading,
                   errorMessage: _errorMessage,
-                  onRetry: _failureStatus == 401 ? () => unawaited(widget.onSignOut()) : _failureStatus == 403 ? null : _loadPortfolio,
+                  onRetry: _failureStatus == 401
+                      ? () => unawaited(widget.onSignOut())
+                      : _failureStatus == 403
+                      ? null
+                      : _loadPortfolio,
                   recoveryLabel: _recoveryLabel,
                   scheduleLoading: _scheduleLoading,
                   scheduleUnavailable: _scheduleUnavailable,
@@ -387,10 +413,19 @@ class _CurrentLoansSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text('Current loans', style: Theme.of(context).textTheme.titleLarge),
-          if (portfolio != null) Text(countLabel, style: Theme.of(context).textTheme.labelLarge),
-        ]),
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'Current loans',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            if (portfolio != null)
+              Text(countLabel, style: Theme.of(context).textTheme.labelLarge),
+          ],
+        ),
         const SizedBox(height: 8),
         if (loading && portfolio == null)
           const Card(
@@ -400,7 +435,13 @@ class _CurrentLoansSection extends StatelessWidget {
             ),
           )
         else if (errorMessage != null && portfolio == null)
-          WorkspaceReadNotice(key: const Key('client-home-retry'), message: errorMessage!, actionLabel: recoveryLabel, onAction: onRetry, stale: portfolio != null)
+          WorkspaceReadNotice(
+            key: const Key('client-home-retry'),
+            message: errorMessage!,
+            actionLabel: recoveryLabel,
+            onAction: onRetry,
+            stale: portfolio != null,
+          )
         else if (activeLoans.isEmpty)
           Card(
             child: Padding(
@@ -435,7 +476,13 @@ class _CurrentLoansSection extends StatelessWidget {
             ),
         if (errorMessage != null && portfolio != null) ...[
           const SizedBox(height: 4),
-          WorkspaceReadNotice(key: const Key('client-home-retry'), message: errorMessage!, actionLabel: recoveryLabel, onAction: onRetry, stale: portfolio != null),
+          WorkspaceReadNotice(
+            key: const Key('client-home-retry'),
+            message: errorMessage!,
+            actionLabel: recoveryLabel,
+            onAction: onRetry,
+            stale: portfolio != null,
+          ),
         ],
       ],
     );
@@ -505,7 +552,10 @@ class _ClientLoanSummaryRow extends StatelessWidget {
                     loan.loanTypeName,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  SpinaStatusLabel(label: _titleCase(loan.status), tone: SpinaStatusTone.information),
+                  SpinaStatusLabel(
+                    label: _titleCase(loan.status),
+                    tone: SpinaStatusTone.information,
+                  ),
                 ],
               ),
               const SizedBox(height: 2),
@@ -533,7 +583,11 @@ class _ClientLoanSummaryRow extends StatelessWidget {
                 const Text('Loading schedule/payoff information'),
               ],
               if (loan.isSevenBySeven && scheduleUnavailable)
-                WorkspaceReadNotice(message: 'Schedule/payoff information unavailable', actionLabel: 'Retry schedule', onAction: onRetrySchedule),
+                WorkspaceReadNotice(
+                  message: 'Schedule/payoff information unavailable',
+                  actionLabel: 'Retry schedule',
+                  onAction: onRetrySchedule,
+                ),
               if (managementReviewRequired) ...[
                 const SizedBox(height: 10),
                 Text(
@@ -582,18 +636,28 @@ class _LoanAmountLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = emphasized ? Theme.of(context).textTheme.titleSmall : null;
-    return LayoutBuilder(builder: (context, constraints) {
-      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-      if (constraints.maxWidth < 350 || scale > 1.2 || value.length > 14) {
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: style), Text(value, style: style),
-        ]);
-      }
-      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(child: Text(label, style: style)), const SizedBox(width: 12),
-        Text(value, style: style, textAlign: TextAlign.right),
-      ]);
-    });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        if (constraints.maxWidth < 350 || scale > 1.2 || value.length > 14) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: style),
+              Text(value, style: style),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Text(label, style: style)),
+            const SizedBox(width: 12),
+            Text(value, style: style, textAlign: TextAlign.right),
+          ],
+        );
+      },
+    );
   }
 }
 

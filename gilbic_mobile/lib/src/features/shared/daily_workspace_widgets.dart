@@ -7,25 +7,39 @@ import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.da
 
 /// Stateless read recovery; it never owns or retries a financial command.
 class WorkspaceReadNotice extends StatelessWidget {
-  const WorkspaceReadNotice({required this.message, required this.actionLabel,
-    this.onAction, this.stale = false, super.key});
+  const WorkspaceReadNotice({
+    required this.message,
+    required this.actionLabel,
+    this.onAction,
+    this.stale = false,
+    super.key,
+  });
   final String message;
   final String actionLabel;
   final VoidCallback? onAction;
   final bool stale;
 
   @override
-  Widget build(BuildContext context) => Card(child: Padding(
-    padding: const EdgeInsets.all(14),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (stale) const Text('Showing the last successful information. It has not been refreshed.'),
-      Text(message),
-      const SizedBox(height: 10),
-      if (onAction != null)
-        OutlinedButton(onPressed: onAction, child: Text(actionLabel))
-      else Text(actionLabel, style: Theme.of(context).textTheme.titleSmall),
-    ]),
-  ));
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (stale)
+            const Text(
+              'Showing the last successful information. It has not been refreshed.',
+            ),
+          Text(message),
+          const SizedBox(height: 10),
+          if (onAction != null)
+            OutlinedButton(onPressed: onAction, child: Text(actionLabel))
+          else
+            Text(actionLabel, style: Theme.of(context).textTheme.titleSmall),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Keeps forms and task lists readable on tablets without narrowing phones.

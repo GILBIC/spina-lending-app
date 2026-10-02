@@ -14,7 +14,10 @@ void main() {
     expect(formatSpinaCalendarDate('2026-02-31'), 'Unavailable');
     expect(formatSpinaCalendarDate('bad'), 'Unavailable');
     expect(formatSpinaCalendarDate(null), 'Not recorded');
-    expect(formatSpinaInstant(DateTime.parse('2026-10-01T16:30:00Z')), '2026-10-02 00:30');
+    expect(
+      formatSpinaInstant(DateTime.parse('2026-10-01T16:30:00Z')),
+      '2026-10-02 00:30',
+    );
     expect(formatSpinaInstant(null), 'Not recorded');
   });
   test('invalid authoritative money is unavailable rather than raw text', () {
@@ -25,7 +28,13 @@ void main() {
     expect(formatClientLoanMoney('-50.00'), '-₱50.00');
     expect(formatClientLoanMoney('0'), '₱0.00');
     expect(formatClientLoanMoney('1.2345'), '₱1.2345');
-    expect(formatClientLoanMoney('90071992547409.91'), '₱90,071,992,547,409.91');
-    expect(formatClientLoanMoney('90071992547409.92'), '₱90,071,992,547,409.92');
+    expect(
+      formatClientLoanMoney('90071992547409.91'),
+      '₱90,071,992,547,409.91',
+    );
+    expect(
+      formatClientLoanMoney('90071992547409.92'),
+      '₱90,071,992,547,409.92',
+    );
   });
 }

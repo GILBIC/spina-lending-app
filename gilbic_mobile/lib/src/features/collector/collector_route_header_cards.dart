@@ -115,9 +115,12 @@ String? _activePromiseReminder(CollectorRouteEntry entry) {
   return reminder.isEmpty ? null : reminder;
 }
 
-String _longDate(DateTime value) => formatSpinaCalendarDate('${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}');
+String _longDate(DateTime value) => formatSpinaCalendarDate(
+  '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}',
+);
 
 String _time(DateTime value) => '${formatSpinaInstant(value)} (Asia/Manila)';
 
 // Legacy cash/route models are numeric; this preserves their existing display conversion.
-String _money(double value) => value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';
+String _money(double value) =>
+    value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';

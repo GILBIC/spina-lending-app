@@ -1,3 +1,5 @@
+import 'support/android_role_fixture.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -20,6 +22,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: SpinaTheme.light,
           home: ClientDashboard(
             session: _session(),
             onSignOut: () async {},
@@ -86,6 +89,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: SpinaTheme.light,
           home: ClientDashboard(
             session: _session(),
             onSignOut: () async {},
@@ -122,6 +126,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: SpinaTheme.light,
         home: ClientDashboard(
           session: _session(),
           onSignOut: () async {},
@@ -157,6 +162,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: SpinaTheme.light,
         home: ClientDashboard(
           session: _session(),
           onSignOut: () async {},
@@ -181,25 +187,25 @@ void main() {
   testWidgets('Client home remains usable at 360x640 and 1.3 text scale', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(360, 640));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
-        child: MaterialApp(
-          home: ClientDashboard(
-            session: _session(),
-            onSignOut: () async {},
-            deviceIdentityProvider: _deviceIdentityProvider(),
-            loanRepository: _FakeClientLoanRepository(_portfolio()),
-            scheduleRepository: _FakeClientScheduleRepository(),
-          ),
-        ),
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(360, 640),
+      textScaler: TextScaler.linear(1.3),
+      home: ClientDashboard(
+        session: _session(),
+        onSignOut: () async {},
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        loanRepository: _FakeClientLoanRepository(_portfolio()),
+        scheduleRepository: _FakeClientScheduleRepository(),
       ),
     );
     await tester.pumpAndSettle();
-
+    expect(
+      MediaQuery.textScalerOf(
+        tester.element(find.byKey(const Key('client-dashboard-list'))),
+      ).scale(10),
+      13,
+    );
     expect(find.byKey(const Key('client-dashboard-list')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

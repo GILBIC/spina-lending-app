@@ -5,7 +5,6 @@ import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
-import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
 UserSession clientSession() => UserSession(
   userId: 'client-1',
@@ -97,6 +96,14 @@ class FakeClientLoanRepository implements ClientLoanRepository {
 }
 
 class FakeClientScheduleRepository implements ClientScheduleRepository {
+  FakeClientScheduleRepository({
+    this.penaltyStatus = 'not_applicable',
+    this.payoff = '0.00',
+    this.reviewReason = '',
+  });
+  final String penaltyStatus;
+  final String payoff;
+  final String reviewReason;
   @override
   Future<ClientLoanSchedule> loadSchedule(
     UserSession session, {
@@ -115,15 +122,14 @@ class FakeClientScheduleRepository implements ClientScheduleRepository {
       pastDueCount: 0,
       scheduleExtensionSlots: 0,
       maturityStatus: 'scheduled',
-      penaltyStatus: 'not_applicable',
+      penaltyStatus: penaltyStatus,
       projectedPenalty: '0.00',
       assessedPenaltyBalance: '0.00',
       penaltyBase: '0.00',
       remainingCostHeadroom: '0.00',
-      exactPayoffTotal: '0.00',
-      managementReviewRequiredReason: '',
+      exactPayoffTotal: payoff,
+      managementReviewRequiredReason: reviewReason,
       rows: const <ClientScheduleRow>[],
     );
   }
 }
-
