@@ -1,0 +1,225 @@
+"""Independent boundary checks against the disposable Collector workflow."""
+
+from datetime import UTC, datetime
+from decimal import Decimal
+from uuid import UUID, uuid4
+
+import psycopg
+import pytest
+import test_collector_surplus_postgres as surplus_support
+import treasury_test_support
+from gilbic_backend.treasury_authorization import TreasuryConflict, TreasuryDenied
+from gilbic_backend.treasury_models import COMMAND_ADAPTER, AccountGrant
+from test_collector_surplus_postgres import accept, cash_delta, command, count, credit
+from treasury_test_support import actor, connect, grant_live, version
+
+surplus = surplus_support.surplus
+treasury = treasury_test_support.treasury
+
+
+def own_request(credit_row, request_id=None):
+    return COMMAND_ADAPTER.validate_python(
+        {
+            "action": "collector_surplus_return_request",
+            "request_id": request_id or uuid4(),
+            "credit_id": credit_row["id"],
+            "credit_version": credit_row["version"],
+            "amount": "40.00",
+            "destination": {
+                "kind": "physical_cash",
+                "recipient_reference": None,
+            },
+            "reason": "Synthetic own credit return request",
+        }
+    )
+
+
+def test_foreign_collector_cannot_request_another_collectors_credit(surplus):
+    t = surplus
+    current_credit = credit(t)
+    with connect() as conn:
+        other = actor(conn, "collector")
+    with pytest.raises(TreasuryDenied):
+        t["service"].execute(other, own_request(current_credit))
+    with connect() as conn:
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.collector_requests where credit_id=%s",
+                (UUID(current_credit["id"]),),
+            ).fetchone()["n"]
+            == 0
+        )
+
+
+def test_own_request_replay_is_bound_to_payload_and_current_collector_role(surplus):
+    t = surplus
+    current_credit = credit(t)
+    submitted = own_request(current_credit)
+    saved = t["service"].execute(t["collector"], submitted)
+    assert saved["result"]["disposition"] == "requested"
+    assert t["service"].request_result(t["collector"], submitted.request_id) == saved
+    changed = COMMAND_ADAPTER.validate_python(
+        dict(submitted.model_dump(mode="json"), amount="41.00")
+    )
+    with pytest.raises(TreasuryConflict):
+        t["service"].execute(t["collector"], changed)
+    with connect() as conn:
+        conn.execute(
+            """delete from core.user_roles
+            where user_id=%s and role_id in
+            (select id from core.roles where code='collector')""",
+            (t["collector"].user_id,),
+        )
+    with pytest.raises(TreasuryDenied):
+        t["service"].request_result(t["collector"], submitted.request_id)
+
+
+def test_acceptance_rolls_back_cash_custody_and_case_if_outcome_save_fails(
+    surplus, monkeypatch
+):
+    t = surplus
+    recorded_count = count(t)
+
+    def reject_outcome(*args, **kwargs):
+        raise RuntimeError("Synthetic audit/outcome failure")
+
+    monkeypatch.setattr(t["service"], "save_result", reject_outcome)
+    with pytest.raises(RuntimeError, match="Synthetic audit/outcome failure"):
+        accept(t, recorded_count)
+    with connect() as conn:
+        remittance = conn.execute(
+            """select status,custody_transferred_at from lending.collection_remittances
+            where id=%s""",
+            (t["remittance_id"],),
+        ).fetchone()
+        assert remittance["status"] == "submitted"
+        assert remittance["custody_transferred_at"] is None
+        assert conn.execute(
+            "select coalesce(sum(signed_amount),0) as amount from treasury.movement_lines where account_id=%s",
+            (t["account_id"],),
+        ).fetchone()["amount"] == Decimal("0.00")
+        for table in ("collector_settlements", "collector_cases", "collector_credits"):
+            query = psycopg.sql.SQL(
+                "select count(*) as n from treasury.{} where account_id=%s"
+            ).format(psycopg.sql.Identifier(table))
+            assert conn.execute(query, (t["account_id"],)).fetchone()["n"] == 0
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.collector_counts where account_id=%s",
+                (t["account_id"],),
+            ).fetchone()["n"]
+            == 1
+        )
+
+
+def test_staff_count_recovery_fails_if_private_evidence_is_missing(
+    surplus, monkeypatch
+):
+    t = surplus
+    recorded_count = count(t)
+    with connect() as conn:
+        request_id = conn.execute(
+            "select request_id from treasury.outcomes where action='collector_count_record' and result->>'target_id'=%s",
+            (recorded_count["id"],),
+        ).fetchone()["request_id"]
+
+    def missing_file(*args, **kwargs):
+        raise FileNotFoundError("Synthetic private evidence is unavailable")
+
+    monkeypatch.setattr(t["service"].store, "read", missing_file)
+    with pytest.raises((FileNotFoundError, TreasuryDenied)):
+        t["service"].request_result(t["owner"], request_id)
+
+
+def test_database_cannot_drop_required_credit_capacity_value(surplus):
+    t = surplus
+    current_credit = credit(t)
+    with pytest.raises(psycopg.Error), connect() as conn:
+        conn.execute(
+            """update treasury.collector_credits
+            set payload=payload-'available_amount',version=version+1 where id=%s""",
+            (UUID(current_credit["id"]),),
+        )
+    with connect() as conn:
+        row = conn.execute(
+            "select payload,version from treasury.collector_credits where id=%s",
+            (UUID(current_credit["id"]),),
+        ).fetchone()
+        assert row["payload"]["available_amount"] == "100.00"
+        assert row["version"] == current_credit["version"]
+
+
+def test_two_prior_counts_cannot_receive_the_same_disputed_cash_twice(surplus):
+    t = surplus
+    first = count(t, "9900.00")
+    second = count(t, "9900.00")
+
+    def retain(recorded_count):
+        return command(
+            t,
+            "collector_custody_exception_record",
+            count_id=recorded_count["id"],
+            count_version=recorded_count["version"],
+            source_digest=recorded_count["source_digest"],
+            retained_amount="9900.00",
+            retained_at=datetime.now(UTC),
+            evidence_id=t["evidence_id"],
+            holder_attestation="Synthetic actual retained short cash",
+            reason="Synthetic disputed handover",
+        )
+
+    retained = retain(first)
+    assert retained["result"]["disposition"] == "custody_exception_recorded"
+    with pytest.raises(TreasuryConflict):
+        retain(second)
+    assert cash_delta(t) == Decimal("9900.00")
+    with connect() as conn:
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.collector_exceptions where account_id=%s",
+                (t["account_id"],),
+            ).fetchone()["n"]
+            == 1
+        )
+
+
+def test_fully_granted_collector_still_cannot_recognize_their_own_credit(surplus):
+    t = surplus
+    received = accept(t, count(t))
+    case = received["result"]["case"]
+    permission = "treasury.collector_surplus.resolve"
+    with connect() as conn:
+        grant_live(conn, t["collector"].user_id, permission)
+    t["service"].execute(
+        t["owner"],
+        AccountGrant(
+            action="account_grant",
+            request_id=uuid4(),
+            account_id=t["account_id"],
+            expected_version=version(t),
+            user_id=t["collector"].user_id,
+            permissions=[permission],
+            private_history=False,
+        ),
+    )
+    with pytest.raises(TreasuryDenied, match="independent"):
+        command(
+            t,
+            "collector_surplus_recognize",
+            actor=t["collector"],
+            case_id=case["id"],
+            case_version=case["version"],
+            source_digest=case["source_digest"],
+            source_review_acknowledged=True,
+            amount="100.00",
+            evidence_id=t["evidence_id"],
+            reason="Synthetic forbidden self recognition despite live grants",
+        )
+    with connect() as conn:
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.collector_credits where account_id=%s",
+                (t["account_id"],),
+            ).fetchone()["n"]
+            == 0
+        )
