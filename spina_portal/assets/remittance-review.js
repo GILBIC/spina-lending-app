@@ -119,7 +119,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   const finalized = new Set();
   let opener = null;
   const focusCleanups = new Set();
-  root.innerHTML = '<div class="list-stack" data-remittance-notices></div><div role="status" aria-live="polite" tabindex="-1" data-remittance-message></div><button class="button button-secondary" type="button" data-remittance-retry>Refresh remittances</button><div data-remittance-detail></div>';
+  root.innerHTML = '<h3 tabindex="-1" data-remittance-notices-heading>Remittance notices</h3><div class="list-stack" data-remittance-notices></div><div role="status" aria-live="polite" tabindex="-1" data-remittance-message></div><button class="button button-secondary" type="button" data-remittance-retry>Refresh remittances</button><div data-remittance-detail></div>';
   const rows = root.querySelector('[data-remittance-notices]');
   const message = root.querySelector('[data-remittance-message]');
   const detail = root.querySelector('[data-remittance-detail]');
@@ -144,8 +144,8 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
     return {stop,focus(target){if(intended&&active()&&(!doc?.activeElement||doc.activeElement===from||doc.activeElement===doc.body)&&target?.isConnected!==false&&!target?.closest?.('[hidden]'))target?.focus?.();}};
   }
   function restoreOpener(){
-    if(opener&&opener.isConnected!==false&&!opener.closest?.('[hidden]')&&!opener.disabled)opener.focus?.();
-    else message.focus?.();
+    if(opener&&opener.isConnected!==false&&[...rows.querySelectorAll('button')].includes(opener)&&!opener.closest?.('[hidden]')&&!opener.disabled)opener.focus?.();
+    else root.querySelector('[data-remittance-notices-heading]')?.focus();
   }
 
   function clearDetail() {const previous=countHandle;countHandle=null;previous?.();beforeTaskChange();

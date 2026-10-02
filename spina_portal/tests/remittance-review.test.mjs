@@ -101,7 +101,16 @@ test('review still focuses its first control when intent stays and Close uses a 
   const button=reviewButton(h);doc.activeElement=button;await open(h);
   assert.equal(h.root.querySelector('[name="reviewedPayments"]').focused,true);
   button.isConnected=false;fire(h.root.querySelector('[data-remittance-close]'),'click');
-  assert.equal(h.root.querySelector('[data-remittance-message]').focused,true);
+  const fallback=h.root.querySelector('[data-remittance-notices-heading]');
+  assert.ok(fallback?.textContent);assert.equal(fallback.focused,true);
+});
+
+test('Close after refreshed notices focuses a visible heading when its original opener was replaced',async t=>{
+  const h=await harness({currentReads:true});t.after(h.dispose);await open(h);const old=reviewButton(h);
+  await h.handle.refreshReadOnly();assert.notStrictEqual(reviewButton(h),old);
+  fire(h.root.querySelector('[data-remittance-close]'),'click');
+  const fallback=h.root.querySelector('[data-remittance-notices-heading]');
+  assert.equal(fallback?.textContent,'Remittance notices');assert.equal(fallback.focused,true);
 });
 
 test('delayed verified acceptance preserves focus when the user moves to other work',async t=>{
