@@ -217,8 +217,10 @@ export function clientRenewalWorkflowRows(requests) {
 export function clientRenewalPresentation({eligibilityState,requestsState,workflowState,selectedRequestId,view='current'}) {
  const requests=requestsState?.status==='ready'?asArray(requestsState.data?.requests):[];
  const progress=workflowState?.status==='ready'?asArray(workflowState.data?.requests):[];
+ // These independently limited lists can return different request IDs.
+ const records=requestsState?.status==='ready'?[...requests,...progress.filter(item=>!requests.some(request=>request.request_id===item.request_id))]:requests;
  const terminal=request=>['cancelled','rejected','declined'].includes(String(request.status).toLowerCase())||request.client_decision==='declined'||request.activation_status==='active';
- const cards=requests.map(request=>{const found=progress.find(item=>item.request_id===request.request_id)||null;const conflict=found&&['loan_id','client_id','status','requested_amount'].some(key=>request[key]!=null&&found[key]!=null&&request[key]!==found[key]);const workflow=conflict?null:found;const record=workflow?{...request,...workflow}:request;let nextStep;
+ const cards=records.map(request=>{const found=progress.find(item=>item.request_id===request.request_id)||null;const conflict=found&&['loan_id','client_id','status','requested_amount'].some(key=>request[key]!=null&&found[key]!=null&&request[key]!==found[key]);const workflow=conflict?null:found;const record=workflow?{...request,...workflow}:request;let nextStep;
  if(conflict)nextStep='Renewal sources changed or disagree. Refresh both records before continuing.';
   else if(!workflow&&request.status==='approved')nextStep='Renewal progress unavailable. Refresh before continuing.';
  else if(terminal(record))nextStep=record.activation_status==='active'?'Renewed loan active. Open My loans for its saved schedule.':'No further action on this request.';
@@ -804,7 +806,8 @@ export async function mountClientWorkspace(context) {
   const renewalState=reads.state('renewals'),workflowState=reads.state('renewalWorkflow');
   const renewalReady=renewalState.status==='ready'&&workflowState.status==='ready';
   const actionCount=renewalReady?clientRenewalPresentation({requestsState:renewalState,workflowState}).cards.filter(card=>card.workflow&&Object.values(clientRenewalActions({...card.request,...card.workflow},asArray(card.workflow.signers).find(signer=>signer.party_role==='borrower'))).some(Boolean)).length:0;
-  const renewalDetail=[renewalState,workflowState].some(state=>state.status==='error')?'Renewals unavailable — open requests to retry.':[renewalState,workflowState].some(state=>state.status==='loading')?'Loading renewal records…':renewalReady?(actionCount?`${actionCount} action${actionCount===1?'':'s'} for you`:model.pendingRenewalCount?`${model.pendingRenewalCount} pending`:'Review your renewal requests.'):'Open renewal requests to check progress.';
+  const renewalSummary=[actionCount?`${actionCount} action${actionCount===1?'':'s'} for you`:'',model.pendingRenewalCount?`${model.pendingRenewalCount} pending`:''].filter(Boolean).join(' · ');
+  const renewalDetail=[renewalState,workflowState].some(state=>state.status==='error')?'Renewals unavailable — open requests to retry.':[renewalState,workflowState].some(state=>state.status==='loading')?'Loading renewal records…':renewalReady?(renewalSummary||'Review your renewal requests.'):'Open renewal requests to check progress.';
   for(const [target,label,text]of [
    ['client-loans','My loans',detail('loans','Open My loans to check your records.',model.allLoans.length?'See your balance, amount due, and schedule.':'No linked loan is recorded.','Loans')],
    ['client-payments','View receipts',detail('payments','Open receipts to check your payment history.',model.payments.length?'Review your payment history.':'No official receipt yet.','Payments')],
