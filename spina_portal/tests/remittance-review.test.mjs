@@ -52,7 +52,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-async function harness({ session = SESSION, notifications = [notice] } = {}) {
+async function harness({ session = SESSION, notifications = [notice], currentReads = false } = {}) {
   assert.equal(existsSync(moduleUrl), true, 'Recipient full remittance review must exist');
   const { mountRemittanceReview } = await import(moduleUrl.href);
   const h = { root: new Element(), controller: new AbortController(), calls: [], online: true,
@@ -67,7 +67,8 @@ async function harness({ session = SESSION, notifications = [notice] } = {}) {
     return h.readPending?.promise ?? h.records;
   } };
   h.dispose = mountRemittanceReview({ root: h.root, api: h.api, session, notifications,
-    signal: h.controller.signal, isOnline: () => h.online });
+    signal: h.controller.signal, isOnline: () => h.online,
+    ...(currentReads?{getSession:()=>h.session,loadNotifications:async()=>{h.noticeReads=(h.noticeReads||0)+1;if(h.noticeError)throw h.noticeError;return h.currentNotices||notifications;},registerHandle:handle=>{h.handle=handle;}}:{}) });
   return h;
 }
 
@@ -284,4 +285,31 @@ test('Employee workspace wires review and disposes it before remount', async (t)
   assert.equal(reviewRoot.innerHTML, '');
   fire(form, 'submit');
   assert.equal(calls.filter((call) => call.options.method === 'POST').length, 0);
+});
+
+test('rejection requires full review and confirmation, sends no physical cash claim and verifies saved result despite failed refresh',async(t)=>{
+ const h=await harness({currentReads:true});t.after(h.dispose);await open(h);
+ const reason=h.root.querySelector('[name="rejectionReason"]');reason.value=' Cash count differs ';
+ const reject=h.root.querySelector('[data-remittance-reject]');fire(reject,'click');await setImmediate();assert.equal(postCalls(h).length,0);
+ check(h,'reviewedPayments');check(h,'confirmRejection');
+ h.response={...record(),status:'rejected',rejected_by_user_id:RECIPIENT,rejected_at:'2026-10-02T08:00:00Z',rejection_reason:'Cash count differs'};
+ const request=h.api.request;h.api.request=async(path,options)=>{const result=await request(path,options);if(options?.method==='POST')h.noticeError=new ApiError('private',{status:503});return result;};
+ fire(reject,'click');fire(reject,'click');await setImmediate();
+ assert.equal(postCalls(h).length,1);assert.equal(postCalls(h)[0].path,`/api/v1/remittances/${REMITTANCE}/reject`);
+ assert.deepEqual(postCalls(h)[0].options.body,{review_acknowledged:true,reason:'Cash count differs'});
+ assert.match(h.root.textContent,/Rejection saved/);assert.match(h.root.textContent,/Notices could not refresh/);
+ h.noticeError=null;await h.handle.refreshReadOnly();assert.equal(reviewButton(h),null,'Stale pending notices cannot re-enable the saved rejection');
+});
+
+test('fresh evidence and current receive authority are checked before any decision',async(t)=>{
+ const h=await harness({currentReads:true});t.after(h.dispose);await open(h);check(h,'reviewedPayments');check(h,'physicallyReceived');
+ h.records[0].total_amount='91.00';accept(h);await setImmediate();assert.equal(postCalls(h).length,0);assert.match(h.root.textContent,/evidence changed/);
+ await open(h);check(h,'reviewedPayments');check(h,'physicallyReceived');h.session={...SESSION,permissions:['remittance.view']};accept(h);await setImmediate();assert.equal(postCalls(h).length,0);assert.doesNotMatch(h.root.textContent,/RCPT-TEST/);
+});
+
+test('uncertain reject locks both decisions until exact read-only reconciliation',async(t)=>{
+ const h=await harness({currentReads:true});t.after(h.dispose);await open(h);check(h,'reviewedPayments');check(h,'confirmRejection');h.root.querySelector('[name="rejectionReason"]').value='Cash differs';h.response={};
+ fire(h.root.querySelector('[data-remittance-reject]'),'click');await setImmediate();assert.equal(h.handle.isUncertain(),true);
+ await h.handle.refreshReadOnly();assert.equal(h.handle.isUncertain(),true);assert.equal(postCalls(h).length,1);
+ h.records=[{...record(),status:'rejected',rejected_by_user_id:RECIPIENT,rejected_at:'2026-10-02T08:00:00Z',rejection_reason:'Cash differs'}];await h.handle.refreshReadOnly();assert.equal(h.handle.isUncertain(),false);assert.equal(reviewButton(h),null);assert.equal(postCalls(h).length,1);
 });
