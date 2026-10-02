@@ -18,6 +18,9 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
   const base = `/api/v1/${management ? 'management' : 'client'}/payment-proofs`;
   const controller = new AbortController(); let disposed = false; let busy = false;
   let listing = {};let loaded=false; let detail = null; let offset = 0; let attempt = null; let uncertain = false; let removers = [];
+  const uploadAvailable=()=>listing.capability?.upload_available===true&&Number.isSafeInteger(listing.capability?.max_bytes)&&listing.capability.max_bytes>0;
+  const currentLoans=()=>getLoansState?.()??loansState;
+  const clientUploadAllowed=()=>uploadAvailable()&&(detail?.proof?detail.proof.can_reupload===true:!currentLoans()||currentLoans().status==='ready');
   const listen = (element, event, fn) => { if (!element) return;
     element.addEventListener(event, fn); removers.push(() => element.removeEventListener(event, fn));
   };
@@ -35,13 +38,13 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
   }
   function lockInputs() {
     for (const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')]) input.disabled = busy || uncertain;
-    for (const button of root.querySelectorAll('button')) button.disabled = busy || (uncertain && button.getAttribute('type') !== 'submit');
+    for (const button of root.querySelectorAll('button')) button.disabled = busy || (uncertain && button.getAttribute('type') !== 'submit') || (!management&&!uncertain&&button.getAttribute('type')==='submit'&&!clientUploadAllowed());
   }
   async function load(nextOffset = offset, preserveEditor = false) {
     if (disposed || busy || uncertain || (!preserveEditor&&!discardAllowed())) return; busy = true;
     try {
       const value = await api.request(`${base}?limit=50&offset=${nextOffset}`,{signal:controller.signal});
-      if (disposed) return;if(!Array.isArray(value?.proofs))throw Error('Payment-proof records are unavailable. Retry this read.'); offset = nextOffset; listing = value;loaded=true; if(preserveEditor&&root.querySelector('form')){const editor=root.querySelector('form');if(editor.parentNode&&editor.replaceWith){render();const replacement=root.querySelector('form');if(replacement){replacement.replaceWith(editor);listen(editor,'submit',submit);}else {root.appendChild(editor);listen(editor,'submit',submit);editor.querySelector('button[type="submit"]').disabled=true;}}status('Records refreshed. Your draft has been retained.');return;}detail = null; attempt = null; render();
+      if (disposed) return;if(!Array.isArray(value?.proofs))throw Error('Payment-proof records are unavailable. Retry this read.'); offset = nextOffset; listing = value;loaded=true; if(preserveEditor&&root.querySelector('form')){const editor=root.querySelector('form');if(editor.parentNode&&editor.replaceWith){render();const replacement=root.querySelector('form');if(replacement){replacement.replaceWith(editor);listen(editor,'submit',submit);}else {root.appendChild(editor);listen(editor,'submit',submit);editor.querySelector('button[type="submit"]').disabled=true;}}status(!management&&!uploadAvailable()?'Records refreshed. Your draft is retained, but proof upload is unavailable. Refresh before submitting.':'Records refreshed. Your draft has been retained.');return;}detail = null; attempt = null; render();
     } catch(error) {fail(error);} finally {busy = false;if(!disposed) lockInputs();}
   }
   function discardAllowed(){const form=root.querySelector('[data-proof-upload]')||root.querySelector('[data-proof-review]');const dirty=form&&(form.querySelector('[name="proofFile"]')?.files?.length||form.querySelector('textarea')?.value);return !dirty||globalThis.confirm?.('Discard this proof draft to open another record?')===true;}
@@ -70,8 +73,9 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
         attempt={path:`${base}/${detail.proof.proof_id}/reviews`,options:{method:'POST',body:{request_id:crypto.randomUUID(),
           expected_version:detail.proof.current_version.version_number,expected_review_id:detail.proof.latest_review?.review_id??null,decision,reason}}};
       }else{
+        if(!clientUploadAllowed()){fail(new Error('Proof upload is unavailable. Refresh before submitting.'));lockInputs();return;}
         const file=root.querySelector('[name="proofFile"]').files?.[0];const capability=listing.capability;
-        if(!capability?.upload_available||!file||!TYPES.includes(file.type)||file.size<1||file.size>Math.min(capability.max_bytes||0,10485760)){
+        if(!file||!TYPES.includes(file.type)||file.size<1||file.size>Math.min(capability.max_bytes,10485760)){
           fail(new Error('Choose a PDF, PNG or JPEG proof of at most 10 MiB.'));return;
         }
         const note=root.querySelector('[name="note"]').value.trim();
@@ -101,7 +105,7 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
     }finally{busy=false;if(!disposed)lockInputs();}
   }
   function render() {
-    clear();const records=asArray(listing.proofs);const proof=detail?.proof;const canUpload=listing.capability?.upload_available===true&&Number.isSafeInteger(listing.capability?.max_bytes)&&listing.capability.max_bytes>0&&(management||!loansState||loansState.status==='ready');
+    clear();const records=asArray(listing.proofs);const proof=detail?.proof;const loanState=currentLoans(),availableLoans=loanState?(loanState.status==='ready'?asArray(loanState.data?.loans):[]):loans;const canUpload=clientUploadAllowed();
     const paging=`<div class="inline-actions">${offset>0?'<button type="button" data-proof-previous>Previous</button>':''}${listing.has_more?'<button type="button" data-proof-next>Next</button>':''}</div>`;
     if(management&&records.length===0&&!proof){
       root.innerHTML=`<div class="payment-proof-empty-row" data-payment-proof-empty>
@@ -127,12 +131,12 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
         ${management&&proof?`<form data-proof-review class="entry-form"><h3>Review current evidence</h3>
           <label>Decision<select name="decision"><option value="reviewed">Evidence reviewed (no payment posted)</option><option value="correction_required">Request correction</option><option value="rejected">Reject evidence</option></select></label>
           <label>Reason<textarea name="reason" maxlength="1000"></textarea></label><button type="submit" class="button button-primary">Save evidence review</button></form>`:''}
-        ${!management&&canUpload&&(!proof||proof.can_reupload)?`<form data-proof-upload class="entry-form"><h3>${proof?'Upload a corrected version':'Submit payment proof'}</h3>
-          ${!proof?`<label>Loan<select name="loanId" required>${loans.map((loan)=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('')}</select></label>`:''}
+        ${!management&&canUpload?`<form data-proof-upload class="entry-form"><h3>${proof?'Upload a corrected version':'Submit payment proof'}</h3>
+          ${!proof?`<label>Loan<select name="loanId" required>${availableLoans.map((loan)=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('')}</select></label>`:''}
           <label>Proof file<input type="file" name="proofFile" accept="application/pdf,image/png,image/jpeg" required /></label>
           <label>Note or payment reference<textarea name="note" maxlength="1000"></textarea></label>
           <button type="submit" class="button button-primary">${proof?'Save corrected evidence':'Submit evidence for review'}</button></form>`:''}
-        ${!management&&!canUpload?emptyState(loansState&&loansState.status!=='ready'?'Loan records unavailable. Existing proof history remains available.':!loaded?'Payment-proof records have not loaded. Retry the read.':listing.capability?.message||'Proof upload is currently unavailable.') : ''}
+        ${!management&&!canUpload?emptyState(!proof&&loanState&&loanState.status!=='ready'?'Loan records unavailable. Existing proof history remains available.':!loaded?'Payment-proof records have not loaded. Retry the read.':listing.capability?.message||'Proof upload is currently unavailable.') : ''}
         ${!management&&proof?'<button type="button" class="button button-secondary" data-proof-new>Start a new submission</button>':''}
         <div data-proof-status role="status" aria-live="polite"></div>`;
     }

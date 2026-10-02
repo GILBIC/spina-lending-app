@@ -71,7 +71,7 @@ export class Element extends EventTarget {
   appendChild(child) {child.remove();this.children.push(child);child.parentElement=this;child.ownerDocument=this.ownerDocument;return child;}
   remove() {if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(child=>child!==this);this.parentElement=null;}
   replaceWith(child) {const parent=this.parentElement;if(!parent)return;const index=parent.children.indexOf(this);child.remove();parent.children[index]=child;child.parentElement=parent;child.ownerDocument=parent.ownerDocument;this.parentElement=null;}
-  closest(selector) {let node=this;while(node){if(selector==='label' && node.tag==='label')return node;if(selector==='[hidden]' && node.hidden)return node;const attribute=selector.match(/^\[([\w-]+)\]$/);if(attribute&&node.getAttribute(attribute[1])!==null)return node;node=node.parentElement;}return null;}
+  closest(selector) {let node=this;while(node){if(selector==='label' && node.tag==='label')return node;if(selector==='[hidden]' && node.hidden)return node;const className=selector.match(/^\.([\w-]+)$/);if(className&&node.classList.contains(className[1]))return node;const attribute=selector.match(/^\[([\w-]+)\]$/);if(attribute&&node.getAttribute(attribute[1])!==null)return node;node=node.parentElement;}return null;}
   reset() {for(const input of this.querySelectorAll('input')){input.value=input.getAttribute('value') || '';input.checked=false;}for(const input of this.querySelectorAll('textarea'))input.value='';}
 
   querySelectorAll(selector) {
