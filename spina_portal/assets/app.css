@@ -2226,6 +2226,19 @@ details > :not(summary) {
 button.management-audit-row { min-height: 48px; }
 #management-staff tr[aria-selected="true"] { background: var(--pink-50); }
 
+.management-task-navigation { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.management-task-navigation button { min-height: 48px; }
+.management-task-navigation [aria-pressed="true"] { background: var(--pink-100); border-color: var(--pink-700); color: var(--pink-900); }
+#management-profile { width: 100%; max-width: 720px; }
+#management-cash-disbursement label:has([name="purpose"]),
+#management-cash-disbursement label:has([name="evidence"]),
+#management-cash-disbursement label:has([name="evidence_reference"]) { grid-column: 1 / -1; }
+.management-staff-table td { overflow-wrap: anywhere; }
+.management-zero-queues { margin-top: .75rem; }
+.management-zero-queues summary { cursor: pointer; padding: .75rem 0; }
+.management-zero-queues .metric-card { padding: .65rem; }
+.management-zero-queues .metric-value { font-size: 1.1rem; }
+
 @media (max-width: 680px) {
   .managed-device-summary { align-items: flex-start; }
   .managed-device-card .section-heading { align-items: flex-start; flex-wrap: wrap; }

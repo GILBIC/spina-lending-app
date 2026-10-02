@@ -1,5 +1,6 @@
 import {createManagementTaskController} from '../management-workspace-tasks.js';
 import {mountManagementPortfolio} from '../management-portfolio.js';
+import {mountManagementPersonalUpdates} from '../management-personal-updates.js';
 import { mountManagementCollectionActions } from '../management-collection-actions.js';
 import { mountManagementJournalActions } from '../management-journal-actions.js';
 import { mountManagementAccounting } from '../management-accounting.js';
@@ -109,6 +110,7 @@ function managementMetricCard(metric) {
     <span class="metric-label">${escapeHtml(presentation.label)}</span>
     <strong class="metric-value">${value}</strong>
     ${details.length ? `<span class="meta">${details.join(' · ')}</span>` : ''}
+    ${metric.key==='activity.unread'?'<button type="button" class="button button-quiet" data-my-updates-shortcut>Open my updates</button>':''}
   </article>`;
 }
 
@@ -116,14 +118,17 @@ function overviewMetrics(metrics) {
   const known = asArray(metrics).filter((metric) => MANAGEMENT_METRIC_PRESENTATION[metric?.key]);
   if (!known.length) return emptyState('No Management metric is currently available.');
   return MANAGEMENT_METRIC_GROUPS.map(([group, title]) => {
-    const cards = known
-      .filter((metric) => MANAGEMENT_METRIC_PRESENTATION[metric.key].group === group)
+    const grouped=known.filter(metric=>MANAGEMENT_METRIC_PRESENTATION[metric.key].group===group);
+    const verifiedZero=metric=>group==='attention'&&metric.count===0&&(metric.amount==null||/^0+(?:\.0+)?$/.test(String(metric.amount)));
+    const cards = grouped.filter(metric=>!verifiedZero(metric))
       .map(managementMetricCard)
       .join('');
-    if (!cards) return '';
+    const zero=grouped.filter(verifiedZero);
+    if (!cards&&!zero.length) return '';
     return `<section class="management-overview-group" data-management-metric-group="${group}">
       <div class="section-heading"><div><h2>${escapeHtml(title)}</h2></div></div>
       <div class="metric-grid">${cards}</div>
+      ${zero.length?`<details class="management-zero-queues"><summary>${zero.length} queues with no pending work</summary><div class="metric-grid">${zero.map(managementMetricCard).join('')}</div></details>`:''}
     </section>`;
   }).join('');
 }
@@ -524,7 +529,7 @@ export async function mountManagementWorkspace(context) {
     if(!active())return;const version=++overviewVersion;const target=root.querySelector('[data-management-overview]');
     if(!target)return;
     if(!canDashboard){target.innerHTML='<p>Management dashboard permission is not assigned.</p>';return;}
-    try{const data=await api.request('/api/v1/management/dashboard-overview');if(active()&&version===overviewVersion)target.innerHTML=`${data.generated_at ? `<p class="meta">Updated ${formatDateTime(data.generated_at)}</p>` : ''}${overviewMetrics(asArray(data.metrics))}`;}
+    try{const data=await api.request('/api/v1/management/dashboard-overview');if(active()&&version===overviewVersion){target.innerHTML=`${data.generated_at ? `<p class="meta">Updated ${formatDateTime(data.generated_at)}</p>` : ''}${overviewMetrics(asArray(data.metrics))}`;target.querySelector('[data-my-updates-shortcut]')?.addEventListener('click',async()=>{await context.managementTaskController?.activate('management-account','management-updates');context.navigateTo?.('management-account');});}}
     catch(error){if(active()&&version===overviewVersion){target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-overview-retry>Retry overview</button>`;target.querySelector('[data-overview-retry]')?.addEventListener('click',()=>void refreshOverview(),{once:true});}}
   }
   async function refreshAccount(){
@@ -578,6 +583,7 @@ export async function mountManagementWorkspace(context) {
   },'support.manage');
   add('management-alerts','management-operations','Alerts & audit',async()=>{const h=readTask({target:root.querySelector('[data-management-alerts-audit]'),load:()=>api.request('/api/v1/management/alerts-audit?window_days=30&limit=100'),render:managementAlertsAuditMarkup,bind:()=>bindManagementAlertsAudit(root.querySelector('[data-management-alerts-audit]'),{signal:context.signal,navigateTask:async(group,id)=>{const accepted=await context.managementTaskController.activate(group,id);if(accepted)context.navigateTo?.(group);else showToast('That task is not available to this account.','error');}})});await h.refresh();return h;},'management.dashboard.view');
   add('management-profile','management-account','Profile & security',()=>({refresh:refreshAccount,dispose:mountAccountCredentials(options('[data-account-credentials]'))}));
+  add('management-updates','management-account','My updates',async()=>{const handle=mountManagementPersonalUpdates({...options('[data-management-updates]'),onRead:refreshOverview});await handle.refresh();return handle;});
   for(const task of tasks)if(task.id!==task.group)root.querySelector(`#${task.id}`).hidden=true;
   const taskController=createManagementTaskController({root,signal:context.signal,getSession,tasks,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange});
   context.managementTaskController=taskController;
