@@ -101,3 +101,12 @@ test('abort clears a checkout draft and a late provider response cannot populate
  fire(d.form,'submit');await setImmediate();h.handle.dispose();pending.resolve(intent);await setImmediate();
  assert.equal(d.amount.value,'');assert.equal(status.innerHTML,'');assert.equal(h.root.innerHTML,'');fire(d.form,'submit');await setImmediate();assert.equal(posts(h).length,1);
 });
+
+test('an explicit change to another still-authorized loan revalidates a retained selection without another read',async t=>{
+ const second={...portfolio.loans[0],loan_id:'20000000-0000-4000-8000-000000000002',loan_number:'Second synthetic loan'};
+ const h=await mount(t,{loans:{loans:[...portfolio.loans,second]}});await open(h);const d=draft(h);
+ h.loans={loans:[second]};await h.context.clientLoad('loans',{refresh:true});assert.equal(d.button.disabled,true);
+ const selects=d.form.querySelectorAll('[data-gcash-select]'),amounts=d.form.querySelectorAll('[data-gcash-amount]');
+ d.selected.checked=false;selects[1].checked=true;amounts[1].value='25.00';const before=h.calls.length;fire(d.form,'change');
+ assert.equal(d.button.disabled,false);assert.equal(h.calls.length,before);assert.equal(d.amount.value,'123.45');assert.equal(posts(h).length,0);
+});

@@ -249,6 +249,7 @@ export function bindClientGcashPanel(context) {
   if (signal?.aborted) { dispose(); return handle; }
   updateReadState();
   if (!form || !statusPanel) return handle;
+  listen(form, 'change', updateReadState);
 
   const actions = createClientGcashActions({ api: { request: (path, options = {}) => api.request(path, { ...options, signal }) } });
 
