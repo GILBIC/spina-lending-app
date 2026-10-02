@@ -59,12 +59,262 @@ const collectorSurplusDispositions = {
   'return_reversed',
 };
 
+// Mirrors the authoritative safe own-row projection; unknown fields must never
+// enter the generic fact renderer or a private export as investigation data.
+const collectorOwnRowFields = {
+  'id',
+  'version',
+  'account_id',
+  'ledger_context_id',
+  'collector_user_id',
+  'created_at',
+  'remittance_id',
+  'recipient_user_id',
+  'source_digest',
+  'gross_obligation',
+  'refund_due_total',
+  'physical_cash_required',
+  'counted_amount',
+  'difference',
+  'counted_at',
+  'recorded_at',
+  'disposition',
+  'settlement_id',
+  'opening_id',
+  'opening_anchor_id',
+  'received_excess_amount',
+  'unidentified_amount',
+  'status',
+  'resolutions',
+  'case_id',
+  'origin_account_id',
+  'recognized_amount',
+  'reclassified_amount',
+  'returned_amount',
+  'applied_amount',
+  'outstanding_amount',
+  'reserved_amount',
+  'available_amount',
+  'frozen',
+  'entries',
+  'kind',
+  'credit_id',
+  'amount',
+  'destination',
+  'action_id',
+  'event_id',
+  'event_version',
+  'reviewed_amount',
+  'confirmation',
+  'acknowledged_at',
+  'exception_id',
+  'collector_request_id',
+  'paying_account_id',
+  'acknowledgment_id',
+  'acknowledgment',
+  'holder_user_id',
+  'retained_amount',
+  'included_amount',
+  'remaining_held_amount',
+  'cutoff',
+  'anchor_kind',
+  'reversed_amount',
+  'count_id',
+  'physical_amount',
+  'authorized_credit_amount',
+  'accepted_at',
+  'remittance_number',
+  'collection_date',
+  'total_amount',
+  'submitted_at',
+  'application_request_supported',
+};
+const collectorSurplusTotals = {
+  'credits': {
+    'recognized_amount',
+    'reclassified_amount',
+    'returned_amount',
+    'applied_amount',
+    'outstanding_amount',
+    'reserved_amount',
+    'available_amount',
+  },
+  'cases': {'received_excess_amount', 'unidentified_amount'},
+  'exceptions': {
+    'retained_amount',
+    'returned_amount',
+    'included_amount',
+    'remaining_held_amount',
+    'reserved_amount',
+    'available_amount',
+  },
+  'actions': {'reserved_amount'},
+};
+
+void _validateOwnRowFields(Map row) {
+  if (row.keys.any((key) => !collectorOwnRowFields.contains(key))) {
+    throw const FormatException(
+      'Private investigation fields cannot enter your credit view.',
+    );
+  }
+  const compoundFields = {
+    'entries',
+    'resolutions',
+    'destination',
+    'acknowledgment',
+  };
+  if (row.entries.any(
+    (entry) =>
+        !compoundFields.contains(entry.key) &&
+        (entry.value is Map || entry.value is List),
+  )) {
+    throw const FormatException(
+      'A scalar credit field contains unexpected private data.',
+    );
+  }
+  for (final entry in <String, Set<String>>{
+    'entries': {'id', 'kind', 'amount', 'action_id', 'created_at'},
+    'resolutions': {'id', 'kind', 'amount', 'status', 'created_at'},
+  }.entries) {
+    if (row[entry.key] == null) continue;
+    if (row[entry.key] is! List ||
+        (row[entry.key] as List).any(
+          (item) =>
+              item is! Map ||
+              item.keys.any((key) => !entry.value.contains(key)) ||
+              item.values.any((value) => value is Map || value is List),
+        )) {
+      throw const FormatException(
+        'Private investigation history cannot enter your credit view.',
+      );
+    }
+  }
+  if (row['destination'] != null) {
+    final destination = treasuryObject(row['destination']);
+    if (destination.keys.any(
+      (key) => !{'kind', 'recipient_reference'}.contains(key),
+    )) {
+      throw const FormatException(
+        'Private destination fields cannot enter your credit view.',
+      );
+    }
+    const TreasuryField(
+      'destination',
+      'Recipient destination',
+      TreasuryFieldKind.destination,
+    ).parse(destination);
+  }
+  if (row['acknowledgment'] != null) {
+    final acknowledgment = treasuryObject(row['acknowledgment']);
+    const acknowledgmentKeys = {
+      'id',
+      'version',
+      'account_id',
+      'ledger_context_id',
+      'collector_user_id',
+      'created_at',
+      'action_id',
+      'event_id',
+      'event_version',
+      'reviewed_amount',
+      'confirmation',
+      'acknowledged_at',
+      'recorded_at',
+    };
+    if (acknowledgment.keys.any((key) => !acknowledgmentKeys.contains(key))) {
+      throw const FormatException(
+        'Private acknowledgment fields cannot enter your credit view.',
+      );
+    }
+    _validateOwnRowFields(acknowledgment);
+  }
+}
+
+void _validateOwnResultEnvelope(Map raw, Map result, String ownUserId) {
+  const outerKeys = {
+    'contract_version',
+    'request_id',
+    'action',
+    'status',
+    'target_id',
+    'version',
+    'result',
+  };
+  const phaseSlots = {
+    'count',
+    'settlement',
+    'case',
+    'credit',
+    'request',
+    'action_record',
+    'acknowledgment',
+    'exception',
+    'opening_anchor',
+  };
+  const scalarKeys = {
+    'collector_surplus_contract_version',
+    'disposition',
+    'source_account_id',
+    'actor_user_id',
+    'device_id',
+    'account_id',
+    'ledger_context_id',
+  };
+  if (raw.keys.any((key) => !outerKeys.contains(key)) ||
+      result.keys.any(
+        (key) =>
+            !phaseSlots.contains(key) &&
+            !scalarKeys.contains(key) &&
+            key != 'blockers',
+      ) ||
+      result.entries.any(
+        (entry) =>
+            scalarKeys.contains(entry.key) &&
+            (entry.value is Map || entry.value is List),
+      ) ||
+      phaseSlots.any((key) => result[key] != null && result[key] is! Map)) {
+    throw const FormatException(
+      'Unexpected result fields cannot enter your credit view.',
+    );
+  }
+  if (result['blockers'] is! List ||
+      (result['blockers'] as List).any(
+        (blocker) =>
+            blocker is! Map ||
+            blocker.keys.any((key) => !{'code', 'message'}.contains(key)) ||
+            blocker['code'] is! String ||
+            blocker['message'] is! String,
+      )) {
+    throw const FormatException(
+      'Unexpected blocker data cannot enter your credit view.',
+    );
+  }
+  for (final slot in phaseSlots) {
+    if (result[slot] == null) continue;
+    final row = treasuryObject(result[slot]);
+    _validateOwnRowFields(row);
+    requireTreasuryId(row['id']);
+    if (row['collector_user_id'] != ownUserId ||
+        row['version'] is! int ||
+        row['version'] < 1) {
+      throw const FormatException(
+        'An own phase record has no confirmed identity.',
+      );
+    }
+  }
+}
+
 void validateCollectorProjection(Object? value, {String? ownUserId}) {
   if (value is List) {
     for (final row in value) {
       validateCollectorProjection(row, ownUserId: ownUserId);
     }
   } else if (value is Map) {
+    if (ownUserId != null &&
+        value.containsKey('id') &&
+        value.containsKey('collector_user_id')) {
+      _validateOwnRowFields(value);
+    }
     for (final e in value.entries) {
       if (ownUserId != null &&
           {
@@ -72,6 +322,7 @@ void validateCollectorProjection(Object? value, {String? ownUserId}) {
             'cancellation_evidence_id',
             'recipient_attestation',
             'holder_attestation',
+            'reason',
             'source_id',
             'opening_version',
             'source_snapshot',
@@ -155,6 +406,118 @@ class CollectorSurplusAccount {
       (raw['actions'] as List).contains('collector_$capability');
 }
 
+void validateCollectorWorkspaceMetadata(
+  Map<String, dynamic> raw, {
+  required String expectedUserId,
+}) {
+  final actor = TreasuryActor.fromJson(treasuryObject(raw['actor']));
+  if (raw['collector_surplus_contract_version'] != 1 ||
+      actor.userId != expectedUserId ||
+      !['own', 'staff'].contains(raw['mode']) ||
+      raw['readiness'] is! Map ||
+      raw['capabilities'] is! Map ||
+      (raw['capabilities'] as Map).values.any((value) => value is! bool) ||
+      raw['accounts'] is! List ||
+      raw['collector_choices'] is! List ||
+      raw['opening_choices'] != null && raw['opening_choices'] is! List) {
+    throw const FormatException('The surplus workspace scope is incomplete.');
+  }
+  final readiness = raw['readiness'] as Map;
+  for (final key in [
+    'enabled',
+    'treasury_ready',
+    'application_enabled',
+    'application_supported',
+    'historical_correction_supported',
+    'gl_supported',
+  ]) {
+    if (readiness[key] is! bool) {
+      throw const FormatException('Surplus readiness is incomplete.');
+    }
+  }
+  if (readiness['blockers'] is! List) {
+    throw const FormatException('Surplus blockers are unavailable.');
+  }
+  for (final blocker in readiness['blockers'] as List) {
+    treasuryBlockerMessage(blocker);
+  }
+  if (!CollectorSurplusKind.values.any((kind) => kind.name == raw['kind']) ||
+      raw['totals'] != null && raw['totals'] is! Map) {
+    throw const FormatException('The surplus totals scope is incomplete.');
+  }
+  final totals = raw['totals'] as Map? ?? const {};
+  final allowedTotals = collectorSurplusTotals[raw['kind']] ?? const <String>{};
+  if (totals.keys.any((key) => !allowedTotals.contains(key))) {
+    throw const FormatException(
+      'Unexpected financial totals cannot enter this view.',
+    );
+  }
+  for (final amount in totals.values) {
+    TreasuryMoney(amount);
+  }
+  if (raw['mode'] == 'own') {
+    const safeKeys = {
+      'collector_surplus_contract_version',
+      'actor',
+      'mode',
+      'readiness',
+      'capabilities',
+      'accounts',
+      'collector_choices',
+      'opening_choices',
+      'kind',
+      'items',
+      'total_count',
+      'totals',
+      'has_more',
+      'limit',
+      'offset',
+    };
+    if (raw.keys.any((key) => !safeKeys.contains(key)) ||
+        (raw['accounts'] as List).isNotEmpty ||
+        (raw['collector_choices'] as List).isNotEmpty ||
+        (raw['opening_choices'] as List? ?? const []).isNotEmpty) {
+      throw const FormatException(
+        'Your credit view exposed a wider account scope.',
+      );
+    }
+    if ((raw['actor'] as Map).keys.any(
+      (key) => !{'user_id', 'device_id'}.contains(key),
+    )) {
+      throw const FormatException(
+        'Unexpected actor fields cannot enter your credit view.',
+      );
+    }
+    final readiness = treasuryObject(raw['readiness']);
+    if (readiness.keys.any(
+      (key) => !{
+        'enabled',
+        'treasury_ready',
+        'application_enabled',
+        'application_supported',
+        'historical_correction_supported',
+        'gl_supported',
+        'blockers',
+      }.contains(key),
+    )) {
+      throw const FormatException(
+        'Unexpected readiness fields cannot enter your credit view.',
+      );
+    }
+    if (readiness['blockers'] is! List ||
+        (readiness['blockers'] as List).any(
+          (blocker) =>
+              blocker is! Map ||
+              blocker.keys.any((key) => !{'code', 'message'}.contains(key)),
+        )) {
+      throw const FormatException(
+        'Unexpected blocker fields cannot enter your credit view.',
+      );
+    }
+    validateCollectorProjection(raw, ownUserId: expectedUserId);
+  }
+}
+
 class CollectorSurplusWorkspace {
   CollectorSurplusWorkspace(
     Map<String, dynamic> json, {
@@ -164,6 +527,7 @@ class CollectorSurplusWorkspace {
     required int offset,
   }) : raw = treasuryObject(immutableTreasury(json)),
        actor = TreasuryActor.fromJson(treasuryObject(json['actor'])) {
+    validateCollectorWorkspaceMetadata(raw, expectedUserId: expectedUserId);
     if (raw['collector_surplus_contract_version'] != 1 ||
         actor.userId != expectedUserId ||
         !['own', 'staff'].contains(raw['mode']) ||
@@ -432,6 +796,9 @@ TreasuryResult validateCollectorOutcome(
 ) {
   final value = TreasuryResult.fromJson(treasuryObject(raw));
   final r = value.result, body = treasuryObject(held['body']);
+  if (held['surplus_mode'] == 'own') {
+    _validateOwnResultEnvelope(value.raw, r, held['actor_user_id'] as String);
+  }
   final phase = collectorResultPhases[held['action']];
   if (phase == null ||
       r['collector_surplus_contract_version'] != 1 ||
@@ -566,13 +933,7 @@ TreasuryResult validateCollectorOutcome(
     }
     if (actual is Map &&
         slot == 'count' &&
-        [
-          'version',
-          'counted_amount',
-          'source_digest',
-          'remittance_id',
-          'recipient_user_id',
-        ].any((key) => actual[key] != expected[key])) {
+        canonicalTreasury(actual) != canonicalTreasury(expected)) {
       throw const FormatException('The immutable reviewed count changed.');
     }
     if (principal['collector_user_id'] != expected['collector_user_id']) {
@@ -640,12 +1001,39 @@ TreasuryResult validateCollectorOutcome(
     if (count is! Map ||
         principal['count_id'] != count['id'] ||
         principal['physical_amount'] != count['counted_amount'] ||
+        principal['gross_obligation'] != count['gross_obligation'] ||
+        principal['authorized_credit_amount'] != '0.00' ||
         principal['remittance_id'] != count['remittance_id'] ||
         principal['recipient_user_id'] != count['recipient_user_id'] ||
         principal['collector_user_id'] != count['collector_user_id'] ||
         principal['event_id'] == null &&
             principal['physical_amount'] != '0.00') {
       throw const FormatException('The accepted physical settlement changed.');
+    }
+    final excess = r['case'];
+    if (disposition == 'accepted_pending_identification') {
+      if (excess is! Map ||
+          excess['settlement_id'] != principal['id'] ||
+          excess['collector_user_id'] != count['collector_user_id'] ||
+          excess['account_id'] != count['account_id'] ||
+          excess['ledger_context_id'] != count['ledger_context_id'] ||
+          excess['source_digest'] != count['source_digest'] ||
+          excess['status'] != 'pending_identification' ||
+          excess['received_excess_amount'] != count['difference'] ||
+          excess['unidentified_amount'] != count['difference'] ||
+          count['difference'] == '0.00' ||
+          r['credit'] != null) {
+        throw const FormatException(
+          'The pending excess identification changed.',
+        );
+      }
+    } else if (disposition == 'accepted_exact' &&
+        (count['difference'] != '0.00' ||
+            excess != null ||
+            r['credit'] != null)) {
+      throw const FormatException(
+        'Exact acceptance cannot recognize excess credit.',
+      );
     }
   }
   if (principalKey == 'settlement' && principal['event_id'] != null) {

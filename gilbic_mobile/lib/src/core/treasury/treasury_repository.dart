@@ -324,27 +324,42 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     final raw = await _journal.read();
     _current();
     if (raw == null) return;
+    late final Map<String, dynamic> held;
     try {
-      final held = treasuryObject(jsonDecode(raw));
+      held = treasuryObject(jsonDecode(raw));
       if (held['contract_version'] != 1 ||
           held['scope'] != _initialScope ||
           held['external_device_id'] != deviceId ||
-          held['actor_user_id'] !=
-              (held['surplus'] == true
-                  ? _surplus?.actor.userId
-                  : _workspace?.actor.userId) ||
-          held['device_id'] !=
-              (held['surplus'] == true
-                  ? _surplus?.actor.deviceId
-                  : _workspace?.actor.deviceId) ||
+          !treasuryUuid(held['actor_user_id']) ||
+          held['actor_user_id'] != _initial.userId ||
+          !treasuryUuid(held['device_id']) ||
+          held['surplus'] == true &&
+              !['own', 'staff'].contains(held['surplus_mode']) ||
           !treasuryUuid(held['request_id']) ||
           !treasuryUuid(held['account_id']) ||
           held['path'] is! String ||
           held['action'] is! String) {
         throw const TreasuryAccessChanged();
       }
-      _attempt = treasuryObject(immutableTreasury(held));
     } on Exception {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    // The shared journal may belong to either workspace. Retain the same-scope
+    // attempt while the server is unavailable; missing cached authority is not
+    // evidence that the submitted write or its private bytes are foreign.
+    _attempt = treasuryObject(immutableTreasury(held));
+    await _authorizeAttempt(held);
+  }
+
+  Future<void> _authorizeAttempt(Map<String, dynamic> held) async {
+    final actor = held['surplus'] == true
+        ? (await loadCollectorSurplus(
+            mode: held['surplus_mode'] as String,
+          )).actor
+        : (await loadWorkspace()).actor;
+    if (actor.userId != held['actor_user_id'] ||
+        actor.deviceId != held['device_id']) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -528,7 +543,9 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     if (mode != null && !['own', 'staff'].contains(mode)) {
       throw ArgumentError('Choose an authorized mode.');
     }
-    if (changedMode && _attempt != null) {
+    if (changedMode &&
+        _attempt != null &&
+        !(_attempt!['surplus'] == true && _attempt!['surplus_mode'] == mode)) {
       throw StateError('Recover the pending phase before changing mode.');
     }
     final requestedMode = mode ?? _surplusMode;
@@ -844,10 +861,16 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     final envelope = treasuryObject(
       jsonDecode(utf8.decode(response.bodyBytes)),
     );
-    if (envelope['success'] != true) {
+    if (envelope['success'] != true ||
+        w.mode == 'own' &&
+            envelope.keys.any((key) => !{'success', 'data'}.contains(key))) {
       throw const FormatException('The private report is unavailable.');
     }
     final exported = treasuryObject(envelope['data']);
+    validateCollectorWorkspaceMetadata(
+      exported,
+      expectedUserId: _initial.userId,
+    );
     final page = exported['items'];
     if (exported['collector_surplus_contract_version'] != 1 ||
         exported['mode'] != w.mode ||
@@ -1153,11 +1176,7 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     if (_attempt == null) return null;
     _busy = true;
     try {
-      if (_attempt!['surplus'] == true) {
-        await loadCollectorSurplus();
-      } else {
-        await loadWorkspace();
-      }
+      await _authorizeAttempt(_attempt!);
       final held = _attempt!;
       final heldUpload = held['upload'];
       final raw = await _request('/requests/${held['request_id']}');
@@ -1180,13 +1199,12 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     }
     _busy = true;
     try {
+      await _authorizeAttempt(_attempt!);
       if (_attempt!['surplus'] == true) {
-        await loadCollectorSurplus();
         // Recovery is read-only even after entry disable. Explicit resend still requires current capability.
         final action = TreasuryAction.fromCode(_attempt!['action'] as String);
         _collectorPermitted(action, _attempt!['account_id'] as String);
       } else {
-        await loadWorkspace();
         _permitted(
           _attempt!['action'] as String,
           _attempt!['account_id'] as String,
