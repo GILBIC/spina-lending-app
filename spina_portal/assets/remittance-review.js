@@ -5,6 +5,7 @@ const money = (value) => typeof value === 'string' && /^(0|[1-9]\d*)\.\d{2}$/.te
 const text = (value) => typeof value === 'string' && value.length > 0;
 const date = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 const count = (value) => Number.isSafeInteger(value) && value >= 0;
+const instant = value => typeof value==='string' && value.includes('T') && Number.isFinite(Date.parse(value));
 
 function reviewable(notice, actorId) {
   return UUID.test(actorId) && UUID.test(notice?.notification_id) && UUID.test(notice?.remittance_id)
@@ -16,7 +17,9 @@ function validDetail(record, notice, actorId, pendingOnly = true) {
   return record?.remittance_id === notice.remittance_id && record.recipient_user_id === actorId
     && record.collector_user_id === notice.sender_user_id && record.collector_user_id !== actorId
     && (pendingOnly ? record.status === 'submitted' : ['submitted','received','rejected'].includes(record.status)) && text(record.remittance_number)
-    && date(record.collection_date) && money(record.total_amount)
+    && date(record.collection_date) && money(record.total_amount) && text(record.collector_name) && text(record.recipient_name)
+    && ['payment_count','unable_to_pay_count','covered_payment_count','client_count'].every(key=>count(record[key]))
+    && typeof record.note==='string' && instant(record.submitted_at)
     && count(record.transaction_count) && record.transaction_count > 0
     && Array.isArray(record.items) && record.items.length === record.transaction_count
     && new Set(record.items.map((item) => item?.transaction_id)).size === record.items.length
@@ -37,7 +40,7 @@ function validDetail(record, notice, actorId, pendingOnly = true) {
 function acceptedResult(result, notice, actorId) {
   const updated = result?.notification;
   return result?.remittance_id === notice.remittance_id && result.status === 'received'
-    && result.custody_user_id === actorId && text(result.received_at)
+    && result.custody_user_id === actorId && instant(result.received_at)
     && updated?.notification_id === notice.notification_id && updated.remittance_id === notice.remittance_id
     && updated.recipient_user_id === actorId && updated.sender_user_id === notice.sender_user_id
     && updated.status === 'accepted' && updated.is_pending === false;
@@ -56,7 +59,7 @@ export function buildRemittanceRejection({record, actorId, reason, reviewed}) {
 export function rejectedRemittanceMatches(result, record, actorId, reason) {
   return result?.remittance_id === record?.remittance_id && result.collector_user_id === record.collector_user_id
     && result.recipient_user_id === actorId && result.status === 'rejected'
-    && result.rejected_by_user_id === actorId && text(result.rejected_at)
+    && result.rejected_by_user_id === actorId && instant(result.rejected_at)
     && result.rejection_reason === reason.trim();
 }
 
@@ -208,6 +211,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
     try {
       const records = await api.request('/api/v1/remittances', { signal: controller.signal });
       if (!active() || current !== generation) return;
+      if(!authorized(!readOnly)){denied();return;}
       const matches = asArray(records).filter((record) => record?.remittance_id === notice.remittance_id);
       if (matches.length !== 1 || !validDetail(matches[0], notice, actorId,!readOnly)) {
         message.textContent = 'The complete pending remittance could not be verified. Use Refresh to check its current status.';
@@ -321,12 +325,13 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       if(pendingDecision){
         const records=await api.request('/api/v1/remittances',{signal:controller.signal});
         if(!active())return;
+        if(!authorized()){denied();return;}
         const {kind,record,notice,reason}=pendingDecision;
         const matching=asArray(records).filter(item=>item?.remittance_id===record.remittance_id);
         const matchingNotices=updated.filter(item=>item?.notification_id===notice.notification_id);
         const verified=matching.length===1 && (kind==='reject'?rejectedRemittanceMatches(matching[0],record,actorId,reason):
           matching[0].status==='received' && matching[0].recipient_user_id===actorId && matching[0].collector_user_id===record.collector_user_id
-          && text(matching[0].received_at) && matchingNotices.length===1 && matchingNotices[0].status==='accepted'
+          && instant(matching[0].received_at) && matchingNotices.length===1 && matchingNotices[0].status==='accepted'
           && matchingNotices[0].is_pending===false && matchingNotices[0].recipient_user_id===actorId && matchingNotices[0].remittance_id===record.remittance_id);
         if(!verified){message.textContent='Decision remains unconfirmed. No write will be repeated; check again or contact the authorized reviewer.';return;}
         finalized.add(notice.notification_id);pendingDecision=null;locked=false;clearDetail();message.textContent='The saved decision is confirmed by the current server records.';
