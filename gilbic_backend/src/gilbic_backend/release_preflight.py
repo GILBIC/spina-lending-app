@@ -31,6 +31,14 @@ REQUIRED_TABLES = (
     "core.employee_profile_versions",
     "core.employee_action_receipts",
     "core.employee_history",
+    "treasury.accounts",
+    "treasury.evidence",
+    "treasury.events",
+    "treasury.receipts",
+    "treasury.applications",
+    "treasury.claim_versions",
+    "treasury.reconciliations",
+    "treasury.outcomes",
 )
 
 
@@ -52,7 +60,12 @@ def _connect(settings: Settings):
 
 
 def probe_database(settings: Settings) -> dict[str, bool]:
-    checks = {"schema": False, "private_grants": False, "disclosure_guards": False}
+    checks = {
+        "schema": False,
+        "private_grants": False,
+        "disclosure_guards": False,
+        "treasury_guards": False,
+    }
     try:
         with _connect(settings) as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -67,7 +80,7 @@ def probe_database(settings: Settings) -> dict[str, bool]:
                     SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
                     CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) a
                     LEFT JOIN pg_roles r ON r.oid=a.grantee
-                    WHERE n.nspname IN ('core','lending','accounting')
+                    WHERE n.nspname IN ('core','lending','accounting','treasury')
                     AND c.relkind IN ('r','p','v','m','f')
                     AND (a.grantee=0 OR r.rolname IN ('anon','authenticated'))
                     )"""
@@ -107,6 +120,34 @@ def probe_database(settings: Settings) -> dict[str, bool]:
             )
             row = cursor.fetchone()
             checks["disclosure_guards"] = bool(row and row[0])
+            # Funding-aware readers require 0137 even with treasury entry disabled.
+            cursor.execute(
+                """WITH required(relation, trigger_name, function_name, trigger_type) AS (
+                    VALUES
+                    ('lending.collection_transactions', 'lending_00_treasury_funding',
+                     'lending.capture_treasury_collection_funding()', 7),
+                    ('lending.collection_transactions', 'accounting_00a_treasury_funding_guard',
+                     'lending.guard_treasury_collection_funding()', 19),
+                    ('lending.collection_remittance_items', 'treasury_remittance_item_guard',
+                     'lending.guard_treasury_remittance_item()', 23),
+                    ('accounting.journal_entries', 'treasury_collection_journal_guard',
+                     'accounting.guard_treasury_collection_journal()', 23)
+                )
+                SELECT bool_and(EXISTS (
+                    SELECT 1 FROM pg_trigger t
+                    WHERE t.tgrelid = to_regclass(required.relation)
+                      AND t.tgname = required.trigger_name
+                      AND t.tgfoid = to_regprocedure(required.function_name)
+                      AND t.tgtype = required.trigger_type
+                      AND t.tgenabled IN ('O', 'A')
+                      AND NOT t.tgisinternal
+                      AND t.tgqual IS NULL
+                      AND t.tgattr = ''::int2vector
+                      AND t.tgnargs = 0
+                )) FROM required"""
+            )
+            row = cursor.fetchone()
+            checks["treasury_guards"] = bool(row and row[0])
     except (psycopg.Error, ValueError):
         # Driver errors may contain credentials, addresses or SQL; never serialize them.
         pass
@@ -206,7 +247,12 @@ def check_runtime(settings: Settings) -> PreflightReport:
         checks.update(probe_database(settings))
     else:
         checks.update(
-            {"schema": False, "private_grants": False, "disclosure_guards": False}
+            {
+                "schema": False,
+                "private_grants": False,
+                "disclosure_guards": False,
+                "treasury_guards": False,
+            }
         )
     return _report("runtime_configuration", checks)
 

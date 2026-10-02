@@ -154,11 +154,11 @@ def _combined_body(actor, receipt, command, sequence=1):
         extra_allocation_choice=command.extra_choice,
         regular_past_due_followup=command.regular_past_due_followup,
         legs=[
-            {
-                "loan_id": item.loan_id,
-                "route_entry_id": item.loan_id,
-                "route_revision": f"loan:{item.loan_id}:v{item.expected_version}",
-            }
+            combined.CombinedPaymentLeg(
+                loan_id=item.loan_id,
+                route_entry_id=item.loan_id,
+                route_revision=f"loan:{item.loan_id}:v{item.expected_version}",
+            )
             for item in command.loans
         ],
     )
@@ -494,7 +494,15 @@ def apply_receipt(conn, actor, receipt, command):
             combined_preview,
             bridge=bridge,
         )
-        ids = [item["transaction_id"] for item in result["legs"]]
+        result_legs = result.get("legs")
+        if not isinstance(result_legs, list) or not all(
+            isinstance(item, dict) and isinstance(item.get("transaction_id"), str)
+            for item in result_legs
+        ):
+            raise TreasuryConflict(
+                "Protected combined payment returned incomplete receipt evidence."
+            )
+        ids = [item["transaction_id"] for item in result_legs]
     else:
         ids = []
         revisions = {
@@ -526,6 +534,10 @@ def apply_receipt(conn, actor, receipt, command):
                 else None,
             )
             posted = bridge.post_collection(conn, storage_actor, posting)
+            if not posted.server_transaction_id or not posted.route_revision:
+                raise TreasuryConflict(
+                    "Protected payment returned incomplete receipt evidence."
+                )
             ids.append(posted.server_transaction_id)
             revisions[item["loan_id"]] = posted.route_revision
     with conn.cursor(row_factory=dict_row) as cursor:

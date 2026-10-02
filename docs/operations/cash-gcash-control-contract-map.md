@@ -60,6 +60,23 @@ Task11 therefore verifies the shared portal treasury workflow in installed Windo
 with the same authenticated backend and report values. It must not recreate the retired
 Tkinter application or a second local financial database.
 
+## Source-aware rollout and recovery
+
+The candidate requires migrations 0136 and 0137 before activation. The read-only
+runtime preflight checks Treasury tables, private grants and the exact enabled funding,
+remittance and journal guards even when Treasury entry is disabled. Disabling entry
+does not remove funding classification from existing loan and cash-custody reads.
+
+The first Treasury-aware deployment installs a retained systemd startup guard outside
+the ordinary release rollback paths. Every subsequent start requires a release with
+the Treasury capability manifest, protected allocator and funding migration. This is
+deliberately conservative: a cash-only release is rejected from that first rollout,
+even before a wallet-funded row exists. An unsuccessful rollback to an older release
+leaves the API stopped and requires recovery to a source-aware release; it must not
+silently restart a runtime that treats wallet payments as Collector cash. Do not remove
+the retained guard to force an incompatible rollback. No host configuration was changed
+while implementing or testing this candidate.
+
 ## Acceptance still required
 
 This map is source evidence, not completed runtime acceptance. Dedicated PostgreSQL

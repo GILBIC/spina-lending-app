@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 
@@ -120,7 +121,7 @@ def build_collection_accounting_preview(
     source_key = collection_source_event_key(event.transaction_id)
     receipt_cash = event.receipt_cash_amount
     unallocated = event.unallocated_amount
-    base = dict(
+    base: dict[str, Any] = dict(
         transaction_id=event.transaction_id,
         source_event_key=source_key,
         receipt_number=event.receipt_number,
@@ -149,7 +150,9 @@ def build_collection_accounting_preview(
 
     if event.funding_source != "collector_cash":
         return CollectionAccountingPreview(
-            **base, disposition="treasury_context_mapping_required", posting_eligible=False,
+            **base,
+            disposition="treasury_context_mapping_required",
+            posting_eligible=False,
             message="Recipient-account funds require a reviewed account and legal-context journal mapping; Collector cash is not the source.",
             proposed_lines=(),
         )
@@ -180,7 +183,11 @@ def build_collection_accounting_preview(
             proposed_lines=(),
         )
 
-    if event.amount < ZERO or unallocated < ZERO or event.amount + unallocated != receipt_cash:
+    if (
+        event.amount < ZERO
+        or unallocated < ZERO
+        or event.amount + unallocated != receipt_cash
+    ):
         return CollectionAccountingPreview(
             **base,
             disposition="receipt_application_mismatch",

@@ -1,5 +1,6 @@
 """Mixed physical-cash/recipient-wallet invariants on an isolated test database."""
 
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -77,6 +78,24 @@ def _copy(conn, cash, receipt, amount="100.00"):
         from lending.collection_transactions where id=%s returning id""",
         (uuid4(), amount, "SYN-" + uuid4().hex, cash),
     ).fetchone()[0]
+
+
+def test_runtime_preflight_requires_active_treasury_guards(funded, monkeypatch):
+    from gilbic_backend.config import Settings
+
+    from gilbic_backend import release_preflight
+
+    conn, *_ = funded
+    monkeypatch.setattr(release_preflight, "_connect", lambda _: nullcontext(conn))
+    settings = Settings(_env_file=None, database_url=DATABASE_URL)
+    assert release_preflight.probe_database(settings)["treasury_guards"] is True
+    conn.rollback()
+    with conn.transaction(force_rollback=True):
+        conn.execute(
+            "ALTER TABLE lending.collection_transactions DISABLE TRIGGER accounting_00a_treasury_funding_guard"
+        )
+        assert release_preflight.probe_database(settings)["treasury_guards"] is False
+    assert release_preflight.probe_database(settings)["treasury_guards"] is True
 
 
 def test_recorder_does_not_determine_cash_custody(funded):

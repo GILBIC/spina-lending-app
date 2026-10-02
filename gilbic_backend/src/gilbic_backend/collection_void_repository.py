@@ -162,9 +162,9 @@ class PostgresCollectionVoidRepository:
         # is a savepoint, never a commit of the treasury receipt/application.
         with (
             nullcontext(connection) if connection is not None else open_connection()
-        ) as connection:
-            with connection.transaction():
-                with connection.cursor(row_factory=dict_row) as cursor:
+        ) as active_connection:
+            with active_connection.transaction():
+                with active_connection.cursor(row_factory=dict_row) as cursor:
                     adjustment_row = cursor.execute(
                         """
                         select id
