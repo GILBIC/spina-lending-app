@@ -19,7 +19,7 @@ export async function mountEmployeeWorkspace(context) {
  context.employeeWorkspaceCleanup?.();
  const {root,api:originalApi,signal,setNavigation}=context,initial=context.session,controller=new AbortController(),jobs=new Map(),cleanups=[];
  let disposed=false,visible='employee-overview',operationsHandle=null,remittanceHandle=null,treasuryHandle=null,updateItems=[],updateLimit=50;
- const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>Boolean(operationsHandle?.isWritePending?.()||remittanceHandle?.isWritePending?.()||context.employeeSupportPending)}),api=treasuryGate.api;context.api=api;
+ const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>Boolean(operationsHandle?.isWritePending?.()||remittanceHandle?.isWritePending?.()||context.employeeSupportPending),getRoleWriteOwner:path=>path.startsWith('/api/v1/employee-operations/')?operationsHandle:path.startsWith('/api/v1/remittances/')&&remittanceHandle?{isWritePending:()=>remittanceHandle.isWritePending()||remittanceHandle.isUncertain()}:null}),api=treasuryGate.api;context.api=api;
  const readVersions=new Map();
  const readStart=id=>{const token=(readVersions.get(id)||0)+1;readVersions.set(id,token);return token;};
  const readCurrent=(id,token)=>active()&&readVersions.get(id)===token;

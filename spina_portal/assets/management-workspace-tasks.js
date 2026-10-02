@@ -81,5 +81,5 @@ export function createManagementTaskController({root, signal, getSession, tasks,
     signal?.removeEventListener('abort',dispose);
   }
   signal?.addEventListener('abort',dispose,{once:true});
-  return {activate,refreshVisible,isWritePending,dispose};
+  return {activate,refreshVisible,isWritePending,writeOwner:()=>states.get(current)?.handle??null,dispose};
 }

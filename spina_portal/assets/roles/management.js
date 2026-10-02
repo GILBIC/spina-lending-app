@@ -403,7 +403,7 @@ export async function mountManagementWorkspace(context) {
   if(context.signal?.aborted)return;
   context.managementTaskController?.dispose();
   context.accountingExportCleanup = null;
-  const {root,api:originalApi,session,setNavigation}=context;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>context.managementTaskController?.isWritePending('management-treasury')===true});const api=treasuryGate.api;context.api=api;
+  const {root,api:originalApi,session,setNavigation}=context;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>context.managementTaskController?.isWritePending('management-treasury')===true,getRoleWriteOwner:()=>context.managementTaskController?.writeOwner?.()});const api=treasuryGate.api;context.api=api;
   const getSession=context.getSession || (()=>context.signal?.aborted?null:context.session);
   const active=()=>!context.signal?.aborted && !!getSession();
   const can=permission=>hasPermission(getSession(),permission);

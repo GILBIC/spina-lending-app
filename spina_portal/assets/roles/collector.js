@@ -18,7 +18,7 @@ export async function mountCollectorWorkspace(context) {
   context.collectorWorkspaceHandle?.dispose();
   const {root,api:originalApi,signal}=context,getSession=context.getSession || (()=>context.session),beforeTaskChange=context.beforeTaskChange || (()=>{}),afterTaskChange=context.afterTaskChange || (()=>{}),navigate=context.navigateTo || (()=>{});
   let disposed=false,route=null,routeVersion=0,routeRead=null,visible='collector-overview',routeError=null,remittance=null,renewalHandle=null,employeeHandle=null,treasuryHandle=null;
-  const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>guard.busy||guard.locked||employeeHandle?.isWritePending()===true}),api=treasuryGate.api;context.api=api;
+  const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>guard.busy||guard.locked||employeeHandle?.isWritePending()===true,getRoleWriteOwner:path=>path.startsWith('/api/v1/employee-operations/')?employeeHandle:{isWritePending:()=>guard.busy||guard.locked}}),api=treasuryGate.api;context.api=api;
   const consumers=new Set(),mounted=new Map(),cleanups=[];
   const can=permission=>hasPermission(getSession(),permission);
   const current=()=>!disposed && !signal?.aborted && Boolean(getSession());
