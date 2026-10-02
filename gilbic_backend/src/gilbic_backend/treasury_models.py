@@ -456,6 +456,19 @@ class CollectorSurplusReturnRecord(Command):
     reason: Text
 
 
+class CollectorSurplusReturnReverse(Command):
+    action: Literal["collector_surplus_return_reverse"]
+    action_id: UUID
+    action_version: Version
+    amount: PositiveMoney
+    provider: Reference
+    reference: Reference
+    effective_at: Instant
+    evidence_id: UUID
+    recipient_attestation: Text
+    reason: Text
+
+
 class CollectorSurplusActionCancel(Command):
     action: Literal["collector_surplus_action_cancel"]
     action_id: UUID
@@ -546,6 +559,7 @@ SurplusCommand = Annotated[
     | CollectorSurplusReturnPrepare
     | CollectorSurplusApplicationPrepare
     | CollectorSurplusReturnRecord
+    | CollectorSurplusReturnReverse
     | CollectorSurplusActionCancel
     | CollectorSurplusResolveSource
     | CollectorSurplusOpeningPrepare
