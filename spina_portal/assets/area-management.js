@@ -258,17 +258,24 @@ function editorMarkup(editor, selected) {
   </form>`;
 }
 
-function collectorEditorMarkup(collectorEditor, selected, collectors = []) {
-  if (!collectorEditor || !selected) return '';
-  const selectedCollectorId = collectorEditor.selectedCollectorUserId || '';
-  const selectedCollector = collectors.find((collector) => collector.user_id === selectedCollectorId) || null;
-  const selectedCollectorName = selectedCollector?.full_name || selectedCollector?.username || '';
-  const options = collectors.map((collector) => {
+function collectorOptions(collectors, selectedCollectorId) {
+  return collectors.map((collector) => {
     const collectorId = String(collector.user_id || '');
     const collectorName = collector.full_name || collector.username || collectorId;
     const selectedAttribute = collectorId === selectedCollectorId ? ' selected' : '';
     return `<option value="${escapeHtml(collectorId)}"${selectedAttribute}>${escapeHtml(collectorName)}</option>`;
   }).join('');
+}
+
+function collectorErrorMarkup(error) {
+  return error ? `${errorCard(error, 'Collector choices are temporarily unavailable.')}<button type="button" class="button button-outline" data-area-collectors-retry>Retry Collector choices</button>` : '';
+}
+
+function collectorEditorMarkup(collectorEditor, selected, collectors = []) {
+  if (!collectorEditor || !selected) return '';
+  const selectedCollectorId = collectorEditor.selectedCollectorUserId || '';
+  const selectedCollector = collectors.find((collector) => collector.user_id === selectedCollectorId) || null;
+  const selectedCollectorName = selectedCollector?.full_name || selectedCollector?.username || '';
   const explanation = selectedCollectorName
     ? `<p class="meta">${escapeHtml(selectedCollectorName)} will handle ${escapeHtml(selected.name)} and its descendants unless a deeper Subarea has its own Collector override.</p>`
     : '';
@@ -280,7 +287,7 @@ function collectorEditorMarkup(collectorEditor, selected, collectors = []) {
     <div class="section-heading"><div><h3>Collector assignment</h3><p>SPINA keeps parent inheritance and deeper overrides authoritative on the server.</p></div></div>
     <label>Collector<select name="collector_user_id" data-area-collector-select>
       <option value="">Select Collector</option>
-      ${options}
+      ${collectorOptions(collectors, selectedCollectorId)}
     </select></label>
     ${explanation}
     <div class="action-row">
@@ -567,7 +574,7 @@ export function renderAreaManagementShell({
         ${clientTransferEditorMarkup(clientTransferEditor, tree)}
         ${retirementEditorMarkup(retirementEditor, selected)}
         ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
-        ${collectorLoadError ? errorCard(collectorLoadError, 'Collector choices are temporarily unavailable.') : ''}
+        <div data-area-collector-status role="status">${collectorErrorMarkup(collectorLoadError)}</div>
       </section>
     </div>
   </section>`;
@@ -584,7 +591,7 @@ export async function mountAreaManagement(context) {
   ].map(permission => hasPermission(getSession(), permission))]);
   const initialScope = scope();
   const controller = new AbortController();
-  let disposed = false, loaded = false, loading = null;
+  let disposed = false, loaded = false, loading = null, refreshLoaded = null;
   const handle = { dispose, refresh: load, refreshReadOnly: load };
 
   function dispose() {
@@ -639,13 +646,16 @@ export async function mountAreaManagement(context) {
   function load() {
     // Once mounted, the existing editor owns its reads. Header refresh must not
     // replace an Area draft or replay a business action.
-    if (!current() || loaded) return Promise.resolve(false);
+    if (!current()) return Promise.resolve(false);
+    if (loaded) return refreshLoaded?.() || Promise.resolve(false);
     if (loading) return loading;
     context.beforeTaskChange?.();
     root.innerHTML = loadingPanel('Loading authoritative Area structure…');
-    loading = mountAreaEditor({ root, api, session, on, current }).then(result => {
+    loading = mountAreaEditor({ root, api, session, on, current,
+      beforeTaskChange: context.beforeTaskChange, afterTaskChange: context.afterTaskChange }).then(result => {
       if (!current()) return false;
       if (result?.error) return failed(result.error);
+      refreshLoaded = result?.refreshReadOnly;
       loaded = true;
       return true;
     }).catch(failed).finally(() => {
@@ -664,7 +674,7 @@ export async function mountAreaManagement(context) {
   return handle;
 }
 
-async function mountAreaEditor({ root, api, session, on, current }) {
+async function mountAreaEditor({ root, api, session, on, current, beforeTaskChange, afterTaskChange }) {
 
   const canManageAreas = hasPermission(session, 'area.manage');
   const canAssignCollector = hasPermission(session, 'area.collector.assign');
@@ -699,6 +709,36 @@ async function mountAreaEditor({ root, api, session, on, current }) {
     mutationError: null,
     draggingAreaId: null,
   };
+  let collectorRead = null;
+
+  function refreshCollectors() {
+    if (!current() || !collectorsResult.error) return Promise.resolve(false);
+    if (collectorRead) return collectorRead;
+    beforeTaskChange?.();
+    const retry = root.querySelector('[data-area-collectors-retry]');
+    if (retry) { retry.disabled = true; retry.textContent = 'Loading Collector choices…'; }
+    collectorRead = settledRequest(api, '/api/v1/areas/collectors', {}, { collectors: [] }).then(result => {
+      if (!current()) return false;
+      collectorsResult.error = result.error;
+      if (!result.error) {
+        state.collectors = Array.isArray(result.data?.collectors) ? result.data.collectors : [];
+        const select = root.querySelector('[data-area-collector-select]');
+        if (select && state.collectorEditor) {
+          const selectedId = state.collectors.some(item => item.user_id === select.value) ? select.value : '';
+          select.innerHTML = `<option value="">Select Collector</option>${collectorOptions(state.collectors, selectedId)}`;
+          select.value = selectedId;
+          state.collectorEditor.selectedCollectorUserId = selectedId;
+        }
+      }
+      const status = root.querySelector('[data-area-collector-status]');
+      if (status) status.innerHTML = collectorErrorMarkup(result.error);
+      return !result.error;
+    }).finally(() => {
+      collectorRead = null;
+      if (current()) afterTaskChange?.();
+    });
+    return collectorRead;
+  }
 
   const render = () => {
     if (!current()) return;
@@ -758,6 +798,11 @@ async function mountAreaEditor({ root, api, session, on, current }) {
   render();
 
   on('click', async (event) => {
+    const collectorRetry = event.target?.closest?.('[data-area-collectors-retry]');
+    if (collectorRetry) {
+      if (root.querySelector('[data-area-collectors-retry]') === collectorRetry) await refreshCollectors();
+      return;
+    }
     const orderControl = event.target?.closest?.('[data-area-order]');
     if (orderControl) {
       if (!canManageAreas) return;
@@ -1308,4 +1353,5 @@ async function mountAreaEditor({ root, api, session, on, current }) {
     state.query = event.target.value || '';
     render();
   });
+  return { refreshReadOnly: refreshCollectors };
 }

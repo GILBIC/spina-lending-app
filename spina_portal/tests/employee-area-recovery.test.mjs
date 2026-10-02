@@ -117,3 +117,82 @@ test('a late Area save after abort cannot reload records or repaint another work
   assert.equal(root.textContent,'New workspace surface');
   assert.equal(calls.length,2,'late accepted save does not start an old-scope reload');
 });
+
+const collectorChoices={collectors:[{user_id:'collector-one',full_name:'Synthetic Collector',username:'synthetic-collector'}]};
+async function partialArea(t,readChoices){
+  const root=new Element(),controller=new AbortController(),calls=[];let handle,choiceReads=0;
+  t.after(()=>controller.abort());
+  await mountEmployeeWorkspace({root,signal:controller.signal,
+    session:{...session(),permissions:['area.manage','area.collector.assign']},setNavigation(){},
+    registerWorkspaceHandle:value=>handle=value,api:{async request(path,options={}){
+      calls.push({path,options});
+      if(path.includes('employee-operations'))return workspace();
+      if(path.endsWith('/collectors'))return readChoices(++choiceReads);
+      assert.equal(path,'/api/v1/areas');
+      return areas('Current Area');
+    }}});
+  handle.activate('employee-area-management');await setImmediate();
+  return {root:root.querySelector('#employee-area-management'),handle,controller,calls};
+}
+function unavailable(){throw Object.assign(Error('Synthetic choices unavailable'),{status:503});}
+
+test('local Collector choices retry preserves the Area draft and shares its read with header Refresh',async t=>{
+  const next=deferred(),{root,handle,calls}=await partialArea(t,count=>count===1?unavailable():next.promise);
+  const {form,input}=rename(root),areaRow=root.querySelector('[data-area-id]');
+  const retry=root.querySelector('[data-area-collectors-retry]');
+  assert.ok(retry,'a partial choices failure offers a local Retry');
+  dispatch(root,'click',retry);const refresh=handle.refreshVisible();await setImmediate();
+  assert.equal(calls.filter(call=>call.path.endsWith('/collectors')).length,2);
+  assert.strictEqual(root.querySelector('[data-area-editor]'),form);
+  next.resolve(collectorChoices);await refresh;await setImmediate();
+  assert.strictEqual(root.querySelector('[data-area-editor]'),form);
+  assert.strictEqual(root.querySelector('[data-area-id]'),areaRow);
+  assert.equal(input.value,'Unsent synthetic Area name');
+  assert.equal(root.querySelector('[data-area-collectors-retry]'),null);
+  assert.equal(calls.filter(call=>call.path==='/api/v1/areas').length,1);
+  assert.equal(calls.filter(call=>call.options.method).length,0);
+  dispatch(root,'click',root.querySelector('[data-area-action="collector"]'));
+  assert.match(root.querySelector('[data-area-collector-select]').textContent,/Synthetic Collector/);
+});
+
+test('header Refresh recovers choices in the current Collector form without replacing its select or selecting a person',async t=>{
+  const next=deferred(),{root,handle,calls}=await partialArea(t,count=>count===1?unavailable():next.promise);
+  const refresh=handle.refreshVisible();await setImmediate();
+  assert.equal(calls.filter(call=>call.path.endsWith('/collectors')).length,2,'header Refresh retries the failed choices read');
+  dispatch(root,'click',root.querySelector('[data-area-action="collector"]'));
+  const form=root.querySelector('[data-area-collector-editor]'),select=form.querySelector('[data-area-collector-select]');
+  next.resolve(collectorChoices);await refresh;
+  assert.strictEqual(root.querySelector('[data-area-collector-editor]'),form);
+  assert.strictEqual(root.querySelector('[data-area-collector-select]'),select);
+  assert.match(select.textContent,/Synthetic Collector/);
+  assert.equal(select.value,'','recovery does not choose a Collector for the owner');
+  assert.equal(calls.filter(call=>call.options.method).length,0);
+});
+
+test('another failed choices retry keeps the Area draft and permits a later local recovery',async t=>{
+  const {root,handle,calls}=await partialArea(t,count=>count<3?unavailable():collectorChoices);
+  const {form,input}=rename(root);
+  await handle.refreshVisible();
+  assert.equal(calls.filter(call=>call.path.endsWith('/collectors')).length,2);
+  assert.strictEqual(root.querySelector('[data-area-editor]'),form);
+  const retry=root.querySelector('[data-area-collectors-retry]');
+  assert.ok(retry);assert.equal(retry.disabled,false);
+  dispatch(root,'click',retry);await setImmediate();
+  assert.strictEqual(root.querySelector('[data-area-editor]'),form);
+  assert.equal(input.value,'Unsent synthetic Area name');
+  assert.equal(root.querySelector('[data-area-collectors-retry]'),null);
+  assert.equal(calls.filter(call=>call.path==='/api/v1/areas').length,1);
+});
+
+test('a denied choices retry clears the retained Area draft and never retries the denied mount',async t=>{
+  const {root,handle,calls}=await partialArea(t,count=>{
+    if(count===1)return unavailable();
+    throw Object.assign(Error('Synthetic denial'),{status:403});
+  });
+  const {input}=rename(root);await handle.refreshVisible();
+  assert.equal(calls.filter(call=>call.path.endsWith('/collectors')).length,2);
+  assert.equal(input.value,'');assert.equal(input.disabled,true);
+  assert.match(root.textContent,/Area access is unavailable/);
+  await handle.refreshVisible();
+  assert.equal(calls.filter(call=>call.path.endsWith('/collectors')).length,2);
+});
