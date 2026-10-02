@@ -239,9 +239,11 @@ function supportRows(requests) {
     .join('')}</div>`;
 }
 
+function clientNotificationCount(items){return `${items.length} loaded updates · ${items.filter(item=>item.is_read!==true).length} unread among loaded updates`;}
+
 export function clientNotificationRows(items, {visibleLimit=30, authorizedRecords}={}) {
   if (!items.length) return emptyState('You have no new SPINA updates.');
-  return `<p>${items.length} loaded updates · ${items.filter(item=>item.is_read!==true).length} unread among loaded updates</p><div class="timeline">${items
+  return `<p data-client-updates-count tabindex="-1">${clientNotificationCount(items)}</p><div class="timeline">${items
     .slice(0, visibleLimit)
     .map((item) => {
       const notificationId = String(item.notification_id || '').trim();
@@ -602,38 +604,41 @@ function bindClientAccountDeviceSecurity(context) {
 }
 
 function bindClientNotificationReadActions(context) {
-  const signal = context.signal;
-  const generation = context.clientWorkspaceGeneration;
-  const currentMount = () => !signal?.aborted && context.clientWorkspaceGeneration === generation && context.clientIsCurrent();
-  for (const button of context.root.querySelectorAll('[data-client-notification-read]')) {
-    button.addEventListener('click', async () => {
-      if (button.disabled || button.hidden || signal?.aborted || !context.clientIsCurrent?.() || globalThis.navigator?.onLine===false) return;
-      const notificationId = button.dataset.clientNotificationRead;
-      const current = () => currentMount() && button.isConnected;
-      let saved = false;
-      setButtonBusy(button, true, 'Marking…');
-      try {
-        const result = await requestClientNotificationRead({
-          api: context.api,
-          notificationId,
-        });
-        if (!current()) return;
-        if (result?.notification_id !== notificationId || result.is_read !== true || result.recipient_user_id !== (context.getSession?.()??context.session)?.user?.id) throw new Error('The update could not be confirmed as read. Refresh Updates before trying again.');
-        saved = true;const item=asArray(context.clientRaw?.notifications).find(note=>note.notification_id===notificationId);if(item)item.is_read=true;
-        button.parentElement.querySelector('[data-client-notification-status]').innerHTML = badge('Read', 'success');
-        showToast('Update marked as read.', 'success');
-      } catch (error) {
+  const signal=context.signal,generation=context.clientWorkspaceGeneration,pending=context.clientNotificationPending;
+  const currentMount=()=>!signal?.aborted&&context.clientWorkspaceGeneration===generation&&context.clientIsCurrent();
+  const currentButton=id=>{const button=context.root.querySelector(`[data-client-notification-read="${id}"]`);return button?.isConnected?button:null;};
+  for(const button of context.root.querySelectorAll('[data-client-notification-read]')){
+    const notificationId=button.dataset.clientNotificationRead;
+    if(pending.has(notificationId))setButtonBusy(button,true,'Marking…');
+    button.addEventListener('click',async()=>{
+      if(button.disabled||button.hidden||pending.has(notificationId)||!currentMount()||currentButton(notificationId)!==button||globalThis.navigator?.onLine===false)return;
+      const ownItem=()=>asArray(context.clientRaw?.notifications).find(note=>note.notification_id===notificationId&&note.recipient_user_id===(context.getSession?.()??context.session)?.user?.id);
+      const itemBefore=ownItem();if(!itemBefore||itemBefore.is_read===true)return;
+      let saved=false;pending.add(notificationId);setButtonBusy(button,true,'Marking…');
+      try{
+        const result=await requestClientNotificationRead({api:context.api,notificationId});
+        if(!currentMount())return;
+        if(result?.notification_id!==notificationId||result.is_read!==true||result.recipient_user_id!==(context.getSession?.()??context.session)?.user?.id)throw new Error('The update could not be confirmed as read. Refresh Updates before trying again.');
+        const item=ownItem();if(!item)return;
+        saved=true;item.is_read=true;
+        const target=currentButton(notificationId);
+        const status=target?.parentElement.querySelector('[data-client-notification-status]');if(status)status.innerHTML=badge('Read','success');
+        const count=context.root.querySelector('[data-client-updates-count]');if(count)count.textContent=clientNotificationCount(asArray(context.clientRaw?.notifications));
+        showToast('Update marked as read.','success');
+      }catch(error){
         if(currentMount()&&[401,403].includes(error.status)){context.clientCleanup();return;}
-        if (current()) showToast(error.message, 'error');
-      } finally {
-        if (current()) setButtonBusy(button, false);
-        else clearButtonBusyFocus(button);
-      }
-      if (saved && current()) {
-        if (button.ownerDocument.activeElement === button && !button.closest('[hidden]')) {
-          button.parentElement.querySelector('[data-client-notification-status]').focus({ preventScroll: true });
-        }
-        button.hidden = true;
+        if(currentMount()&&ownItem())showToast(error.message,'error');
+      }finally{
+        pending.delete(notificationId);
+        if(currentMount()){
+          const target=currentButton(notificationId);if(target!==button)clearButtonBusyFocus(button);
+          if(target){setButtonBusy(target,false);
+            if(saved){
+              if(target===button&&target.ownerDocument.activeElement===target&&!target.closest('[hidden]'))target.parentElement.querySelector('[data-client-notification-status]').focus({preventScroll:true});
+              target.hidden=true;
+            }
+          }
+        }else clearButtonBusyFocus(button);
       }
     });
   }
@@ -751,7 +756,7 @@ function authorityScope(session) {return JSON.stringify([session?.user?.id,sessi
 export async function mountClientWorkspace(context) {
  if(context.signal?.aborted)return;context.clientCleanup?.();
  const generation=(context.clientWorkspaceGeneration??0)+1;context.clientWorkspaceGeneration=generation;
- const {root,api:originalApi,setNavigation}=context;const scope=authorityScope(context.getSession?.()??context.session);const controller=new AbortController();let disposed=false,visible='client-overview',notificationsLimit=30,renewalView='current';const childCleanups=[];const initialized=new Set();const mutations=createClientMutationController();context.clientMutations=mutations;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>mutations.pending()||mutations.uncertain()||context.clientProofHandle?.isUncertain()===true,getRoleWriteOwner:path=>path.startsWith('/api/v1/client/payment-proofs')&&context.clientProofHandle?{isWritePending:()=>context.clientProofHandle.isUncertain()}:{isWritePending:()=>mutations.pending()||mutations.uncertain()}}),api=treasuryGate.api;context.api=api;
+ const {root,api:originalApi,setNavigation}=context;const scope=authorityScope(context.getSession?.()??context.session);const controller=new AbortController();let disposed=false,visible='client-overview',notificationsLimit=30,renewalView='current';const childCleanups=[];const notificationPending=new Set();context.clientNotificationPending=notificationPending;childCleanups.push(()=>notificationPending.clear());const initialized=new Set();const mutations=createClientMutationController();context.clientMutations=mutations;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>mutations.pending()||mutations.uncertain()||context.clientProofHandle?.isUncertain()===true,getRoleWriteOwner:path=>path.startsWith('/api/v1/client/payment-proofs')&&context.clientProofHandle?{isWritePending:()=>context.clientProofHandle.isUncertain()}:{isWritePending:()=>mutations.pending()||mutations.uncertain()}}),api=treasuryGate.api;context.api=api;
  const current=()=>{const session=context.getSession?context.getSession():context.session;const ok=!disposed&&!context.signal?.aborted&&context.clientWorkspaceGeneration===generation&&(!context.getSession||session!==null)&&authorityScope(session)===scope;if(!ok&&!disposed)dispose();return ok;};
  function dispose(){
   if(disposed)return;disposed=true;
@@ -772,7 +777,7 @@ export async function mountClientWorkspace(context) {
  let linkedClientId=null;
  const paths={account:'/api/v1/account',loans:'/api/v1/client/loans',payments:'/api/v1/client/payments',statement:'/api/v1/client/statement',renewals:'/api/v1/client/renewals',renewalWorkflow:'/api/v1/client/renewal-workflow',support:'/api/v1/client/support',gcash:'/api/v1/client/gcash/config',notifications:'/api/v1/activity-notifications'};
  function unavailable(key){const state=reads.state(key);return state.status==='error'?`<div class="notice-card warning"><strong>${escapeHtml(key)} records unavailable</strong>${errorCard(state.error)}<button class="button button-secondary" type="button" data-client-retry="${key}">Retry</button></div>`:loadingPanel(`Loading ${key} records…`);}
- function setRegion(key,html){const region=root.querySelector(`[data-client-region="${key}"]`);if(!region)return;context.beforeTaskChange?.();region.innerHTML=html;context.afterTaskChange?.();for(const b of region.querySelectorAll('[data-client-retry]'))b.addEventListener('click',()=>load(key,{refresh:true}));}
+ function setRegion(key,html){const region=root.querySelector(`[data-client-region="${key}"]`);if(!region)return;if(key==='notifications')for(const button of region.querySelectorAll('[data-client-notification-read]'))clearButtonBusyFocus(button);context.beforeTaskChange?.();region.innerHTML=html;context.afterTaskChange?.();for(const b of region.querySelectorAll('[data-client-retry]'))b.addEventListener('click',()=>load(key,{refresh:true}));}
  function updateLoanSummary(id,state){raw.homeObligationSchedules[id]=state;for(const node of root.querySelectorAll('[data-client-loan-summary]'))if(node.getAttribute('data-client-loan-summary')===id){context.beforeTaskChange?.();node.innerHTML=classifyLoanType(asArray(raw.loans.loans).find(l=>l.loan_id===id)?.loan_type_name??asArray(raw.loans.loans).find(l=>l.loan_id===id)?.loan_type_code)==='seven-by-seven'?renderClientPayoff(state):'';context.afterTaskChange?.();}renderHome();}
  function renderHomeCopy(){
   const overview=root.querySelector('#client-overview'),actions=overview?.querySelector('.daily-actions');if(!actions)return;
@@ -821,7 +826,7 @@ export async function mountClientWorkspace(context) {
     finally{if(currentView()){downloading=false;button.disabled=false;}}
    });
   }
- }if(key==='account')bindClientAccountDeviceSecurity(context);if(key==='notifications'){bindClientNotificationReadActions(context);for(const button of root.querySelectorAll('[data-client-notification-payment]'))button.addEventListener('click',async()=>{if(!current())return;const id=button.getAttribute('data-client-notification-payment');if(reads.state('payments').status!=='ready'||!asArray(raw.payments.payments).some(p=>p.transaction_id===id))return;context.navigateTo?.('client-payments');await activate('client-payments');root.querySelector(`[data-payment-details="${id}"]`)?.click?.();});const more=root.querySelector('[data-client-updates-more]');more?.addEventListener('click',()=>{notificationsLimit+=30;renderRegion('notifications');});}}
+ }if(key==='account')bindClientAccountDeviceSecurity(context);if(key==='notifications'){bindClientNotificationReadActions(context);for(const button of root.querySelectorAll('[data-client-notification-payment]'))button.addEventListener('click',async()=>{if(!current())return;const id=button.getAttribute('data-client-notification-payment');if(reads.state('payments').status!=='ready'||!asArray(raw.payments.payments).some(p=>p.transaction_id===id))return;context.navigateTo?.('client-payments');await activate('client-payments');root.querySelector(`[data-payment-details="${id}"]`)?.click?.();});const more=root.querySelector('[data-client-updates-more]');more?.addEventListener('click',()=>{if(!current()||root.querySelector('[data-client-updates-more]')!==more)return;const focused=more.ownerDocument.activeElement===more;notificationsLimit+=30;renderRegion('notifications');if(focused)(root.querySelector('[data-client-updates-more]')||root.querySelector('[data-client-updates-count]'))?.focus({preventScroll:true});});}}
  function renderRenewals(){renderHome();
  const presentation=clientRenewalPresentation({eligibilityState:reads.state('renewals'),requestsState:reads.state('renewals'),workflowState:reads.state('renewalWorkflow'),view:renewalView});
  const tabs=`<div class="inline-actions">${['current','eligibility','history'].map(view=>`<button class="button button-secondary" type="button" data-client-renewal-view="${view}" aria-pressed="${renewalView===view}">${view==='current'?'Current requests':view==='eligibility'?'Eligibility':'History'}</button>`).join('')}</div>`;
