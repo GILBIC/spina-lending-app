@@ -277,14 +277,14 @@ test('Employee workspace wires review and disposes it before remount', async (t)
       return {};
     } } };
   await mountEmployeeWorkspace(context);
-  context.handle.activate('employee-remittance');await setImmediate();
+  context.handle?.activate('employee-remittance');await setImmediate();
   const reviewRoot = root.querySelector('[data-remittance-review]');
   assert.ok(reviewRoot, 'Employee remittance section must mount the full review');
   fire(reviewRoot.querySelector('[data-review-notification]'), 'click'); await setImmediate();
   const form = reviewRoot.querySelector('[data-remittance-accept-form]');
   assert.ok(form);
   await mountEmployeeWorkspace(context);
-  context.handle.activate('employee-remittance');await setImmediate();
+  context.handle?.activate('employee-remittance');await setImmediate();
   assert.equal(reviewRoot.innerHTML, '');
   fire(form, 'submit');
   assert.equal(calls.filter((call) => call.options.method === 'POST').length, 0);

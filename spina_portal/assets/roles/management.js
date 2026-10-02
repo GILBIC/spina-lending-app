@@ -14,6 +14,7 @@ import { mountOfficeFirstLoan } from '../office-first-loan.js';
 import { mountOfficeOnboarding } from '../office-onboarding.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
+import { mountRemittanceReview } from '../remittance-review.js';
 import { mountCashDisbursement } from '../cash-disbursement.js';
 import { bindManagementAlertsAudit, managementAlertsAuditMarkup } from '../management-alerts-audit.js';
 import {
@@ -443,7 +444,7 @@ export async function mountManagementWorkspace(context) {
   const canPrepareCashDisbursement=can('cash_disbursement.prepare');
   const canRenewals=can('renewal.manage'),canSupport=can('support.manage'),canReviewPaymentProof=can('client_payment_proof.review');
   const canManageAccounts=can('account.manage'),canManageDevices=can('device.manage'),canViewStaff=canManageAccounts||canManageDevices;
-  const canReceiveRemittance=can('remittance.receive');
+  const canViewRemittance=can('remittance.view');
   const canUseAreaManagement=['area.manage','area.collector.assign','area.client.assign','area.retire'].some(can);
   const empty={data:{},error:null};
   const account=empty,overview=empty,loans=empty,loanOperations=empty,pastDueReport=empty,financialStatements=empty,generalJournal=empty,trialBalance=empty,alerts=empty,renewals=empty,support=empty,staff=empty;
@@ -496,7 +497,7 @@ export async function mountManagementWorkspace(context) {
   ${canCollectionActions ? '<section class="section-card" id="management-collection-actions"><div data-management-collection-actions></div></section>' : ''}
   <section class="section-card" id="management-loan-operations" data-screen-share-section><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" aria-label="Search collection history" placeholder="Client, receipt, loan, or collector" /><select name="status" aria-label="Collection status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Review recorded past-due reasons and amounts by date, area, reason, or event.</p></div></div><form id="management-past-due-report-search" class="past-due-filter-grid"><label>Start date<input type="date" name="start_date" /></label><label>End date<input type="date" name="end_date" /></label><label>Area<input name="area" maxlength="200" placeholder="All areas" /></label><label>Reason<select name="reason_code"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select></label><label>Event<select name="event_kind"><option value="">All events</option><option value="unable_to_pay">Unable to pay</option><option value="partial_payment">Partial payment</option></select></label><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
-  ${canReceiveRemittance ? '<section class="section-card" id="management-remittances"><div data-management-remittance-review></div></section>' : ''}</section>
+  ${canViewRemittance ? '<section class="section-card" id="management-remittances"><h2>Remittance review</h2><p>Review cash handovers assigned to your account and their saved history.</p><div data-management-remittance-review></div></section>' : ''}</section>
   <section class="workspace-group" id="management-accounting-hub" data-workspace-section>
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>\n  ${!canViewFinancialStatements && !canViewGeneralJournal && !canPrepareCashDisbursement ? emptyState('No accounting tools are assigned to this account.') : ''}
   ${canPrepareCashDisbursement ? '<section class="section-card" id="management-cash-disbursement"><div data-cash-disbursement></div></section>' : ''}
@@ -557,6 +558,14 @@ export async function mountManagementWorkspace(context) {
     const h=bindManagementLoanOperations(context);await h.refresh();return h;
   });
   add('management-past-due-report','management-collections','Past-due report',async()=>{const h=bindManagementPastDueReport(context);await h.refresh();return h;},'management.dashboard.view');
+  add('management-remittances','management-collections','Remittance review',async()=>{
+    let handle;
+    const dispose=mountRemittanceReview({...options('[data-management-remittance-review]'),notifications:null,
+      loadNotifications:()=>api.request('/api/v1/notifications',{signal:context.signal}),
+      registerHandle:value=>{handle=value;},onNoticesChanged:()=>{void refreshOverview();}});
+    await handle?.refreshReadOnly();
+    return{dispose,refresh:()=>handle?.refreshReadOnly(),isWritePending:()=>handle?.isUncertain()===true||handle?.isWritePending()===true};
+  },'remittance.view');
   add('management-financial-statements','management-accounting-hub','Financial statements',async()=>{const h=mountManagementFinancialStatements(options('#management-financial-statements'));await h.refresh();return h;},'accounting.view');
   add('management-general-journal','management-accounting-hub','Journal & Trial Balance',async()=>{
     const target=root.querySelector('[data-management-journal-evidence]');let actions=()=>{},exports=()=>{},version=0;
