@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_loan.dart';
 import 'package:gilbic_mobile/src/core/management/management_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 
 class ManagementLoanPortfolioPage extends StatefulWidget {
   const ManagementLoanPortfolioPage({
@@ -389,12 +390,12 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = loan.isOverdue ? 'Overdue' : _titleCase(loan.loanStatus);
-    return Chip(
-      label: Text(label),
-      avatar: Icon(
-        loan.isOverdue ? Icons.warning_amber : Icons.check_circle,
-        size: 18,
-      ),
+    return SpinaStatusLabel(
+      label: label,
+      tone: loan.isOverdue
+          ? SpinaStatusTone.attention
+          : SpinaStatusTone.information,
+      icon: loan.isOverdue ? Icons.warning_amber : Icons.info_outline,
     );
   }
 }
