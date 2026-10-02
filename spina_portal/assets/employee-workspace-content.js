@@ -16,7 +16,7 @@ function activityRows(items,limit=50) {
   return `<div class="timeline">${items
     .slice(0, limit)
     .map(
-      (item) => `<article class="timeline-item">
+      (item) => `<article class="timeline-item" data-employee-update-id="${escapeHtml(item.notification_id || '')}">
         <strong>${escapeHtml(item.title || item.notification_type || 'SPINA update')}</strong>
         <span>${escapeHtml(item.message || '')}</span>
         <span class="meta">${escapeHtml(item.sender_name || '')}${item.created_at ? ` · ${formatDateTime(item.created_at)}` : ''}</span>
@@ -64,7 +64,7 @@ function accountSection(account) {
   </div>`;
 }
 
-function bindActions(context) {
+function bindActions(context,{isCurrent=()=>true,onDenied=()=>{}}={}) {
   const signal = context.signal;
   for (const form of context.root.querySelectorAll('.employee-support-review')) {
     context.employeeSupportBindings ||= new WeakSet();
@@ -73,10 +73,10 @@ function bindActions(context) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const button = form.querySelector('button[type="submit"]');
-      if (button.disabled || form.hidden || signal?.aborted) return;
+      if (button.disabled || form.hidden || signal?.aborted || !isCurrent()) return;
       const currentSession=context.getSession?context.getSession():context.session;
-      if(!currentSession||!hasPermission(currentSession,'support.manage'))return;
-      const current = () => !signal?.aborted && form.isConnected;
+      if(!currentSession||!hasPermission(currentSession,'support.manage')){onDenied();return;}
+      const current = () => !signal?.aborted && form.isConnected && isCurrent();
       setButtonBusy(button, true, 'Saving…');
       context.employeeSupportPending=true;
       const data = new FormData(form);
@@ -90,7 +90,8 @@ function bindActions(context) {
             response,
           },
         });
-        if (!current() || !hasPermission(context.getSession?context.getSession():context.session,'support.manage')) return;
+        if (!current()) return;
+        if (!hasPermission(context.getSession?context.getSession():context.session,'support.manage')) {onDenied();return;}
         const record = result?.request;
         if (record?.request_id !== form.dataset.requestId || !['answered', 'resolved'].includes(record.status) || typeof record.management_response !== 'string') throw new Error('The saved response could not be confirmed. Refresh the support queue before trying again.');
         const card = form.parentElement;
@@ -104,7 +105,10 @@ function bindActions(context) {
         completed = true;
         showToast('Client support response saved.', 'success');
       } catch (error) {
-        if (current()) showToast(error.message, 'error');
+        if (current()) {
+          if ([401,403].includes(error?.status)) onDenied(error);
+          else showToast(error.message, 'error');
+        }
       } finally {
         context.employeeSupportPending=false;
         if (current()) setButtonBusy(button, false);

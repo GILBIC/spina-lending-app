@@ -1770,6 +1770,21 @@ details > :not(summary) {
   font-weight: 750;
 }
 
+:is(#employee-operations, #employee-payslips) .employee-record > .section-heading {
+  flex-wrap: wrap;
+}
+
+:is(#employee-operations, #employee-payslips) .employee-record > .section-heading h3 {
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+:is(#employee-operations, #employee-payslips) .employee-record > .section-heading .badge {
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow-wrap: normal;
+}
+
 .employee-details {
   display: grid;
   gap: 0.65rem;

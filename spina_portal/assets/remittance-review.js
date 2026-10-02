@@ -118,7 +118,8 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   let pendingDecision = null,countHandle=null;
   const finalized = new Set();
   let opener = null;
-  root.innerHTML = '<div class="list-stack" data-remittance-notices></div><div role="status" aria-live="polite" tabindex="-1" data-remittance-message></div><button class="button button-secondary" type="button" data-remittance-retry>Refresh remittances</button><div data-remittance-detail></div>';
+  const focusCleanups = new Set();
+  root.innerHTML = '<h3 tabindex="-1" data-remittance-notices-heading>Remittance notices</h3><div class="list-stack" data-remittance-notices></div><div role="status" aria-live="polite" tabindex="-1" data-remittance-message></div><button class="button button-secondary" type="button" data-remittance-retry>Refresh remittances</button><div data-remittance-detail></div>';
   const rows = root.querySelector('[data-remittance-notices]');
   const message = root.querySelector('[data-remittance-message]');
   const detail = root.querySelector('[data-remittance-detail]');
@@ -132,6 +133,19 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   function on(element, type, handler) {
     element.addEventListener(type, handler);
     listeners.push(() => element.removeEventListener(type, handler));
+  }
+
+  function followFocus(from) {
+    const doc=root.ownerDocument;
+    let intended=!doc?.activeElement || doc.activeElement===from || doc.activeElement===doc.body;
+    const moved=event=>{if(event.type!=='focusin'||event.target!==from)intended=false;};
+    const stop=()=>{for(const type of ['focusin','pointerdown','keydown'])doc?.removeEventListener(type,moved,true);focusCleanups.delete(stop);};
+    if(intended){for(const type of ['focusin','pointerdown','keydown'])doc?.addEventListener(type,moved,true);focusCleanups.add(stop);}
+    return {stop,focus(target){if(intended&&active()&&(!doc?.activeElement||doc.activeElement===from||doc.activeElement===doc.body)&&target?.isConnected!==false&&!target?.closest?.('[hidden]'))target?.focus?.();}};
+  }
+  function restoreOpener(){
+    if(opener&&opener.isConnected!==false&&[...rows.querySelectorAll('button')].includes(opener)&&!opener.closest?.('[hidden]')&&!opener.disabled)opener.focus?.();
+    else root.querySelector('[data-remittance-notices-heading]')?.focus();
   }
 
   function clearDetail() {const previous=countHandle;countHandle=null;previous?.();beforeTaskChange();
@@ -208,6 +222,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
     loading = true;
     updateButtons();
     const current = generation;
+    const focus=followFocus(opener);
     message.textContent = 'Loading the complete remittance for review…';
     try {
       const records = await api.request('/api/v1/remittances', { signal: controller.signal });
@@ -221,7 +236,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       let counted=false;if(receivingContractRequired&&!readOnly){const compatibility=await api.request(`/api/v1/treasury/collector-surplus/remittances/${notice.remittance_id}/receiving-contract`,{signal:controller.signal});if(!active()||current!==generation)return;if(compatibility?.collector_surplus_contract_version!==1||compatibility.remittance_id!==notice.remittance_id||compatibility.recipient_user_id!==actorId||typeof compatibility.count_required!=='boolean'||typeof compatibility.legacy_receive_allowed!=='boolean'||compatibility.count_required===compatibility.legacy_receive_allowed)throw Error('The current receiving contract is unavailable. No cash acceptance can be submitted.');counted=compatibility.count_required;}beforeTaskChange();detail.innerHTML = detailMarkup(matches[0],!readOnly,counted);afterTaskChange();if(counted){countHandle=mountCollectorSurplus({root:detail.querySelector('[data-counted-receiving]'),api,getSession,signal:controller.signal,remittanceId:notice.remittance_id,mode:'staff',beforeTaskChange,afterTaskChange,canStartWrite:canStartCountWrite,onPendingChange:updateButtons,onSaved:result=>{if(!['accepted_exact','accepted_pending_identification'].includes(result.result?.disposition))return;if(result.result.settlement?.remittance_id!==notice.remittance_id)return;finalized.add(notice.notification_id);clearDetail();message.textContent='Exact counted cash acceptance is confirmed. Additional cash remains pending identification if recorded.';void refreshReadOnly();}});await countHandle.ready;}
       const reviewedEvidence = JSON.stringify(matches[0]);
       message.textContent = 'Review the complete list, then confirm physical cash receipt.';
-      if(readOnly){message.textContent='Full remittance evidence, read only.';on(detail.querySelector('[data-remittance-close]'),'click',()=>{if(submitting)return;clearDetail();updateButtons();opener?.focus?.();});detail.querySelector('[data-remittance-close]')?.focus();return;}
+      if(readOnly){message.textContent='Full remittance evidence, read only.';on(detail.querySelector('[data-remittance-close]'),'click',()=>{if(!active()||submitting||current!==generation)return;clearDetail();updateButtons();restoreOpener();});focus.focus(detail.querySelector('[data-remittance-close]'));return;}
       const reviewed = detail.querySelector('[name="reviewedPayments"]');
       const received = detail.querySelector('[name="physicallyReceived"]');
       const reason = detail.querySelector('[name="rejectionReason"]');
@@ -230,11 +245,11 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       on(received, 'change', updateButtons);
       on(reason, 'input', updateButtons);
       on(confirm, 'change', updateButtons);
-      reviewed.focus?.();
+      focus.focus(reviewed);
       on(detail.querySelector('[data-remittance-close]'), 'click', () => {
         if (!active() || submitting || countHandle?.isWritePending() || current !== generation) return;
         clearDetail(); message.textContent = ''; updateButtons();
-        opener?.focus?.();
+        restoreOpener();
       });
       async function decide(kind, event) {
         event.preventDefault();
@@ -252,6 +267,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
             action = buildRemittanceRejection({record:matches[0],actorId,reason:reason.value,reviewed:reviewed.checked});
           } else action = {path:`/api/v1/notifications/${notice.notification_id}/accept-remittance`,options:{method:'POST',body:{review_acknowledged:true},financial:true}};
         } catch (error) {message.textContent=error.message;return;}
+        const decisionFocus=followFocus(root.ownerDocument?.activeElement);
         submitting = true;
         updateButtons();
         message.textContent = 'Confirming cash receipt with SPINA…';
@@ -293,13 +309,14 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
             notices=notices.filter(item=>item.notification_id!==notice.notification_id || !item.is_pending);
             renderNotices();message.textContent=saved;
           }catch(error){if(!active())return;if([401,403].includes(error?.status))denied();else message.textContent=`${saved} Notices could not refresh. Use Refresh for a read-only check.`;}}
-          pendingDecision=null;locked=false;message.focus?.();
+          pendingDecision=null;locked=false;decisionFocus.focus(message);
         } catch (error) {
           if (!active() || current !== generation) return;
           if ([401, 403].includes(error?.status)) denied();
           else if(error?.code==='collector_count_required'){pendingDecision=null;locked=false;clearDetail();message.textContent='Actual count is now required. Open a fresh review; acknowledgment-only acceptance is disabled.';}else if(pendingDecision)uncertain();
           else message.textContent='Current remittance evidence could not refresh. No decision was sent. Use Refresh and review again.';
         } finally {
+          decisionFocus.stop();
           submitting = false;
           if (active()) updateButtons();
         }
@@ -311,6 +328,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
       if ([401, 403].includes(error?.status)) denied();
       else message.textContent = 'The complete remittance is unavailable. Check the connection and open Review remittance again.';
     } finally {
+      focus.stop();
       if (active() && current === generation) { loading = false; updateButtons(); }
     }
   }
@@ -346,6 +364,7 @@ export function mountRemittanceReview({ root, api, session, notifications, signa
   function cleanup() {
     if (disposed) return;
     disposed = true;
+    for(const stop of focusCleanups)stop();
     controller.abort();
     signal?.removeEventListener('abort', cleanup);
     for (const remove of listeners) remove();

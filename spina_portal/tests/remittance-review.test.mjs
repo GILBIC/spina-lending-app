@@ -87,6 +87,42 @@ function check(h, name) {
 }
 function accept(h) { fire(h.root.querySelector('[data-remittance-accept-form]'), 'submit'); }
 
+for(const readOnly of [false,true])test(`delayed ${readOnly?'read-only':'decision'} review does not move focus after the user leaves`,async t=>{
+  const h=await harness();t.after(h.dispose);const doc=h.root.ownerDocument,previous=doc.activeElement;t.after(()=>doc.activeElement=previous);
+  const button=h.root.querySelector(readOnly?'[data-view-remittance]':'[data-review-notification]');doc.activeElement=button;
+  h.readPending=deferred();fire(button,'click');doc.activeElement=new Element('input');doc.dispatchEvent(new Event('focusin'));
+  h.readPending.resolve(h.records);await setImmediate();
+  assert.notEqual(h.root.querySelector(readOnly?'[data-remittance-close]':'[name="reviewedPayments"]').focused,true);
+  assert.equal(postCalls(h).length,0);
+});
+
+test('review still focuses its first control when intent stays and Close uses a visible fallback',async t=>{
+  const h=await harness();t.after(h.dispose);const doc=h.root.ownerDocument,previous=doc.activeElement;t.after(()=>doc.activeElement=previous);
+  const button=reviewButton(h);doc.activeElement=button;await open(h);
+  assert.equal(h.root.querySelector('[name="reviewedPayments"]').focused,true);
+  button.isConnected=false;fire(h.root.querySelector('[data-remittance-close]'),'click');
+  const fallback=h.root.querySelector('[data-remittance-notices-heading]');
+  assert.ok(fallback?.textContent);assert.equal(fallback.focused,true);
+});
+
+test('Close after refreshed notices focuses a visible heading when its original opener was replaced',async t=>{
+  const h=await harness({currentReads:true});t.after(h.dispose);await open(h);const old=reviewButton(h);
+  await h.handle.refreshReadOnly();assert.notStrictEqual(reviewButton(h),old);
+  fire(h.root.querySelector('[data-remittance-close]'),'click');
+  const fallback=h.root.querySelector('[data-remittance-notices-heading]');
+  assert.equal(fallback?.textContent,'Remittance notices');assert.equal(fallback.focused,true);
+});
+
+test('delayed verified acceptance preserves focus when the user moves to other work',async t=>{
+  const h=await harness();t.after(h.dispose);const doc=h.root.ownerDocument,previous=doc.activeElement;t.after(()=>doc.activeElement=previous);
+  await open(h);check(h,'reviewedPayments');check(h,'physicallyReceived');
+  doc.activeElement=h.root.querySelector('[data-remittance-accept]');h.writePending=deferred();accept(h);
+  doc.activeElement=new Element('textarea');doc.dispatchEvent(new Event('focusin'));
+  h.writePending.resolve(accepted());await setImmediate();
+  assert.match(h.root.textContent,/Cash custody is now recorded/);
+  assert.notEqual(h.root.querySelector('[data-remittance-message]').focused,true);assert.equal(postCalls(h).length,1);
+});
+
 test('pending summary offers review and never acceptance or a financial request', async (t) => {
   const h = await harness(); t.after(h.dispose);
   assert.match(reviewButton(h).textContent, /Review remittance/);

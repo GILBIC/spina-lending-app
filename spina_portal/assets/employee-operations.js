@@ -1,5 +1,5 @@
 import {asArray, badge, emptyState, errorCard, escapeHtml as esc, loadingPanel, titleCase} from './ui.js';
-import {attendanceGuidance,employeeWorkDate} from './employee-workday.js';
+import {buildEmployeeWorkdaySummary,employeeWorkDate} from './employee-workday.js';
 import {mountEmployeePayslipPrint,payslipPrintable} from './employee-payslip-print.js';
 
 const BASE = '/api/v1/employee-operations';
@@ -195,7 +195,7 @@ function recordMarkup(workspace,record,index) {
   const components=asArray(data.components);
   const rows=(name,label,fields)=>asArray(data[name]).length?`<h4>${label}</h4><div class="employee-evidence-rows">${data[name].map(row=>`<dl class="employee-details">${fields.map(key=>`<div><dt>${esc(key==='due_date'?'Due date':titleCase(key))}</dt><dd>${display(key,row[key])}</dd></div>`).join('')}</dl>`).join('')}</div>`:'';
   const original=data.request_kind==='correction'?`<h4>Original recorded events for the requested date</h4>${workspace.attendance.filter(event=>event.employee_id===record.employee_id&&manilaDate(event.payload.captured_at)===data.work_date).map(event=>`<p>${esc(titleCase(event.payload.event_type))} · ${esc(event.payload.captured_at)} · ${esc(titleCase(event.status))}</p>`).join('')||'<p>No original events recorded.</p>'}`:'';
-  const proposed=object(data.proposed_terms)?`<div class="notice-card"><h4>Proposed advance terms awaiting review</h4><p>${esc(data.proposed_terms.reason)}</p><p>Employee agreement: ${esc(data.proposed_terms.employee_acknowledgment)}</p><p>Payroll authorization: ${esc(data.proposed_terms.payroll_authorization)}</p><table><thead><tr><th>Proposed due date</th><th>Proposed installment</th></tr></thead><tbody>${asArray(data.proposed_terms.installments).map(item=>`<tr><td>${esc(item.due_date)}</td><td>${currency(item.amount)}</td></tr>`).join('')}</tbody></table></div>`:'';
+  const proposed=object(data.proposed_terms)?`<div class="notice-card"><h4>Proposed advance terms awaiting review</h4><p>${esc(data.proposed_terms.reason)}</p><p>Employee agreement: ${esc(data.proposed_terms.employee_acknowledgment)}</p><p>Payroll authorization: ${esc(data.proposed_terms.payroll_authorization)}</p><div class="employee-evidence-rows" data-employee-proposed-installments>${asArray(data.proposed_terms.installments).map(item=>`<dl class="employee-details"><div><dt>Proposed due date</dt><dd>${esc(item.due_date)}</dd></div><div><dt>Proposed installment</dt><dd>${currency(item.amount)}</dd></div></dl>`).join('')}</div></div>`:'';
   return `<article class="data-card employee-record"><div class="section-heading"><h3>${esc(record.employee_id?employeeName(workspace,record.employee_id):COLLECTIONS[index.split(':')[0]])}</h3>${badge(record.status)}</div>
     <p class="meta">Updated ${esc(record.updated_at||'')}</p><p class="meta">Record reference: ${esc(record.id)}</p>
     <dl class="employee-details">${scalar.map(([key,value])=>`<div><dt>${esc(LABELS[key])}</dt><dd>${display(key,value)}</dd></div>`).join('')}</dl>
@@ -214,24 +214,46 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   mounts.get(root)?.();
   const controller=new AbortController();let disposed=false;let busy=false;let stale=false;let workspace=null;let selected=null;let removers=[];let pending=pendingBySession.get(session)||null;
   const feedbackId=`employee-feedback-${crypto.randomUUID()}`;let opener=null;
-  let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null;
+  let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null,dayTimer=null,expiredDate=null;
   let dateFrom=employeeWorkDate(now()),dateTo=dateFrom,allDates=false;
-  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
+  const focusCleanups=new Set();
+  function retainEditorFocus(){
+    const doc=root.ownerDocument,target=doc?.activeElement;
+    if(!target?.closest?.('[data-employee-editor]'))return ()=>{};
+    const selection=[target.selectionStart,target.selectionEnd,target.selectionDirection];let intended=true;
+    const moved=event=>{if(event.type!=='focusin'||event.target!==target&&event.target!==doc.body)intended=false;};
+    const stop=()=>{for(const type of ['focusin','pointerdown','keydown'])doc.removeEventListener(type,moved,true);focusCleanups.delete(stop);};
+    for(const type of ['focusin','pointerdown','keydown'])doc.addEventListener(type,moved,true);focusCleanups.add(stop);
+    return ()=>{stop();if(disposed||!intended||target.disabled||target.isConnected===false||target.closest('[hidden]')||doc.activeElement!==target&&doc.activeElement!==doc.body)return;
+      target.focus({preventScroll:true});if(Number.isInteger(selection[0])&&Number.isInteger(selection[1]))target.setSelectionRange?.(...selection);
+    };
+  }
+  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;printing.close();expireGuidance();beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
+  function expireGuidance(){
+    if(disposed||!loadedDate||loadedDate===employeeWorkDate(now()))return;
+    const guidance=root.querySelector('[data-employee-guidance]');if(guidance)guidance.textContent='Date changed. Refresh employee records before using attendance guidance.';
+    for(const button of root.querySelectorAll('[data-employee-suggested]')){button.removeAttribute('data-employee-suggested');button.className='button button-secondary';}
+    if(expiredDate!==loadedDate){expiredDate=loadedDate;onReadState?.({status:'stale'});}
+  }
+  function watchWorkDate(){
+    clearTimeout(dayTimer);const [year,month,day]=loadedDate.split('-').map(Number);
+    dayTimer=setTimeout(expireGuidance,Math.max(1,Date.UTC(year,month-1,day+1)-8*3600000-new Date(now()).getTime()));dayTimer?.unref?.();
+  }
   function dateVisible(day){return allDates||day>=dateFrom&&day<=dateTo;}
   const currentScope=()=>getSession()?.user?.id===session?.user?.id;
   const printing=mountEmployeePayslipPrint({root,signal:controller.signal,getCurrentScope:()=>currentScope()&&workspace?{userId:workspace.actor.user_id,employeeId:workspace.actor.employee_id,deviceId:workspace.actor.device_id}:null,loadWorkspace:async()=>{beforeTaskChange?.();const value=await api.request(`${BASE}/workspace`,{signal:controller.signal});return validateWorkspace(value,getSession());}});
   const editorMatches=command=>selected&&command.action===selected.action&&(!selected.record || command.id===selected.record.id || command.original_payroll_id===selected.record.id || command.original_history_id===selected.record.id);
   const listen=(element,event,handler)=>{if(element){element.addEventListener(event,handler);removers.push(()=>element.removeEventListener(event,handler));}};
   function clear(){for(const remove of removers)remove();removers=[];for(const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')])input.value='';root.innerHTML='';}
-  function dispose(){if(disposed)return;disposed=true;controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
+  function dispose(){if(disposed)return;disposed=true;clearTimeout(dayTimer);globalThis.removeEventListener?.('focus',expireGuidance);root.ownerDocument?.removeEventListener?.('visibilitychange',expireGuidance);for(const stop of focusCleanups)stop();controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
   function message(text,error=false){const element=root.querySelector('[data-employee-status]');if(element){if(error)element.innerHTML=errorCard(text);else element.textContent=text;}}
   function focusFeedback(){root.querySelector('[data-employee-status]')?.focus();}
   function restoreFocus(){
     let target=null;
     if(opener?.recordId){
       target=[...root.querySelectorAll('[data-employee-action]')].find(button=>{
-        const [key,index]=button.getAttribute('data-employee-record').split(':');
-        return button.getAttribute('data-employee-action')===opener.action&&workspace?.[key]?.[Number(index)]?.id===opener.recordId;
+        const [key,id]=button.getAttribute('data-employee-record').split(':');
+        return button.getAttribute('data-employee-action')===opener.action&&id===opener.recordId&&workspace?.[key]?.some(record=>record.id===id);
       });
     }else if(opener)target=root.querySelector(`[data-employee-create="${opener.action}"]`);
     const recordGroup=target?.getAttribute('data-employee-record')?.split(':')[0];
@@ -240,8 +262,8 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     if(target&&!target.disabled)target.focus();
     opener=null;
   }
-  function denied(error){if([401,403].includes(error?.status)){pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);return true;}return false;}
-  function connection(){if(disposed)return;lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
+  function denied(error){if([401,403].includes(error?.status)){printing.close();pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);onReadState?.({status:'denied'});return true;}return false;}
+  function connection(){if(disposed)return;expireGuidance();lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
   function lock(){
     const offline=globalThis.navigator?.onLine===false;
     for(const node of [...root.querySelectorAll('button'),...root.querySelectorAll('input'),...root.querySelectorAll('select'),...root.querySelectorAll('textarea')]) {
@@ -253,7 +275,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   function setPending(value){pending=value;if(value)pendingBySession.set(session,value);else pendingBySession.delete(session);}
   async function load({recover=false,successMessage=''}={}) {
-    if(disposed||busy)return;busy=true;lock();
+    if(disposed||busy)return;printing.close();const restoreEditorFocus=retainEditorFocus();busy=true;lock();
     if(!currentScope()){setPending(null);dispose();return;}
     try {
       const value=await api.request(`${BASE}/workspace${recover&&pending?`?request_id=${encodeURIComponent(pending.request_id)}`:''}`,{signal:controller.signal});
@@ -262,7 +284,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       const next=validateWorkspace(value,getSession());
       if(workspace && (next.actor.employee_id!==workspace.actor.employee_id || next.actor.device_id!==workspace.actor.device_id)){setPending(null);selected=null;clear();}
       workspace=next;stale=false;
-      loadedDate=employeeWorkDate(now());
+      loadedDate=employeeWorkDate(now());expiredDate=null;watchWorkDate();
       if(recover&&pending&&matchesResult(workspace.last_result,pending)) {successMessage=workspace.last_result.message;if(editorMatches(pending))selected=null;setPending(null);}
       if(selected){
         if(selected.record){const current=Object.keys(COLLECTIONS).flatMap(key=>workspace[key]).find(record=>record.id===selected.record.id&&record.employee_id===selected.record.employee_id);
@@ -275,8 +297,8 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       render();if(successMessage)message(successMessage);
       else if(editorStale)message('This record changed. Your draft is retained with its original revision; cancel editing and review the current record before submitting.');
       else if(pending)message('The result is not confirmed. Check the saved result, or retry the same unchanged request. Do not start another payment.');
-    } catch(error){if(disposed)return;stale=true;onReadState?.({status:[401,403].includes(error?.status)?'denied':'error'});if(!denied(error)){if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
-    finally{busy=false;if(!disposed){lock();if(successMessage)restoreFocus();}}
+    } catch(error){if(disposed)return;stale=true;if(!denied(error)){onReadState?.({status:'error'});if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
+    finally{busy=false;if(!disposed){lock();if(successMessage&&!selected)restoreFocus();}restoreEditorFocus();}
   }
   async function execute(command) {
     if(disposed||busy||globalThis.navigator?.onLine===false)return;
@@ -298,8 +320,12 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   function editor(action,record=null) {
     if(busy||pending||stale||disposed||!(record?recordAllowed(workspace,record,action):createAllowed(workspace,action)))return;
+    const form=root.querySelector('[data-employee-form]');
+    if(selected?.action===action && selected.record?.id===record?.id){form?.querySelector('[name]')?.focus();return;}
+    if(selected&&form&&editorFields(form)!==selected.initialFields&&globalThis.confirm?.('Discard the unfinished form and open a different action?')!==true)return;
     opener={action,recordId:record?.id};selected={action,record:record?structuredClone(record):null};editorStale=false;render();root.querySelector('[data-employee-editor]')?.scrollIntoView?.({block:'nearest'});root.querySelector('[data-employee-form]')?.querySelector('[name]')?.focus();
   }
+  function editorFields(form){return JSON.stringify(['input','select','textarea'].flatMap(tag=>[...form.querySelectorAll(tag)].map(input=>[tag,input.getAttribute('name'),input.value,Boolean(input.checked)])));}
   function editorMarkup(){
     if(!selected)return '';
     const {action,record}=selected;const form=FORMS[action];let fields=form.fields;
@@ -346,22 +372,24 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     await execute({action:'attendance_record',request_id:crypto.randomUUID(),id:crypto.randomUUID(),expected_version:0,employee_id:workspace.actor.employee_id,event_type:eventType,captured_at:capturedAt,device_id:workspace.actor.device_id,previous_event_id:prior?.id??null,sequence,offline:false});
   }
   function render(){
+    const restoreEditorFocus=retainEditorFocus();
     const retained=selected&&selected===renderedSelection?root.querySelector('[data-employee-editor]'):null;
-    retained?.remove();clear();if(!workspace)return;
+    retained?.remove();clear();if(!workspace){restoreEditorFocus();return;}
     const available=Object.entries(FORMS).filter(([action])=>createAllowed(workspace,action));
     const groups=[...new Set(available.map(([action,form])=>presentation==='employee'?actionView(action):form.group))];
     const reviewer=workspace.capabilities.can_manage_staff||workspace.capabilities.can_configure
       ||workspace.capabilities.can_prepare_payroll||workspace.capabilities.can_approve_payroll
       ||workspace.capabilities.can_review_requests||workspace.capabilities.can_review_shortages;
-    const latestAttendance=workspace.attendance_days[0]||null;
-    const latestLeave=workspace.leave_balances[0]||null;
-    const recordCounts={
-      requests:workspace.requests.length,
-      tasks:workspace.tasks.length,
-      advances:workspace.advances.length,
-      shortages:workspace.shortages.length,
-      payroll:workspace.payroll.length,
-    };
+    const personal=key=>presentation==='employee'?workspace[key].filter(record=>workspace.actor.employee_id&&record.employee_id===workspace.actor.employee_id):workspace[key];
+    const latestAttendance=[...personal('attendance_days')].sort((a,b)=>String(b.work_date).localeCompare(String(a.work_date)))[0]||null;
+    const latestLeave=[...personal('leave_balances')].sort((a,b)=>String(b.as_of).localeCompare(String(a.as_of)))[0]||null;
+    const recordCounts=Object.fromEntries(['requests','tasks','advances','shortages','payroll'].map(key=>[key,presentation==='employee'&&!workspace.actor.employee_id?'Unavailable':personal(key).length]));
+    const dateHasRecords=workspace.attendance_days.some(day=>dateVisible(day.work_date))||workspace.attendance.some(record=>dateVisible(employeeWorkDate(record.payload.captured_at)));
+    const dateEmpty=presentation==='employee'&&!dateHasRecords?`<p data-employee-date-empty data-employee-view="workday">${allDates?'No attendance records loaded.':dateFrom===dateTo?'No record for this date.':'No records for this date range.'}</p>`:'';
+    const guidance=buildEmployeeWorkdaySummary({workspace,now:`${loadedDate}T00:00:00+08:00`}).attendance;
+    const nextLabels={clock_in:'Clock in',break_start:'Start break',break_end:'End break',clock_out:'Clock out'};
+    const suggested=pending?[]:guidance.primaryActions;
+    const guidanceText=guidance.status!=='loaded'?'Attendance guidance is unavailable until your employee account is linked.':pending?'Check the previous submission before recording another event.':guidance.needsReview?'Needs review. Inspect the recorded events and use Request attendance correction when needed.':suggested.length?`Suggested next: ${suggested.map(action=>nextLabels[action]).join(' or ')}.`:'Day recorded.';
     const setupNotice=workspace.setup_missing.length?`<div class="notice-card warning employee-setup-notice">
       <h3>Employee setup incomplete</h3>
       <p>Some employee or payroll information still needs setup before all records are available.</p>
@@ -369,7 +397,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       <p class="meta">Missing setup does not mean zero pay.</p>
     </div>`:'';
     const summary=`<div class="employee-work-summary" data-employee-work-summary>
-      <article><span>Attendance</span><strong>${latestAttendance?esc(latestAttendance.work_date):'No records'}</strong></article>
+      <article><span>Latest attendance</span><strong>${latestAttendance?esc(latestAttendance.work_date):'No records'}</strong></article>
       <article><span>Leave</span><strong>${latestLeave?esc(latestLeave.available_minutes)+' min available':'Not configured'}</strong></article>
       <article><span>Requests</span><strong>${recordCounts.requests}</strong></article>
       <article><span>Tasks</span><strong>${recordCounts.tasks}</strong></article>
@@ -380,21 +408,22 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       <p class="meta" data-employee-connection></p>
       ${setupNotice}
       ${summary}
+      ${dateEmpty}
       ${presentation==='employee'?`<nav class="inline-actions" aria-label="Work and pay views">${Object.entries(VIEWS).map(([id,label])=>`<button class="button button-outline" type="button" data-employee-view-button="${id}">${label}</button>`).join('')}</nav>`:''}
       ${presentation==='employee'?`<section data-employee-view="workday"><h3>Loaded attendance dates</h3><label>From<input type="date" name="attendanceFrom" value="${esc(dateFrom)}" /></label><label>Through<input type="date" name="attendanceTo" value="${esc(dateTo)}" /></label><button class="button button-outline" type="button" data-employee-all-dates>${allDates?'Show current date':'Show all loaded dates'}</button><p>This filters loaded records. It does not fetch or delete earlier days.</p></section>`:''}
-      ${workspace.capabilities.can_self_service?`<section class="employee-time" data-employee-view="workday"><h3>My attendance</h3><p>${esc(attendanceGuidance({events:workspace.attendance,employeeId:workspace.actor.employee_id,workDate:loadedDate}).label)}</p><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
+      ${workspace.capabilities.can_self_service?`<section class="employee-time" data-employee-view="workday"><h3>My attendance</h3><p>${esc(guidance.label)}</p><p data-employee-guidance>${esc(guidanceText)}</p><p>Server day review: ${esc(guidance.dayReview.record?titleCase(guidance.dayReview.record.status):'No day review loaded for this date')}.</p><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button ${suggested.includes(value)?'button-primary':'button-secondary'}" type="button" data-employee-attendance="${value}" ${suggested.includes(value)?`data-employee-suggested="${value}"`:''}>${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
       <div class="employee-command-groups">${groups.map(group=>`<section><h3>${esc(presentation==='employee'?VIEWS[group]:group)}</h3><div class="inline-actions">${available.filter(([action,form])=>(presentation==='employee'?actionView(action):form.group)===group).map(([action,form])=>`<button type="button" class="button button-outline" data-employee-create="${action}">${esc(form.label)}</button>`).join('')}</div></section>`).join('')}</div>
       <div id="${feedbackId}" data-employee-status role="status" aria-live="polite" tabindex="-1"></div>
       ${pending?'<div class="notice-card warning"><h3>Confirm previous submission</h3><p>The same request identity is retained. Check its result before creating any other change.</p><button type="button" class="button button-secondary" data-employee-check>Check saved result</button><button type="button" class="button button-outline" data-employee-retry>Retry same unchanged request</button></div>':''}
       ${editorMarkup()}
-      ${workspace.attendance_days.length?`<section><h3>Attendance day review</h3>${workspace.attendance_days.filter(day=>presentation!=='employee'||dateVisible(day.work_date)).map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
+      ${workspace.attendance_days.length?`<section data-employee-attendance-days><h3>Attendance day review</h3>${workspace.attendance_days.filter(day=>presentation!=='employee'||dateVisible(day.work_date)).map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
       ${workspace.leave_balances.length?`<section><h3>Leave balances</h3>${workspace.leave_balances.map(balance=>`<article class="data-card"><strong>${esc(employeeName(workspace,balance.employee_id))}</strong><p>As of ${esc(balance.as_of)} · ${balance.eligible?'Eligible':'Not yet eligible'}</p><p>Available: ${esc(balance.available_minutes)} minutes · Used: ${esc(balance.used_minutes)} · Reserved: ${esc(balance.reserved_minutes)} · Accrued: ${esc(balance.accrued_minutes)} · Verified opening: ${esc(balance.opening_minutes)}</p></article>`).join('')}</section>`:''}
-      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length} loaded)</summary><div class="employee-record-grid">${workspace[key].map((record,index)=>({record,index})).filter(({record})=>presentation!=='employee'||key!=='attendance'||dateVisible(employeeWorkDate(record.payload.captured_at))).map(({record,index})=>recordMarkup(workspace,record,`${key}:${index}`)+(presentation==='employee'&&key==='payroll'&&record.employee_id===workspace.actor.employee_id&&payslipPrintable(record)?`<button class="button button-secondary" type="button" data-employee-print-payroll="${record.id}" data-employee-print-version="${record.version}">Print payslip</button>`:'')).join('')}</div></details>`).join('')}`;
+      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length} loaded)</summary><div class="employee-record-grid">${workspace[key].filter(record=>presentation!=='employee'||key!=='attendance'||dateVisible(employeeWorkDate(record.payload.captured_at))).map(record=>recordMarkup(workspace,record,`${key}:${record.id}`)+(presentation==='employee'&&key==='payroll'&&record.employee_id===workspace.actor.employee_id&&payslipPrintable(record)?`<button class="button button-secondary" type="button" data-employee-print-payroll="${record.id}" data-employee-print-version="${record.version}">Print payslip</button>`:'')).join('')}</div></details>`).join('')}`;
     if(retained)root.querySelector('[data-employee-editor]')?.replaceWith(retained);
     renderedSelection=selected;
     listen(root.querySelector('[data-employee-all-dates]'),'click',()=>{allDates=!allDates;if(!allDates)dateFrom=dateTo=employeeWorkDate(now());render();});
     for(const name of ['attendanceFrom','attendanceTo'])listen(root.querySelector(`[name="${name}"]`),'change',()=>{const value=root.querySelector(`[name="${name}"]`).value;if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return;if(name==='attendanceFrom')dateFrom=value;else dateTo=value;allDates=false;render();});
-    for(const button of root.querySelectorAll('[data-employee-print-payroll]'))listen(button,'click',async()=>{if(busy||pending||stale||disposed)return;busy=true;lock();try{await printing.open(button.getAttribute('data-employee-print-payroll'),Number(button.getAttribute('data-employee-print-version')));}catch(error){if(!denied(error))message(error,true);}finally{busy=false;if(!disposed){lock();afterTaskChange?.();}}});
+    for(const button of root.querySelectorAll('[data-employee-print-payroll]'))listen(button,'click',async()=>{if(busy||pending||stale||disposed)return;busy=true;lock();try{await printing.open(button.getAttribute('data-employee-print-payroll'),Number(button.getAttribute('data-employee-print-version')));}catch(error){if(disposed)return;if(!denied(error))message(error,true);}finally{busy=false;if(!disposed){lock();afterTaskChange?.();}}});
     if(presentation==='employee'){
       for(const section of root.querySelectorAll('[data-employee-collection]'))section.setAttribute('data-employee-view',COLLECTION_VIEW[section.getAttribute('data-employee-collection')]||'other');
       const commandGroups=root.querySelector('.employee-command-groups');
@@ -407,10 +436,11 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     listen(root.querySelector('[data-employee-check]'),'click',()=>load({recover:true}));
     listen(root.querySelector('[data-employee-retry]'),'click',()=>{if(pending)void execute(pending);});
     for(const button of root.querySelectorAll('[data-employee-create]'))listen(button,'click',()=>editor(button.getAttribute('data-employee-create')));
-    for(const button of root.querySelectorAll('[data-employee-action]'))listen(button,'click',()=>{const [key,index]=button.getAttribute('data-employee-record').split(':');editor(button.getAttribute('data-employee-action'),workspace[key][Number(index)]);});
+    for(const button of root.querySelectorAll('[data-employee-action]'))listen(button,'click',()=>{const [key,id]=button.getAttribute('data-employee-record').split(':');const record=workspace[key]?.find(item=>item.id===id);if(record)editor(button.getAttribute('data-employee-action'),record);});
     for(const button of root.querySelectorAll('[data-employee-attendance]'))listen(button,'click',()=>attendance(button.getAttribute('data-employee-attendance')));
     listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;editorStale=false;render();restoreFocus();});
     const form=root.querySelector('[data-employee-form]');
+    if(selected&&form&&!retained)selected.initialFields=editorFields(form);
     listen(form,'submit',event=>{event.preventDefault();if(busy||pending||stale||editorStale||disposed)return;try{void execute(buildCommand(form));}catch(error){message(error,true);focusFeedback();}});
     if(selected)for(const button of root.querySelectorAll('[data-employee-add-row]'))listen(button,'click',()=>{
       if(busy||pending)return;const spec=FORMS[selected.action].fields.find(item=>item.name===button.getAttribute('data-employee-add-row'));
@@ -418,9 +448,10 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       if(rows.length>=spec.max)return;rows.push({});parent.innerHTML=rows.map(value=>`<div class="employee-form-row" data-employee-row>${spec.fields.map(item=>inputMarkup({...item,optional:true},value)).join('')}</div>`).join('');
     });
     connection();
+    restoreEditorFocus();
   }
-  mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
+  mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('focus',expireGuidance);root.ownerDocument?.addEventListener?.('visibilitychange',expireGuidance);globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
   if(signal?.aborted){dispose();return dispose;}
-  onController?.({refresh:options=>load({recover:options?.recover===true}),selectView,isWritePending:()=>busy||Boolean(pending),dispose});
+  onController?.({refresh:options=>load({recover:options?.recover===true}),selectView,closePrint:printing.close,isWritePending:()=>busy||Boolean(pending),dispose});
   root.innerHTML=loadingPanel('Loading private employee records…');void load();return dispose;
 }

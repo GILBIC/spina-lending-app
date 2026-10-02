@@ -11,7 +11,7 @@ export function buildPayslipPrintMarkup({record,employeeName}) {
 export function mountEmployeePayslipPrint({root,getCurrentScope,loadWorkspace,signal,print=()=>globalThis.print()}) {
  let disposed=false,generation=0,region=null;
  function close(){generation+=1;if(region){region.textContent='';region.remove();region=null;}}
- function dispose(){if(disposed)return;disposed=true;close();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('afterprint',close);}
+ function dispose(){if(disposed)return;disposed=true;close();signal?.removeEventListener('abort',dispose);for(const event of ['afterprint','pagehide','popstate'])globalThis.removeEventListener?.(event,close);}
  async function open(recordId,expectedVersion){
   close();if(disposed||signal?.aborted||globalThis.navigator?.onLine===false)throw new Error('An online authorized payroll read is required.');
   const original=getCurrentScope(),current=++generation;if(!original)throw new Error('The employee scope is no longer authorized.');
@@ -25,5 +25,5 @@ export function mountEmployeePayslipPrint({root,getCurrentScope,loadWorkspace,si
   region=root.ownerDocument.createElement('section');region.setAttribute('data-employee-print-region','');region.innerHTML=markup;
   (root.ownerDocument.body||root).appendChild(region);try{print();}catch(error){close();throw error;}
  }
- signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('afterprint',close);if(signal?.aborted)dispose();return {open,close,dispose};
+ signal?.addEventListener('abort',dispose,{once:true});for(const event of ['afterprint','pagehide','popstate'])globalThis.addEventListener?.(event,close);if(signal?.aborted)dispose();return {open,close,dispose};
 }
