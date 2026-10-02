@@ -138,12 +138,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     }
     if (_isSevenBySevenLoan(entry.loanType) &&
         !entry.sevenBySevenMobileEnabled) {
-      return '7x7 mobile collection is disabled. Use Gilbic desktop until the protected server allocator explicitly enables this route entry.';
+      return '7x7 mobile collection is disabled. Use SPINA desktop until the protected server allocator explicitly enables this route entry.';
     }
     if (!entry.canCollectMobile || !entry.canEnterPayment) {
       return entry.collectionMessage.isNotEmpty
           ? entry.collectionMessage
-          : 'Use Gilbic desktop for this loan.';
+          : 'Use SPINA desktop for this loan.';
     }
     if (entry.loanId.trim().isEmpty || entry.routeRevision == null) {
       return 'Refresh the route before recording this collection.';

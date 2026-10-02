@@ -490,14 +490,14 @@ const _employeeSections = <_EmployeeSection>[
         availability: _EmployeeModuleAvailability.available,
       ),
       _EmployeeModule(
-        'My account & devices',
+        'Profile & security',
         'Profile, current session, registered devices, and sign-out controls',
         Icons.account_circle_outlined,
         action: _EmployeeAction.account,
         availability: _EmployeeModuleAvailability.available,
       ),
       _EmployeeModule(
-        'Connectivity & offline policy',
+        'Offline & sync',
         'See which Employee information and actions require the live server',
         Icons.cloud_off_outlined,
         action: _EmployeeAction.offlinePolicy,

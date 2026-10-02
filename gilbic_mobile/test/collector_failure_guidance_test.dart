@@ -53,7 +53,7 @@ void main() {
         StateError('SocketException: connection refused at 10.0.2.2'),
         task: CollectorFailureTask.loadRoute,
       ),
-      "Gilbic could not load today's route. Check your connection, then tap Try again.",
+      "SPINA could not load today's route. Check your connection, then tap Try again.",
     );
   });
 
@@ -79,7 +79,7 @@ void main() {
         StateError('database host 10.0.2.2 did not respond'),
         task: CollectorFailureTask.correctCollection,
       ),
-      "Gilbic could not save this correction. Refresh the route, check today's entry, then try again.",
+      "SPINA could not save this correction. Refresh the route, check today's entry, then try again.",
     );
   });
 
@@ -89,7 +89,7 @@ void main() {
         StateError('SocketException: connection refused at 10.0.2.2'),
         task: CollectorFailureTask.loadCorrectionHistory,
       ),
-      'Gilbic could not load correction history. Check your connection, then tap Retry.',
+      'SPINA could not load correction history. Check your connection, then tap Retry.',
     );
   });
 
@@ -99,7 +99,7 @@ void main() {
         StateError('SocketException: connection refused at 10.0.2.2'),
         task: CollectorFailureTask.loadOtherAreaWork,
       ),
-      'Gilbic could not load other-area work. Check your connection, then tap Retry.',
+      'SPINA could not load other-area work. Check your connection, then tap Retry.',
     );
   });
 
