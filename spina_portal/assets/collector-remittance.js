@@ -48,14 +48,14 @@ export function mountCollectorRemittance({root,api,getSession,getRouteDate,guard
   const fail=message=>{feedback.hidden=false;feedback.textContent=message;};
   function invalidatePreview(){reviewed=null;ack.checked=false;button.disabled=true;}
   function canSubmit(){const data=states.preview.data;return current() && hasPermission(getSession(),'remittance.create') && !guard.locked && globalThis.navigator?.onLine!==false && states.preview.status==='ready' && data?.collector_user_id===sessionId(getSession()) && data?.collection_date===getRouteDate() && validateCollectorRemittanceEvidence(data) && !confirmedSnapshots.has(snapshotKey(data)) && /[1-9]/.test(data.total_amount) && !data.total_amount.startsWith('-') && states.recipients.status==='ready' && states.recipients.data.some(item=>item.user_id===recipient.value) && ack.checked===true;}
-  function renderHistory(){const target=root.querySelector('[data-remittance-history]'),state=states.history;
-    if(state.status!=='ready'){target.innerHTML=`<p>${state.status==='not_permitted'?'Remittance history permission is required.':state.status==='error'?'Remittance history unavailable.':'Loading remittance history…'}</p>${state.status==='error'?'<button type="button" data-retry-history>Retry history</button>':''}`;target.querySelector('[data-retry-history]')?.addEventListener('click',()=>refresh('history'));return;}
+  function renderHistory(){beforeTaskChange();const target=root.querySelector('[data-remittance-history]'),state=states.history;
+    if(state.status!=='ready'){target.innerHTML=`<p>${state.status==='not_permitted'?'Remittance history permission is required.':state.status==='error'?'Remittance history unavailable.':'Loading remittance history…'}</p>${state.status==='error'?'<button type="button" data-retry-history>Retry history</button>':''}`;target.querySelector('[data-retry-history]')?.addEventListener('click',()=>refresh('history'));afterTaskChange();return;}
     target.innerHTML=`<button class="button button-outline" type="button" data-refresh-history>Refresh history / check submission status</button><p>Showing ${Math.min(limit,history.length)} of ${history.length} loaded remittances</p>${history.slice(0,limit).map(item=>`<article class="list-item"><strong>${h(item.remittance_number || 'Remittance')}</strong><p>${h(item.collection_date)} · ${h(item.status || 'Unknown status')} · ${money(item.total_amount)}</p><button class="button button-outline" type="button" data-remittance-id="${h(item.remittance_id)}">View saved evidence</button></article>`).join('') || '<p>No remittance history is available.</p>'}${limit<history.length?'<button class="button button-secondary" type="button" data-more-history>Show more</button>':''}`;
     target.querySelector('[data-refresh-history]')?.addEventListener('click',()=>refresh('history'));
     for(const control of target.querySelectorAll('[data-remittance-id]'))control.addEventListener('click',()=>openRecord(control.getAttribute('data-remittance-id')));
-    target.querySelector('[data-more-history]')?.addEventListener('click',()=>{limit+=30;renderHistory();});
+    target.querySelector('[data-more-history]')?.addEventListener('click',()=>{limit+=30;renderHistory();});afterTaskChange();
   }
-  function render(){if(!current())return;const creating=hasPermission(getSession(),'remittance.create');form.hidden=!creating;
+  function render(){if(!current())return;beforeTaskChange();const creating=hasPermission(getSession(),'remittance.create');form.hidden=!creating;
     const summary=root.querySelector('[data-remittance-summary]');summary.innerHTML=!creating?'<p>Remittance history only</p>':states.preview.status==='unavailable' && !getRouteDate()?'<div class="notice-card warning">Route date unavailable — refresh the route to load a remittance summary.</div>':remittanceSummaryMarkup(states.preview);
     if(creating && ['error','unavailable'].includes(states.preview.status) && getRouteDate()){summary.innerHTML+='<button type="button" data-retry-summary>Retry summary</button>';summary.querySelector('[data-retry-summary]').addEventListener('click',()=>refresh('preview'));}
     form.querySelector('[name="collectionDate"]').value=getRouteDate() || '';
@@ -64,7 +64,7 @@ export function mountCollectorRemittance({root,api,getSession,getRouteDate,guard
     rsRoot.querySelector('[data-retry-recipients]')?.addEventListener('click',()=>refresh('recipients'));
     if(rs.status==='ready'){const selected=recipient.value;recipient.innerHTML=`<option value="">Choose recipient</option>${rs.data.map(item=>`<option value="${h(item.user_id)}">${h(item.full_name)} · ${h(item.role_name || '')}</option>`).join('')}`;recipient.value=rs.data.some(item=>item.user_id===selected)?selected:'';}
     root.querySelector('[data-remittance-evidence]').innerHTML=states.preview.status==='ready'?renderCollectorRemittanceEvidence(states.preview.data):'<p>Evidence unavailable until the summary loads.</p>';
-    renderHistory();button.disabled=!canSubmit();guard.sync();
+    renderHistory();button.disabled=!canSubmit();guard.sync();afterTaskChange();
   }
   async function refresh(only){if(!current())return;if(inflight)return inflight;const version=++generation,dateAtStart=getRouteDate();invalidatePreview();
     const permission={preview:hasPermission(getSession(),'remittance.create'),recipients:hasPermission(getSession(),'remittance.create'),history:hasPermission(getSession(),'remittance.view')};
