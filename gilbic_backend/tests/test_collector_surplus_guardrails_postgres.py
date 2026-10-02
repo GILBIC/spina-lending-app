@@ -11,7 +11,7 @@ import treasury_test_support
 from gilbic_backend.treasury_authorization import TreasuryConflict, TreasuryDenied
 from gilbic_backend.treasury_models import COMMAND_ADAPTER, AccountGrant
 from test_collector_surplus_postgres import accept, cash_delta, command, count, credit
-from treasury_test_support import actor, connect, grant_live, version
+from treasury_test_support import actor, connect, evidence, grant_live, version
 
 surplus = surplus_support.surplus
 treasury = treasury_test_support.treasury
@@ -222,4 +222,56 @@ def test_fully_granted_collector_still_cannot_recognize_their_own_credit(surplus
                 (t["account_id"],),
             ).fetchone()["n"]
             == 0
+        )
+
+
+def test_same_opening_cash_cannot_anchor_two_collectors_beyond_its_capacity(surplus):
+    t = surplus
+    opening_evidence = evidence(t, "opening")
+    prepared = command(
+        t,
+        "opening_prepare",
+        cutoff=datetime(2026, 10, 1, tzinfo=UTC),
+        amount="100.00",
+        evidence_id=opening_evidence,
+        reason="Synthetic existing cash includes Collector liabilities",
+        personal_amount="0.00",
+        third_party_amount="100.00",
+        transit_amount="0.00",
+    )
+    activated = command(
+        t,
+        "opening_activate",
+        opening_id=prepared["target_id"],
+        opening_version=prepared["version"],
+        confirmed=True,
+        reason="Synthetic opening reviewed",
+    )
+    with connect() as conn:
+        other_collector = actor(conn, "collector")
+
+    def anchor(collector_user_id):
+        return command(
+            t,
+            "collector_surplus_opening_prepare",
+            collector_user_id=collector_user_id,
+            opening_id=activated["target_id"],
+            opening_version=activated["version"],
+            amount="80.00",
+            evidence_id=opening_evidence,
+            overlap_review_acknowledged=True,
+            reason="Synthetic existing liability anchor",
+        )
+
+    first = anchor(t["collector"].user_id)
+    assert first["result"]["disposition"] == "opening_prepared"
+    with pytest.raises(TreasuryConflict):
+        anchor(other_collector.user_id)
+    with connect() as conn:
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.collector_openings where account_id=%s",
+                (t["account_id"],),
+            ).fetchone()["n"]
+            == 1
         )
