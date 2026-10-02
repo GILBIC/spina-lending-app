@@ -195,6 +195,34 @@ class TreasuryService:
             from .collector_surplus import replay_scope
 
             return replay_scope(self, conn, actor, row)
+        detail = row["result"]["result"]
+        source_link = detail.get("source_link", {})
+        collector_return = source_link.get("action_record")
+        if (
+            not collector_return
+            and source_link.get("source_id")
+            and detail.get("event", {})
+            .get("requested_purpose", "")
+            .startswith("collector_")
+        ):
+            from .collector_surplus import load
+
+            collector_return = load(
+                conn, "actions", UUID(source_link["source_id"]), lock=False
+            )
+        if collector_return:
+            from .collector_surplus import require_replay_accounts
+
+            account_permissions = {
+                row["account_id"]: {
+                    row["permission"],
+                    "treasury.collector_surplus.settle",
+                }
+            }
+            account_permissions.setdefault(
+                UUID(collector_return["origin_account_id"]), set()
+            ).add("treasury.collector_surplus.settle")
+            require_replay_accounts(conn, actor, account_permissions)
         if row["permission"] == "claim_own":
             from .treasury_claims import get_claim
 
@@ -213,9 +241,7 @@ class TreasuryService:
         self.require_source_authority(
             conn, actor, row["action"], row["result"]["result"].get("application_id")
         )
-        collector_return = (
-            row["result"]["result"].get("source_link", {}).get("action_record")
-        )
+        current_return = None
         if collector_return:
             from .collector_surplus import check_account, independent, load
 
@@ -271,6 +297,8 @@ class TreasuryService:
                     collect_evidence(item)
 
         collect_evidence(detail)
+        if current_return is not None:
+            evidence_ids.add(current_return["evidence_id"])
         if detail.get("evidence", {}).get("id"):
             evidence_ids.add(detail["evidence"]["id"])
         event_id = detail.get("event", {}).get("id") or detail.get("receipt", {}).get(

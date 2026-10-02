@@ -321,7 +321,7 @@ def detail(service, conn, actor, kind, target, mode=None):
         ]
     if kind == "actions":
         ack = conn.execute(
-            "select id from treasury.collector_acknowledgments where action_id=%s order by created_at desc,id desc limit 1",
+            "select id from treasury.collector_acknowledgments where action_id=%s order by record_sequence desc limit 1",
             (target,),
         ).fetchone()
         row["acknowledgment"] = (

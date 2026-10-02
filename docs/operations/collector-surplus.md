@@ -64,9 +64,11 @@ second amount owed.
    transfers. The approved source, Collector, principal, paying account, evidence
    and observed event must match.
 4. The Collector acknowledges the exact observed principal and event as received
-   or not received. This records the recipient's statement only.
+   or not received. This records the recipient's statement only. If receipt is
+   delayed, the Collector can append a new statement; the earlier one remains.
 5. Authorized staff separately confirms settlement from the exact current event
-   and acknowledgment. Only the paid disposition reduces outstanding credit.
+   and latest acknowledgment. An older received statement cannot override a later
+   not-received statement. Only the paid disposition reduces outstanding credit.
 
 For a PHP100 credit, reserving PHP40 leaves PHP100 outstanding, PHP40 reserved
 and PHP60 available. A confirmed PHP40 return leaves PHP60 outstanding. A later
@@ -78,6 +80,10 @@ A debit without recipient confirmation stays pending and reserved. Not-received
 acknowledgment, transport uncertainty or a timeout is not permission to pay again,
 cancel a known debit or release capacity. Cancellation requires proven no-debit
 conditions and evidence. Never delete a real debit to represent a reversal.
+
+Frozen credit cannot be selected for a new return or advance an existing reserved
+return. If money was independently verified as already debited, its event remains
+visible with the source link blocked and the reservation held for review.
 
 Retained-cash exception returns use the same verified debit/acknowledgment
 separation but discharge the physical custody exception, not Collector credit.

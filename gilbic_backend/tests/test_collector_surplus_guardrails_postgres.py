@@ -22,6 +22,122 @@ surplus = surplus_support.surplus
 treasury = treasury_test_support.treasury
 
 
+def observe_return(t, action_row):
+    return command(
+        t,
+        "disbursement_record",
+        purpose="collector_surplus_return",
+        source_id=action_row["id"],
+        source_version=action_row["version"],
+        payee_id=t["collector"].user_id,
+        amount="40.00",
+        provider="physical_cash",
+        reference=uuid4().hex,
+        effective_at=datetime.now(UTC),
+        evidence_id=t["evidence_id"],
+        recipient_attestation="Synthetic actual debit already observed",
+        reason="Synthetic independent outgoing cash evidence",
+    )["result"]
+
+
+def test_frozen_credit_retains_observation_without_advancing_return(surplus):
+    from gilbic_backend.treasury_disbursements import source_choices
+
+    t = surplus
+    action_row, credit_row = surplus_support.prepared(t)
+    command(
+        t,
+        "collector_surplus_resolve_source",
+        credit_id=credit_row["id"],
+        credit_version=credit_row["version"],
+        source_id=t["remittance_id"],
+        source_digest="a" * 64,
+        amount="40.00",
+        evidence_id=t["evidence_id"],
+        reason="Synthetic source conflict requires recovery before payment",
+    )
+    with connect() as conn:
+        before_choices = source_choices(conn, t["owner"])
+    assert not any(row["id"] == action_row["id"] for row in before_choices)
+    observed = observe_return(t, action_row)
+    assert observed["source_link"]["status"] == "blocked"
+    assert observed["source_link"]["action_record"]["status"] == "reserved"
+    assert cash_delta(t) == Decimal("10060.00")
+    with connect() as conn:
+        current = conn.execute(
+            "select payload from treasury.collector_credits where id=%s",
+            (credit_row["id"],),
+        ).fetchone()["payload"]
+        choices = source_choices(conn, t["owner"])
+    assert current["frozen"] is True
+    assert current["outstanding_amount"] == "100.00"
+    assert current["reserved_amount"] == "40.00"
+    assert not any(row["id"] == action_row["id"] for row in choices)
+
+
+@pytest.mark.parametrize("initial", ["not_received", "received"])
+def test_current_acknowledgment_resolves_delayed_receipt_without_new_debit(
+    surplus, initial
+):
+    t = surplus
+    action_row, credit_row = surplus_support.prepared(t)
+    observed = observe_return(t, action_row)
+    action_row = observed["source_link"]["action_record"]
+    event = observed["event"]
+
+    def acknowledge(confirmation):
+        return command(
+            t,
+            "collector_surplus_return_acknowledge",
+            actor=t["collector"],
+            credit_id=credit_row["id"],
+            credit_version=credit_row["version"],
+            action_id=action_row["id"],
+            action_version=action_row["version"],
+            event_id=event["id"],
+            event_version=event["version"],
+            reviewed_amount="40.00",
+            confirmation=confirmation,
+            acknowledged_at=datetime.now(UTC),
+            reason="Synthetic updated actual receipt statement",
+        )["result"]["acknowledgment"]
+
+    def settle(ack):
+        return command(
+            t,
+            "collector_surplus_return_record",
+            action_id=action_row["id"],
+            action_version=action_row["version"],
+            event_id=event["id"],
+            event_version=event["version"],
+            acknowledgment_id=ack["id"],
+            acknowledgment_version=ack["version"],
+            reason="Synthetic independent review of latest actual receipt",
+        )
+
+    first = acknowledge(initial)
+    if initial == "received":
+        acknowledge("not_received")
+        with pytest.raises(TreasuryConflict):
+            settle(first)
+    current = acknowledge("received")
+    result = settle(current)
+    assert result["result"]["disposition"] == "paid"
+    assert result["result"]["credit"]["outstanding_amount"] == "60.00"
+    assert result["result"]["credit"]["reserved_amount"] == "0.00"
+    assert cash_delta(t) == Decimal("10060.00")
+    with connect() as conn:
+        facts = conn.execute(
+            "select payload from treasury.collector_acknowledgments where action_id=%s",
+            (action_row["id"],),
+        ).fetchall()
+    assert len(facts) == (3 if initial == "received" else 2)
+    assert {row["payload"]["confirmation"] for row in facts} == {
+        "received",
+        "not_received",
+    }
+
+
 def test_unpaid_cancellation_releases_reservation_without_cash(surplus):
     t = surplus
     action_row, credit_row = surplus_support.prepared(t)

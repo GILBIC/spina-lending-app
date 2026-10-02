@@ -160,7 +160,11 @@ alter table treasury.collector_requests add column if not exists credit_id uuid 
 alter table treasury.collector_actions add column if not exists credit_id uuid generated always as ((payload->>'credit_id')::uuid) stored references treasury.collector_credits(id);
 alter table treasury.collector_actions add column if not exists exception_id uuid generated always as ((payload->>'exception_id')::uuid) stored references treasury.collector_exceptions(id);
 alter table treasury.collector_actions add column if not exists event_id uuid generated always as ((payload->>'event_id')::uuid) stored unique references treasury.events(id);
-alter table treasury.collector_acknowledgments add column if not exists action_id uuid generated always as ((payload->>'action_id')::uuid) stored unique references treasury.collector_actions(id);
+alter table treasury.collector_acknowledgments add column if not exists action_id uuid generated always as ((payload->>'action_id')::uuid) stored references treasury.collector_actions(id);
+-- Statements can change when a delayed payment arrives. Keep every statement;
+-- the action lock serializes inserts and this sequence identifies the latest.
+alter table treasury.collector_acknowledgments add column record_sequence bigint generated always as identity;
+create index collector_acknowledgment_latest on treasury.collector_acknowledgments(action_id,record_sequence desc);
 alter table treasury.collector_exceptions add column if not exists count_id uuid generated always as ((payload->>'count_id')::uuid) stored unique references treasury.collector_counts(id);
 alter table treasury.collector_exceptions add column if not exists event_id uuid generated always as ((payload->>'event_id')::uuid) stored unique references treasury.events(id);
 alter table treasury.collector_openings add column if not exists opening_id uuid generated always as ((payload->>'opening_id')::uuid) stored references treasury.opening_positions(id);

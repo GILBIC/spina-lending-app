@@ -230,6 +230,18 @@ def own_account(conn, actor, account_id):
     return row
 
 
+def require_replay_accounts(conn, actor, permissions):
+    require_actor(conn, actor)
+    accounts = sorted(permissions, key=str)
+    for account_id in accounts:
+        conn.execute(
+            "select pg_advisory_xact_lock(hashtextextended(%s,1))", (str(account_id),)
+        )
+    for account_id in accounts:
+        for permission in sorted(permissions[account_id]):
+            require_account(conn, actor, account_id, permission)
+
+
 def replay_scope(service, conn, actor, row):
     detail = row["result"]["result"]
     if row["permission"] == "collector_surplus_own":
@@ -247,12 +259,9 @@ def replay_scope(service, conn, actor, row):
         from .collector_surplus_reads import redacted
 
         return redacted(row["result"])
-    require_account(conn, actor, row["account_id"], row["permission"])
     origin = detail.get("source_account_id") or (detail.get("action_record") or {}).get(
         "origin_account_id"
     )
-    if origin and str(origin) != str(row["account_id"]):
-        require_account(conn, actor, UUID(origin), PREFIX + "settle")
     if row["action"] in {
         "collector_count_record",
         "collector_count_accept",
@@ -278,18 +287,53 @@ def replay_scope(service, conn, actor, row):
                 collect(item)
 
     collect(detail)
-    for evidence_id in evidence_ids:
+    credit = detail.get("credit")
+    if credit and credit.get("case_id"):
+        entries = conn.execute(
+            "select payload from treasury.collector_entries where credit_id=%s and payload->>'kind'='recognition'",
+            (UUID(credit["id"]),),
+        ).fetchall()
+        resolutions = conn.execute(
+            "select payload from treasury.collector_resolutions where payload->>'credit_id'=%s and payload->>'kind'='collector_credit'",
+            (credit["id"],),
+        ).fetchall()
+        if not entries or not resolutions:
+            raise TreasuryDenied("Original recognition evidence facts are unavailable.")
+        for original in [*entries, *resolutions]:
+            collect(original["payload"])
+    elif credit and credit.get("opening_anchor_id"):
+        collect(load(conn, "openings", UUID(credit["opening_anchor_id"]), lock=False))
+    event_ids = set()
+    for slot in ["action_record", "exception", "settlement"]:
+        if detail.get(slot, {}) and detail[slot].get("event_id"):
+            event_ids.add(detail[slot]["event_id"])
+    for event_id in event_ids:
+        event = conn.execute(
+            "select evidence_id,account_id from treasury.events where id=%s",
+            (UUID(event_id),),
+        ).fetchone()
+        if not event:
+            raise TreasuryDenied("Original actual movement evidence is unavailable.")
+        evidence_ids.add(str(event["evidence_id"]))
+    permissions = {row["account_id"]: {row["permission"]}}
+    if origin and str(origin) != str(row["account_id"]):
+        permissions.setdefault(UUID(origin), set()).add(PREFIX + "settle")
+    evidence_rows = []
+    for evidence_id in sorted(evidence_ids):
         evidence = conn.execute(
             "select * from treasury.evidence where id=%s", (UUID(evidence_id),)
         ).fetchone()
         if not evidence:
             raise TreasuryDenied("Current private source evidence is unavailable.")
         if evidence["account_id"] != row["account_id"]:
-            require_account(conn, actor, evidence["account_id"], PREFIX + "settle")
+            permissions.setdefault(evidence["account_id"], set()).add(PREFIX + "settle")
+        evidence_rows.append(evidence)
+    require_replay_accounts(conn, actor, permissions)
+    for evidence in evidence_rows:
         service.evidence(
             conn,
             evidence["account_id"],
-            UUID(evidence_id),
+            evidence["id"],
             {"recipient", "opening", "correction"},
         )
     return row["result"]
@@ -761,6 +805,10 @@ def link_debit(service, conn, actor, account, event, command):
     check_account(account, row)
     require_account(conn, actor, UUID(row["origin_account_id"]), PREFIX + "settle")
     require_account(conn, actor, account["id"], PREFIX + "settle")
+    if row["credit_id"] and load(conn, "credits", UUID(row["credit_id"]))["frozen"]:
+        raise TreasuryConflict(
+            "Collector source recovery is unresolved; the actual debit remains unclassified."
+        )
     expected = (
         "exception_return"
         if command.purpose == "collector_custody_exception_return"
@@ -874,8 +922,14 @@ def settle(service, conn, actor, account, command):
         command.acknowledgment_id,
         command.acknowledgment_version,
     )
+    latest = conn.execute(
+        "select id from treasury.collector_acknowledgments where action_id=%s order by record_sequence desc limit 1",
+        (UUID(row["id"]),),
+    ).fetchone()
     if (
         row["status"] != "debited_confirmation_pending"
+        or not latest
+        or str(latest["id"]) != ack["id"]
         or ack["action_id"] != row["id"]
         or ack["confirmation"] != "received"
         or row["event_id"] != str(command.event_id)
@@ -1121,6 +1175,12 @@ def source_summary(conn, account_id):
     outstanding = total("credits", "outstanding_amount")
     held = total("exceptions", "remaining_held_amount")
     reserved = total("credits", "reserved_amount")
+    recovery = conn.execute(
+        """select count(*) as n,coalesce(sum((payload->>'outstanding_amount')::numeric),0) as amount
+        from treasury.collector_credits where account_id=%s
+        and ((payload->>'frozen')::boolean or payload->>'status'='recovery_required')""",
+        (account_id,),
+    ).fetchone()
     return {
         "as_of": "current",
         "available": True,
@@ -1128,7 +1188,9 @@ def source_summary(conn, account_id):
         "collector_outstanding_amount": outstanding,
         "collector_reserved_amount": reserved,
         "held_dispute_amount": held,
-        "source_resolved": pending == "0.00" and held == "0.00",
+        "collector_recovery_count": recovery["n"],
+        "collector_recovery_amount": format(recovery["amount"], ".2f"),
+        "source_resolved": pending == "0.00" and held == "0.00" and recovery["n"] == 0,
         "gl_posting_available": False,
-        "message": "Cash close does not settle unidentified sources, Collector liabilities or disputed custody. Protected liability GL mapping is unavailable.",
+        "message": "Cash close does not settle unidentified sources, Collector liabilities, frozen source recovery or disputed custody. Protected liability GL mapping is unavailable.",
     }

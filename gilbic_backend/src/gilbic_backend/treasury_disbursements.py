@@ -40,6 +40,11 @@ def source_choices(conn, actor):
             row = load(conn, "actions", item["id"], lock=False)
             if observed_debit(conn, row["id"]):
                 continue
+            if (
+                row["credit_id"]
+                and load(conn, "credits", row["credit_id"], lock=False)["frozen"]
+            ):
+                continue
             require_account(
                 conn,
                 actor,

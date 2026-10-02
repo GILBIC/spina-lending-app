@@ -896,6 +896,202 @@ def test_reclassification_after_actual_partial_return_freezes_without_negative_c
     ) == Decimal("10060.00")
 
 
+@pytest.mark.parametrize("phase", ["recognition", "paid"])
+def test_current_replay_requires_original_recognition_and_distinct_debit_file(
+    surplus, monkeypatch, phase
+):
+    from gilbic_backend.office_review_evidence_storage import EvidenceFileError
+
+    t = surplus
+    distinct = UUID(evidence(t))
+    original = t["service"].execute
+    commands = {}
+
+    def recording(actor, model):
+        if (
+            phase == "recognition" and model.action == "collector_surplus_recognize"
+        ) or (phase == "paid" and model.action == "disbursement_record"):
+            model = model.model_copy(update={"evidence_id": distinct})
+        commands[model.action] = model
+        return original(actor, model)
+
+    monkeypatch.setattr(t["service"], "execute", recording)
+    if phase == "recognition":
+        credit(t)
+        target = commands["collector_surplus_recognize"]
+    else:
+        paid(t)
+        target = commands["collector_surplus_return_record"]
+    (t["service"].store.root / (distinct.hex + ".bin")).unlink()
+    with pytest.raises((EvidenceFileError, TreasuryDenied)):
+        t["service"].request_result(t["owner"], target.request_id)
+    with pytest.raises((EvidenceFileError, TreasuryDenied)):
+        original(t["owner"], target)
+
+
+def test_frozen_credit_keeps_current_source_unresolved(surplus):
+    from gilbic_backend.collector_surplus import source_summary
+
+    t = surplus
+    c = paid(t)["result"]["credit"]
+    command(
+        t,
+        "collector_surplus_resolve_source",
+        credit_id=c["id"],
+        credit_version=c["version"],
+        source_id=t["transaction_id"],
+        source_digest="a" * 64,
+        amount="100.00",
+        evidence_id=t["evidence_id"],
+        reason="Synthetic historical source requires current recovery review",
+    )
+    with connect() as conn:
+        summary = source_summary(conn, t["account_id"])
+    assert not summary["source_resolved"]
+    assert (
+        summary["collector_recovery_count"] == 1
+        and summary["collector_recovery_amount"] == "60.00"
+    )
+    assert "recovery" in summary["message"].lower()
+
+
+def test_opposite_cross_account_replays_use_canonical_real_locks(surplus, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import timedelta
+    from threading import Barrier, Lock, get_ident
+
+    from gilbic_backend import collector_surplus, treasury_repository
+
+    t = surplus
+    credit_a = credit(t)
+    account_a = t["account_id"]
+    account_b = UUID(int=account_a.int + 1)
+    t["service"].execute(
+        t["owner"],
+        AccountConfigure(
+            action="account_configure",
+            request_id=uuid4(),
+            account_id=account_b,
+            expected_version=0,
+            ledger_context_id=t["context_id"],
+            context="synthetic",
+            kind="physical_cash",
+            alias="Synthetic second independent cash location",
+            ownership="synthetic",
+            custodian_user_id=t["owner"].user_id,
+        ),
+    )
+    other = {**t, "account_id": account_b}
+    other["evidence_id"] = evidence(other)
+    opening_evidence = evidence(other, "opening")
+    opening = command(
+        other,
+        "opening_prepare",
+        cutoff=datetime.now(UTC) - timedelta(days=1),
+        amount="100.00",
+        evidence_id=opening_evidence,
+        reason="Synthetic verified independent cash opening",
+    )
+    command(
+        other,
+        "opening_activate",
+        opening_id=opening["target_id"],
+        opening_version=opening["version"],
+        confirmed=True,
+        reason="Verified synthetic current opening",
+    )
+    anchor = command(
+        other,
+        "collector_surplus_opening_prepare",
+        collector_user_id=t["collector"].user_id,
+        opening_id=opening["target_id"],
+        opening_version=2,
+        amount="100.00",
+        evidence_id=opening_evidence,
+        overlap_review_acknowledged=True,
+        reason="Independent synthetic opening credit source",
+    )
+    credit_b = command(
+        other,
+        "collector_surplus_opening_activate",
+        anchor_id=anchor["target_id"],
+        anchor_version=anchor["version"],
+        reason="Activate evidenced liability without new cash",
+    )["result"]["credit"]
+    request_ids = []
+
+    for origin, paying, current_credit in [(t, other, credit_a), (other, t, credit_b)]:
+        request = command(
+            origin,
+            "collector_surplus_return_request",
+            actor=t["collector"],
+            credit_id=current_credit["id"],
+            credit_version=current_credit["version"],
+            amount="40.00",
+            destination={"kind": "physical_cash", "recipient_reference": None},
+            reason="Own independent requested partial return",
+        )["result"]["request"]
+        prepared_result = command(
+            paying,
+            "collector_surplus_return_prepare",
+            credit_id=current_credit["id"],
+            credit_version=current_credit["version"],
+            collector_request_id=request["id"],
+            collector_request_version=request["version"],
+            amount="40.00",
+            destination=request["destination"],
+            evidence_id=paying["evidence_id"],
+            reason="Independent current source and paying location reviewed",
+        )
+        approved = prepared_result["result"]["action_record"]
+        request_ids.append(UUID(prepared_result["request_id"]))
+        debited = command(
+            paying,
+            "disbursement_record",
+            purpose="collector_surplus_return",
+            source_id=approved["id"],
+            source_version=approved["version"],
+            payee_id=t["collector"].user_id,
+            amount="40.00",
+            provider="physical_cash",
+            reference=uuid4().hex,
+            effective_at=datetime.now(UTC),
+            evidence_id=paying["evidence_id"],
+            recipient_attestation="Actual synthetic physical return observed",
+            reason="Observed exact paying account return",
+        )
+        request_ids.append(UUID(debited["request_id"]))
+
+    actual_require_account = collector_surplus.require_account
+    sequences = {}
+    sequence_lock = Lock()
+    barrier = Barrier(4)
+
+    def recording_authority(conn, actor, account_id, permission, **options):
+        with sequence_lock:
+            sequences.setdefault(get_ident(), []).append(UUID(str(account_id)))
+        return actual_require_account(conn, actor, account_id, permission, **options)
+
+    monkeypatch.setattr(collector_surplus, "require_account", recording_authority)
+    monkeypatch.setattr(treasury_repository, "require_account", recording_authority)
+
+    def reading(request_id):
+        barrier.wait()
+        return t["service"].request_result(t["owner"], request_id)
+
+    with ThreadPoolExecutor(4) as pool:
+        results = list(pool.map(reading, request_ids))
+    assert {UUID(result["request_id"]) for result in results} == set(request_ids)
+    assert len(sequences) == 4
+    assert all(
+        list(dict.fromkeys(sequence)) == [account_a, account_b]
+        for sequence in sequences.values()
+    )
+    assert cash_delta(t) == Decimal("10060.00") and cash_delta(other) == Decimal(
+        "-40.00"
+    )
+
+
 def test_source_recognition_invalidates_close_without_changing_cash_or_snapshot(
     surplus,
 ):
