@@ -10,12 +10,12 @@ List<File> androidFixtureFontFiles(Map<String, dynamic> configuration) {
     root.endsWith('/') ? root : '$root/',
   ).resolve('bin/cache/artifacts/material_fonts/');
   final files = [
-    'roboto-regular.ttf',
-    'roboto-medium.ttf',
-    'roboto-bold.ttf',
-    'roboto-black.ttf',
-    'roboto-light.ttf',
-    'materialicons-regular.otf',
+    'Roboto-Regular.ttf',
+    'Roboto-Medium.ttf',
+    'Roboto-Bold.ttf',
+    'Roboto-Black.ttf',
+    'Roboto-Light.ttf',
+    'MaterialIcons-Regular.otf',
   ].map((name) => File.fromUri(directory.resolve(name))).toList();
   final missing = files.where((file) => !file.existsSync()).toList();
   if (missing.isNotEmpty) {

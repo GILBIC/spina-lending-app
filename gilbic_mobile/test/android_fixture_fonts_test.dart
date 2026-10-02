@@ -33,12 +33,12 @@ void main() {
       );
       await folder.create(recursive: true);
       for (final name in [
-        'roboto-regular.ttf',
-        'roboto-medium.ttf',
-        'roboto-bold.ttf',
-        'roboto-black.ttf',
-        'roboto-light.ttf',
-        'materialicons-regular.otf',
+        'Roboto-Regular.ttf',
+        'Roboto-Medium.ttf',
+        'Roboto-Bold.ttf',
+        'Roboto-Black.ttf',
+        'Roboto-Light.ttf',
+        'MaterialIcons-Regular.otf',
       ]) {
         await File('${folder.path}/$name').writeAsBytes([1]);
       }
@@ -46,8 +46,8 @@ void main() {
         'flutterRoot': sdk.uri.toString(),
       });
       expect(files.length, 6);
-      expect(files.first.path.endsWith('roboto-regular.ttf'), isTrue);
-      expect(files.last.path.endsWith('materialicons-regular.otf'), isTrue);
+      expect(files.first.path.endsWith('Roboto-Regular.ttf'), isTrue);
+      expect(files.last.path.endsWith('MaterialIcons-Regular.otf'), isTrue);
       await files[3].delete();
       expect(
         () => androidFixtureFontFiles({'flutterRoot': sdk.uri.toString()}),
