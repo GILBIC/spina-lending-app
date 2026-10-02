@@ -220,7 +220,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('July 31, 2026 • Offline copy'), findsOneWidget);
+    expect(find.textContaining('2026-07-31 • Offline copy'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.text('Offline copy — read-only'), findsOneWidget);
     expect(

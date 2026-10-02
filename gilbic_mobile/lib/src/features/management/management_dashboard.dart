@@ -70,7 +70,7 @@ class ManagementDashboard extends StatefulWidget {
 }
 
 class _ManagementDashboardState extends State<ManagementDashboard> {
-  late final ManagementDashboardOverviewRepository _overviewRepository;
+  late ManagementDashboardOverviewRepository _overviewRepository;
   ManagementDashboardOverview? _overview;
   bool _loadingOverview = true;
   String? _overviewError;
@@ -98,6 +98,22 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
   }
 
   @override
+  void didUpdateWidget(ManagementDashboard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.overviewRepository != widget.overviewRepository) {
+      _overview = null;
+      _deviceId = null;
+      _deviceIdLoad = null;
+      _overviewRepository =
+          widget.overviewRepository ??
+          SpinaManagementDashboardOverviewRepository();
+      unawaited(_loadOverview());
+    }
+  }
+
+  @override
   void dispose() {
     _requestGeneration += 1;
     super.dispose();
@@ -110,17 +126,25 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
   }
 
   Future<String> _loadAndCacheDeviceId() async {
+    final provider = widget.deviceIdentityProvider;
     try {
-      final identity = await widget.deviceIdentityProvider.load();
-      _deviceId = identity.installationId;
+      final identity = await provider.load();
+      if (provider == widget.deviceIdentityProvider) {
+        _deviceId = identity.installationId;
+      }
       return identity.installationId;
     } finally {
-      _deviceIdLoad = null;
+      if (provider == widget.deviceIdentityProvider) {
+        _deviceIdLoad = null;
+      }
     }
   }
 
   Future<void> _loadOverview({bool refresh = false}) async {
     final generation = ++_requestGeneration;
+    final session = widget.session;
+    final repository = _overviewRepository;
+    final provider = widget.deviceIdentityProvider;
     setState(() {
       _loadingOverview = true;
       _overviewError = null;
@@ -128,8 +152,14 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     });
     try {
       final deviceId = await _loadDeviceIdOnce();
-      final overview = await _overviewRepository.loadOverview(
-        widget.session,
+      if (!mounted ||
+          session != widget.session ||
+          repository != _overviewRepository ||
+          provider != widget.deviceIdentityProvider) {
+        return;
+      }
+      final overview = await repository.loadOverview(
+        session,
         deviceId: deviceId,
       );
       if (!mounted || generation != _requestGeneration) return;

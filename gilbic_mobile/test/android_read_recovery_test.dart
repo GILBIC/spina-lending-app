@@ -13,6 +13,16 @@ import 'support/client_fixture.dart';
 import 'support/role_homes.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
+import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+
+class DeferredOverview implements ManagementDashboardOverviewRepository {
+  final pending = Completer<ManagementDashboardOverview>();
+  @override
+  Future<ManagementDashboardOverview> loadOverview(
+    UserSession session, {
+    required String deviceId,
+  }) => pending.future;
+}
 
 class RevocableOverview extends SyntheticOverview {
   bool denied = false;
@@ -81,6 +91,43 @@ Future<void> open(
   ),
 );
 void main() {
+  testWidgets('Management changed session discards late private overview', (
+    tester,
+  ) async {
+    final old = DeferredOverview();
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(412, 915),
+      textScaler: TextScaler.linear(1),
+      home: roleHome(AppRole.management, overview: old),
+    );
+    await tester.pump();
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(412, 915),
+      textScaler: TextScaler.linear(1),
+      home: roleHome(AppRole.management),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.byKey(const Key('management-overview-facts')), findsOneWidget);
+    old.pending.complete(
+      ManagementDashboardOverview(
+        generatedAt: DateTime.utc(2026, 10, 2),
+        currency: 'PHP',
+        ignoredMetricKeys: const [],
+        metrics: [
+          ManagementDashboardMetric(
+            key: ManagementDashboardMetricKey.values.first,
+            count: 66,
+            amount: '666.66',
+            asOfDate: DateTime(2026, 10, 2),
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('₱666.66'), findsNothing);
+  });
   testWidgets(
     'Management denied refresh clears facts and has no permission retry',
     (tester) async {
