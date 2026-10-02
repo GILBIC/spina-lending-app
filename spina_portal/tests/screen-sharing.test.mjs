@@ -53,6 +53,23 @@ test('grouped Management sharing restricts each former audited panel and exclude
   } finally { globalThis.RestrictionTarget = previous; }
 });
 
+test('visible private detail panels block sharing even without a file or password input', () => {
+  const contentRoot = groupedManagementContent('management-clients-loans', 'management-loans');
+  const panel = contentRoot.querySelector('#management-loans');
+  panel.innerHTML = '<div data-private-panel>Private schedule or receipt evidence</div>';
+  const detail = panel.querySelector('[data-private-panel]');
+  const subject = controller({ sectionId: 'management-clients-loans', contentRoot });
+  assert.equal(subject.safeToCapture(), false);
+  detail.hidden = true;
+  assert.equal(subject.safeToCapture(), true, 'closed private detail must not block its ordinary parent');
+  detail.hidden = false;
+  let stopped = 0;
+  subject.track = { stop: () => { stopped += 1; } };
+  subject.afterNavigate();
+  assert.equal(stopped, 1, 'revealing private details immediately stops the active mocked track');
+  subject.dispose();
+});
+
 test('grouped Management capture stops when navigating or replacing its exact restricted child', async () => {
   const contentRoot = groupedManagementContent('management-clients-loans', 'management-loans');
   const panel = contentRoot.querySelector('#management-loans');

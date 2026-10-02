@@ -15,7 +15,7 @@ const MANAGEMENT_CHILD = new Map([
   ['management-clients-loans', 'management-loans'],
   ['management-collections', 'management-loan-operations'],
 ]);
-const SENSITIVE = 'input[type="password"], .one-time-client-credentials, [data-credential-result], [data-credential-own-form], [data-credential-reset-form], input[type="file"], dialog[open], [role="dialog"]';
+const SENSITIVE = 'input[type="password"], .one-time-client-credentials, [data-credential-result], [data-credential-own-form], [data-credential-reset-form], input[type="file"], dialog[open], [role="dialog"], [data-private-panel]';
 
 export function isEligibleScreen(role, id) {
   return ELIGIBLE[role]?.has(id) === true;
@@ -338,7 +338,7 @@ export class ScreenSharingController {
     this.observer = new MutationObserver(() => {
       if ((this.track || this.preparedTrack || this.prepareInFlight || this.readyInFlight) && !this.safeToCapture()) void this.stop({ reason: 'Sharing stopped because a private control appeared.' });
     });
-    this.observer.observe(this.contentRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'type', 'open', 'id', 'data-screen-share-section'] });
+    this.observer.observe(this.contentRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'type', 'open', 'id', 'data-screen-share-section', 'data-private-panel'] });
   }
 
   mount({ session, role }) {
