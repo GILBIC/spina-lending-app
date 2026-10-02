@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/media/private_image_store.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -77,6 +78,7 @@ abstract interface class TreasuryRepository {
   });
   Future<Map<String, dynamic>> detail(TreasuryListKind kind, String id);
   Future<Map<String, dynamic>> instructions();
+  Future<ClientDocumentFile> exportReconciliation(String id);
   Future<TreasuryResult> execute(TreasuryCommand command, {String? targetId});
   Future<TreasuryResult?> recover();
   Future<TreasuryResult> retrySame();
@@ -180,14 +182,18 @@ class SpinaTreasuryRepository implements TreasuryRepository {
   }
 
   Future<void> _redact() async {
-    final heldUpload = _attempt?['upload'];
     _workspace = null;
     _attempt = null;
     _lastPreview = null;
     _previewInput = null;
     _denied = true;
-    await _journal.clear();
-    if (heldUpload != null) await _images.cleanup();
+    try {
+      await _journal.clear();
+    } finally {
+      // A foreign or corrupt restored journal can have private files even
+      // before it becomes this repository's in-memory attempt.
+      await _images.cleanup();
+    }
   }
 
   Map<String, String> _headers() => {
@@ -365,6 +371,7 @@ class SpinaTreasuryRepository implements TreasuryRepository {
         'The selected record could not be confirmed.',
       );
     }
+    validateTreasuryFinancialProjection(data);
     return treasuryObject(immutableTreasury(data));
   }
 
@@ -377,6 +384,59 @@ class SpinaTreasuryRepository implements TreasuryRepository {
       throw const FormatException('Payment instructions are unavailable.');
     }
     return value;
+  }
+
+  @override
+  Future<ClientDocumentFile> exportReconciliation(String id) async {
+    _online();
+    requireTreasuryId(id);
+    await loadWorkspace();
+    final record = await detail(TreasuryListKind.reconciliations, id);
+    final account = _workspace!.account(record['account_id'] as String? ?? '');
+    if (account?.balance == null ||
+        account?.permits('reconciliation_observe') != true ||
+        _workspace?.capability('reconciliation_observe') != true) {
+      throw const TreasuryAccessChanged();
+    }
+    final response = await _client.get(
+      ApiConfig.endpoint('/api/v1/treasury/reconciliations/$id/export'),
+      headers: _headers(),
+    );
+    _current();
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      await _redact();
+      throw const TreasuryAccessChanged();
+    }
+    if (response.statusCode != 200 ||
+        response.headers['content-type']?.split(';').first !=
+            'application/json' ||
+        response.headers['cache-control']?.contains('no-store') != true ||
+        response.bodyBytes.length > 20 * 1024 * 1024) {
+      throw const FormatException(
+        'The private reconciliation export is unavailable.',
+      );
+    }
+    final data = treasuryObject(jsonDecode(utf8.decode(response.bodyBytes)));
+    final exportedAccount = treasuryObject(data['account']);
+    final exportedRecord = treasuryObject(data['reconciliation']);
+    if (data['contract_version'] != 1 ||
+        exportedAccount['id'] != account!.id ||
+        exportedAccount['ledger_context_id'] != account.ledgerContextId ||
+        exportedAccount['currency'] != 'PHP' ||
+        exportedRecord['id'] != id ||
+        exportedRecord['account_id'] != account.id ||
+        data['ledger'] is! List ||
+        data['exceptions'] is! Map) {
+      throw const FormatException(
+        'The private export does not match the selected reconciliation.',
+      );
+    }
+    validateTreasuryFinancialProjection(data);
+    return ClientDocumentFile(
+      filename: 'treasury-private-reconciliation-$id.json',
+      bytes: Uint8List.fromList(response.bodyBytes),
+      mediaType: 'application/json',
+    );
   }
 
   Map<String, dynamic> _held({
@@ -435,21 +495,28 @@ class SpinaTreasuryRepository implements TreasuryRepository {
             'opening_prepare' => result['opening'],
             _ => null,
           };
-          if (body.containsKey('amount') && entity != null &&
+          if (body.containsKey('amount') &&
+              entity != null &&
               (entity is! Map || entity['amount'] != body['amount'])) {
             throw const TreasuryUncertain();
           }
           if (held['action'] == 'receipt_verify' &&
               (result['receipt'] is! Map ||
-               (result['receipt'] as Map)['client_id'] != body['client_id'])) {
+                  (result['receipt'] as Map)['client_id'] !=
+                      body['client_id'])) {
             throw const TreasuryUncertain();
           }
           if (held['action'] == 'receipt_apply') {
             final application = result['application'];
-            final ids = application is Map ? application['transaction_ids'] : null;
-            if (application is! Map || application['status'] != 'recorded' ||
-                application['amount'] != body['total_amount'] || ids is! List ||
-                ids.isEmpty || ids.any((id) => !treasuryUuid(id)) ||
+            final ids = application is Map
+                ? application['transaction_ids']
+                : null;
+            if (application is! Map ||
+                application['status'] != 'recorded' ||
+                application['amount'] != body['total_amount'] ||
+                ids is! List ||
+                ids.isEmpty ||
+                ids.any((id) => !treasuryUuid(id)) ||
                 ids.toSet().length != ids.length) {
               throw const TreasuryUncertain();
             }
@@ -499,8 +566,9 @@ class SpinaTreasuryRepository implements TreasuryRepository {
               throw const TreasuryUncertain();
             }
           } else if (record['account_id'] != held['account_id'] ||
-              record['purpose'] != upload['purpose'])
+              record['purpose'] != upload['purpose']) {
             throw const TreasuryUncertain();
+          }
         }
       }
       return value;
@@ -542,9 +610,9 @@ class SpinaTreasuryRepository implements TreasuryRepository {
         ),
         held,
       );
+      if (heldUpload != null) await _images.cleanup();
       await _journal.clear();
       _attempt = null;
-      if (heldUpload != null) await _images.cleanup();
       return value;
     } on TreasuryAccessChanged {
       rethrow;
@@ -552,9 +620,9 @@ class SpinaTreasuryRepository implements TreasuryRepository {
       if (error is SpinaApiException &&
           error.statusCode != null &&
           error.statusCode! < 500) {
+        if (heldUpload != null) await _images.cleanup();
         await _journal.clear();
         _attempt = null;
-        if (heldUpload != null) await _images.cleanup();
         rethrow;
       }
       throw const TreasuryUncertain();
@@ -654,9 +722,9 @@ class SpinaTreasuryRepository implements TreasuryRepository {
       final raw = await _request('/requests/${held['request_id']}');
       if (raw == null) return null;
       final value = _validate(raw, held);
+      if (heldUpload != null) await _images.cleanup();
       await _journal.clear();
       _attempt = null;
-      if (heldUpload != null) await _images.cleanup();
       return value;
     } finally {
       _busy = false;
@@ -702,6 +770,38 @@ class SpinaTreasuryRepository implements TreasuryRepository {
     try {
       await loadWorkspace();
       _permitted(action, accountId);
+      if (metadata != null) {
+        if (_workspace!.account(accountId)?.version !=
+            metadata['account_version']) {
+          throw StateError(
+            'Receiving account changed. Refresh and review the proof before sending.',
+          );
+        }
+        if (_workspace!.raw.containsKey('borrower_choices')) {
+          final choices = (_workspace!.raw['borrower_choices'] as List)
+              .whereType<Map<String, dynamic>>();
+          final borrower = choices
+              .where(
+                (r) =>
+                    r['client_id'] == metadata['client_id'] &&
+                    (r['allowed_account_ids'] as List? ?? []).contains(
+                      accountId,
+                    ),
+              )
+              .firstOrNull;
+          if (borrower == null ||
+              action == 'claim_submit' &&
+                  (metadata['loan_ids'] as List).any(
+                    (id) => !(borrower['loans'] as List? ?? [])
+                        .whereType<Map<String, dynamic>>()
+                        .any((loan) => loan['loan_id'] == id),
+                  )) {
+            throw StateError(
+              'Current borrower or loan scope changed. Refresh your own portfolio or assigned route before sending.',
+            );
+          }
+        }
+      }
       requireTreasuryId(requestId);
       final type = await treasuryMediaType(file);
       final retained = await _images.retain(file);
@@ -806,7 +906,12 @@ class SpinaTreasuryRepository implements TreasuryRepository {
     required String purpose,
     required XFile file,
   }) async {
-    if (!['recipient', 'opening', 'statement', 'correction'].contains(purpose)) {
+    if (![
+      'recipient',
+      'opening',
+      'statement',
+      'correction',
+    ].contains(purpose)) {
       throw const FormatException('Choose a valid evidence purpose.');
     }
     requireTreasuryId(accountId);
@@ -870,14 +975,21 @@ class SpinaTreasuryRepository implements TreasuryRepository {
         value['can_apply'] is! bool ||
         value['can_apply'] == true &&
             ((value['allocations'] as List).isEmpty ||
-                (value['blockers'] as List).isNotEmpty)) {
+                (value['blockers'] as List).isNotEmpty) ||
+        value['can_apply'] == false &&
+            ((value['blockers'] as List).isEmpty || value['digest'] != null)) {
       throw const TreasuryUncertain();
     }
-    const TreasuryField(
-      'digest',
-      'Digest',
-      TreasuryFieldKind.digest,
-    ).parse(value['digest']);
+    if (value['can_apply'] == true || value['digest'] != null) {
+      const TreasuryField(
+        'digest',
+        'Digest',
+        TreasuryFieldKind.digest,
+      ).parse(value['digest']);
+    }
+    for (final blocker in value['blockers'] as List) {
+      treasuryBlockerMessage(blocker);
+    }
     TreasuryMoney(value['remaining_amount']);
     for (final raw in value['allocations'] as List) {
       final row = treasuryObject(raw);

@@ -208,10 +208,11 @@ class TreasuryField {
           ).parse(row['promised_payment_date']);
           TreasuryMoney(row['promised_amount'], positive: true);
         } else if (row['promised_payment_date'] != null ||
-            row['promised_amount'] != null)
+            row['promised_amount'] != null) {
           throw const FormatException(
             'Promise details require promised to pay later.',
           );
+        }
         if (row['reason_code'] == 'other' &&
             (row['note'] as String? ?? '').trim().isEmpty) {
           throw const FormatException('Other requires an explanation.');
@@ -255,7 +256,9 @@ class TreasuryField {
         }
         return value.map((v) {
           final row = treasuryObject(v);
-          if (row.keys.any((k) => !['loan_id', 'expected_version'].contains(k))) {
+          if (row.keys.any(
+            (k) => !['loan_id', 'expected_version'].contains(k),
+          )) {
             throw const FormatException('Invalid loan choice.');
           }
           return {
@@ -318,7 +321,13 @@ const reasonField = TreasuryField('reason', 'Reason', textKind);
 const observationFields = [
   TreasuryField('id', 'Statement row ID', idKind),
   TreasuryField('provider', 'Provider', textKind, maxLength: 200),
-  TreasuryField('reference', 'Reference', textKind, maxLength: 200),
+  TreasuryField(
+    'reference',
+    'Reference (if present)',
+    textKind,
+    required: false,
+    maxLength: 200,
+  ),
   TreasuryField(
     'direction',
     'Direction',
@@ -508,7 +517,14 @@ final Map<TreasuryAction, List<TreasuryField>> treasuryFields = {
     ...applicationFields,
   ],
   TreasuryAction.disbursementRecord: [
-    ...transactionFields,
+    ...transactionFields.where((f) => f.key != 'reference'),
+    const TreasuryField(
+      'reference',
+      'Actual reference (if present)',
+      textKind,
+      required: false,
+      maxLength: 200,
+    ),
     const TreasuryField(
       'direction',
       'Direction',
@@ -712,7 +728,10 @@ class TreasuryCommand {
     };
     for (final f in schema) {
       final value = f.parse(fields[f.key]);
-      if (value != null) body[f.key] = value;
+      if (value != null ||
+          action == TreasuryAction.disbursementRecord && f.key == 'reference') {
+        body[f.key] = value;
+      }
     }
     if (action == TreasuryAction.openingActivate && body['confirmed'] != true) {
       throw const FormatException('Confirm the actual observed opening.');
@@ -725,6 +744,61 @@ class TreasuryCommand {
   String get accountId => _body['account_id'] as String;
   int get expectedVersion => _body['expected_version'] as int;
   Map<String, dynamic> toJson() => _body;
+}
+
+String treasuryBlockerMessage(Object? value) {
+  if (value is String && value.trim().isNotEmpty) {
+    return value;
+  }
+  if (value is Map &&
+      value['code'] is String &&
+      (value['code'] as String).trim().isNotEmpty &&
+      value['message'] is String &&
+      (value['message'] as String).trim().isNotEmpty) {
+    return value['message'] as String;
+  }
+  throw const FormatException('The server blocker is incomplete.');
+}
+
+/// Server amounts stay decimal strings; totals are never inferred from rows.
+void validateTreasuryFinancialProjection(Object? value) {
+  if (value is List) {
+    for (final row in value) {
+      validateTreasuryFinancialProjection(row);
+    }
+  } else if (value is Map) {
+    for (final entry in value.entries) {
+      if (entry.value != null &&
+          const {
+            'amount',
+            'fee',
+            'remaining_amount',
+            'applied_amount',
+            'refunded_amount',
+            'unapplied_amount',
+            'unallocated_amount',
+            'total_amount',
+            'actual_balance',
+            'expected_balance',
+            'difference',
+            'transit_amount',
+            'opening_balance',
+            'principal_amount',
+            'fee_amount',
+          }.contains(entry.key)) {
+        TreasuryMoney(
+          entry.value,
+          signed: const {
+            'expected_balance',
+            'difference',
+            'actual_balance',
+            'opening_balance',
+          }.contains(entry.key),
+        );
+      }
+      validateTreasuryFinancialProjection(entry.value);
+    }
+  }
 }
 
 class TreasuryActor {
@@ -752,6 +826,7 @@ class TreasuryAccount {
     }
     final amount = balance?['expected_balance'];
     if (amount != null) TreasuryMoney(amount, signed: true);
+    validateTreasuryFinancialProjection(json);
   }
   final String id, ledgerContextId;
   final Map<String, dynamic> raw;
@@ -785,6 +860,7 @@ class TreasuryWorkspace {
     accounts = (json['accounts'] as List)
         .map((v) => TreasuryAccount.fromJson(treasuryObject(v)))
         .toList(growable: false);
+    validateTreasuryFinancialProjection(json);
     if (accounts.map((a) => a.id).toSet().length != accounts.length) {
       throw const FormatException('The account scope is invalid.');
     }
@@ -836,6 +912,7 @@ class TreasuryPage {
     items = (json['items'] as List)
         .map((v) => treasuryObject(immutableTreasury(treasuryObject(v))))
         .toList(growable: false);
+    validateTreasuryFinancialProjection(json);
     if (items.length > limit ||
         json['has_more'] != (offset + items.length < json['total_count'])) {
       throw const FormatException('The server page is incomplete.');

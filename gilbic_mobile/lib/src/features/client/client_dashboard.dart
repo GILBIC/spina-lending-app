@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/treasury/treasury_workspace_page.dart';
 import 'dart:async';
 import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
@@ -336,6 +337,38 @@ class _ClientDashboardState extends State<ClientDashboard> {
                   description: 'Balances, schedules, and loan history',
                   icon: Icons.account_balance_wallet_outlined,
                   onTap: _openLoans,
+                ),
+                _ClientActionRow(
+                  key: const Key('client-home-treasury'),
+                  title: 'Cash and GCash payment proof',
+                  description:
+                      'Receiving instructions, own proof and recording status',
+                  icon: Icons.account_balance_wallet_outlined,
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => TreasuryWorkspacePage(
+                        session: widget.session,
+                        deviceIdentityProvider: widget.deviceIdentityProvider,
+                        borrowerChoices: _portfolio == null
+                            ? const []
+                            : [
+                                {
+                                  'client_id': _portfolio!.clientId,
+                                  'name': _portfolio!.clientName,
+                                  'loans': [
+                                    for (final loan in _portfolio!.activeLoans)
+                                      {
+                                        'loan_id': loan.loanId,
+                                        'loan_number': loan.loanNumber,
+                                        'loan_type': loan.loanTypeName,
+                                        'expected_version': loan.stateVersion,
+                                      },
+                                  ],
+                                },
+                              ],
+                      ),
+                    ),
+                  ),
                 ),
                 _ClientActionRow(
                   key: const Key('client-home-payments'),

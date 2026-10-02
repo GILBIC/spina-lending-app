@@ -9,6 +9,31 @@ import 'package:http/testing.dart';
 import 'support/treasury_fixture.dart';
 
 void main() {
+  test(
+    'owner observation without a reference remains unresolved; verification requires a reference',
+    () {
+      final rows =
+          const TreasuryField(
+                'rows',
+                'Rows',
+                TreasuryFieldKind.observations,
+              ).parse([
+                {
+                  'id': event,
+                  'provider': 'gcash',
+                  'reference': null,
+                  'direction': 'debit',
+                  'amount': '20.01',
+                  'effective_at': '2026-10-02T00:00:00Z',
+                },
+              ])
+              as List;
+      expect((rows.single as Map)['reference'], isNull);
+      final verifyReference = treasuryFields[TreasuryAction.receiptVerify]!
+          .firstWhere((f) => f.key == 'reference');
+      expect(() => verifyReference.parse(null), throwsFormatException);
+    },
+  );
   test('exact money preserves adjacent values above double precision', () {
     expect(TreasuryMoney('90071992547409.91').text, '90071992547409.91');
     expect(TreasuryMoney('90071992547409.92').text, '90071992547409.92');
@@ -274,10 +299,50 @@ void main() {
       expect((apply.toJson()['loans'] as List).single['expected_version'], 0);
     },
   );
-  test('received amount and borrower exactly match verified receipt result', () async {
-    final w=workspace();(w['capabilities'] as Map)['receipt_verify']=true;((w['accounts'] as List).single['actions'] as List).add('receipt_verify');
-    final verify=TreasuryCommand(TreasuryAction.receiptVerify,requestId:requestId,accountId:account,expectedVersion:1,fields:{'client_id':user,'amount':'90071992547409.91','provider':'gcash','reference':'Synthetic actual recipient transaction','effective_at':'2026-10-02T00:00:00Z','evidence_id':ledger,'recipient_attestation':'Checked actual recipient history','reason':'Synthetic fixture'});
-    final wrong=outcome(action:'receipt_verify');(wrong['result'] as Map).remove('event');(wrong['result'] as Map)['receipt']={'id':event,'version':2,'client_id':user,'amount':'90071992547409.92'};
-    final repo=SpinaTreasuryRepository(session:session(),deviceId:'external',journal:MemoryTreasuryJournal(),client:MockClient((r)async=>jsonResponse(r.method=='GET'?w:wrong)));await repo.loadWorkspace();await expectLater(repo.execute(verify),throwsA(isA<TreasuryUncertain>()));expect(repo.pendingRequestId,requestId);
-  });
+  test(
+    'received amount and borrower exactly match verified receipt result',
+    () async {
+      final w = workspace();
+      (w['capabilities'] as Map)['receipt_verify'] = true;
+      ((w['accounts'] as List).single['actions'] as List).add('receipt_verify');
+      final verify = TreasuryCommand(
+        TreasuryAction.receiptVerify,
+        requestId: requestId,
+        accountId: account,
+        expectedVersion: 1,
+        fields: {
+          'client_id': user,
+          'amount': '90071992547409.91',
+          'provider': 'gcash',
+          'reference': 'Synthetic actual recipient transaction',
+          'effective_at': '2026-10-02T00:00:00Z',
+          'evidence_id': ledger,
+          'recipient_attestation': 'Checked actual recipient history',
+          'reason': 'Synthetic fixture',
+        },
+      );
+      final wrong = outcome(action: 'receipt_verify');
+      (wrong['result'] as Map).remove('event');
+      (wrong['result'] as Map)['receipt'] = {
+        'id': event,
+        'version': 2,
+        'client_id': user,
+        'amount': '90071992547409.92',
+      };
+      final repo = SpinaTreasuryRepository(
+        session: session(),
+        deviceId: 'external',
+        journal: MemoryTreasuryJournal(),
+        client: MockClient(
+          (r) async => jsonResponse(r.method == 'GET' ? w : wrong),
+        ),
+      );
+      await repo.loadWorkspace();
+      await expectLater(
+        repo.execute(verify),
+        throwsA(isA<TreasuryUncertain>()),
+      );
+      expect(repo.pendingRequestId, requestId);
+    },
+  );
 }

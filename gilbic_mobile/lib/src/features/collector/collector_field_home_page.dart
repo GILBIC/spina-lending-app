@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/features/treasury/treasury_workspace_page.dart';
+import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
 import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'package:flutter/material.dart';
@@ -248,6 +250,24 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     style: Theme.of(sheetContext).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 14),
+                  if (widget.session.hasAnyPermission(treasuryPermissionCodes))
+                    _CollectorToolTile(
+                      key: const Key('collector-more-treasury'),
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Cash and GCash payment proof',
+                      subtitle:
+                          'Assigned borrower proof and recipient recording status',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _open(
+                          TreasuryWorkspacePage(
+                            session: widget.session,
+                            deviceIdentityProvider:
+                                widget.deviceIdentityProvider,
+                          ),
+                        );
+                      },
+                    ),
                   if (widget.session.hasPermission(
                     'client_onboarding.visit.record',
                   ))

@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/treasury/treasury_workspace_page.dart';
 import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'dart:async';
@@ -281,6 +282,10 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     }
 
     final page = switch (module.action) {
+      _ManagementAction.treasury => TreasuryWorkspacePage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
       _ManagementAction.employeeOperations => EmployeeOperationsPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -1261,6 +1266,7 @@ class _ManagementModuleShortcut extends StatelessWidget {
 }
 
 enum _ManagementAction {
+  treasury('management-treasury'),
   office('management-office'),
   areas('management-areas'),
   clientAccounts('management-client-accounts'),
@@ -1446,6 +1452,12 @@ const _managementSections = <_ManagementSection>[
     description:
         'Monitor client cash, remittances, corrections, and reversals.',
     modules: <_ManagementModule>[
+      _ManagementModule(
+        'Cash and GCash Control',
+        'Scoped accounts, received funds and manual reconciliation',
+        Icons.account_balance_wallet_outlined,
+        action: _ManagementAction.treasury,
+      ),
       _ManagementModule(
         'Collection oversight',
         'Collections, remittances, custody, corrections, and voids',

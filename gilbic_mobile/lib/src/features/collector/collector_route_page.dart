@@ -575,6 +575,13 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     if (!entry.processedToday || entry.todayTransactionId == null) {
       return 'There is no collection entry to edit.';
     }
+    if (entry.todayReceipts.any(
+      (receipt) =>
+          receipt.transactionId == entry.todayTransactionId &&
+          receipt.isTreasuryFunded,
+    )) {
+      return 'Recipient funds were applied. Treasury reversals require authorized receipt review.';
+    }
     if (entry.todayIsLocked) {
       return 'This collection is already remitted and permanently locked.';
     }
@@ -1010,6 +1017,7 @@ class _TodayReceipts extends StatelessWidget {
                   'Receipt ${receipt.receiptNumber} • '
                   '${_moneyCompact(receipt.amount)} • '
                   '${receipt.collectorName}'
+                  '${receipt.isTreasuryFunded ? ' · Recipient funds applied; no Collector cash' : ''}'
                   '${receipt.isLocked ? ' • Locked' : ''}',
                   style: Theme.of(
                     context,

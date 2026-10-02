@@ -11,6 +11,68 @@ import 'package:image_picker/image_picker.dart';
 import 'support/treasury_fixture.dart';
 
 void main() {
+  test(
+    'private reconciliation export stays scoped and does not expose Client history',
+    () async {
+      var exportReads = 0;
+      final data = {
+        'contract_version': 1,
+        'account': {
+          'id': account,
+          'ledger_context_id': ledger,
+          'currency': 'PHP',
+        },
+        'reconciliation': {
+          'id': event,
+          'account_id': account,
+          'actual_balance': '90071992547409.91',
+        },
+        'ledger': [],
+        'exceptions': {},
+        'generated_at': '2026-10-02T00:00:00Z',
+      };
+      for (final private in [false, true]) {
+        final w = workspace(private: private);
+        (w['capabilities'] as Map)['reconciliation_observe'] = true;
+        ((w['accounts'] as List).single['actions'] as List).add(
+          'reconciliation_observe',
+        );
+        final repo = SpinaTreasuryRepository(
+          session: session(),
+          deviceId: 'external',
+          journal: MemoryTreasuryJournal(),
+          client: MockClient((r) async {
+            if (r.url.path.endsWith('/workspace')) return jsonResponse(w);
+            if (r.url.path.endsWith('/export')) {
+              exportReads++;
+              return http.Response(
+                jsonEncode(data),
+                200,
+                headers: {
+                  'content-type': 'application/json',
+                  'cache-control': 'no-store',
+                },
+              );
+            }
+            return jsonResponse({'id': event, 'account_id': account});
+          }),
+        );
+        await repo.loadWorkspace();
+        if (!private) {
+          await expectLater(
+            repo.exportReconciliation(event),
+            throwsA(isA<TreasuryAccessChanged>()),
+          );
+          expect(exportReads, 0);
+        } else {
+          final file = await repo.exportReconciliation(event);
+          expect(file.mediaType, 'application/json');
+          expect(utf8.decode(file.bytes), contains('90071992547409.91'));
+          expect(exportReads, 1);
+        }
+      }
+    },
+  );
   final bytes = base64Decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   );
@@ -36,6 +98,70 @@ void main() {
   tearDown(() async {
     await temp.delete(recursive: true);
   });
+  test(
+    'changed scoped borrower and account version block a proof before POST or persistence',
+    () async {
+      for (final changedVersion in [true, false]) {
+        var posts = 0;
+        final w = workspace(private: false)
+          ..['borrower_choices'] = [
+            {
+              'client_id': user,
+              'allowed_account_ids': changedVersion ? [account] : [],
+              'loans': [
+                {'loan_id': ledger},
+              ],
+            },
+          ];
+        if (changedVersion) {
+          ((w['accounts'] as List).single as Map)['version'] = 2;
+        }
+        final journal = MemoryTreasuryJournal();
+        final repo = SpinaTreasuryRepository(
+          session: session(),
+          deviceId: 'external',
+          journal: journal,
+          images: images,
+          client: MockClient((r) async {
+            if (r.method == 'POST') posts++;
+            return jsonResponse(w);
+          }),
+        );
+        await repo.loadWorkspace();
+        await expectLater(
+          repo.uploadClaim(
+            metadata(),
+            XFile.fromData(bytes, name: 'proof.png', mimeType: 'image/png'),
+          ),
+          throwsA(isA<StateError>()),
+        );
+        expect(posts, 0);
+        expect(journal.value, isNull);
+      }
+    },
+  );
+  test(
+    'foreign submitted journal redaction also removes orphaned private copies',
+    () async {
+      await images.retain(XFile.fromData(bytes, name: 'proof.png'));
+      final journal = MemoryTreasuryJournal()
+        ..value = '{"contract_version":1,"scope":"foreign"}';
+      final repo = SpinaTreasuryRepository(
+        session: session(),
+        deviceId: 'external',
+        journal: journal,
+        images: images,
+        client: MockClient((r) async => jsonResponse(workspace())),
+      );
+      await repo.loadWorkspace();
+      await expectLater(
+        repo.restoreAttempt(),
+        throwsA(isA<TreasuryAccessChanged>()),
+      );
+      expect(journal.value, isNull);
+      expect(await Directory('${temp.path}/private').list().toList(), isEmpty);
+    },
+  );
   Map<String, dynamic> savedUpload({String amount = '20.01'}) => {
     'contract_version': 1,
     'request_id': requestId,

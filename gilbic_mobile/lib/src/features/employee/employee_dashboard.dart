@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/features/treasury/treasury_workspace_page.dart';
+import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
 import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -59,6 +61,10 @@ class EmployeeDashboard extends StatelessWidget {
     }
 
     final page = switch (module.action) {
+      _EmployeeAction.treasury => TreasuryWorkspacePage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
       _EmployeeAction.office => OfficeWorkspacePage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -293,6 +299,7 @@ class _EmployeeModuleRow extends StatelessWidget {
 }
 
 enum _EmployeeAction {
+  treasury('employee-treasury'),
   office('employee-office'),
   areas('employee-areas'),
   attendance('employee-attendance'),
@@ -446,6 +453,14 @@ const _employeeSections = <_EmployeeSection>[
           'area.client.assign',
           'area.retire',
         ],
+      ),
+      _EmployeeModule(
+        'Cash and GCash Control',
+        'Current account-scoped proof and funds workflows',
+        Icons.account_balance_wallet_outlined,
+        action: _EmployeeAction.treasury,
+        availability: _EmployeeModuleAvailability.available,
+        anyPermissions: treasuryPermissionCodes,
       ),
       _EmployeeModule(
         'Remittance requests',
