@@ -1,3 +1,6 @@
+import 'package:gilbic_mobile/src/features/employee/employee_record_presentation.dart';
+import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -9,7 +12,6 @@ import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_r
 import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_service.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart';
-import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/features/employee/employee_command_form.dart';
 
 enum EmployeeSection {
@@ -359,7 +361,7 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
         final instant = DateTime.tryParse(value);
         return instant == null
             ? value
-            : '${formatSpinaBusinessDateTime(instant)} (Asia/Manila)';
+            : '${formatSpinaInstant(instant)} (Asia/Manila)';
       }
       return value;
     }
@@ -367,6 +369,7 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
   }
 
   Widget _value(String key, Object? value) {
+    if (employeeHiddenDetailKeys.contains(key)) return const SizedBox.shrink();
     if (value is List) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,12 +425,8 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
     final payload = record['payload'] is Map
         ? stringMap(record['payload'])
         : record;
-    final title = collection == 'tasks'
-        ? payload['description']?.toString()
-        : collection == 'payroll'
-        ? '${employeeLabel(payload['payroll_kind']?.toString() ?? 'payroll')} · ${payload['week_start'] ?? ''}'
-        : null;
     final id = record['employee_id'] as String?;
+    final presentation = presentEmployeeRecord(collection, record, _workspace!.employeeName(id));
     final actions = stringList(record['allowed_actions'])
         .where(
           (action) =>
@@ -441,39 +440,25 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
         key: ValueKey(
           '$collection-${record['id'] ?? '$id-${record['work_date']}'}',
         ),
-        title: Text(title ?? _workspace!.employeeName(id)),
-        subtitle: Text(
-          [
-            if (title != null) _workspace!.employeeName(id),
-            if (record['status'] != null)
-              employeeLabel(record['status'].toString()),
-            if (payload['net_pay'] != null) 'Net pay PHP ${payload['net_pay']}',
-            if (payload['outstanding_amount'] != null)
-              'Outstanding PHP ${payload['outstanding_amount']}',
-            if (payload['work_date'] != null) payload['work_date'].toString(),
-          ].join(' · '),
-        ),
+        title: Text(presentation.title),
+        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SpinaStatusLabel(label: presentation.status, tone: SpinaStatusTone.information),
+          for (final field in presentation.summaryFields.entries)
+            Text('${employeeLabel(field.key)}: ${field.value}'),
+        ]),
         childrenPadding: const EdgeInsets.all(14),
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final pair in payload.entries.where(
-            (entry) => !const [
-              'employee_id',
-              'device_id',
-              'request_id',
-              'action',
-              'expected_version',
-              'is_self',
-              'can_review',
-              'can_approve_payroll',
-              'can_approve_advance',
-            ].contains(entry.key),
-          ))
-            _value(pair.key, pair.value),
-          if (record['version'] != null) _value('version', record['version']),
-          if (record['updated_at'] != null)
-            _value('updated_at', record['updated_at']),
-          if (record['id'] != null) _value('record_id', record['id']),
+          ExpansionTile(
+            title: const Text('Details'),
+            expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final key in presentation.detailKeys) _value(key, payload[key]),
+              if (record['version'] != null) _value('version', record['version']),
+              if (record['updated_at'] != null) _value('updated_at', record['updated_at']),
+              if (record['id'] != null) _value('record_id', record['id']),
+            ],
+          ),
           if (historyRows.isNotEmpty)
             ExpansionTile(
               title: const Text('Record history'),
