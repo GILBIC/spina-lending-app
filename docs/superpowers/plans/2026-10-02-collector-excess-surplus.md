@@ -210,23 +210,28 @@ git diff --check
 - [ ] Review coverage below and record blocked adapters/platform evidence separately. Leave real setup, opening credits, permissions and production feature flags untouched. Keep source-aware recovery guard; no incompatible downgrade or disposal of evidence.
 - [ ] Update this PR from planning-only only after product commits exist; keep Draft/open/unmerged and automatic merge off. Synchronize GitHub, latest Notion checkpoint and Create State with exact head, dependency status, completed/remaining tasks, tests, screenshots/private-safe evidence and next owner action. Disclose failed connectors. No merge/deploy/live migration/Master checkbox changes.
 
-## Coverage ledger at handoff
+## Execution ledger — 2 October 2026
+
+This dated ledger supersedes the original unchecked planning checklist above.
+See [verification receipt](../../operations/collector-surplus-verification.md)
+for actual test/platform evidence and the PR checks for the published revision.
+The feature remains a dependent Draft against Treasury #490 at `08c31edd`.
 
 | Task | Coverage | Status |
 | --- | --- | --- |
-| 0 | Dependency and source/lock ownership | Pending Codex |
-| 1 | S1/S4/S9 schema, exact contracts and authority | Not implemented |
-| 2 | S2/S3 actual count/acceptance/cash once | Not implemented |
-| 3 | S1/S3/S4 identification and credit | Not implemented |
-| 4 | S5 return/reservation/recovery | Not implemented |
-| 5 | S6 explicit application | Not implemented; opt-in adapter gate |
-| 6 | S7 source corrections/reclassification | Not implemented; historical adapter gate |
-| 7 | S8 opening and accounting | Not implemented; real mapping/count gate |
-| 8 | S9 reconciliation/backup/rollback integrity | Not implemented |
-| 9 | S10 Web and own-Collector scope | Not implemented |
-| 10 | S10 Android/Windows parity | Not implemented |
-| 11 | S11 and S1–S12 integrated evidence | Not run |
-| 12 | S12 exact-head CI and handoff | Not run |
+| 0 | Dependency and source/lock ownership | Completed in isolated dependent checkout; main and #490 unchanged. |
+| 1 | S1/S4/S9 schema, exact contracts and authority | Implemented; current role, own scope, exact money and database guard tests passed. |
+| 2 | S2/S3 actual count/acceptance/cash once | Implemented; exact, over, short and zero counts, real receipt, contention and rollback passed. |
+| 3 | S1/S3/S4 identification and credit | Implemented; independent recognition without duplicate cash and bounded capacity passed. |
+| 4 | S5 return/reservation/recovery | Implemented; partial/cross-wallet returns, fees, incoming reversal, delayed receipt and source freezing passed. |
+| 5 | S6 explicit application | Own intent implemented. Execution explicitly blocked: protected custody split adapter unavailable; no credit consumed. |
+| 6 | S7 source corrections/reclassification | Evidenced review/recovery implemented. Historical borrower posting and disputed-cash inclusion explicitly blocked. |
+| 7 | S8 opening and accounting | Operational credit/pending-excess anchors implemented and tested. Automatic liability GL mapping/posting unavailable; real figures unconfigured. |
+| 8 | S9 reconciliation/backup/rollback integrity | Implemented; current evidence replay, source watermarks, runtime guard and populated synthetic restore passed. |
+| 9 | S10 Web and own-Collector scope | Implemented; full Portal tests and named synthetic Web/Windows checks passed; final review corrections included. |
+| 10 | S10 Android/Windows parity | Implemented; final native189 focused checks/analyzer and named layout matrix passed. Pre-final full run1224/1skip; exact published source requires full CI. Physical-device/TalkBack acceptance unverified. |
+| 11 | S11 and S1–S12 integrated evidence | Fresh PostgreSQL116/116 and populated restore passed. Both independent reviews resolved their five finding groups with targeted evidence. |
+| 12 | S12 exact-head CI and handoff | Local verification and documented dependent publication prepared. Exact-head CI status is recorded by the published PR checks and dated current handoff; no merge/deployment authorized by this plan. |
 
 ## Copyable Codex task
 
