@@ -83,7 +83,7 @@ class MobileOfflinePolicy {
         'The cached route is explicitly read-only; collection, correction, remittance, custody, and other financial writes require the live server.',
     availableOffline: <String>[
       'The last successfully downloaded assigned route may be shown as an encrypted Offline copy for the signed-in collector.',
-      'Cached route values are presentation-only and may be stale; Gilbic does not recalculate balances or eligibility offline.',
+      'Cached route values are presentation-only and may be stale; SPINA does not recalculate balances or eligibility offline.',
       'Attendance and break events are encrypted for this account and device, keep their original capture time, and sync automatically when the app resumes or reconnects.',
       'A still-valid secure session may remain open during a temporary network outage.',
     ],
@@ -103,7 +103,7 @@ class MobileOfflinePolicy {
     role: AppRole.client,
     summary:
         'Client mobile financial data and request/evidence workflows require a live SPINA server connection. '
-        'Gilbic does not create an offline borrower ledger or silently queue renewal/payment-proof requests.',
+        'SPINA does not create an offline borrower ledger or silently queue renewal/payment-proof requests.',
     availableOffline: <String>[
       'A still-valid secure session may remain open during a temporary network outage.',
       'Already-rendered screens may remain visible, but their loan/payment values must be treated as stale until refreshed.',

@@ -1,8 +1,8 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_alerts_audit.dart';
@@ -70,7 +70,7 @@ class ManagementDashboard extends StatefulWidget {
 }
 
 class _ManagementDashboardState extends State<ManagementDashboard> {
-  late final ManagementDashboardOverviewRepository _overviewRepository;
+  late ManagementDashboardOverviewRepository _overviewRepository;
   ManagementDashboardOverview? _overview;
   bool _loadingOverview = true;
   String? _overviewError;
@@ -98,6 +98,22 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
   }
 
   @override
+  void didUpdateWidget(ManagementDashboard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.overviewRepository != widget.overviewRepository) {
+      _overview = null;
+      _deviceId = null;
+      _deviceIdLoad = null;
+      _overviewRepository =
+          widget.overviewRepository ??
+          SpinaManagementDashboardOverviewRepository();
+      unawaited(_loadOverview());
+    }
+  }
+
+  @override
   void dispose() {
     _requestGeneration += 1;
     super.dispose();
@@ -110,17 +126,25 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
   }
 
   Future<String> _loadAndCacheDeviceId() async {
+    final provider = widget.deviceIdentityProvider;
     try {
-      final identity = await widget.deviceIdentityProvider.load();
-      _deviceId = identity.installationId;
+      final identity = await provider.load();
+      if (provider == widget.deviceIdentityProvider) {
+        _deviceId = identity.installationId;
+      }
       return identity.installationId;
     } finally {
-      _deviceIdLoad = null;
+      if (provider == widget.deviceIdentityProvider) {
+        _deviceIdLoad = null;
+      }
     }
   }
 
   Future<void> _loadOverview({bool refresh = false}) async {
     final generation = ++_requestGeneration;
+    final session = widget.session;
+    final repository = _overviewRepository;
+    final provider = widget.deviceIdentityProvider;
     setState(() {
       _loadingOverview = true;
       _overviewError = null;
@@ -128,8 +152,14 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     });
     try {
       final deviceId = await _loadDeviceIdOnce();
-      final overview = await _overviewRepository.loadOverview(
-        widget.session,
+      if (!mounted ||
+          session != widget.session ||
+          repository != _overviewRepository ||
+          provider != widget.deviceIdentityProvider) {
+        return;
+      }
+      final overview = await repository.loadOverview(
+        session,
         deviceId: deviceId,
       );
       if (!mounted || generation != _requestGeneration) return;
@@ -137,9 +167,11 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     } on Object catch (error) {
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
-        _overviewError = error is SpinaApiException
-            ? error.message
-            : refresh
+        if (error is SpinaApiException &&
+            (error.statusCode == 401 || error.statusCode == 403)) {
+          _overview = null;
+        }
+        _overviewError = refresh
             ? 'The live Management overview could not be refreshed.'
             : 'The live Management overview could not be loaded.';
         _overviewStatusCode = error is SpinaApiException
@@ -690,6 +722,10 @@ class _ManagementOverviewInitialError extends StatelessWidget {
                       icon: const Icon(Icons.login),
                       label: const Text('Sign in again'),
                     )
+                  : statusCode == 403
+                  ? const Text(
+                      'Access unavailable. Return to Profile & security or contact Management.',
+                    )
                   : OutlinedButton.icon(
                       key: const Key('management-overview-retry'),
                       onPressed: onRetry,
@@ -719,7 +755,12 @@ class _ManagementAttentionGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
-        final columnCount = constraints.maxWidth >= 900
+        final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350
+            ? 2
+            : scale > 1.1
+            ? 3
+            : constraints.maxWidth >= 900
             ? 6
             : constraints.maxWidth >= 600
             ? 5
@@ -761,7 +802,12 @@ class _ManagementKpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 10.0;
-        final columnCount = constraints.maxWidth >= 900 ? 3 : 2;
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350
+            ? 1
+            : constraints.maxWidth >= 900
+            ? 3
+            : 2;
         final cardWidth =
             (constraints.maxWidth - (spacing * (columnCount - 1))) /
             columnCount;
@@ -793,8 +839,8 @@ class _ManagementKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = _kpiContent(context, metric);
-    return SizedBox(
-      height: 104,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 104),
       child: Card(
         key: Key('management-overview-metric-${metric.key.name}'),
         margin: EdgeInsets.zero,
@@ -812,27 +858,19 @@ class _ManagementKpiCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      content.$1,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                  Text(
+                    content.$1,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     content.$2,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                   if (content.$3 != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       content.$3!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -856,9 +894,9 @@ class _ManagementAttentionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = _attentionContent(metric);
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
+    return ConstrainedBox(
       key: Key('management-overview-metric-${metric.key.name}'),
-      height: 92,
+      constraints: const BoxConstraints(minHeight: 92),
       child: Semantics(
         button: true,
         label:
@@ -907,8 +945,6 @@ class _ManagementAttentionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       content.$1,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
@@ -947,11 +983,11 @@ bool _metricHasAttention(ManagementDashboardMetric metric) {
 }
 
 (String, String) _attentionContent(ManagementDashboardMetric metric) {
-  final amount = _formatMoney(metric.amount ?? '0.00');
+  final amount = formatSpinaMoney(metric.amount);
   return switch (metric.key) {
     ManagementDashboardMetricKey.assignedRemittances => (
       'Remittances',
-      'PHP $amount awaiting receipt',
+      '$amount awaiting receipt',
     ),
     ManagementDashboardMetricKey.protectedRenewals => (
       'Renewal requests',
@@ -993,7 +1029,7 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
   ManagementDashboardMetric metric,
 ) {
   final count = metric.count ?? 0;
-  final amount = _formatMoney(metric.amount ?? '0.00');
+  final amount = formatSpinaMoney(metric.amount);
   return switch (metric.key) {
     ManagementDashboardMetricKey.activeClients => (
       '$count',
@@ -1011,17 +1047,17 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
       null,
     ),
     ManagementDashboardMetricKey.outstandingBalance => (
-      'PHP $amount',
+      amount,
       'Outstanding',
       null,
     ),
     ManagementDashboardMetricKey.latestCollections => (
-      'PHP $amount',
+      amount,
       'Collected',
       '$count entries${_asOfText(context, metric.asOfDate)}',
     ),
     ManagementDashboardMetricKey.unremittedCollections => (
-      'PHP $amount',
+      amount,
       'Unremitted cash',
       '$count collection entries',
     ),
@@ -1029,32 +1065,12 @@ String _attentionBadgeText(ManagementDashboardMetric metric) {
   };
 }
 
-String _updatedText(BuildContext context, DateTime generatedAt) {
-  final local = spinaBusinessWallClock(generatedAt);
-  final date = MaterialLocalizations.of(context).formatMediumDate(local);
-  final time = TimeOfDay.fromDateTime(local).format(context);
-  return 'Updated $date at $time';
-}
+String _updatedText(BuildContext context, DateTime generatedAt) =>
+    'Updated ${formatSpinaInstant(generatedAt)} (Asia/Manila)';
 
-String _asOfText(BuildContext context, DateTime? asOfDate) {
-  if (asOfDate == null) return '';
-  final calendarDate = DateTime(asOfDate.year, asOfDate.month, asOfDate.day);
-  final date = MaterialLocalizations.of(context).formatMediumDate(calendarDate);
-  return ' • $date';
-}
-
-String _formatMoney(String value) {
-  final parts = value.split('.');
-  final integer = parts.first;
-  final grouped = StringBuffer();
-  for (var index = 0; index < integer.length; index++) {
-    if (index > 0 && (integer.length - index) % 3 == 0) {
-      grouped.write(',');
-    }
-    grouped.write(integer[index]);
-  }
-  return '${grouped.toString()}.${parts[1]}';
-}
+String _asOfText(BuildContext context, DateTime? value) => value == null
+    ? ''
+    : ' • ${formatSpinaCalendarDate('${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}')}';
 
 String _metricDestinationLabel(ManagementDashboardMetricKey key) {
   return switch (key) {
@@ -1155,7 +1171,12 @@ class _ManagementModuleGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 8.0;
-        final columnCount = constraints.maxWidth >= 900
+        final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+        final columnCount = scale > 1.5 || constraints.maxWidth < 350
+            ? 2
+            : scale > 1.1
+            ? 3
+            : constraints.maxWidth >= 900
             ? 6
             : constraints.maxWidth >= 600
             ? 5
@@ -1191,9 +1212,9 @@ class _ManagementModuleShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
+    return ConstrainedBox(
       key: Key(module.action.keyName),
-      height: 92,
+      constraints: const BoxConstraints(minHeight: 92),
       child: Semantics(
         button: true,
         label: '${module.title}. ${module.description}',
@@ -1225,8 +1246,6 @@ class _ManagementModuleShortcut extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       module.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
@@ -1519,13 +1538,13 @@ const _managementSections = <_ManagementSection>[
         'Review your own Management account, session, device, and live-server requirements.',
     modules: <_ManagementModule>[
       _ManagementModule(
-        'My account & devices',
+        'Profile & security',
         'Profile, current session, registered devices, and sign-out controls',
         Icons.admin_panel_settings_outlined,
         action: _ManagementAction.myAccountDevices,
       ),
       _ManagementModule(
-        'Connectivity & offline policy',
+        'Offline & sync',
         'See which Management data and actions require the live server',
         Icons.cloud_off_outlined,
         action: _ManagementAction.offlinePolicy,

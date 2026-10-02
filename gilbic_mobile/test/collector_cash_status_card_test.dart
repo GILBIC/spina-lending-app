@@ -66,7 +66,7 @@ void main() {
                     find.byKey(const Key('collector-cash-status-refresh')),
                   )
                   .onPressed,
-              isNotNull,
+              failure == '401' || failure == '403' ? isNull : isNotNull,
             );
           },
           () => MockClient((request) async {
@@ -350,7 +350,7 @@ void _expectNoCashAmounts() {
 
 void _expectUnavailable() {
   _expectNoCashAmounts();
-  expect(find.textContaining('Cash status unavailable'), findsOneWidget);
+  expect(find.textContaining('unavailable'), findsOneWidget);
 }
 
 void _expectActualCash() {

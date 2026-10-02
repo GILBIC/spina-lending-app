@@ -63,9 +63,9 @@ void main() {
     );
     expect(find.text('Active clients'), findsOneWidget);
     expect(find.text('Overdue loans'), findsOneWidget);
-    expect(find.text('PHP 987,654.32'), findsOneWidget);
+    expect(find.text('₱987,654.32'), findsOneWidget);
     expect(find.text('Outstanding'), findsOneWidget);
-    expect(find.text('PHP 3,750.50'), findsOneWidget);
+    expect(find.text('₱3,750.50'), findsOneWidget);
     expect(find.text('Unremitted cash'), findsOneWidget);
     expect(
       find.byKey(const Key('management-overview-metric-protectedRenewals')),

@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -19,6 +20,7 @@ void main() {
       final repository = _CaptureRepository();
       await tester.pumpWidget(
         MaterialApp(
+          theme: SpinaTheme.light,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: const TextScaler.linear(2),
@@ -156,7 +158,7 @@ void main() {
     expect(find.text('Retry same entry'), findsOneWidget);
     expect(
       find.text(
-        'Gilbic could not confirm this collection. Check your connection, then use Retry for the same entry.',
+        'SPINA could not confirm this collection. Check your connection, then use Retry for the same entry.',
       ),
       findsOneWidget,
     );
