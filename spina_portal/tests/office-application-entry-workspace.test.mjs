@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-application-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -88,7 +89,9 @@ for (const role of ['employee', 'management']) {
     fill(entry); save(entry); save(entry);
     await setImmediate();
     assert.equal(posts(h).length, 1);
-    assert.deepEqual(posts(h)[0], { path: `${BASE}/drafts`, options: { method: 'POST', signal: h.controller.signal, body: {
+    assert.ok(posts(h)[0].options.signal instanceof AbortSignal);
+    assert.equal(posts(h)[0].options.signal.aborted,false);
+    assert.deepEqual(posts(h)[0], { path: `${BASE}/drafts`, options: { method: 'POST', signal: posts(h)[0].options.signal, body: {
       cif_version_id: CIF, application_reference: REFERENCE, information: information(),
     } } });
     assert.equal(h.requests.at(-1).path, SUMMARY);
@@ -108,7 +111,9 @@ for (const role of ['employee', 'management']) {
     assert.equal(input(entry, 'requested_amount').value, '9007199254740993.01');
     set(entry, 'purpose', 'Updated private purpose'); save(entry); await setImmediate();
     const expected = information(); expected.request.purpose = 'Updated private purpose';
-    assert.deepEqual(posts(h)[0], { path: `${BASE}/${APP}/draft-versions`, options: { method: 'POST', signal: h.controller.signal, body: {
+    assert.ok(posts(h)[0].options.signal instanceof AbortSignal);
+    assert.equal(posts(h)[0].options.signal.aborted,false);
+    assert.deepEqual(posts(h)[0], { path: `${BASE}/${APP}/draft-versions`, options: { method: 'POST', signal: posts(h)[0].options.signal, body: {
       cif_version_id: CIF, expected_version_number: 1, information: expected,
     } } });
     assert.match(root.textContent, /Updated private purpose/);

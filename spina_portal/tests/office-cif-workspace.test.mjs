@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
 
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-cif-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -89,7 +90,7 @@ for (const role of ['employee', 'management']) {
     const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
     assert.deepEqual(h.navigation.find(({ id }) => id === navigationId), role === 'management'
       ? {id: navigationId, label: 'Clients & loans'}
-      : {id: navigationId, label: 'CIF review', group: 'Daily work'}, `${role} CIF review navigation is not connected`);
+      : {id: navigationId, label: 'CIF review', group: 'Office work'}, `${role} CIF review navigation is not connected`);
     if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
     const root = officeSelection(h, role);
     assert.match(root.querySelector('label').textContent, /Office intake reference/);

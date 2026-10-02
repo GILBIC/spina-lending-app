@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
 
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-area-management', 'employee-cif-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -76,7 +77,7 @@ async function openCif(h, role) {
   const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
   assert.deepEqual(h.navigation.filter(({ id }) => id === navigationId), [role === 'management'
     ? {id: navigationId, label: 'Clients & loans'}
-    : {id: navigationId, label: 'CIF review', group: 'Daily work'}]);
+    : {id: navigationId, label: 'CIF review', group: 'Office work'}]);
   if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
   const input = selection.querySelector('input');
   input.value = REFERENCE;

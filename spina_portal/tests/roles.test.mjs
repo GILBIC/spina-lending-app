@@ -7,7 +7,8 @@ import {
   availableRoleActions,
   normalizeRole,
 } from '../assets/roles.js';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-area-management']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 
 const areaNode = {

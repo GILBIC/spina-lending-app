@@ -1,4 +1,6 @@
 import {asArray, badge, emptyState, errorCard, escapeHtml as esc, loadingPanel, titleCase} from './ui.js';
+import {attendanceGuidance,employeeWorkDate} from './employee-workday.js';
+import {mountEmployeePayslipPrint,payslipPrintable} from './employee-payslip-print.js';
 
 const BASE = '/api/v1/employee-operations';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -64,6 +66,10 @@ const COLLECTIONS = {
 const CAPABILITIES = ['can_self_service','can_manage_staff','can_configure','can_prepare_payroll','can_approve_payroll','can_record_payments','can_assign_tasks','can_review_requests','can_review_shortages','can_prepare_accounting','can_view_statutory','can_report_shortage','can_record_advances'];
 const MONEY_FIELDS = new Set(['daily_rate','amount','expected_cash','accounted_cash','shortage_amount','disbursed_amount','repaid_amount','outstanding_amount','gross_pay','deductions','net_pay','paid_amount','balance_due','statement_balance','ledger_balance','sss_employee','sss_employer','philhealth_employee','philhealth_employer','pagibig_employee','pagibig_employer','employer_other','maximum_authorized_recovery','basic_earned','taxable_earned','tax_withheld','thirteenth_paid','other_benefits_paid','debit','credit']);
 const LABELS = Object.fromEntries(Object.values(FORMS).flatMap(form=>form.fields.map(item=>[item.name,item.label])));
+const VIEWS={workday:'Workday',tasks:'Tasks',timeoff:'Time off',advances:'Advances',payslips:'Payslips',other:'Other records'};
+const COLLECTION_VIEW={attendance:'workday',schedules:'workday',tasks:'tasks',requests:'timeoff',leave_ledger:'timeoff',advances:'advances',payroll:'payslips',payments:'payslips',payroll_history:'payslips'};
+const actionView=action=>action==='correction_request'?'workday':FORMS[action]?.group==='Tasks'?'tasks':FORMS[action]?.group==='Time and leave'?'timeoff':FORMS[action]?.group==='Advances'?'advances':FORMS[action]?.group==='Payroll'?'payslips':'other';
+const actionLabel=(action,record,workspace)=>action==='request_decide'&&record?.employee_id===workspace.actor.user_id?'Cancel my request':FORMS[action].label;
 Object.assign(LABELS,{full_name:'Employee',status:'Status',working_minutes:'Accepted working minutes',unpaid_break_minutes:'Unpaid break minutes',event_type:'Event',captured_at:'Captured at',received_at:'Received',decision_reason:'Review decision reason',request_kind:'Request category',disbursed_amount:'Principal disbursed',repaid_amount:'Principal repaid',outstanding_amount:'Outstanding principal',shortage_amount:'Recorded shortage',gross_pay:'Gross pay',deductions:'Deductions',net_pay:'Net pay',paid_amount:'Completed payments',balance_due:'Still due',period_end:'Period ends',journal_entry_id:'General Journal draft reference',explanation:'Employee explanation',approved_by:'Approved by',decided_by:'Decision by',recorded_by:'Payment recorded by',disbursed_at:'Disbursed at',original_payroll_id:'Original payroll reference',approval_reason:'Approval reason',original_history_id:'Original history reference',original_expected_version:'Original history revision'});
 Object.assign(LABELS,{minutes:'Minutes',amount:'Amount (PHP)',work_date:'Work date',as_of:'As of',description:'Description',reason:'Reason',source:'Reviewed source',reference:'Reference',evidence:'Supporting evidence',employee_acknowledgment:'Employee acknowledgment',settlement_evidence:'Verified settlement evidence',paid_minutes:'Reviewed payable minutes'});
 
@@ -187,7 +193,7 @@ function recordMarkup(workspace,record,index) {
   const scalar=Object.entries(data).filter(([key,value])=>LABELS[key]&&['string','number','boolean'].includes(typeof value));
   const actions=record.allowed_actions.filter(action=>recordAllowed(workspace,record,action));
   const components=asArray(data.components);
-  const rows=(name,label,fields)=>asArray(data[name]).length?`<h4>${label}</h4><div class="table-wrap"><table><thead><tr>${fields.map(key=>`<th>${esc(key==='due_date'?'Due date':titleCase(key))}</th>`).join('')}</tr></thead><tbody>${data[name].map(row=>`<tr>${fields.map(key=>`<td>${display(key,row[key])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'';
+  const rows=(name,label,fields)=>asArray(data[name]).length?`<h4>${label}</h4><div class="employee-evidence-rows">${data[name].map(row=>`<dl class="employee-details">${fields.map(key=>`<div><dt>${esc(key==='due_date'?'Due date':titleCase(key))}</dt><dd>${display(key,row[key])}</dd></div>`).join('')}</dl>`).join('')}</div>`:'';
   const original=data.request_kind==='correction'?`<h4>Original recorded events for the requested date</h4>${workspace.attendance.filter(event=>event.employee_id===record.employee_id&&manilaDate(event.payload.captured_at)===data.work_date).map(event=>`<p>${esc(titleCase(event.payload.event_type))} · ${esc(event.payload.captured_at)} · ${esc(titleCase(event.status))}</p>`).join('')||'<p>No original events recorded.</p>'}`:'';
   const proposed=object(data.proposed_terms)?`<div class="notice-card"><h4>Proposed advance terms awaiting review</h4><p>${esc(data.proposed_terms.reason)}</p><p>Employee agreement: ${esc(data.proposed_terms.employee_acknowledgment)}</p><p>Payroll authorization: ${esc(data.proposed_terms.payroll_authorization)}</p><table><thead><tr><th>Proposed due date</th><th>Proposed installment</th></tr></thead><tbody>${asArray(data.proposed_terms.installments).map(item=>`<tr><td>${esc(item.due_date)}</td><td>${currency(item.amount)}</td></tr>`).join('')}</tbody></table></div>`:'';
   return `<article class="data-card employee-record"><div class="section-heading"><h3>${esc(record.employee_id?employeeName(workspace,record.employee_id):COLLECTIONS[index.split(':')[0]])}</h3>${badge(record.status)}</div>
@@ -199,18 +205,25 @@ function recordMarkup(workspace,record,index) {
     ${original}${rows('installments','Current agreed principal repayment schedule',['due_date','amount'])}${proposed}${rows('repayment_history','Recorded repayments',['amount','occurred_at','reference','source'])}${rows('lines','Journal draft lines',['account_code','debit','credit'])}
     ${history.length?`<details><summary>Record history (${history.length})</summary>${history.map(item=>`<article><p>${esc(item.created_at)} · ${esc(titleCase(item.action))} · ${esc(titleCase(item.status))} · Revision ${esc(item.version)}</p><dl class="employee-details">${Object.entries(object(item.payload)?item.payload:{}).filter(([key,value])=>LABELS[key]&&['string','number','boolean'].includes(typeof value)).map(([key,value])=>`<div><dt>${esc(LABELS[key])}</dt><dd>${display(key,value)}</dd></div>`).join('')}</dl></article>`).join('')}</details>`:''}
     ${asArray(data.issues).length?`<div class="notice-card warning"><strong>Review required</strong><ul>${data.issues.map(issue=>`<li>${esc(issue)}</li>`).join('')}</ul></div>`:''}
-    ${actions.length?`<div class="inline-actions">${actions.map(action=>`<button type="button" class="button button-secondary" data-employee-action="${action}" data-employee-record="${index}">${esc(FORMS[action].label)}</button>`).join('')}</div>`:''}
+    ${actions.length?`<div class="inline-actions">${actions.map(action=>`<button type="button" class="button button-secondary" data-employee-action="${action}" data-employee-record="${index}">${esc(actionLabel(action,record,workspace))}</button>`).join('')}</div>`:''}
   </article>`;
 }
 
-export function mountEmployeeOperations({root,api,session,signal,now=()=>new Date()}) {
+export function mountEmployeeOperations({root,api,session,signal,now=()=>new Date(),getSession=()=>session,onController,onSnapshot,onReadState,presentation='default',initialView='workday',beforeTaskChange,afterTaskChange}) {
   if(!root)return ()=>{};
   mounts.get(root)?.();
   const controller=new AbortController();let disposed=false;let busy=false;let stale=false;let workspace=null;let selected=null;let removers=[];let pending=pendingBySession.get(session)||null;
   const feedbackId=`employee-feedback-${crypto.randomUUID()}`;let opener=null;
+  let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null;
+  let dateFrom=employeeWorkDate(now()),dateTo=dateFrom,allDates=false;
+  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
+  function dateVisible(day){return allDates||day>=dateFrom&&day<=dateTo;}
+  const currentScope=()=>getSession()?.user?.id===session?.user?.id;
+  const printing=mountEmployeePayslipPrint({root,signal:controller.signal,getCurrentScope:()=>currentScope()&&workspace?{userId:workspace.actor.user_id,employeeId:workspace.actor.employee_id,deviceId:workspace.actor.device_id}:null,loadWorkspace:async()=>{beforeTaskChange?.();const value=await api.request(`${BASE}/workspace`,{signal:controller.signal});return validateWorkspace(value,getSession());}});
+  const editorMatches=command=>selected&&command.action===selected.action&&(!selected.record || command.id===selected.record.id || command.original_payroll_id===selected.record.id || command.original_history_id===selected.record.id);
   const listen=(element,event,handler)=>{if(element){element.addEventListener(event,handler);removers.push(()=>element.removeEventListener(event,handler));}};
   function clear(){for(const remove of removers)remove();removers=[];for(const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')])input.value='';root.innerHTML='';}
-  function dispose(){if(disposed)return;disposed=true;controller.abort();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
+  function dispose(){if(disposed)return;disposed=true;controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
   function message(text,error=false){const element=root.querySelector('[data-employee-status]');if(element){if(error)element.innerHTML=errorCard(text);else element.textContent=text;}}
   function focusFeedback(){root.querySelector('[data-employee-status]')?.focus();}
   function restoreFocus(){
@@ -233,32 +246,51 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     const offline=globalThis.navigator?.onLine===false;
     for(const node of [...root.querySelectorAll('button'),...root.querySelectorAll('input'),...root.querySelectorAll('select'),...root.querySelectorAll('textarea')]) {
       const recovery=node.getAttribute('data-employee-check')!==null||node.getAttribute('data-employee-retry')!==null;
-      node.disabled=busy||offline||Boolean(pending&&!recovery)||Boolean(stale&&!recovery&&node.getAttribute('data-employee-refresh')===null);
+      const cancel=node.getAttribute('data-employee-cancel')!==null;
+      node.disabled=busy||offline||Boolean(pending&&!recovery)||Boolean(stale&&!recovery&&!cancel&&node.getAttribute('data-employee-refresh')===null);
+      if(editorStale && node.closest('[data-employee-editor]') && node.getAttribute('data-employee-cancel')===null)node.disabled=true;
     }
   }
   function setPending(value){pending=value;if(value)pendingBySession.set(session,value);else pendingBySession.delete(session);}
-  async function load({recover=Boolean(pending),successMessage=''}={}) {
+  async function load({recover=false,successMessage=''}={}) {
     if(disposed||busy)return;busy=true;lock();
+    if(!currentScope()){setPending(null);dispose();return;}
     try {
       const value=await api.request(`${BASE}/workspace${recover&&pending?`?request_id=${encodeURIComponent(pending.request_id)}`:''}`,{signal:controller.signal});
-      if(disposed)return;workspace=validateWorkspace(value,session);stale=false;
-      if(recover&&pending&&matchesResult(workspace.last_result,pending)) {successMessage=workspace.last_result.message;setPending(null);selected=null;}
+      if(disposed)return;if(!currentScope()){setPending(null);dispose();return;}
+      if(value?.actor?.user_id!==getSession()?.user?.id)throw Object.assign(new Error('Employee account identity changed. Sign in again.'),{status:403});
+      const next=validateWorkspace(value,getSession());
+      if(workspace && (next.actor.employee_id!==workspace.actor.employee_id || next.actor.device_id!==workspace.actor.device_id)){setPending(null);selected=null;clear();}
+      workspace=next;stale=false;
+      loadedDate=employeeWorkDate(now());
+      if(recover&&pending&&matchesResult(workspace.last_result,pending)) {successMessage=workspace.last_result.message;if(editorMatches(pending))selected=null;setPending(null);}
+      if(selected){
+        if(selected.record){const current=Object.keys(COLLECTIONS).flatMap(key=>workspace[key]).find(record=>record.id===selected.record.id&&record.employee_id===selected.record.employee_id);
+          if(!current||!recordAllowed(workspace,current,selected.action))selected=null;
+          else editorStale=current.version!==selected.record.version;
+        }else if(!createAllowed(workspace,selected.action))selected=null;
+      }
+      onSnapshot?.(workspace);
+      onReadState?.({status:'loaded'});
       render();if(successMessage)message(successMessage);
+      else if(editorStale)message('This record changed. Your draft is retained with its original revision; cancel editing and review the current record before submitting.');
       else if(pending)message('The result is not confirmed. Check the saved result, or retry the same unchanged request. Do not start another payment.');
-    } catch(error){if(disposed)return;stale=true;if(!denied(error)){if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else message(error,true);}}
+    } catch(error){if(disposed)return;stale=true;onReadState?.({status:[401,403].includes(error?.status)?'denied':'error'});if(!denied(error)){if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
     finally{busy=false;if(!disposed){lock();if(successMessage)restoreFocus();}}
   }
   async function execute(command) {
     if(disposed||busy||globalThis.navigator?.onLine===false)return;
+    if(!currentScope()){setPending(null);dispose();return;}
     setPending(command);busy=true;lock();message('Saving employee record…');let accepted='';let uncertain=false;let rejected=false;
     try {
       const result=await api.request(`${BASE}/actions`,{method:'POST',body:command,financial:true,signal:controller.signal});
       if(disposed)return;if(!matchesResult(result,command))throw Object.assign(new Error('The saved response could not be confirmed.'),{code:'network_uncertain'});
-      accepted=result.message;setPending(null);selected=null;
+      if(!currentScope()){setPending(null);dispose();return;}
+      accepted=result.message;if(editorMatches(command))selected=null;setPending(null);
     } catch(error){
       if(disposed)return;if(denied(error))return;
       uncertain=error?.code==='network_uncertain'||!error?.status||error.status>=500;
-      if(!uncertain){setPending(null);rejected=true;if(error.status===409){selected=null;stale=true;render();}message(error,true);}
+      if(!uncertain){setPending(null);rejected=true;if(error.status===409){editorStale=Boolean(selected);stale=true;render();}message(error,true);}
     } finally{busy=false;if(!disposed){lock();if(rejected){if(stale)root.querySelector('[data-employee-refresh]')?.focus();else focusFeedback();}}}
     if(disposed||!workspace)return;
     if(accepted){render();await load({recover:false,successMessage:accepted});}
@@ -266,28 +298,28 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   function editor(action,record=null) {
     if(busy||pending||stale||disposed||!(record?recordAllowed(workspace,record,action):createAllowed(workspace,action)))return;
-    opener={action,recordId:record?.id};selected={action,record};render();root.querySelector('[data-employee-editor]')?.scrollIntoView?.({block:'nearest'});root.querySelector('[data-employee-form]')?.querySelector('[name]')?.focus();
+    opener={action,recordId:record?.id};selected={action,record:record?structuredClone(record):null};editorStale=false;render();root.querySelector('[data-employee-editor]')?.scrollIntoView?.({block:'nearest'});root.querySelector('[data-employee-form]')?.querySelector('[name]')?.focus();
   }
   function editorMarkup(){
     if(!selected)return '';
     const {action,record}=selected;const form=FORMS[action];let fields=form.fields;
-    if(action==='request_decide')fields=[choice('decision','Decision',record.employee_id===workspace.actor.user_id?['cancelled']:['approved','rejected','cancelled']),reason,minutes('paid_minutes','Reviewed payable minutes (when applicable)',true)];
+    if(action==='request_decide')fields=record.employee_id===workspace.actor.user_id?[choice('decision','Decision',['cancelled']),reason]:[choice('decision','Decision',['approved','rejected','cancelled']),reason,minutes('paid_minutes','Reviewed payable minutes (when applicable)',true)];
     const profiles=workspace.profiles.filter(item=>action!=='shortage_report'||workspace.capabilities.can_manage_staff||item.employee_id===workspace.actor.user_id);
     const target=record?`<p>Employee: ${esc(employeeName(workspace,record.employee_id))}</p>`:form.subject==='self'?`<p>For: ${esc(employeeName(workspace,workspace.actor.employee_id))}</p>`:form.subject?inputMarkup(field('employee_id','Employee account', 'account'),{},form.subject==='account'?workspace.account_candidates:profiles.map(item=>({user_id:item.employee_id,full_name:item.payload.full_name} ))):'';
     let values=action==='advance_terms'&&object(record?.payload.proposed_terms)?record.payload.proposed_terms:record?.payload??{};
     if(action==='payroll_history_correct')values={...values,reason:''};
-    return `<section class="employee-editor" data-employee-editor><h3>${esc(form.label)}</h3>${record||form.subject==='self'?target:''}
+    return `<section class="employee-editor" data-employee-editor><h3>${esc(actionLabel(action,record,workspace))}</h3>${record||form.subject==='self'?target:''}
       ${action==='payroll_payment'?'<p>Record a payment that actually occurred. This form does not initiate a transfer. A reference alone is insufficient evidence of completion.</p>':''}
       ${action==='payroll_adjustment'?'<p>This creates a linked adjustment. Shortage recovery requires a lawful basis, individual responsibility, employee response and an authorized cap; it is never automatic.</p>':''}
       ${action==='payroll_history_correct'?`<p>The original history is preserved. Enter the complete corrected totals for payroll year ${esc(record.payload.year)} and a reason for this replacement.</p>`:''}
       ${action==='accounting_prepare'?'<p>Preparation creates a draft for authorized review. It does not post a journal or confirm settlement.</p>':''}
       ${fields.some(spec=>spec.type==='integer'&&/minutes/.test(spec.name))?'<p class="meta">For an eight-hour schedule, a full day is 480 minutes and half a day is 240 minutes. Enter the actual applicable time.</p>':''}
-      <form class="entry-form" data-employee-form="${action}" aria-describedby="${feedbackId}">${!record&&form.subject&&form.subject!=='self'?target:''}${fields.map(spec=>inputMarkup(spec,values,workspace.account_candidates)).join('')}<div class="inline-actions"><button type="submit" class="button button-primary">${esc(form.label)}</button><button type="button" class="button button-outline" data-employee-cancel>Cancel editing</button></div></form></section>`;
+      <form class="entry-form" data-employee-form="${action}" aria-describedby="${feedbackId}">${!record&&form.subject&&form.subject!=='self'?target:''}${fields.map(spec=>inputMarkup(spec,values,workspace.account_candidates)).join('')}<div class="inline-actions"><button type="submit" class="button button-primary">${esc(actionLabel(action,record,workspace))}</button><button type="button" class="button button-outline" data-employee-cancel>Cancel editing</button></div></form></section>`;
   }
   function buildCommand(form){
     const {action,record}=selected;const definition=FORMS[action];
     let fields=definition.fields;
-    if(action==='request_decide')fields=[choice('decision','Decision',record.employee_id===workspace.actor.user_id?['cancelled']:['approved','rejected','cancelled']),reason,minutes('paid_minutes','Reviewed payable minutes',true)];
+    if(action==='request_decide')fields=record.employee_id===workspace.actor.user_id?[choice('decision','Decision',['cancelled']),reason]:[choice('decision','Decision',['approved','rejected','cancelled']),reason,minutes('paid_minutes','Reviewed payable minutes',true)];
     const body=readFields(form,fields);
     let employeeId=record?.employee_id;
     if(!record&&definition.subject==='self')employeeId=workspace.actor.employee_id;
@@ -303,6 +335,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   async function attendance(eventType){
     if(disposed||busy||pending||stale||!workspace?.capabilities.can_self_service||globalThis.navigator?.onLine===false)return;
+    if(loadedDate!==employeeWorkDate(now())){stale=true;message('The Manila work date changed. Refresh current attendance before recording a new event.');lock();return;}
     if(!UUID.test(workspace.actor.device_id)||!UUID.test(workspace.actor.employee_id)){message(new Error('The current registered employee device could not be verified. Refresh before recording attendance.'),true);return;}
     const capturedAt=now().toISOString();
     const today=workspace.attendance.filter(item=>item.employee_id===workspace.actor.employee_id&&manilaDate(item.payload.captured_at)===manilaDate(capturedAt));
@@ -313,7 +346,8 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     await execute({action:'attendance_record',request_id:crypto.randomUUID(),id:crypto.randomUUID(),expected_version:0,employee_id:workspace.actor.employee_id,event_type:eventType,captured_at:capturedAt,device_id:workspace.actor.device_id,previous_event_id:prior?.id??null,sequence,offline:false});
   }
   function render(){
-    clear();if(!workspace)return;
+    const retained=selected&&selected===renderedSelection?root.querySelector('[data-employee-editor]'):null;
+    retained?.remove();clear();if(!workspace)return;
     const available=Object.entries(FORMS).filter(([action])=>createAllowed(workspace,action));
     const groups=[...new Set(available.map(([,form])=>form.group))];
     const reviewer=workspace.capabilities.can_manage_staff||workspace.capabilities.can_configure
@@ -346,23 +380,38 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       <p class="meta" data-employee-connection></p>
       ${setupNotice}
       ${summary}
-      ${workspace.capabilities.can_self_service?`<section class="employee-time"><h3>My attendance</h3><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
+      ${presentation==='employee'?`<nav class="inline-actions" aria-label="Work and pay views">${Object.entries(VIEWS).map(([id,label])=>`<button class="button button-outline" type="button" data-employee-view-button="${id}">${label}</button>`).join('')}</nav>`:''}
+      ${presentation==='employee'?`<section data-employee-view="workday"><h3>Loaded attendance dates</h3><label>From<input type="date" name="attendanceFrom" value="${esc(dateFrom)}" /></label><label>Through<input type="date" name="attendanceTo" value="${esc(dateTo)}" /></label><button class="button button-outline" type="button" data-employee-all-dates>${allDates?'Show current date':'Show all loaded dates'}</button><p>This filters loaded records. It does not fetch or delete earlier days.</p></section>`:''}
+      ${workspace.capabilities.can_self_service?`<section class="employee-time" data-employee-view="workday"><h3>My attendance</h3><p>${esc(attendanceGuidance({events:workspace.attendance,employeeId:workspace.actor.employee_id,workDate:loadedDate}).label)}</p><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
       <div class="employee-command-groups">${groups.map(group=>`<section><h3>${esc(group)}</h3><div class="inline-actions">${available.filter(([,form])=>form.group===group).map(([action,form])=>`<button type="button" class="button button-outline" data-employee-create="${action}">${esc(form.label)}</button>`).join('')}</div></section>`).join('')}</div>
       <div id="${feedbackId}" data-employee-status role="status" aria-live="polite" tabindex="-1"></div>
       ${pending?'<div class="notice-card warning"><h3>Confirm previous submission</h3><p>The same request identity is retained. Check its result before creating any other change.</p><button type="button" class="button button-secondary" data-employee-check>Check saved result</button><button type="button" class="button button-outline" data-employee-retry>Retry same unchanged request</button></div>':''}
       ${editorMarkup()}
-      ${workspace.attendance_days.length?`<section><h3>Attendance day review</h3>${workspace.attendance_days.map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
+      ${workspace.attendance_days.length?`<section><h3>Attendance day review</h3>${workspace.attendance_days.filter(day=>presentation!=='employee'||dateVisible(day.work_date)).map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
       ${workspace.leave_balances.length?`<section><h3>Leave balances</h3>${workspace.leave_balances.map(balance=>`<article class="data-card"><strong>${esc(employeeName(workspace,balance.employee_id))}</strong><p>As of ${esc(balance.as_of)} · ${balance.eligible?'Eligible':'Not yet eligible'}</p><p>Available: ${esc(balance.available_minutes)} minutes · Used: ${esc(balance.used_minutes)} · Reserved: ${esc(balance.reserved_minutes)} · Accrued: ${esc(balance.accrued_minutes)} · Verified opening: ${esc(balance.opening_minutes)}</p></article>`).join('')}</section>`:''}
-      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length})</summary><div class="employee-record-grid">${workspace[key].map((record,index)=>recordMarkup(workspace,record,`${key}:${index}`)).join('')}</div></details>`).join('')}`;
+      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length} loaded)</summary><div class="employee-record-grid">${workspace[key].map((record,index)=>({record,index})).filter(({record})=>presentation!=='employee'||key!=='attendance'||dateVisible(employeeWorkDate(record.payload.captured_at))).map(({record,index})=>recordMarkup(workspace,record,`${key}:${index}`)+(presentation==='employee'&&key==='payroll'&&record.employee_id===workspace.actor.employee_id&&payslipPrintable(record)?`<button class="button button-secondary" type="button" data-employee-print-payroll="${record.id}" data-employee-print-version="${record.version}">Print payslip</button>`:'')).join('')}</div></details>`).join('')}`;
+    if(retained)root.querySelector('[data-employee-editor]')?.replaceWith(retained);
+    renderedSelection=selected;
+    listen(root.querySelector('[data-employee-all-dates]'),'click',()=>{allDates=!allDates;if(!allDates)dateFrom=dateTo=employeeWorkDate(now());render();});
+    for(const name of ['attendanceFrom','attendanceTo'])listen(root.querySelector(`[name="${name}"]`),'change',()=>{const value=root.querySelector(`[name="${name}"]`).value;if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return;if(name==='attendanceFrom')dateFrom=value;else dateTo=value;allDates=false;render();});
+    for(const button of root.querySelectorAll('[data-employee-print-payroll]'))listen(button,'click',async()=>{if(busy||pending||stale||disposed)return;busy=true;lock();try{await printing.open(button.getAttribute('data-employee-print-payroll'),Number(button.getAttribute('data-employee-print-version')));}catch(error){if(!denied(error))message(error,true);}finally{busy=false;if(!disposed){lock();afterTaskChange?.();}}});
+    if(presentation==='employee'){
+      for(const section of root.querySelectorAll('[data-employee-collection]'))section.setAttribute('data-employee-view',COLLECTION_VIEW[section.getAttribute('data-employee-collection')]||'other');
+      const commandGroups=root.querySelector('.employee-command-groups');
+      for(const section of commandGroups?.querySelectorAll('section')||[])section.setAttribute('data-employee-view',actionView(section.querySelector('[data-employee-create]')?.getAttribute('data-employee-create')));
+      const days=root.querySelectorAll('section');for(const section of days){if(section.querySelector('h3')?.textContent==='Attendance day review')section.setAttribute('data-employee-view','workday');if(section.querySelector('h3')?.textContent==='Leave balances')section.setAttribute('data-employee-view','timeoff');}
+      for(const button of root.querySelectorAll('[data-employee-view-button]'))listen(button,'click',()=>selectView(button.getAttribute('data-employee-view-button')));
+      selectView(view);
+    }
     listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());
     listen(root.querySelector('[data-employee-check]'),'click',()=>load({recover:true}));
     listen(root.querySelector('[data-employee-retry]'),'click',()=>{if(pending)void execute(pending);});
     for(const button of root.querySelectorAll('[data-employee-create]'))listen(button,'click',()=>editor(button.getAttribute('data-employee-create')));
     for(const button of root.querySelectorAll('[data-employee-action]'))listen(button,'click',()=>{const [key,index]=button.getAttribute('data-employee-record').split(':');editor(button.getAttribute('data-employee-action'),workspace[key][Number(index)]);});
     for(const button of root.querySelectorAll('[data-employee-attendance]'))listen(button,'click',()=>attendance(button.getAttribute('data-employee-attendance')));
-    listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;render();restoreFocus();});
+    listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;editorStale=false;render();restoreFocus();});
     const form=root.querySelector('[data-employee-form]');
-    listen(form,'submit',event=>{event.preventDefault();if(busy||pending||stale||disposed)return;try{void execute(buildCommand(form));}catch(error){message(error,true);focusFeedback();}});
+    listen(form,'submit',event=>{event.preventDefault();if(busy||pending||stale||editorStale||disposed)return;try{void execute(buildCommand(form));}catch(error){message(error,true);focusFeedback();}});
     if(selected)for(const button of root.querySelectorAll('[data-employee-add-row]'))listen(button,'click',()=>{
       if(busy||pending)return;const spec=FORMS[selected.action].fields.find(item=>item.name===button.getAttribute('data-employee-add-row'));
       const parent=form.querySelector(`[data-employee-rows="${spec.name}"]`);const rows=[...parent.querySelectorAll('[data-employee-row]')].map(row=>readFields(row,spec.fields,false));
@@ -372,5 +421,6 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
   if(signal?.aborted){dispose();return dispose;}
+  onController?.({refresh:options=>load({recover:options?.recover===true}),selectView,isWritePending:()=>busy||Boolean(pending),dispose});
   root.innerHTML=loadingPanel('Loading private employee records…');void load();return dispose;
 }

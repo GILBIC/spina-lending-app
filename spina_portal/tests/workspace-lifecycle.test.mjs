@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MemoryStorage, SessionStore } from '../assets/session.js';
+import {Element as ParsedElement} from './helpers/dom.mjs';
+import {workspace,SELF} from './helpers/employee-workspace.mjs';
 
 let instance = 0;
 const tick = () => new Promise((resolve) => setImmediate(resolve));
@@ -52,12 +54,13 @@ async function harness(t, role, roles = [role]) {
     'environment-label', 'refresh-workspace', 'logout-button', 'login-form',
     'workspace-choice', 'workspace-choice-label', 'screen-sharing-controls',
   ]) elements.set(id, new Element());
+  if(role==='employee'){elements.set('role-content',new ParsedElement());elements.set('role-navigation',new ParsedElement());}
   const events = new EventTarget();
   const sessionStorage = new MemoryStorage();
   const localStorage = new MemoryStorage();
   const session = {
     access_token: 'synthetic-session', refresh_token: 'synthetic-refresh',
-    user: { id: 'synthetic-user', role, roles, permissions: [], full_name: 'Office user' },
+    user: { id: role==='employee'?SELF:'synthetic-user', role, roles, permissions: [], full_name: 'Office user' },
   };
   sessionStorage.setItem(SessionStore.SESSION_KEY, JSON.stringify(session));
   const accounts = [];
@@ -75,6 +78,7 @@ async function harness(t, role, roles = [role]) {
     fetch: async (url) => {
       if (url.endsWith('/auth/me')) return json({ user: session.user });
       if (url.endsWith('/auth/logout')) return logoutResponse.promise;
+      if(role==='employee'&&url.endsWith('/employee-operations/workspace'))return json(workspace());
       if (url.endsWith('/account')) {
         const result = deferred();
         accounts.push(result);
@@ -96,6 +100,11 @@ async function harness(t, role, roles = [role]) {
     }
   });
   await import(`../assets/app.js?lifecycle=${++instance}`);
+  if(role==='employee'){
+    for(let count=0;count<30&&!elements.get('role-navigation').querySelector('[data-nav-target="employee-account"]');count+=1)await tick();
+    await tick();
+    const event=new Event('click');Object.defineProperty(event,'target',{value:elements.get('role-navigation').querySelector('[data-nav-target="employee-account"]')});elements.get('role-navigation').dispatchEvent(event);
+  }
   for (let count = 0; count < 30 && accounts.length === 0; count += 1) await tick();
   assert.equal(accounts.length, 1, 'boot must reach the real office workspace');
   return { elements, events, accounts, logoutResponse };
@@ -149,7 +158,7 @@ for (const role of ['employee', 'management', 'client']) {
     const h = await harness(t, role);
     const refresh = h.elements.get('refresh-workspace').emit('click');
     assert.equal(h.accounts.length, 2);
-    h.accounts[1].resolve(json({ profile: { full_name: 'Current office account' } }));
+    h.accounts[1].resolve(json({ profile: { full_name: 'Current office account' },devices:[] }));
     await refresh;
     const current = h.elements.get('role-content').innerHTML;
     assert.match(current, /Current office account/);
