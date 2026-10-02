@@ -17,7 +17,9 @@ $accepted = @(
 )
 foreach ($case in $accepted) {
     $actual = Resolve-SafePortalUri -Value $case[0]
-    if ($actual -ne $case[1]) { throw "Unexpected normalized URL for $($case[0]): $actual" }
+    # Windows .NET Framework expands IPv6 text; compare its canonical URI.
+    $expected = ([System.Uri]::new($case[1])).AbsoluteUri.TrimEnd("/")
+    if ($actual -ne $expected) { throw "Unexpected normalized URL for $($case[0]): $actual" }
 }
 
 $rejected = @(
