@@ -262,7 +262,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     if(target&&!target.disabled)target.focus();
     opener=null;
   }
-  function denied(error){if([401,403].includes(error?.status)){printing.close();pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);return true;}return false;}
+  function denied(error){if([401,403].includes(error?.status)){printing.close();pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);onReadState?.({status:'denied'});return true;}return false;}
   function connection(){if(disposed)return;expireGuidance();lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
   function lock(){
     const offline=globalThis.navigator?.onLine===false;
@@ -297,7 +297,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       render();if(successMessage)message(successMessage);
       else if(editorStale)message('This record changed. Your draft is retained with its original revision; cancel editing and review the current record before submitting.');
       else if(pending)message('The result is not confirmed. Check the saved result, or retry the same unchanged request. Do not start another payment.');
-    } catch(error){if(disposed)return;stale=true;onReadState?.({status:[401,403].includes(error?.status)?'denied':'error'});if(!denied(error)){if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
+    } catch(error){if(disposed)return;stale=true;if(!denied(error)){onReadState?.({status:'error'});if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
     finally{busy=false;if(!disposed){lock();if(successMessage&&!selected)restoreFocus();}restoreEditorFocus();}
   }
   async function execute(command) {
@@ -423,7 +423,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     renderedSelection=selected;
     listen(root.querySelector('[data-employee-all-dates]'),'click',()=>{allDates=!allDates;if(!allDates)dateFrom=dateTo=employeeWorkDate(now());render();});
     for(const name of ['attendanceFrom','attendanceTo'])listen(root.querySelector(`[name="${name}"]`),'change',()=>{const value=root.querySelector(`[name="${name}"]`).value;if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return;if(name==='attendanceFrom')dateFrom=value;else dateTo=value;allDates=false;render();});
-    for(const button of root.querySelectorAll('[data-employee-print-payroll]'))listen(button,'click',async()=>{if(busy||pending||stale||disposed)return;busy=true;lock();try{await printing.open(button.getAttribute('data-employee-print-payroll'),Number(button.getAttribute('data-employee-print-version')));}catch(error){if(!denied(error))message(error,true);}finally{busy=false;if(!disposed){lock();afterTaskChange?.();}}});
+    for(const button of root.querySelectorAll('[data-employee-print-payroll]'))listen(button,'click',async()=>{if(busy||pending||stale||disposed)return;busy=true;lock();try{await printing.open(button.getAttribute('data-employee-print-payroll'),Number(button.getAttribute('data-employee-print-version')));}catch(error){if(disposed)return;if(!denied(error))message(error,true);}finally{busy=false;if(!disposed){lock();afterTaskChange?.();}}});
     if(presentation==='employee'){
       for(const section of root.querySelectorAll('[data-employee-collection]'))section.setAttribute('data-employee-view',COLLECTION_VIEW[section.getAttribute('data-employee-collection')]||'other');
       const commandGroups=root.querySelector('.employee-command-groups');
