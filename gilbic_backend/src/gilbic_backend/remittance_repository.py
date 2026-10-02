@@ -360,6 +360,7 @@ class PostgresRemittanceRepository:
                         where id = any(%s)
                           and collector_user_id = %s
                           and remittance_id is null
+                          and funding_source = 'collector_cash'
                           and is_locked = false
                           and is_voided = false
                         """,
@@ -617,6 +618,7 @@ class PostgresRemittanceRepository:
             where t.collector_user_id = %s
               and t.collection_date = %s
               and t.remittance_id is null
+              and t.funding_source = 'collector_cash'
               and t.is_locked = false
               and t.is_voided = false
             order by t.accepted_at, t.id

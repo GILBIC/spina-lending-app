@@ -68,6 +68,7 @@ class PostgresCrossCollectionStatusRepository:
                         coalesce(remittance.remittance_number, '')
                             as remittance_number,
                         case
+                            when transaction.funding_source = 'treasury_receipt' then 'wallet_applied'
                             when remittance.id is null then 'not_remitted'
                             when remittance.status = 'received' then 'accepted'
                             else 'awaiting_acceptance'

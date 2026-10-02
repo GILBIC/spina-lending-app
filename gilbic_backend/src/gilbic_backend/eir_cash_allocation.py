@@ -35,6 +35,7 @@ class EirCashSourceEvent:
     entry_type: str
     amount: Decimal
     is_voided: bool = False
+    funding_source: str = "collector_cash"
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +67,7 @@ class EirCashAllocation:
     disposition: str
     message: str
     daily_accruals: tuple[EirDailyAccrual, ...] = ()
+    funding_source: str = "collector_cash"
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,7 +215,11 @@ def allocate_event_date_eir_cash(
     ordered = tuple(
         sorted(
             supported_events,
-            key=lambda item: (item.collection_date, item.accepted_at, item.transaction_id),
+            key=lambda item: (
+                item.collection_date,
+                item.accepted_at,
+                item.transaction_id,
+            ),
         )
     )
 
@@ -279,6 +285,7 @@ def allocate_event_date_eir_cash(
             allocations.append(
                 EirCashAllocation(
                     transaction_id=event.transaction_id,
+                    funding_source=event.funding_source,
                     source_event_key=f"collection:{event.transaction_id}",
                     collection_date=event.collection_date,
                     amount=cash,
@@ -324,6 +331,7 @@ def allocate_event_date_eir_cash(
         allocations.append(
             EirCashAllocation(
                 transaction_id=event.transaction_id,
+                funding_source=event.funding_source,
                 source_event_key=f"collection:{event.transaction_id}",
                 collection_date=event.collection_date,
                 amount=cash,

@@ -95,7 +95,7 @@ function entriesMarkup(entries) {
           <strong>${escapeHtml(entry.client_name || '—')}</strong>
           <span class="meta">${escapeHtml(entry.loan_number || '—')} · ${escapeHtml(entry.loan_type_name || '—')}</span>
         </div>
-        ${badge(entry.status || 'unknown')}
+        ${badge(entry.status === 'wallet_applied' ? 'Recipient funds applied' : entry.status || 'unknown')}
       </div>
       <div class="loan-operation-primary">
         <div><span>Amount</span><strong>${formatMoney(entry.amount)}</strong></div>
@@ -103,7 +103,7 @@ function entriesMarkup(entries) {
         <div><span>Receipt</span><strong>${escapeHtml(entry.receipt_number || '—')}</strong></div>
         <div><span>Collection date</span><strong>${formatDate(entry.collection_date)}</strong></div>
       </div>
-      <p class="meta">Collector: ${escapeHtml(entry.collector_name || '—')}${entry.remittance_number ? ` · Remittance ${escapeHtml(entry.remittance_number)}` : ''}</p>
+      <p class="meta">Recorded by: ${escapeHtml(entry.collector_name || '—')}${entry.remittance_number ? ` · Remittance ${escapeHtml(entry.remittance_number)}` : ''}</p>
       ${covered.length ? `<p class="meta"><strong>Covered dates:</strong> ${coveredDatesMarkup(covered)}</p>` : ''}
       <details class="loan-operation-technical" data-loan-ops-technical>
         <summary>Details</summary>

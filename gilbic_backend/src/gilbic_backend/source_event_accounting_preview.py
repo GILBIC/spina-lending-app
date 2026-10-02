@@ -28,6 +28,7 @@ class CollectionSourceEvent:
     amount: Decimal
     is_voided: bool
     voided_at: datetime | None
+    funding_source: str = "collector_cash"
     cash_received_amount: Decimal | None = None
     unallocated_amount: Decimal = ZERO
     journal_entry_id: UUID | None = None
@@ -145,6 +146,13 @@ def build_collection_accounting_preview(
         reversal_status=event.reversal_status,
         reversal_entry_number=event.reversal_entry_number,
     )
+
+    if event.funding_source != "collector_cash":
+        return CollectionAccountingPreview(
+            **base, disposition="treasury_context_mapping_required", posting_eligible=False,
+            message="Recipient-account funds require a reviewed account and legal-context journal mapping; Collector cash is not the source.",
+            proposed_lines=(),
+        )
 
     if event.entry_type == "pass":
         if event.journal_entry_id is not None:

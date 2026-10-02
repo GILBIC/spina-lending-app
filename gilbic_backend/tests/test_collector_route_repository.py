@@ -87,6 +87,7 @@ class FakeConnection:
                     "today_assigned_collector_user_id": COLLECTOR_USER_ID,
                     "today_collection_origin": "assigned_route",
                     "today_is_locked": False,
+                    "today_funding_source": "collector_cash",
                     "today_contract_controlled": False,
                     "today_amount": Decimal("600.00"),
                     "today_note": "Selected dates only",
@@ -274,3 +275,9 @@ def test_contract_setting_blocks_pay_until_verified_gate_is_ready() -> None:
     assert entry.can_collect_mobile is True
     assert entry.can_enter_payment is False
     assert "does not match the operational balance" in entry.collection_message
+
+
+def test_recipient_funded_receipt_never_offers_collector_cash_edit(monkeypatch):
+    connection = FakeConnection()
+    connection.entry_cursor.rows[0]["today_funding_source"] = "treasury_receipt"
+    assert _load_route(monkeypatch, connection).entries[0].can_edit_today is False

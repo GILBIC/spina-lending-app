@@ -24,6 +24,9 @@ class CollectorRouteReceiptRecord:
     collector_user_id: UUID
     collector_name: str
     is_locked: bool
+    funding_source: str = "collector_cash"
+    funding_receipt_id: UUID | None = None
+    funding_account_id: UUID | None = None
     note: str = ""
     covered_dates: tuple[date, ...] = ()
     accepted_at: datetime | None = None
@@ -263,6 +266,9 @@ def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
                 collector_user_id=UUID(str(collector_user_id)),
                 collector_name=str(raw.get("collector_name") or "Collector"),
                 is_locked=bool(raw.get("is_locked")),
+                funding_source=str(raw.get("funding_source", "collector_cash")),
+                funding_receipt_id=UUID(raw["funding_receipt_id"]) if raw.get("funding_receipt_id") else None,
+                funding_account_id=UUID(raw["funding_account_id"]) if raw.get("funding_account_id") else None,
                 note=str(raw.get("note") or ""),
                 covered_dates=covered_dates,
                 accepted_at=_datetime_value(raw.get("accepted_at")),
@@ -511,6 +517,7 @@ class PostgresCollectorRouteRepository:
                         today.assigned_collector_user_id as today_assigned_collector_user_id,
                         coalesce(today.collection_origin, '') as today_collection_origin,
                         coalesce(today.is_locked, false) as today_is_locked,
+                        today.funding_source as today_funding_source,
                         coalesce(today.contract_controlled, false) as today_contract_controlled,
                         coalesce(today.amount, 0) as today_amount,
                         coalesce(today.note, '') as today_note,
@@ -570,6 +577,7 @@ class PostgresCollectorRouteRepository:
                             t.assigned_collector_user_id,
                             t.collection_origin,
                             t.is_locked,
+                            t.funding_source,
                             (
                                 exists (
                                     select 1
@@ -609,6 +617,9 @@ class PostgresCollectorRouteRepository:
                                             'Collector'
                                         ),
                                         'is_locked', receipt.is_locked,
+                                        'funding_source', receipt.funding_source,
+                                        'funding_receipt_id', receipt.funding_receipt_id,
+                                        'funding_account_id', receipt.funding_account_id,
                                         'note', receipt.note,
                                         'accepted_at', receipt.accepted_at,
                                         'covered_dates', coalesce((
@@ -825,6 +836,7 @@ class PostgresCollectorRouteRepository:
                     today_contract_controlled=bool(row["today_contract_controlled"]),
                     can_edit_today=(
                         row["today_transaction_id"] is not None
+                        and row["today_funding_source"] == "collector_cash"
                         and not bool(row["today_is_locked"])
                         and not bool(row["today_contract_controlled"])
                         and (

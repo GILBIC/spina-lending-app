@@ -651,6 +651,7 @@ def _collector_cash_held(cursor: Any, *, collector_user_id: UUID) -> Decimal:
               and transaction.entry_type <> 'pass'
               and transaction.is_voided = false
               and transaction.remittance_id is null
+              and transaction.funding_source = 'collector_cash'
               and transaction.is_locked = false
         ), released_cash as (
             select coalesce(sum(greatest(

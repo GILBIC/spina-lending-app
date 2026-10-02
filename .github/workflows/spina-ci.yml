@@ -318,6 +318,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          flutter precache --universal
           flutter pub get --enforce-lockfile
           flutter analyze --fatal-infos
           flutter test
@@ -333,6 +334,7 @@ jobs:
             --source-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
             --mode debug --api-url https://spina.157-230-250-111.sslip.io
           cd "$host"
+          flutter precache --universal
           flutter pub get --enforce-lockfile
           flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub \
             --dart-define=GILBIC_API_URL=https://spina.157-230-250-111.sslip.io
@@ -440,13 +442,14 @@ jobs:
             tools/run_0099_remittance_capacity_disposable_postgres_validation.py \
             tools/run_0102_remittance_review_disposable_postgres_validation.py \
             tools/run_v1_tax_evidence_disposable_postgres_validation.py \
-            tools/run_mvp_private_schema_barrier_validation.py
+            tools/run_mvp_private_schema_barrier_validation.py \
+            tools/run_treasury_disposable_postgres_validation.py
 
       - name: Create isolated validation databases
         shell: bash
         run: |
           set -euo pipefail
-          for database in x7preview combinedrenewal delegatedarea initialcapital periodclose remittancecap remittancereview v1tax mvp_private_schema_test; do
+          for database in x7preview combinedrenewal delegatedarea initialcapital periodclose remittancecap remittancereview v1tax treasury_test mvp_private_schema_test; do
             docker exec "${{ job.services.postgres.id }}" createdb -U postgres "$database"
           done
 
@@ -462,6 +465,7 @@ jobs:
           REMIT_CAP_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancecap?sslmode=disable
           REMIT_REVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancereview?sslmode=disable
           TAX_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/v1tax?sslmode=disable
+          TREASURY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/treasury_test?sslmode=disable
           GILBIC_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mvp_private_schema_test?sslmode=disable
         run: |
           set -euo pipefail
@@ -476,6 +480,7 @@ jobs:
             python tools/run_0102_remittance_review_disposable_postgres_validation.py
             python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
             python tools/run_mvp_private_schema_barrier_validation.py
+            python tools/run_treasury_disposable_postgres_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
       - name: Restore synthetic database and private evidence from backup

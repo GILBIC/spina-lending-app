@@ -343,7 +343,12 @@ def _validate_regular_plus_7x7(
     body: CombinedPaymentRequest,
     *,
     collector_account_id: UUID,
+    authorized_client_id: UUID | None = None,
 ) -> dict[str, dict[str, Any]]:
+    if authorized_client_id is not None and authorized_client_id != body.client_id:
+        raise CollectionRejected(
+            "Receipt and loan client do not match.", code="treasury_client_mismatch"
+        )
     loan_ids = [leg.loan_id for leg in body.legs]
     with connection.cursor(row_factory=dict_row) as cursor:
         cursor.execute(
@@ -367,7 +372,7 @@ def _validate_regular_plus_7x7(
             join lending.clients client on client.id = loan.client_id
             left join lending.loan_collection_state state on state.loan_id = loan.id
             where loan.id = any(%s)
-              and exists (
+              and ((%s and loan.client_id = %s) or exists (
                   select 1
                   from lending.collector_area_assignments assignment
                   where assignment.collector_user_id = %s
@@ -377,11 +382,16 @@ def _validate_regular_plus_7x7(
                         coalesce(client.area, ''),
                         true
                     )
-              )
+              ))
             order by loan.id
             for update of loan
             """,
-            (loan_ids, collector_account_id),
+            (
+                loan_ids,
+                authorized_client_id is not None,
+                authorized_client_id,
+                collector_account_id,
+            ),
         )
         rows = cursor.fetchall()
     if len(rows) != 2:
@@ -427,14 +437,18 @@ def _validate_regular_plus_7x7(
             )
 
         settings = row["settings"] if isinstance(row["settings"], dict) else {}
-        mobile_enabled = str(settings.get("mobile_collections_enabled") or "").strip().lower() in {
+        mobile_enabled = str(
+            settings.get("mobile_collections_enabled") or ""
+        ).strip().lower() in {
             "true",
             "1",
             "yes",
             "on",
         }
         mode = str(row["calculation_mode"] or "").strip().lower()
-        seven_enabled = str(settings.get("mobile_seven_by_seven_enabled") or "").strip().lower() in {
+        seven_enabled = str(
+            settings.get("mobile_seven_by_seven_enabled") or ""
+        ).strip().lower() in {
             "true",
             "1",
             "yes",
@@ -640,9 +654,7 @@ def _collectible_obligation(
         )
         schedule = cursor.fetchone()
         schedule_count = int(schedule["schedule_count"] or 0) if schedule else 0
-        registration_count = (
-            int(schedule["registration_count"] or 0) if schedule else 0
-        )
+        registration_count = int(schedule["registration_count"] or 0) if schedule else 0
         if schedule_count == 1:
             if mode == "fixed_daily":
                 _require_regular_schedule_posting_ready(
@@ -760,9 +772,7 @@ def _authoritative_allocation_evidence(
             "operational_amount": format(_money(row["operational_amount"]), "f"),
             "removed": bool(row["removed_from_operational_schedule"]),
             "allocated_amount": format(_money(row["allocated_amount"]), "f"),
-            "active_advance_amount": format(
-                _money(row["active_advance_amount"]), "f"
-            ),
+            "active_advance_amount": format(_money(row["active_advance_amount"]), "f"),
         }
         for row in rows
         if row["installment_id"] is not None
@@ -807,12 +817,12 @@ def _authoritative_seven_by_seven_penalty_obligation(
             code="seven_by_seven_penalty_management_review_required",
         )
 
-    penalty_due = _money(
-        state.assessed_penalty_balance + state.projected_penalty
-    )
+    penalty_due = _money(state.assessed_penalty_balance + state.projected_penalty)
     evidence = {
         "status": state.status,
-        "schedule_id": str(state.schedule_id) if state.schedule_id is not None else None,
+        "schedule_id": str(state.schedule_id)
+        if state.schedule_id is not None
+        else None,
         "pricing_compliance_review_id": state.pricing_compliance_review_id,
         "terms_fingerprint": state.terms_fingerprint,
         "contractual_maturity": (
@@ -822,14 +832,10 @@ def _authoritative_seven_by_seven_penalty_obligation(
         ),
         "as_of_date": state.as_of_date.isoformat(),
         "projected_penalty": format(_money(state.projected_penalty), "f"),
-        "assessed_penalty_balance": format(
-            _money(state.assessed_penalty_balance), "f"
-        ),
+        "assessed_penalty_balance": format(_money(state.assessed_penalty_balance), "f"),
         "penalty_collectible": format(penalty_due, "f"),
         "penalty_base": format(_money(state.penalty_base), "f"),
-        "remaining_cost_headroom": format(
-            _money(state.remaining_cost_headroom), "f"
-        ),
+        "remaining_cost_headroom": format(_money(state.remaining_cost_headroom), "f"),
         "effective_monthly_rate": format(state.effective_monthly_rate, "f"),
         "projection_start_date": (
             state.projection_start_date.isoformat()
@@ -917,8 +923,7 @@ def _project_seven_by_seven_cash(
                 continue
             if (
                 component == "extra"
-                and extra_choice
-                is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_ADVANCE
+                and extra_choice is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_ADVANCE
             ):
                 projection[component] = {
                     "cash_amount": format(_money(amount), "f"),
@@ -941,9 +946,7 @@ def _project_seven_by_seven_cash(
             try:
                 result = allocate_seven_by_seven_payments(
                     original_principal=_money(loan["principal"]),
-                    daily_interest_per_1000=_money(
-                        loan["daily_interest_per_1000"]
-                    ),
+                    daily_interest_per_1000=_money(loan["daily_interest_per_1000"]),
                     payment_start=payment_start,
                     events=tuple(projected_events),
                     contractual_maturity=historical.contractual_maturity,
@@ -998,11 +1001,17 @@ def _allocation_preview(
     body: CombinedPaymentRequest,
     *,
     collector_account_id: UUID,
+    authorized_client_id: UUID | None = None,
 ) -> dict[str, Any]:
     loans = _validate_regular_plus_7x7(
         connection,
         body,
         collector_account_id=collector_account_id,
+        **(
+            {"authorized_client_id": authorized_client_id}
+            if authorized_client_id is not None
+            else {}
+        ),
     )
     regular = loans["fixed_daily"]
     seven = loans["seven_by_seven"]
@@ -1387,6 +1396,241 @@ def _replay_or_conflict(
     return payload
 
 
+def _post_reviewed_components(
+    connection, actor, body, idempotency_key, preview, *, bridge=None
+):
+    """Apply an authoritative preview using the caller-owned transaction.
+
+    Both physical-cash Combined Pay and verified treasury receipts use this
+    exact ordering, protected bridge and all-or-nothing allocation check.
+    """
+    bridge = bridge or ConcurrentReceiptSafeCollectionPostingBridge()
+    preview_legs = {str(item["loan_type"]): item for item in preview["legs"]}
+    request_legs = {str(leg.loan_id): leg for leg in body.legs}
+    seven_preview = preview_legs["seven_by_seven"]
+    regular_preview = preview_legs["regular"]
+    seven_leg = request_legs[seven_preview["loan_id"]]
+    regular_leg = request_legs[regular_preview["loan_id"]]
+    seven_scheduled = _money(seven_preview["scheduled_amount"])
+    regular_scheduled = _money(regular_preview["scheduled_amount"])
+    seven_extra = _money(seven_preview["extra_amount"])
+    regular_extra = _money(regular_preview["extra_amount"])
+
+    seven_advance_dates: tuple[date, ...] = ()
+    if (
+        body.extra_allocation_choice
+        is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_ADVANCE
+    ):
+        seven_advance_dates = _seven_by_seven_advance_dates(
+            connection,
+            loan_id=seven_leg.loan_id,
+            collection_date=body.collection_date,
+            amount=seven_extra,
+        )
+
+    posted_legs: list[dict[str, object]] = []
+    total = Decimal("0.00")
+    applied_total = Decimal("0.00")
+    unallocated_total = Decimal("0.00")
+
+    def post_component(
+        *,
+        component: str,
+        leg: CombinedPaymentLeg,
+        amount: Decimal,
+        device_offset: int,
+        entry_type: CollectionEntryType = CollectionEntryType.PAYMENT,
+        route_revision: str | None = None,
+        allocation_intent: PaymentAllocationIntent = (
+            PaymentAllocationIntent.SCHEDULED
+        ),
+        covered_dates: tuple[date, ...] | None = None,
+    ):
+        nonlocal applied_total, total, unallocated_total
+        child_key = uuid5(
+            idempotency_key,
+            f"{component}:{leg.loan_id}",
+        )
+        command = CollectionCommand(
+            idempotency_key=child_key,
+            route_entry_id=str(leg.route_entry_id),
+            client_id=str(body.client_id),
+            loan_id=str(leg.loan_id),
+            collection_date=body.collection_date,
+            entry_type=entry_type,
+            amount=amount,
+            advance_from=(
+                covered_dates[0]
+                if entry_type is CollectionEntryType.ADVANCE and covered_dates
+                else None
+            ),
+            advance_until=(
+                covered_dates[-1]
+                if entry_type is CollectionEntryType.ADVANCE and covered_dates
+                else None
+            ),
+            covered_dates=(
+                covered_dates if covered_dates is not None else (body.collection_date,)
+            ),
+            recorded_at=body.recorded_at,
+            device_id=body.device_id,
+            device_sequence=body.device_sequence + device_offset,
+            note=("Atomic Regular + 7x7 one-total Pay • " + component),
+            route_revision=(route_revision or leg.route_revision.strip()),
+            payment_allocation_intent=allocation_intent,
+            past_due_followup=(
+                body.regular_past_due_followup.to_input()
+                if component.startswith("regular_")
+                and preview["regular_past_due_followup_required"]
+                and body.regular_past_due_followup is not None
+                else None
+            ),
+        )
+        posted = bridge.post_collection(connection, actor, command)
+        with connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                select amount, applied_amount, unallocated_amount,
+                       allocation_state
+                from lending.collection_transactions
+                where id = %s
+                """,
+                (UUID(posted.server_transaction_id),),
+            )
+            receipt = cursor.fetchone()
+        if receipt is None:
+            raise CollectionRejected(
+                "The saved combined receipt evidence could not be reloaded.",
+                code="combined_receipt_evidence_missing",
+            )
+        cash_received = _money(receipt["amount"])
+        applied = _money(receipt["applied_amount"])
+        unallocated = _money(receipt["unallocated_amount"])
+        total += cash_received
+        applied_total += applied
+        unallocated_total += unallocated
+        leg_result: dict[str, object] = {
+            "loan_id": str(leg.loan_id),
+            "transaction_id": posted.server_transaction_id,
+            "receipt_number": posted.receipt_number,
+            "amount": format(cash_received, "f"),
+            "applied_amount": format(applied, "f"),
+            "unallocated_amount": format(unallocated, "f"),
+            "allocation_state": str(receipt["allocation_state"]),
+            "allocation_component": component,
+            "official_balance": format(posted.official_balance, "f"),
+            "route_revision": posted.route_revision,
+            "message": posted.message,
+        }
+        if posted.result_metadata:
+            leg_result["result"] = dict(posted.result_metadata)
+        posted_legs.append(leg_result)
+        return posted
+
+    device_offset = 0
+    seven_revision = seven_leg.route_revision.strip()
+    if seven_scheduled > ZERO:
+        posted = post_component(
+            component="seven_by_seven_scheduled",
+            leg=seven_leg,
+            amount=seven_scheduled,
+            device_offset=device_offset,
+        )
+        device_offset += 1
+        seven_revision = posted.route_revision or seven_revision
+
+    if regular_scheduled > ZERO or regular_extra > ZERO:
+        regular_intent = PaymentAllocationIntent.SCHEDULED
+        if (
+            body.extra_allocation_choice
+            is CombinedExtraAllocationChoice.REGULAR_ADVANCE
+        ):
+            regular_intent = PaymentAllocationIntent.EXTRA_AS_ADVANCE
+        elif (
+            body.extra_allocation_choice
+            is CombinedExtraAllocationChoice.REGULAR_PRINCIPAL_REDUCTION
+        ):
+            regular_intent = PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+        post_component(
+            component=(
+                "regular_scheduled_and_extra"
+                if regular_extra > ZERO
+                else "regular_scheduled"
+            ),
+            leg=regular_leg,
+            amount=_money(regular_scheduled + regular_extra),
+            device_offset=device_offset,
+            allocation_intent=regular_intent,
+        )
+        device_offset += 1
+
+    if seven_extra > ZERO:
+        if (
+            body.extra_allocation_choice
+            is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_ADVANCE
+        ):
+            post_component(
+                component="seven_by_seven_advance",
+                leg=seven_leg,
+                amount=seven_extra,
+                device_offset=device_offset,
+                entry_type=CollectionEntryType.ADVANCE,
+                route_revision=seven_revision,
+                covered_dates=seven_advance_dates,
+            )
+        elif (
+            body.extra_allocation_choice
+            is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_EXTRA_PRINCIPAL
+        ):
+            post_component(
+                component="seven_by_seven_extra_principal",
+                leg=seven_leg,
+                amount=seven_extra,
+                device_offset=device_offset,
+                route_revision=seven_revision,
+                allocation_intent=(
+                    PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+                ),
+                covered_dates=(),
+            )
+        device_offset += 1
+
+    expected_cash = _money(body.cash_received_amount)
+    planned_cash = _money(
+        seven_scheduled + regular_scheduled + regular_extra + seven_extra
+    )
+    if (
+        planned_cash != expected_cash
+        or total != expected_cash
+        or applied_total != total
+        or unallocated_total != ZERO
+    ):
+        raise CollectionRejected(
+            "The protected combined allocation changed while saving. "
+            "Nothing was recorded; refresh the route and try again.",
+            code="combined_cash_allocation_contradiction",
+        )
+
+    result_payload: dict[str, object] = {
+        "status": "accepted",
+        "duplicate": False,
+        "client_transaction_id": str(idempotency_key),
+        "client_id": str(body.client_id),
+        "total_amount": format(total.quantize(Decimal("0.01")), "f"),
+        "applied_total_amount": format(_money(applied_total), "f"),
+        "unallocated_total_amount": format(_money(unallocated_total), "f"),
+        "cash_allocation_state": ("fully_allocated"),
+        "allocation_status": preview["status"],
+        "allocation_hash": preview["allocation_hash"],
+        "extra_allocation_choice": preview["extra_allocation_choice"],
+        "legs": posted_legs,
+        "message": (
+            "One cash total was allocated and saved atomically across Regular + 7x7."
+        ),
+    }
+    return result_payload
+
+
 def create_combined_collection_router() -> APIRouter:
     router = APIRouter(tags=["collector-collections"])
 
@@ -1456,11 +1700,7 @@ def create_combined_collection_router() -> APIRouter:
         accepted_request_hashes = frozenset(
             {
                 request_hash,
-                *(
-                    (_hash(legacy_canonical),)
-                    if legacy_canonical is not None
-                    else ()
-                ),
+                *((_hash(legacy_canonical),) if legacy_canonical is not None else ()),
             }
         )
         bridge = ConcurrentReceiptSafeCollectionPostingBridge()
@@ -1554,247 +1794,14 @@ def create_combined_collection_router() -> APIRouter:
                             code="combined_regular_past_due_reason_not_needed",
                         )
 
-                    preview_legs = {
-                        str(item["loan_type"]): item for item in preview["legs"]
-                    }
-                    request_legs = {str(leg.loan_id): leg for leg in body.legs}
-                    seven_preview = preview_legs["seven_by_seven"]
-                    regular_preview = preview_legs["regular"]
-                    seven_leg = request_legs[seven_preview["loan_id"]]
-                    regular_leg = request_legs[regular_preview["loan_id"]]
-                    seven_scheduled = _money(seven_preview["scheduled_amount"])
-                    regular_scheduled = _money(regular_preview["scheduled_amount"])
-                    seven_extra = _money(seven_preview["extra_amount"])
-                    regular_extra = _money(regular_preview["extra_amount"])
-
-                    seven_advance_dates: tuple[date, ...] = ()
-                    if (
-                        body.extra_allocation_choice
-                        is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_ADVANCE
-                    ):
-                        seven_advance_dates = _seven_by_seven_advance_dates(
-                            connection,
-                            loan_id=seven_leg.loan_id,
-                            collection_date=body.collection_date,
-                            amount=seven_extra,
-                        )
-
-                    posted_legs: list[dict[str, object]] = []
-                    total = Decimal("0.00")
-                    applied_total = Decimal("0.00")
-                    unallocated_total = Decimal("0.00")
-
-                    def post_component(
-                        *,
-                        component: str,
-                        leg: CombinedPaymentLeg,
-                        amount: Decimal,
-                        device_offset: int,
-                        entry_type: CollectionEntryType = CollectionEntryType.PAYMENT,
-                        route_revision: str | None = None,
-                        allocation_intent: PaymentAllocationIntent = (
-                            PaymentAllocationIntent.SCHEDULED
-                        ),
-                        covered_dates: tuple[date, ...] | None = None,
-                    ):
-                        nonlocal applied_total, total, unallocated_total
-                        child_key = uuid5(
-                            idempotency_key,
-                            f"{component}:{leg.loan_id}",
-                        )
-                        command = CollectionCommand(
-                            idempotency_key=child_key,
-                            route_entry_id=str(leg.route_entry_id),
-                            client_id=str(body.client_id),
-                            loan_id=str(leg.loan_id),
-                            collection_date=body.collection_date,
-                            entry_type=entry_type,
-                            amount=amount,
-                            advance_from=(
-                                covered_dates[0]
-                                if entry_type is CollectionEntryType.ADVANCE
-                                and covered_dates
-                                else None
-                            ),
-                            advance_until=(
-                                covered_dates[-1]
-                                if entry_type is CollectionEntryType.ADVANCE
-                                and covered_dates
-                                else None
-                            ),
-                            covered_dates=(
-                                covered_dates
-                                if covered_dates is not None
-                                else (body.collection_date,)
-                            ),
-                            recorded_at=body.recorded_at,
-                            device_id=body.device_id,
-                            device_sequence=body.device_sequence + device_offset,
-                            note=("Atomic Regular + 7x7 one-total Pay • " + component),
-                            route_revision=(
-                                route_revision or leg.route_revision.strip()
-                            ),
-                            payment_allocation_intent=allocation_intent,
-                            past_due_followup=(
-                                body.regular_past_due_followup.to_input()
-                                if component.startswith("regular_")
-                                and preview["regular_past_due_followup_required"]
-                                and body.regular_past_due_followup is not None
-                                else None
-                            ),
-                        )
-                        posted = bridge.post_collection(connection, actor, command)
-                        with connection.cursor(row_factory=dict_row) as cursor:
-                            cursor.execute(
-                                """
-                                select amount, applied_amount, unallocated_amount,
-                                       allocation_state
-                                from lending.collection_transactions
-                                where id = %s
-                                """,
-                                (UUID(posted.server_transaction_id),),
-                            )
-                            receipt = cursor.fetchone()
-                        if receipt is None:
-                            raise CollectionRejected(
-                                "The saved combined receipt evidence could not be reloaded.",
-                                code="combined_receipt_evidence_missing",
-                            )
-                        cash_received = _money(receipt["amount"])
-                        applied = _money(receipt["applied_amount"])
-                        unallocated = _money(receipt["unallocated_amount"])
-                        total += cash_received
-                        applied_total += applied
-                        unallocated_total += unallocated
-                        leg_result: dict[str, object] = {
-                            "loan_id": str(leg.loan_id),
-                            "transaction_id": posted.server_transaction_id,
-                            "receipt_number": posted.receipt_number,
-                            "amount": format(cash_received, "f"),
-                            "applied_amount": format(applied, "f"),
-                            "unallocated_amount": format(unallocated, "f"),
-                            "allocation_state": str(receipt["allocation_state"]),
-                            "allocation_component": component,
-                            "official_balance": format(posted.official_balance, "f"),
-                            "route_revision": posted.route_revision,
-                            "message": posted.message,
-                        }
-                        if posted.result_metadata:
-                            leg_result["result"] = dict(posted.result_metadata)
-                        posted_legs.append(leg_result)
-                        return posted
-
-                    device_offset = 0
-                    seven_revision = seven_leg.route_revision.strip()
-                    if seven_scheduled > ZERO:
-                        posted = post_component(
-                            component="seven_by_seven_scheduled",
-                            leg=seven_leg,
-                            amount=seven_scheduled,
-                            device_offset=device_offset,
-                        )
-                        device_offset += 1
-                        seven_revision = posted.route_revision or seven_revision
-
-                    if regular_scheduled > ZERO or regular_extra > ZERO:
-                        regular_intent = PaymentAllocationIntent.SCHEDULED
-                        if (
-                            body.extra_allocation_choice
-                            is CombinedExtraAllocationChoice.REGULAR_ADVANCE
-                        ):
-                            regular_intent = PaymentAllocationIntent.EXTRA_AS_ADVANCE
-                        elif (
-                            body.extra_allocation_choice
-                            is CombinedExtraAllocationChoice.REGULAR_PRINCIPAL_REDUCTION
-                        ):
-                            regular_intent = (
-                                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
-                            )
-                        post_component(
-                            component=(
-                                "regular_scheduled_and_extra"
-                                if regular_extra > ZERO
-                                else "regular_scheduled"
-                            ),
-                            leg=regular_leg,
-                            amount=_money(regular_scheduled + regular_extra),
-                            device_offset=device_offset,
-                            allocation_intent=regular_intent,
-                        )
-                        device_offset += 1
-
-                    if seven_extra > ZERO:
-                        if (
-                            body.extra_allocation_choice
-                            is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_ADVANCE
-                        ):
-                            post_component(
-                                component="seven_by_seven_advance",
-                                leg=seven_leg,
-                                amount=seven_extra,
-                                device_offset=device_offset,
-                                entry_type=CollectionEntryType.ADVANCE,
-                                route_revision=seven_revision,
-                                covered_dates=seven_advance_dates,
-                            )
-                        elif (
-                            body.extra_allocation_choice
-                            is CombinedExtraAllocationChoice.SEVEN_BY_SEVEN_EXTRA_PRINCIPAL
-                        ):
-                            post_component(
-                                component="seven_by_seven_extra_principal",
-                                leg=seven_leg,
-                                amount=seven_extra,
-                                device_offset=device_offset,
-                                route_revision=seven_revision,
-                                allocation_intent=(
-                                    PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
-                                ),
-                                covered_dates=(),
-                            )
-                        device_offset += 1
-
-                    expected_cash = _money(body.cash_received_amount)
-                    planned_cash = _money(
-                        seven_scheduled
-                        + regular_scheduled
-                        + regular_extra
-                        + seven_extra
+                    result_payload = _post_reviewed_components(
+                        connection,
+                        actor,
+                        body,
+                        idempotency_key,
+                        preview,
+                        bridge=bridge,
                     )
-                    if (
-                        planned_cash != expected_cash
-                        or total != expected_cash
-                        or applied_total != total
-                        or unallocated_total != ZERO
-                    ):
-                        raise CollectionRejected(
-                            "The protected combined allocation changed while saving. "
-                            "Nothing was recorded; refresh the route and try again.",
-                            code="combined_cash_allocation_contradiction",
-                        )
-
-                    result_payload: dict[str, object] = {
-                        "status": "accepted",
-                        "duplicate": False,
-                        "client_transaction_id": str(idempotency_key),
-                        "client_id": str(body.client_id),
-                        "total_amount": format(total.quantize(Decimal("0.01")), "f"),
-                        "applied_total_amount": format(_money(applied_total), "f"),
-                        "unallocated_total_amount": format(
-                            _money(unallocated_total), "f"
-                        ),
-                        "cash_allocation_state": (
-                            "fully_allocated"
-                        ),
-                        "allocation_status": preview["status"],
-                        "allocation_hash": preview["allocation_hash"],
-                        "extra_allocation_choice": preview["extra_allocation_choice"],
-                        "legs": posted_legs,
-                        "message": (
-                            "One cash total was allocated and saved atomically "
-                            "across Regular + 7x7."
-                        ),
-                    }
                     with connection.cursor() as cursor:
                         cursor.execute(
                             """

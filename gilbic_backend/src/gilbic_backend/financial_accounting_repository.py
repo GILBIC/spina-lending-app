@@ -212,6 +212,7 @@ class PostgresFinancialAccountingRepository:
                             where t.is_voided = false
                               and t.is_locked = false
                               and t.remittance_id is null
+                              and t.funding_source = 'collector_cash'
                               and t.entry_type <> 'pass'
                         ), 0) as unremitted_cash,
                         count(*) filter (where t.is_voided = false)
