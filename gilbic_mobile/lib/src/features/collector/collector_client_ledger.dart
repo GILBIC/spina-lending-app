@@ -66,7 +66,13 @@ class CollectorClientLedgerSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text('${group.clientCount} clients'),
+                Text(
+                  '${group.clientCount} clients',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: SpinaTheme.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -350,8 +356,9 @@ class _TodayAction extends StatelessWidget {
               Text(state.pendingRetry ? 'Retry' : 'Pay'),
               Text(
                 _moneyShort(state.payableAmount),
-                maxLines: 1,
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
               ),
             ],
           ),
@@ -377,7 +384,13 @@ class _TodayAction extends StatelessWidget {
             if (amount > 0 && (label == 'Pay' || label == 'Retry'))
               Text(
                 _moneyShort(amount),
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: enabled
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: .38),
+                ),
               ),
           ],
         ),

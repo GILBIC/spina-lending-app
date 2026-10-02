@@ -12,6 +12,7 @@ void main() {
     'GCash tomorrow',
   ]) {
     testWidgets('note_mentions_never_verify_gcash: $note', (tester) async {
+      final handle = tester.ensureSemantics();
       final entry = CollectorRouteEntry(
         id: 'entry',
         clientId: 'client',
@@ -60,6 +61,8 @@ void main() {
       expect(find.text('NOT COLLECTED'), findsOneWidget);
       expect(submitted, 0);
       expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      handle.dispose();
     });
   }
 }
