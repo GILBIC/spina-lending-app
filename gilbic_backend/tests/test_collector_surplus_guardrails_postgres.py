@@ -9,7 +9,12 @@ import pytest
 import test_collector_surplus_postgres as surplus_support
 import treasury_test_support
 from gilbic_backend.treasury_authorization import TreasuryConflict, TreasuryDenied
-from gilbic_backend.treasury_models import COMMAND_ADAPTER, AccountGrant
+from gilbic_backend.treasury_models import (
+    COMMAND_ADAPTER,
+    AccountConfigure,
+    AccountGrant,
+    TransferRecord,
+)
 from test_collector_surplus_postgres import accept, cash_delta, command, count, credit
 from treasury_test_support import actor, connect, evidence, grant_live, version
 
@@ -275,3 +280,54 @@ def test_same_opening_cash_cannot_anchor_two_collectors_beyond_its_capacity(surp
             ).fetchone()["n"]
             == 1
         )
+
+
+def test_existing_transfer_keeps_commanded_source_when_other_uuid_sorts_last(treasury):
+    t = dict(treasury)
+    source_id, destination_id = sorted([uuid4(), uuid4()], key=str)
+    t["account_id"] = source_id
+    for account_id in (source_id, destination_id):
+        t["service"].execute(
+            t["owner"],
+            AccountConfigure(
+                action="account_configure",
+                request_id=uuid4(),
+                account_id=account_id,
+                expected_version=0,
+                ledger_context_id=t["context_id"],
+                context="synthetic",
+                kind="gcash",
+                alias="Synthetic sorted transfer account",
+                ownership="synthetic",
+                custodian_user_id=t["owner"].user_id,
+            ),
+        )
+    result = t["service"].execute(
+        t["owner"],
+        TransferRecord(
+            action="transfer_record",
+            request_id=uuid4(),
+            account_id=source_id,
+            expected_version=version(t),
+            transfer_id=uuid4(),
+            leg="source",
+            other_account_id=destination_id,
+            other_account_version=1,
+            amount="10.00",
+            provider="gcash",
+            reference=uuid4().hex,
+            effective_at=datetime.now(UTC),
+            evidence_id=evidence(t),
+            recipient_attestation="Synthetic independently observed source debit",
+            reason="Source identity must not depend on lock sort order",
+        ),
+    )
+    assert result["result"]["account_id"] == str(source_id)
+    assert result["result"]["event"]["account_id"] == str(source_id)
+    assert result["result"]["transfer"]["transit_amount"] == "10.00"
+    assert cash_delta(t) == Decimal("-10.00")
+    with connect() as conn:
+        assert conn.execute(
+            "select coalesce(sum(signed_amount),0) as amount from treasury.movement_lines where account_id=%s",
+            (destination_id,),
+        ).fetchone()["amount"] == Decimal("0.00")
