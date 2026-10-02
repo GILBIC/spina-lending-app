@@ -2182,6 +2182,31 @@ details > :not(summary) {
   background: var(--surface-soft);
 }
 
+/* Collector disclosures preserve the existing route-first phone layout. */
+#collector-route .collector-entry-summary { display: contents; }
+#collector-route .ledger-row { grid-template-columns: minmax(150px, 1.3fr) minmax(90px, 0.7fr) minmax(180px, 1fr) minmax(110px, 0.8fr) minmax(180px, 1.2fr); }
+#collector-route .ledger-actions { flex-wrap: wrap; }
+#collector-remittance label:has([name="reviewed"]) { display: flex; align-items: flex-start; gap: 0.6rem; }
+#collector-remittance [name="reviewed"] { width: auto; flex: 0 0 auto; }
+#collector-route .collector-entry-form { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); max-width: 48rem; width: 100%; }
+#collector-route .collector-entry-form details { padding: 0.6rem; border: 1px solid var(--pink-200); border-radius: var(--radius-sm); }
+#collector-route .collector-entry-form summary { min-height: 48px; display: flex; align-items: center; cursor: pointer; }
+#collector-route .collector-entry-form details label { display: grid; gap: 0.4rem; margin-block: 0.5rem; }
+#collector-route .collector-route-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 0.75rem; margin-block: 1rem; }
+#collector-route .ledger-cell, #collector-route .list-item, #collector-master-review td, #collector-remittance .list-item, #collector-renewals .list-item { overflow-wrap: anywhere; }
+#collector-route [data-route-receipt], #collector-route [data-collector-schedule], #collector-remittance [data-remittance-detail] { margin-top: 1rem; padding: 1rem; border: 1px solid var(--pink-300); border-radius: var(--radius-sm); }
+#collector-workflows .entry-form, #collector-remittance .entry-form, #collector-renewals .entry-form { grid-template-columns: minmax(0, 1fr); max-width: 48rem; }
+#collector-remittance details > summary { min-height: 48px; display: flex; align-items: center; cursor: pointer; }
+#collector-remittance [data-remittance-evidence] .list-item { display: block; }
+#collector-master-review .collector-attention-table, #collector-route .collector-schedule-table { table-layout: auto; }
+@media (max-width: 680px) {
+  #collector-route .collector-route-filters { grid-template-columns: minmax(0, 1fr); }
+  #collector-route .ledger-row { grid-template-columns: minmax(0, 1fr); }
+  #collector-route .collector-entry-form { min-width: 0; padding: 0.7rem; }
+  #collector-route .ledger-actions .button, #collector-master-review .button { min-height: 48px; white-space: normal; }
+  #collector-master-review .collector-attention-table td[data-label="Today"] { font-variant-numeric: tabular-nums; }
+}
+
 .managed-device-summary,
 .managed-device-filters,
 .management-audit-filters {

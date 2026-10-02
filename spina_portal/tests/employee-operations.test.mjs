@@ -212,9 +212,9 @@ for(const role of ['employee','collector','management'])test(`${role} mounts pri
  const names={employee:'mountEmployeeWorkspace',collector:'mountCollectorWorkspace',management:'mountManagementWorkspace'};
  const roleModule=await import(`../assets/roles/${role}.js`);const root=new Element();root.dataset={};let navigation,handle;const calls=[];const controller=new AbortController();
  const api={request:async(path)=>{calls.push(path);if(path==='/api/v1/employee-operations/workspace')return workspace();if(path==='/api/v1/account')return {profile:{full_name:'Synthetic employee'}};return {};}};
- await roleModule[names[role]]({root,api,session:{user:{id:SELF,role,roles:[role],permissions:[]}},signal:controller.signal,setNavigation:items=>{navigation=items;},registerWorkspaceHandle:value=>{handle=value;}});if(role==='management')await handle.activate('management-operations','management-employee-operations');await setImmediate();
+ const context={root,api,session:{user:{id:SELF,role,roles:[role],permissions:[]}},signal:controller.signal,setNavigation:items=>{navigation=items;},registerWorkspaceHandle:value=>{handle=value;}};await roleModule[names[role]](context);if(role==='management')await handle.activate('management-operations','management-employee-operations');if(role==='collector')await context.collectorWorkspaceHandle.activate('collector-employee-operations');await setImmediate();
  assert.ok(calls.includes('/api/v1/employee-operations/workspace'));assert.ok(navigation.some(item=>role==='management'?item.id==='management-operations':item.id.includes('employee-operations')));assert.match(root.textContent,/My attendance/);
- controller.abort();assert.equal(root.querySelector('[data-employee-operations]').innerHTML,'');
+ const panel=root.querySelector('[data-employee-operations]');controller.abort();assert.equal(panel.innerHTML,'');
 });
 
 test('validation rejection preserves edited fields and focuses associated feedback',async()=>{
