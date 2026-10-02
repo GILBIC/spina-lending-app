@@ -348,7 +348,13 @@ function syncClientMutationControls(context) {
  const mutations=context.clientMutations;if(!mutations)return;
  for(const button of context.root.querySelectorAll('button')){const key=clientMutationKey(button);if(key&&mutations.blocked(key))button.disabled=true;}
  const support=context.root.querySelector('#client-support-form');if(support&&mutations.blocked('support'))support.querySelector('button[type="submit"]').disabled=true;
- const renewal=context.root.querySelector('#client-renewal-form');if(renewal&&mutations.blocked('renewal:create:'+renewal.querySelector('[name="loanId"]').value))renewal.querySelector('button[type="submit"]').disabled=true;
+ const renewal=context.root.querySelector('#client-renewal-form');
+ if(renewal){
+  const select=renewal.querySelector('[name="loanId"]');const ready=context.clientReads?.state('renewals').status==='ready';
+  const eligible=ready?asArray(context.clientRaw?.renewals?.loans).filter(loan=>loan.eligible===true&&!loan.pending_request_id):[];
+  select.disabled=!ready||!eligible.length;
+  renewal.querySelector('button[type="submit"]').disabled=!eligible.some(loan=>loan.loan_id===select.value)||mutations.pending()||mutations.blocked('renewal:create:'+select.value);
+ }
  const status=context.root.querySelector('[data-client-mutation-status]');if(status){status.hidden=!mutations.uncertain();status.textContent=mutations.uncertain()?'A submission could not be confirmed. Check the saved record with the office before trying again. Refresh reads do not authorize another attempt.':'';}
 }
 async function runClientMutation(context,key,operation,{remember=true}={}) {
@@ -555,9 +561,12 @@ function bindForms(context) {
  for(const [selector,key,path,fields]of [
  ['#client-renewal-form','renewals','/api/v1/client/renewals',{loanId:'loan_id',requestedAmount:'requested_amount',message:'message'}],
  ['#client-support-form','support','/api/v1/client/support',{category:'category',subject:'subject',message:'message',referenceText:'reference_text'}]]) {
-  const form=context.root.querySelector(selector);form?.addEventListener('submit',async event=>{
+  const form=context.root.querySelector(selector);
+  if(key==='renewals')form?.querySelector('[name="loanId"]').addEventListener('change',()=>{if(context.clientIsCurrent())syncClientMutationControls(context);});
+  form?.addEventListener('submit',async event=>{
    event.preventDefault();const button=form.querySelector('button[type="submit"]');if(button.disabled||!context.clientIsCurrent?.())return;
    if(globalThis.navigator?.onLine===false){showToast('Connect to the internet before sending.','error');return;}
+   if(key==='renewals'&&context.clientMutations.pending())return;
    const data=new FormData(form);const snapshot=Object.fromEntries(Object.keys(fields).map(name=>[name,String(data.get(name)||'')]));
    if(key==='renewals'&&(context.clientReads.state('renewals').status!=='ready'||!asArray(context.clientRaw.renewals.loans).some(loan=>loan.loan_id===snapshot.loanId&&loan.eligible===true&&!loan.pending_request_id))){showToast('Refresh renewal eligibility before submitting this draft.','error');return;}
    const submittedClientId=context.clientRaw[key]?.client?.client_id||context.clientRaw.loans?.client?.client_id;
@@ -566,8 +575,7 @@ function bindForms(context) {
     const body=Object.fromEntries(Object.entries(fields).map(([name,field])=>[field,snapshot[name].trim()]));if(key==='renewals')normalizeMoney(body.requested_amount,'Requested amount');const submitted=await context.api.request(path,{method:'POST',body,signal:context.clientSignal});if(!context.clientIsCurrent())return;verifyClientCreatedRequest(submitted,{kind:key==='support'?'support':'renewal',body,clientId:submittedClientId});context.clientMutations.complete(mutationKey,{remember:key==='renewals'});
     if(!context.clientIsCurrent())return;saved=true;
     for(const name of Object.keys(fields)){const field=form.querySelector(`[name="${name}"]`);if(field&&field.value===snapshot[name]&&field.tagName!=='SELECT'&&name!=='category'&&name!=='loanId')field.value='';}
-    const result=await refreshClientRegion(context,key);if(key==='renewals')await refreshClientRegion(context,'renewalWorkflow');
-    if(context.clientIsCurrent())showToast(result.status==='error'?'Saved; refreshing records failed. Use Retry to read the saved records.':key==='support'?'Support request sent.':'Renewal request sent. Your assigned Collector must recommend it before Management review.','success');
+    await refreshClientSavedRecords(context,key==='renewals'?['renewals','renewalWorkflow']:['support'],key==='support'?'Support request sent.':'Renewal request sent. Your assigned Collector must recommend it before Management review.');
    }catch(error){if(context.clientIsCurrent()){if(!saved)context.clientMutations.fail(mutationKey,error);if([401,403].includes(error.status)){context.clientCleanup();return;}showToast(saved?'Saved; refreshing records failed.':error.message,'error');}}
    finally{if(context.clientIsCurrent()){setButtonBusy(button,false);syncClientMutationControls(context);}else clearButtonBusyFocus(button);}
   });
@@ -642,10 +650,9 @@ function bindClientRenewalCancellation(context) {
           api: context.api,expectedRecord:currentClientRenewal(context,requestId),signal:context.clientSignal,
           requestId,
         }));
+        if(!context.clientIsCurrent())return;
         if (!cancelled) {button.disabled=false;syncClientMutationControls(context);return;}
-        if(!context.clientIsCurrent())return;showToast('Renewal request cancelled.', 'success');
-        await refreshClientRegion(context, 'renewals');
-        await refreshClientRegion(context, 'renewalWorkflow');
+        await refreshClientSavedRecords(context,['renewals','renewalWorkflow'],'Renewal request cancelled.');
       } catch (error) {
         if(context.clientIsCurrent()) {showToast(error.message, 'error');button.disabled=false;syncClientMutationControls(context);}
       }
@@ -666,13 +673,12 @@ function bindClientRenewalWorkflowActions(context) {
           requestId,
           decision,
         }));
+        if(!context.clientIsCurrent())return;
         if (!acted) {
           setButtonBusy(button, false);syncClientMutationControls(context);
           return;
         }
-        if(!context.clientIsCurrent())return;showToast(decision === 'accepted' ? 'Renewal accepted. Complete your own signer step next.' : 'Renewal declined.', 'success');
-        await refreshClientRegion(context, 'renewals');
-        await refreshClientRegion(context, 'renewalWorkflow');
+        await refreshClientSavedRecords(context,['renewals','renewalWorkflow'],decision === 'accepted' ? 'Renewal accepted. Complete your own signer step next.' : 'Renewal declined.');
       } catch (error) {
         if(context.clientIsCurrent()) {showToast(error.message, 'error');setButtonBusy(button, false);syncClientMutationControls(context);}
         else clearButtonBusyFocus(button);
@@ -692,13 +698,12 @@ function bindClientRenewalWorkflowActions(context) {
           requestId,
           signerId,
         }));
+        if(!context.clientIsCurrent())return;
         if (!signed) {
           setButtonBusy(button, false);syncClientMutationControls(context);
           return;
         }
-        if(!context.clientIsCurrent())return;showToast('Your renewal signature was recorded.', 'success');
-        await refreshClientRegion(context, 'renewals');
-        await refreshClientRegion(context, 'renewalWorkflow');
+        await refreshClientSavedRecords(context,['renewals','renewalWorkflow'],'Your renewal signature was recorded.');
       } catch (error) {
         if(context.clientIsCurrent()) {showToast(error.message, 'error');setButtonBusy(button, false);syncClientMutationControls(context);}
         else clearButtonBusyFocus(button);
@@ -716,13 +721,12 @@ function bindClientRenewalWorkflowActions(context) {
           api: context.api,expectedRecord:currentClientRenewal(context,requestId),signal:context.clientSignal,
           requestId,
         }));
+        if(!context.clientIsCurrent())return;
         if (!confirmed) {
           setButtonBusy(button, false);syncClientMutationControls(context);
           return;
         }
-        if(!context.clientIsCurrent())return;showToast('Cash receipt confirmed.', 'success');
-        await refreshClientRegion(context, 'renewals');
-        await refreshClientRegion(context, 'renewalWorkflow');
+        await refreshClientSavedRecords(context,['renewals','renewalWorkflow'],'Cash receipt confirmed.');
       } catch (error) {
         if(context.clientIsCurrent()) {showToast(error.message, 'error');setButtonBusy(button, false);syncClientMutationControls(context);}
         else clearButtonBusyFocus(button);
@@ -733,13 +737,31 @@ function bindClientRenewalWorkflowActions(context) {
 
 export function refreshClientRegion(context,key) {return context.clientLoad?.(key,{refresh:true})??Promise.resolve({status:'idle',data:null,error:null,revision:0});}
 
+async function refreshClientSavedRecords(context,keys,message) {
+  let failed=false;
+  for(const key of keys){
+    if(!context.clientIsCurrent())return;
+    try{const result=await refreshClientRegion(context,key);failed=result.status!=='ready'||failed;}
+    catch{failed=true;}
+  }
+  if(context.clientIsCurrent())showToast(failed?'Saved; refreshing records failed. Use Refresh to read the saved records.':message,'success');
+}
+
 function authorityScope(session) {return JSON.stringify([session?.user?.id,session?.user?.role,session?.user?.client_id,session?.client_id,session?.device?.id,session?.device_id,session?.permissions,session?.user?.permissions]);}
 export async function mountClientWorkspace(context) {
  if(context.signal?.aborted)return;context.clientCleanup?.();
  const generation=(context.clientWorkspaceGeneration??0)+1;context.clientWorkspaceGeneration=generation;
  const {root,api:originalApi,setNavigation}=context;const scope=authorityScope(context.getSession?.()??context.session);const controller=new AbortController();let disposed=false,visible='client-overview',notificationsLimit=30,renewalView='current';const childCleanups=[];const initialized=new Set();const mutations=createClientMutationController();context.clientMutations=mutations;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>mutations.pending()||mutations.uncertain()||context.clientProofHandle?.isUncertain()===true,getRoleWriteOwner:path=>path.startsWith('/api/v1/client/payment-proofs')&&context.clientProofHandle?{isWritePending:()=>context.clientProofHandle.isUncertain()}:{isWritePending:()=>mutations.pending()||mutations.uncertain()}}),api=treasuryGate.api;context.api=api;
  const current=()=>{const session=context.getSession?context.getSession():context.session;const ok=!disposed&&!context.signal?.aborted&&context.clientWorkspaceGeneration===generation&&(!context.getSession||session!==null)&&authorityScope(session)===scope;if(!ok&&!disposed)dispose();return ok;};
- function dispose(){if(disposed)return;disposed=true;controller.abort();mutations.dispose();reads.dispose();for(const cleanup of childCleanups)cleanup?.();context.clientDocumentCleanup?.();context.clientProofCleanup?.();context.clientScheduleCleanup?.();if(context.clientWorkspaceGeneration===generation){context.beforeTaskChange?.();root.innerHTML='';context.afterTaskChange?.();}context.signal?.removeEventListener('abort',dispose);}
+ function dispose(){
+  if(disposed)return;disposed=true;
+  if(context.clientWorkspaceGeneration===generation){
+   // Clear private values before child abort handlers detach their editors.
+   for(const selector of ['input','textarea','select'])for(const field of root.querySelectorAll(selector)){field.value='';field.checked=false;field.disabled=true;}
+   for(const button of root.querySelectorAll('button')){button.disabled=true;clearButtonBusyFocus(button);}
+  }
+  controller.abort();mutations.dispose();reads.dispose();for(const cleanup of childCleanups)cleanup?.();context.clientDocumentCleanup?.();context.clientProofCleanup?.();context.clientScheduleCleanup?.();if(context.clientWorkspaceGeneration===generation){context.beforeTaskChange?.();root.innerHTML='';context.afterTaskChange?.();}context.signal?.removeEventListener('abort',dispose);
+ }
  context.clientCleanup=dispose;context.clientSignal=controller.signal;context.clientIsCurrent=current;
  const sections=[['client-overview','Today'],['client-loans','My loans'],['client-renewals','Renewal requests'],['client-payment-instructions','Payment options'],['client-payment-proofs','Payment proof'],['client-gcash-claims','GCash proof & status'],['client-support','Ask for help'],['client-payments','Payments & receipts'],['client-statement','Statement'],['client-documents','Documents'],['client-updates','Updates'],['client-account','Account & devices']];setNavigation(sections.map(([id,label])=>({id,label,group:['client-account'].includes(id)?'Administration':['client-payments','client-statement','client-documents','client-updates'].includes(id)?'Records':'Daily work'})));
  const raw={account:{},loans:{loans:[]},payments:{payments:[]},statement:{},renewals:{loans:[],requests:[]},renewalWorkflow:{requests:[]},support:{requests:[]},gcash:{},notifications:[],homeObligationSchedules:{}};context.clientRaw=raw;
@@ -754,7 +776,16 @@ export async function mountClientWorkspace(context) {
  function documents(){if(!initialized.has('documents')||!root.querySelector('[data-client-documents]'))return;context.clientDocumentCleanup?.();context.clientDocumentCleanup=mountClientDocuments({root:root.querySelector('[data-client-documents]'),api,loansState:reads.state('loans'),paymentsState:reads.state('payments'),onRetry:key=>load(key,{refresh:true}),signal:controller.signal});}
  function renderRegion(key){const state=reads.state(key);if(key==='loans'){const region=root.querySelector('[data-client-region="loans"]');const cards=region?.querySelectorAll('.loan-card')||[];const ids=Array.from(cards).map(card=>card.querySelector('[data-client-schedule-loan]')?.getAttribute('data-client-schedule-loan'));if(cards.length&&state.status==='loading'){for(const card of cards)card.querySelector('[data-client-schedule-loan]').disabled=true;renderHome();return;}if(cards.length&&state.status==='ready'&&JSON.stringify(ids)===JSON.stringify(asArray(raw.loans.loans).map(l=>l.loan_id))){for(const card of cards){const id=card.querySelector('[data-client-schedule-loan]').getAttribute('data-client-schedule-loan');const loan=asArray(raw.loans.loans).find(l=>l.loan_id===id);const temporary=card.ownerDocument.createElement('div');temporary.innerHTML=loanCard(loan,reads.state(`schedule:${id}`));context.beforeTaskChange?.();card.querySelector('.loan-meta').innerHTML=temporary.querySelector('.loan-meta').innerHTML;card.querySelector('.section-heading').innerHTML=temporary.querySelector('.section-heading').innerHTML;card.querySelector('[data-client-schedule-loan]').disabled=false;context.afterTaskChange?.();}renderHome();documents();return;}childCleanups.push(context.clientScheduleCleanup);context.clientScheduleCleanup?.();setRegion('loans',state.status==='ready'?asArray(raw.loans.loans).map(loan=>loanCard(loan,reads.state(`schedule:${loan.loan_id}`))).join('')||emptyState('No linked loan is available on this account.'):unavailable(key));context.clientScheduleCleanup=bindClientScheduleButtons({...context,signal:controller.signal,onController:handle=>scheduleView=handle});renderHome();documents();return;}
  if(key==='payments'){setRegion(key,state.status==='ready'?paymentRows(asArray(raw.payments.payments)):unavailable(key));childCleanups.push(bindClientPaymentDetails({root,paymentsState:()=>reads.state('payments'),onDownload:id=>downloadClientRecordCopy({api,kind:'payment',transactionId:id,signal:controller.signal}),signal:controller.signal,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange}));documents();if(reads.state('notifications').status==='ready')renderRegion('notifications');return;}
- if(key==='renewals'){renderRenewals();const form=root.querySelector('#client-renewal-form');const select=form?.querySelector('[name="loanId"]');const eligible=state.status==='ready'?asArray(raw.renewals.loans).filter(l=>l.eligible===true&&!l.pending_request_id):[];if(select){const selected=select.value;select.innerHTML=eligible.map(l=>`<option value="${escapeHtml(l.loan_id)}">${escapeHtml(l.loan_number||'Loan')}</option>`).join('');if(selected)select.value=selected;const valid=eligible.some(l=>l.loan_id===select.value);select.disabled=!valid;form.querySelector('button[type="submit"]').disabled=!valid;}syncClientMutationControls(context);return;}
+ if(key==='renewals'){
+  renderRenewals();const select=root.querySelector('#client-renewal-form')?.querySelector('[name="loanId"]');
+  if(select&&state.status==='ready'){
+   const selected=select.value;const eligible=asArray(raw.renewals.loans).filter(loan=>loan.eligible===true&&!loan.pending_request_id);
+   const missing=selected&&!eligible.some(loan=>loan.loan_id===selected);
+   select.innerHTML='<option value="">Choose an eligible loan</option>'+(missing?`<option value="${escapeHtml(selected)}" disabled>Previously selected loan is no longer eligible. Choose another loan.</option>`:'')+eligible.map(loan=>`<option value="${escapeHtml(loan.loan_id)}">${escapeHtml(loan.loan_number||'Loan')}</option>`).join('');
+   select.value=selected;
+  }
+  syncClientMutationControls(context);return;
+ }
  if(key==='renewalWorkflow'){renderRenewals();return;}
  if(key==='gcash'){if(!initialized.has('gcash'))return;if(root.querySelector('#client-gcash-form')){gcashHandle?.updateReadState();return;}gcashHandle?.dispose();setRegion(key,renderClientGcashPanel({capability:state.data,capabilityState:state,loans:asArray(raw.loans.loans),loansState:reads.state('loans')}));gcashHandle=bindClientGcashPanel({...context,signal:controller.signal});return;}
  const renderers={account:()=>clientAccountCard(raw.account),statement:()=>renderClientStatement(raw.statement),support:()=>supportRows(asArray(raw.support.requests)),notifications:()=>clientNotificationRows(raw.notifications,{visibleLimit:notificationsLimit,authorizedRecords:{userId:(context.getSession?.()??context.session)?.user?.id,payments:reads.state('payments').status==='ready'?asArray(raw.payments.payments):[]}})};if(renderers[key])setRegion(key,state.status==='ready'?renderers[key]():unavailable(key));if(key==='statement'){const button=root.querySelector('[data-client-statement-copy]');button?.addEventListener('click',async()=>{if(button.disabled||!current())return;button.disabled=true;try{await downloadClientRecordCopy({api,kind:'statement',signal:controller.signal});}catch(error){if(current())root.querySelector('[data-client-statement-download-status]').textContent=error.message;}finally{if(current())button.disabled=false;}});}if(key==='account')bindClientAccountDeviceSecurity(context);if(key==='notifications'){bindClientNotificationReadActions(context);for(const button of root.querySelectorAll('[data-client-notification-payment]'))button.addEventListener('click',async()=>{if(!current())return;const id=button.getAttribute('data-client-notification-payment');if(reads.state('payments').status!=='ready'||!asArray(raw.payments.payments).some(p=>p.transaction_id===id))return;context.navigateTo?.('client-payments');await activate('client-payments');root.querySelector(`[data-payment-details="${id}"]`)?.click?.();});const more=root.querySelector('[data-client-updates-more]');more?.addEventListener('click',()=>{notificationsLimit+=30;renderRegion('notifications');});}}
