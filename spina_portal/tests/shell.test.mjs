@@ -65,7 +65,7 @@ test('service worker explicitly bypasses authenticated API and health traffic', 
 test('service worker refreshes the shell and includes the office CIF review modules', async () => {
   const serviceWorker = await text('../sw.js');
 
-  assert.match(serviceWorker, /spina-company-shell-v24-collector-surplus/);
+  assert.match(serviceWorker, /spina-company-shell-v25-exact-plan-followthrough/);
   for (const asset of ['collector-surplus', 'collector-surplus-contract', 'session-refresh', 'management-collection-actions', 'management-journal-actions', 'management-accounting', 'management-tax-ecl']) {
     assert.ok(serviceWorker.includes(`/assets/${asset}.js`));
   }
