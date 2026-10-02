@@ -55,7 +55,11 @@ function closeNavigation() {
 }
 const workspaceNavigation = bindNavigation(roleNavigation, roleContent, {
   onBeforeNavigate: ({ to }) => sharingController.beforeNavigate(to),
-  onNavigate: ({ label, userInitiated }) => {
+  onNavigate: ({ id, label, userInitiated }) => {
+    const handle = currentWorkspaceHandle;
+    Promise.resolve(handle?.activate?.(id)).catch(() => {
+      if (handle === currentWorkspaceHandle) showToast('This task could not load. Use its Retry control.', 'error');
+    });
     sharingController.afterNavigate();
     if (currentScreen) currentScreen.textContent = label || 'Today';
     if (userInitiated) closeNavigation();
@@ -65,6 +69,7 @@ const workspaceNavigation = bindNavigation(roleNavigation, roleContent, {
 let currentMount = null;
 let currentContext = null;
 let workspaceController = null;
+let currentWorkspaceHandle = null;
 const refreshController = new SessionRefreshController({
   api, sessionStore,
   onRefreshed: async (session) => {
@@ -99,6 +104,7 @@ function clearWorkspace() {
   sharingController.dispose();
   workspaceController?.abort();
   workspaceController = null;
+  currentWorkspaceHandle = null;
   currentMount = null;
   currentContext = null;
   workspaceNavigation.reset();
@@ -126,8 +132,33 @@ async function mountCurrentWorkspace() {
   workspaceController?.abort();
   const controller = new AbortController();
   workspaceController = controller;
+  currentWorkspaceHandle = null;
   const mount = currentMount;
-  const context = { ...currentContext, signal: controller.signal };
+  const ownerContext = currentContext;
+  const isCurrent = () => !controller.signal.aborted && workspaceController === controller && currentContext === ownerContext;
+  let registeredHandle = null;
+  const context = {
+    ...ownerContext, signal: controller.signal,
+    getSession: () => isCurrent() ? ownerContext.session : null,
+    registerWorkspaceHandle: (handle) => {
+      if (!isCurrent()) { handle?.dispose?.(); return false; }
+      if (registeredHandle !== handle) registeredHandle?.dispose?.();
+      registeredHandle = handle;
+      currentWorkspaceHandle = handle;
+      return true;
+    },
+    beforeTaskChange: () => {
+      if (isCurrent()) void sharingController.stop({ reason: 'Live view stopped because the work panel changed.' });
+    },
+    afterTaskChange: () => { if (isCurrent()) sharingController.afterNavigate(); },
+    navigateTo: (id) => isCurrent() && workspaceNavigation.activate(id, { focus: true }),
+  };
+  Object.defineProperty(context, 'session', {get: () => isCurrent() ? ownerContext.session : null});
+  controller.signal.addEventListener('abort', () => {
+    registeredHandle?.dispose?.();
+    if (currentWorkspaceHandle === registeredHandle) currentWorkspaceHandle = null;
+    registeredHandle = null;
+  }, {once: true});
   refreshButton.disabled = true;
   try {
     await mount(context);
@@ -138,6 +169,23 @@ async function mountCurrentWorkspace() {
     showToast(error.message || 'Workspace failed to load.', 'error');
   } finally {
     if (workspaceController === controller) refreshButton.disabled = false;
+  }
+}
+
+async function refreshCurrentWorkspace() {
+  const handle = currentWorkspaceHandle;
+  const controller = workspaceController;
+  if (!handle?.refreshVisible) return mountCurrentWorkspace();
+  if (handle.isWritePending?.()) {
+    showToast('Finish or reconcile the current action before refreshing.', 'error');
+    return;
+  }
+  refreshButton.disabled = true;
+  try { await handle.refreshVisible(); }
+  catch (error) {
+    if (handle === currentWorkspaceHandle && !controller?.signal.aborted) showToast(error.message || 'Refresh failed. Your work is retained.', 'error');
+  } finally {
+    if (controller === workspaceController) refreshButton.disabled = false;
   }
 }
 
@@ -220,7 +268,7 @@ loginForm.addEventListener('submit', async (event) => {
   }
 });
 
-refreshButton.addEventListener('click', () => mountCurrentWorkspace());
+refreshButton.addEventListener('click', () => refreshCurrentWorkspace());
 workspaceChoice?.addEventListener('change', () => {
   const session = currentContext?.session;
   if (!session || sessionWorkspaceRoles(session).includes('management')) return;
