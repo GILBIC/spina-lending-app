@@ -1,3 +1,4 @@
+import {mountManagementRenewals} from '../management-renewals.js';
 import {createManagementTaskController} from '../management-workspace-tasks.js';
 import {mountManagementPortfolio} from '../management-portfolio.js';
 import {mountManagementPersonalUpdates} from '../management-personal-updates.js';
@@ -200,12 +201,6 @@ function bindManagementOfficeWorkflow(root) {
   return () => removers.forEach((remove) => remove());
 }
 
-function renewalQueue(items) {
-  if (!items.length) return '<p class="management-queue-empty" role="status" data-management-queue-empty="renewals">No renewal requests waiting.</p>';
-  return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.loan_number || 'Loan')} · ${escapeHtml(request.loan_type_name || '')}</div></div>${badge(request.status)}</div><div class="detail-grid"><div class="detail-item"><span>Current principal</span><strong>${formatMoney(request.current_principal)}</strong></div><div class="detail-item"><span>Remaining</span><strong>${formatMoney(request.remaining_balance)}</strong></div><div class="detail-item"><span>Requested</span><strong>${formatMoney(request.requested_amount)}</strong></div></div>${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}<form class="entry-form management-renewal-review" data-request-id="${escapeHtml(request.request_id)}"><label>Decision<select name="decision"><option value="approved">Approve request</option><option value="rejected">Reject request</option></select></label><label>Review note<textarea name="reviewNote" maxlength="1000" placeholder="Required when rejecting"></textarea></label><button class="button button-primary" type="submit">Confirm review</button></form></article>`).join('')}</div>`;
-}
-
-
 function staffRows(accounts, canManageDevices) {
   if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
   const actionLabel = canManageDevices ? 'Manage devices' : 'View account';
@@ -402,33 +397,6 @@ export function bindStaffDevices(context, accounts) {
   return cleanup;
 }
 
-function bindRenewals(context) {
-  for (const form of context.root.querySelectorAll('.management-renewal-review')) {
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      const decision = String(data.get('decision'));
-      const reviewNote = String(data.get('reviewNote') || '').trim();
-      if (decision === 'rejected' && reviewNote.length < 3) {
-        showToast('Enter a clear rejection reason.', 'error');
-        return;
-      }
-      if (!globalThis.confirm?.(`Confirm ${decision} for this renewal request?`)) return;
-      const button = form.querySelector('button[type="submit"]');
-      setButtonBusy(button, true, 'Saving…');
-      try {
-        await context.api.request(`/api/v1/management/renewals/${encodeURIComponent(form.dataset.requestId)}/review`, { method: 'POST', body: { decision, review_note: reviewNote } });
-        showToast(`Renewal request ${decision}.`, 'success');
-        await mountManagementWorkspace(context);
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
-      }
-    });
-  }
-}
-
-
 export async function mountManagementWorkspace(context) {
   if(context.signal?.aborted)return;
   context.managementTaskController?.dispose();
@@ -523,7 +491,7 @@ export async function mountManagementWorkspace(context) {
     if(!target)return;
     if(!canDashboard){target.innerHTML='<p>Management dashboard permission is not assigned.</p>';return true;}
     try{const data=await api.request('/api/v1/management/dashboard-overview');if(active()&&version===overviewVersion){target.innerHTML=`${data.generated_at ? `<p class="meta">Updated ${formatDateTime(data.generated_at)}</p>` : ''}${overviewMetrics(asArray(data.metrics))}`;target.querySelector('[data-my-updates-shortcut]')?.addEventListener('click',async()=>{await context.managementTaskController?.activate('management-account','management-updates');context.navigateTo?.('management-account');});return true;}return false;}
-    catch(error){if(active()&&version===overviewVersion){target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-overview-retry>Retry overview</button>`;target.querySelector('[data-overview-retry]')?.addEventListener('click',()=>void refreshOverview(),{once:true});}return false;}
+    catch(error){if(active()&&version===overviewVersion){target.innerHTML=`<p role="status">Today overview is unavailable. Retry to load current totals.</p>${errorCard(error)}<button type="button" class="button button-outline" data-overview-retry>Retry overview</button>`;target.querySelector('[data-overview-retry]')?.addEventListener('click',()=>void refreshOverview(),{once:true});}return false;}
   }
   async function refreshAccount(){
     const version=++accountVersion;const target=root.querySelector('[data-management-account-profile]');
@@ -545,8 +513,7 @@ export async function mountManagementWorkspace(context) {
     return ()=>handlers.forEach(dispose=>dispose?.());
   },'client_onboarding.requirement.review');
   add('management-renewals','management-clients-loans','Renewals',async()=>{
-    const target=root.querySelector('[data-management-renewal-workflow]');
-    const h=readTask({target,load:()=>api.request('/api/v1/management/renewals?status=pending'),render:data=>renewalQueue(asArray(data.requests)),bind:()=>bindRenewals(context)});await h.refresh();return h;
+    const h=mountManagementRenewals({...options('[data-management-renewal-workflow]'),onSaved:refreshOverview});await h.refresh();return h;
   },'renewal.manage');
   add('management-payment-proofs','management-clients-loans','Payment evidence',()=>{
     let handle;const dispose=mountPaymentProofs({...options('[data-management-payment-proofs]'),mode:'management',registerHandle:value=>{handle=value;}});

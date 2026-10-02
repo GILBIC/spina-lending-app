@@ -279,27 +279,27 @@ Do not subsequently run npm run build on the unchanged head: it repeats tests. P
 
 ## Coverage and completion ledger
 
-All implementation and assessment below is pending at this revision. Replace status with exact evidence during execution, not predictions.
+Implementation ledger updated 2 October 2026. Full current portal suite1102/1102,189 module syntax checks and build passed;41 integrated synthetic browser captures plus19 renewal component captures, zero page errors/outside requests. Exact-head CI and combined six-PR integration remain separate pending gates. See docs/reviews/2026-10-02-management-output-scope.md for explicit missing-contract limits.
 
 | Requirement / task | Required coverage | State |
 | --- | --- | --- |
-| Task0 | Live refs, original/addendum and shared ownership | Pending Codex |
-| R1 / Task1 | False-zero error/recovery, global summary, races | Not implemented |
-| R8 / Task1A | Real rich renewal queue/terms, exact results, no legacy approval | Not implemented |
-| R8 / Task1B | Custody/proof/activation and private evidence/uncertainty | Not implemented |
-| R9 / Task1C | Actual recipient review, full evidence, Accept/Reject, exact-result checks | Not implemented |
-| R2 / Task2 | Draft/File identity, scoped success updates and pending recovery | Not implemented |
-| R3 / Task3 | Independent Today, lazy loads, safe Refresh/session cleanup | Not implemented |
-| R4 / Task4 | Staff390/320 readability, device permissions and focus | Not implemented |
-| R5 / Task5 | Six groups, precise task destinations and private boundaries | Not implemented |
-| R10 / Task5A | Exact loan detail,100+50 pagination and global-summary separation | Not implemented |
-| R6 / Task6 | All device/audit evidence reachable, original IDs/order | Not implemented |
-| R7 / Task7 | Today/cash/account density with protected flows unchanged | Not implemented |
-| R11 / Task7A | Authorized periods, response matching and local retry | Not implemented |
-| R12 / Task7B | Own Updates/Mark read, safe destinations,30/60/65 | Not implemented |
-| R13 / Task7C | Proof initial retry, Support history and draft/uncertainty protection | Not implemented |
-| R14 / Task7D | Borrower/output/metadata/version limits explicitly mapped | Pending assessment |
-| Task8 | Full checks,18 core plus new views, other roles/privacy/PWA/exact-head CI | Not run |
+| Task0 | Live refs, original/addendum and shared ownership | Verified current refs and owner scope |
+| R1 / Task1 | False-zero error/recovery, global summary, races | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R8 / Task1A | Real rich renewal queue/terms, exact results, no legacy approval | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R8 / Task1B | Custody/proof/activation and private evidence/uncertainty | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R9 / Task1C | Actual recipient review, full evidence, Accept/Reject, exact-result checks | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R2 / Task2 | Draft/File identity, scoped success updates and pending recovery | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R3 / Task3 | Independent Today, lazy loads, safe Refresh/session cleanup | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R4 / Task4 | Staff390/320 readability, device permissions and focus | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R5 / Task5 | Six groups, precise task destinations and private boundaries | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R10 / Task5A | Exact loan detail,100+50 pagination and global-summary separation | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R6 / Task6 | All device/audit evidence reachable, original IDs/order | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R7 / Task7 | Today/cash/account density with protected flows unchanged | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R11 / Task7A | Authorized periods, response matching and local retry | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R12 / Task7B | Own Updates/Mark read, safe destinations,30/60/65 | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R13 / Task7C | Proof initial retry, Support history and draft/uncertainty protection | Implemented; focused behavior plus full1102 suite and browser evidence |
+| R14 / Task7D | Borrower/output/metadata/version limits explicitly mapped | Assessed; supported outputs retained and missing contracts explicitly mapped |
+| Task8 | Full checks,18 core plus new views, other roles/privacy/PWA/exact-head CI | Local checks and41+19 captures passed; final exact-head CI and six-PR integration pending |
 
 ## Scope dispositions to complete during execution
 

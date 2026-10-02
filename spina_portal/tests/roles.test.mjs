@@ -204,7 +204,7 @@ test('Employee with unrelated permissions does not expose or load Area Managemen
 });
 
 test('Management mounts the same shared Area component and receives retirement controls', async () => {
-  const calls = [];
+  const calls = [];let workspaceHandle;
   const navigation = [];
   const { root, areaRoot: mountedAreaRoot } = workspaceRoot('#management-area-management');
   const api = {
@@ -220,12 +220,14 @@ test('Management mounts the same shared Area component and receives retirement c
   await mountManagementWorkspace({
     api,
     root,
+    registerWorkspaceHandle(handle){workspaceHandle=handle;},
     session: { permissions: ['area.retire'] },
     setNavigation(items) {
       navigation.push(...items);
     },
   });
 
+  await workspaceHandle.activate('management-operations','management-area-management');
   assert.ok(navigation.some((item) => item.id === 'management-operations' && item.label === 'People & operations'));
   assert.ok(calls.includes('/api/v1/areas?include_inactive=true'));
   assert.match(mountedAreaRoot.innerHTML, /AREA MANAGEMENT/i);
