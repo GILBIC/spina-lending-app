@@ -216,6 +216,18 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   const feedbackId=`employee-feedback-${crypto.randomUUID()}`;let opener=null;
   let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null;
   let dateFrom=employeeWorkDate(now()),dateTo=dateFrom,allDates=false;
+  const focusCleanups=new Set();
+  function retainEditorFocus(){
+    const doc=root.ownerDocument,target=doc?.activeElement;
+    if(!target?.closest?.('[data-employee-editor]'))return ()=>{};
+    const selection=[target.selectionStart,target.selectionEnd,target.selectionDirection];let intended=true;
+    const moved=event=>{if(event.type!=='focusin'||event.target!==target&&event.target!==doc.body)intended=false;};
+    const stop=()=>{for(const type of ['focusin','pointerdown','keydown'])doc.removeEventListener(type,moved,true);focusCleanups.delete(stop);};
+    for(const type of ['focusin','pointerdown','keydown'])doc.addEventListener(type,moved,true);focusCleanups.add(stop);
+    return ()=>{stop();if(disposed||!intended||target.disabled||target.isConnected===false||target.closest('[hidden]')||doc.activeElement!==target&&doc.activeElement!==doc.body)return;
+      target.focus({preventScroll:true});if(Number.isInteger(selection[0])&&Number.isInteger(selection[1]))target.setSelectionRange?.(...selection);
+    };
+  }
   function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
   function dateVisible(day){return allDates||day>=dateFrom&&day<=dateTo;}
   const currentScope=()=>getSession()?.user?.id===session?.user?.id;
@@ -223,7 +235,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   const editorMatches=command=>selected&&command.action===selected.action&&(!selected.record || command.id===selected.record.id || command.original_payroll_id===selected.record.id || command.original_history_id===selected.record.id);
   const listen=(element,event,handler)=>{if(element){element.addEventListener(event,handler);removers.push(()=>element.removeEventListener(event,handler));}};
   function clear(){for(const remove of removers)remove();removers=[];for(const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')])input.value='';root.innerHTML='';}
-  function dispose(){if(disposed)return;disposed=true;controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
+  function dispose(){if(disposed)return;disposed=true;for(const stop of focusCleanups)stop();controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
   function message(text,error=false){const element=root.querySelector('[data-employee-status]');if(element){if(error)element.innerHTML=errorCard(text);else element.textContent=text;}}
   function focusFeedback(){root.querySelector('[data-employee-status]')?.focus();}
   function restoreFocus(){
@@ -253,7 +265,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   function setPending(value){pending=value;if(value)pendingBySession.set(session,value);else pendingBySession.delete(session);}
   async function load({recover=false,successMessage=''}={}) {
-    if(disposed||busy)return;busy=true;lock();
+    if(disposed||busy)return;const restoreEditorFocus=retainEditorFocus();busy=true;lock();
     if(!currentScope()){setPending(null);dispose();return;}
     try {
       const value=await api.request(`${BASE}/workspace${recover&&pending?`?request_id=${encodeURIComponent(pending.request_id)}`:''}`,{signal:controller.signal});
@@ -276,7 +288,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       else if(editorStale)message('This record changed. Your draft is retained with its original revision; cancel editing and review the current record before submitting.');
       else if(pending)message('The result is not confirmed. Check the saved result, or retry the same unchanged request. Do not start another payment.');
     } catch(error){if(disposed)return;stale=true;onReadState?.({status:[401,403].includes(error?.status)?'denied':'error'});if(!denied(error)){if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
-    finally{busy=false;if(!disposed){lock();if(successMessage)restoreFocus();}}
+    finally{busy=false;if(!disposed){lock();if(successMessage&&!selected)restoreFocus();}restoreEditorFocus();}
   }
   async function execute(command) {
     if(disposed||busy||globalThis.navigator?.onLine===false)return;
@@ -350,8 +362,9 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     await execute({action:'attendance_record',request_id:crypto.randomUUID(),id:crypto.randomUUID(),expected_version:0,employee_id:workspace.actor.employee_id,event_type:eventType,captured_at:capturedAt,device_id:workspace.actor.device_id,previous_event_id:prior?.id??null,sequence,offline:false});
   }
   function render(){
+    const restoreEditorFocus=retainEditorFocus();
     const retained=selected&&selected===renderedSelection?root.querySelector('[data-employee-editor]'):null;
-    retained?.remove();clear();if(!workspace)return;
+    retained?.remove();clear();if(!workspace){restoreEditorFocus();return;}
     const available=Object.entries(FORMS).filter(([action])=>createAllowed(workspace,action));
     const groups=[...new Set(available.map(([action,form])=>presentation==='employee'?actionView(action):form.group))];
     const reviewer=workspace.capabilities.can_manage_staff||workspace.capabilities.can_configure
@@ -423,6 +436,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       if(rows.length>=spec.max)return;rows.push({});parent.innerHTML=rows.map(value=>`<div class="employee-form-row" data-employee-row>${spec.fields.map(item=>inputMarkup({...item,optional:true},value)).join('')}</div>`).join('');
     });
     connection();
+    restoreEditorFocus();
   }
   mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
   if(signal?.aborted){dispose();return dispose;}
