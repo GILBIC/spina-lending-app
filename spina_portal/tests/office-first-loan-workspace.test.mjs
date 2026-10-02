@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
 import { availableRoleActions } from '../assets/roles.js';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-first-loan']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 

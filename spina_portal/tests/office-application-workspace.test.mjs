@@ -2,7 +2,8 @@ import {mountRoleTask, activateManagementTask} from './helpers/management-task-h
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-application-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -62,7 +63,7 @@ for (const role of ['employee', 'management']) {
     const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-application-review`;
     assert.deepEqual(h.navigation.find((item) => item.id === navigationId), role === 'management'
       ? {id: navigationId, label: 'Clients & loans'}
-      : {id: navigationId, label: 'Application review', group: 'Daily work'});
+      : {id: navigationId, label: 'Application review', group: 'Office work'});
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="application"]'));
     if (role === 'management') { await activateManagementTask(h.context, 'management-operations', 'management-area-management'); await activateManagementTask(h.context, 'management-clients-loans', 'management-office'); }
     const cif = h.root.querySelector('[data-office-cif-selection]');
