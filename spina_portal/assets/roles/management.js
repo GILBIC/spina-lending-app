@@ -547,7 +547,10 @@ export async function mountManagementWorkspace(context) {
     const target=root.querySelector('[data-management-renewal-workflow]');
     const h=readTask({target,load:()=>api.request('/api/v1/management/renewals?status=pending'),render:data=>renewalQueue(asArray(data.requests)),bind:()=>bindRenewals(context)});await h.refresh();return h;
   },'renewal.manage');
-  add('management-payment-proofs','management-clients-loans','Payment evidence',()=>mountPaymentProofs({...options('[data-management-payment-proofs]'),mode:'management'}),'client_payment_proof.review');
+  add('management-payment-proofs','management-clients-loans','Payment evidence',()=>{
+    let handle;const dispose=mountPaymentProofs({...options('[data-management-payment-proofs]'),mode:'management',registerHandle:value=>{handle=value;}});
+    return{dispose,refresh:()=>handle?.refreshReadOnly(),isWritePending:()=>handle?.isUncertain()===true};
+  },'client_payment_proof.review');
   add('management-client-accounts','management-clients-loans','Client accounts',()=>bindClientAccountAdmin(context),'account.manage');
   add('management-collection-actions','management-collections','Collection actions',()=>mountManagementCollectionActions({...options('[data-management-collection-actions]'),sessionStore:context.sessionStore}));
   add('management-loan-operations','management-collections','Loan operations & history',async()=>{

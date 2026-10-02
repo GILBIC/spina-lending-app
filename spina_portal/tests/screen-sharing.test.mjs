@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Element } from './helpers/dom.mjs';
 import { mountManagementWorkspace } from '../assets/roles/management.js';
+import {createManagementTaskController} from '../assets/management-workspace-tasks.js';
 import {
   isEligibleScreen,
   verifySelfCapture,
@@ -83,6 +84,20 @@ test('Management rendering marks only the two existing audited child panels for 
     assert.deepEqual(root.querySelectorAll('[data-screen-share-section]').map(panel => panel.getAttribute('id')),
       ['management-loans', 'management-loan-operations']);
   } finally { abort.abort(); }
+});
+
+test('Management local task change stops active and prepared capture before hiding the exact public panel',async()=>{
+  for(const kind of ['track','preparedTrack']) {
+    const contentRoot=groupedManagementContent('management-clients-loans','management-loans');
+    const panel=contentRoot.querySelector('#management-loans');let stopped=0,wasVisibleAtStop=false;
+    const subject=controller({sectionId:'management-clients-loans',contentRoot});
+    const taskController=createManagementTaskController({root:contentRoot,getSession:()=>({user:{id:'manager'}}),beforeTaskChange:()=>void subject.stop({notify:false}),tasks:[{id:'management-loans',group:'management-clients-loans',mount:()=>({})},{id:'private-sibling',group:'management-clients-loans',mount:()=>({})}]});
+    await taskController.activate('management-clients-loans','management-loans');
+    subject[kind]={stop(){stopped++;wasVisibleAtStop=!panel.hidden;}};
+    await taskController.activate('management-clients-loans','private-sibling');
+    assert.equal(stopped,1);assert.equal(wasVisibleAtStop,true);assert.equal(panel.hidden,true);assert.equal(subject.safeToCapture(),false);assert.equal(subject[kind],null);
+    taskController.dispose();subject.dispose();
+  }
 });
 
 function controller(overrides = {}) {
