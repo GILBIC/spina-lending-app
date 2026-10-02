@@ -206,7 +206,7 @@ function supportQueue(items) {
 function staffRows(accounts, canManageDevices) {
   if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
   const actionLabel = canManageDevices ? 'Manage devices' : 'View account';
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Account updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr data-staff-row-id="${escapeHtml(account.id || '')}" aria-selected="false"><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).map((role) => titleCase(String(role).trim().toLowerCase())).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 'Not reported')}</td><td>${formatDateTime(account.updated_at)}</td><td><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table class="mobile-card-table management-staff-table"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Account updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr data-staff-row-id="${escapeHtml(account.id || '')}" aria-selected="false"><td data-label="Name"><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td data-label="Username">${escapeHtml(account.username || '—')}</td><td data-label="Role">${escapeHtml(asArray(account.roles).map((role) => titleCase(String(role).trim().toLowerCase())).join(', ') || '—')}</td><td data-label="Status">${badge(account.status)}</td><td data-label="Devices">${escapeHtml(account.device_count ?? 'Not reported')}</td><td data-label="Account updated">${formatDateTime(account.updated_at)}</td><td data-label="Action"><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function accountCard(account) {
@@ -275,6 +275,9 @@ export function bindStaffDevices(context, accounts) {
   let selectedId = '';
   let disposed = false;
   let busy = false;
+  let opener = null;
+  let focusAtOpen = null;
+  const filters = context.staffDeviceFilters || (context.staffDeviceFilters = new Map());
   const active = (version) => !disposed && !context.signal?.aborted && version === selectionVersion;
 
   function select(id) {
@@ -284,18 +287,23 @@ export function bindStaffDevices(context, accounts) {
     }
   }
 
-  function close() {
+  function close(restoreFocus = true) {
     selectionVersion += 1;
     panelCleanup();
     select('');
     detail.innerHTML = '';
     detail.setAttribute('hidden', '');
+    if(restoreFocus&&!disposed){
+      const connected=Array.from(context.root.querySelectorAll('[data-manage-staff-id]')).includes(opener);
+      (connected?opener:context.root.querySelector('[data-management-staff-heading]'))?.focus?.();
+    }
   }
 
   function showPanel(account, devices, version) {
     panelCleanup();
     detail.innerHTML = renderManagedDevicePanel(account, devices, { canManageDevices });
-    const removeFilters = bindManagedDevicePanel(detail);
+    if(!filters.has(account.id))filters.set(account.id,{});
+    const removeFilters = bindManagedDevicePanel(detail,{state:filters.get(account.id)});
     const remove = [removeFilters];
     const on = (button, handler) => {
       button?.addEventListener('click', handler);
@@ -331,6 +339,7 @@ export function bindStaffDevices(context, accounts) {
       });
     }
     panelCleanup = () => { for (const cleanup of remove) cleanup(); };
+    if(!globalThis.document||globalThis.document.activeElement===focusAtOpen)detail.querySelector('[data-managed-device-heading]')?.focus?.();
   }
 
   for (const button of context.root.querySelectorAll('[data-manage-staff-id]')) {
@@ -338,6 +347,7 @@ export function bindStaffDevices(context, accounts) {
       if (disposed || context.signal?.aborted || busy) return;
       const account = accountById.get(String(button.getAttribute('data-manage-staff-id') || ''));
       const version = ++selectionVersion;
+      opener=button;focusAtOpen=globalThis.document?.activeElement;
       panelCleanup();
       detail.removeAttribute('hidden');
       if (!account) {
@@ -367,7 +377,7 @@ export function bindStaffDevices(context, accounts) {
   function cleanup() {
     if (disposed) return;
     disposed = true;
-    close();
+    close(false);
     for (const remove of listeners) remove();
     context.signal?.removeEventListener('abort', cleanup);
   }
@@ -501,7 +511,7 @@ export async function mountManagementWorkspace(context) {
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>People & operations</h1><p>Manage staff, areas, employee work, support, and audit activity.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2></div></div><div data-management-alerts-audit>${alerts.error ? errorCard(alerts.error) : managementAlertsAuditMarkup(alerts.data)}</div></section>` : ''}
   ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
-  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff and manage registered devices.</p></div></div>${staffInviteMarkup(session)}<div data-management-staff-list></div><div id="management-staff-device-detail" class="section-card" hidden></div></section>` : ''}
+  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2 tabindex="-1" data-management-staff-heading>Staff and devices</h2><p>Invite staff and manage registered devices.</p></div></div>${staffInviteMarkup(session)}<div data-management-staff-list></div><div id="management-staff-device-detail" class="section-card" hidden></div></section>` : ''}
   <section class="section-card" id="management-employee-operations"><div data-employee-operations></div></section>
   ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div><div data-management-support-list></div></section>` : ''}
   </section>
@@ -566,7 +576,7 @@ export async function mountManagementWorkspace(context) {
     const target=root.querySelector('[data-management-support-list]');
     const h=readTask({target,load:()=>api.request('/api/v1/management/support?status=open'),render:data=>supportQueue(asArray(data.requests)),bind:()=>bindSupport(context)});await h.refresh();return h;
   },'support.manage');
-  add('management-alerts','management-operations','Alerts & audit',async()=>{const h=readTask({target:root.querySelector('[data-management-alerts-audit]'),load:()=>api.request('/api/v1/management/alerts-audit?window_days=30&limit=100'),render:managementAlertsAuditMarkup,bind:()=>bindManagementAlertsAudit(root.querySelector('[data-management-alerts-audit]'),{signal:context.signal})});await h.refresh();return h;},'management.dashboard.view');
+  add('management-alerts','management-operations','Alerts & audit',async()=>{const h=readTask({target:root.querySelector('[data-management-alerts-audit]'),load:()=>api.request('/api/v1/management/alerts-audit?window_days=30&limit=100'),render:managementAlertsAuditMarkup,bind:()=>bindManagementAlertsAudit(root.querySelector('[data-management-alerts-audit]'),{signal:context.signal,navigateTask:async(group,id)=>{const accepted=await context.managementTaskController.activate(group,id);if(accepted)context.navigateTo?.(group);else showToast('That task is not available to this account.','error');}})});await h.refresh();return h;},'management.dashboard.view');
   add('management-profile','management-account','Profile & security',()=>({refresh:refreshAccount,dispose:mountAccountCredentials(options('[data-account-credentials]'))}));
   for(const task of tasks)if(task.id!==task.group)root.querySelector(`#${task.id}`).hidden=true;
   const taskController=createManagementTaskController({root,signal:context.signal,getSession,tasks,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange});

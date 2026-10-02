@@ -105,36 +105,46 @@ export function renderManagedDevicePanel(
       );
 
   return `<div class="section-heading">
-    <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(username)}${username ? ' · ' : ''}${escapeHtml(roleText)}</p></div>
+    <div><h3 tabindex="-1" data-managed-device-heading>${escapeHtml(name)}</h3><p>${escapeHtml(username)}${username ? ' · ' : ''}${escapeHtml(roleText)}</p></div>
     <button class="button button-quiet button-small" type="button" data-managed-device-close>Close</button>
   </div>
   ${permissionNotice}
   ${summary}${filters}
-  ${cards}`;
+  ${cards}<p class="meta" data-managed-device-visible></p><button class="button button-outline" type="button" data-managed-device-more hidden>Show 10 more devices</button>`;
 }
 
-export function bindManagedDevicePanel(root) {
+export function bindManagedDevicePanel(root, {state = {}} = {}) {
   if (!root) return () => {};
   const buttons = root.querySelectorAll('[data-managed-device-filter]');
   const cards = root.querySelectorAll('[data-managed-device-status]');
   const empty = root.querySelector('[data-managed-device-filter-empty]');
+  const more = root.querySelector('[data-managed-device-more]');
+  const count = root.querySelector('[data-managed-device-visible]');
   const listeners = [];
+  const statuses=Array.from(cards).map(card=>card.getAttribute('data-managed-device-status'));
+  if(!['all','active','pending','revoked'].includes(state.filter))state.filter=statuses.includes('pending')?'pending':statuses.includes('active')?'active':'all';
+  let cap=10;
+  function render() {
+    let matched=0,visible=0;
+    for(const card of cards) {
+      const match=state.filter==='all'||card.getAttribute('data-managed-device-status')===state.filter;
+      if(match)matched++;
+      if(match&&matched<=cap){card.removeAttribute('hidden');visible++;}else card.setAttribute('hidden','');
+    }
+    for(const button of buttons)button.setAttribute('aria-pressed',String(button.getAttribute('data-managed-device-filter')===state.filter));
+    if(matched)empty?.setAttribute('hidden','');else empty?.removeAttribute('hidden');
+    if(count)count.textContent=`${visible} visible · ${matched} matching · ${cards.length} loaded devices`;
+    if(more)more.hidden=matched<=cap;
+  }
   for (const button of buttons) {
     const filter = () => {
       const status = button.getAttribute('data-managed-device-filter');
       if (!['all', 'active', 'pending', 'revoked'].includes(status)) return;
-      let visible = 0;
-      for (const card of cards) {
-        const show = status === 'all' || card.getAttribute('data-managed-device-status') === status;
-        if (show) { card.removeAttribute('hidden'); visible += 1; }
-        else card.setAttribute('hidden', '');
-      }
-      for (const control of buttons) control.setAttribute('aria-pressed', String(control === button));
-      if (visible) empty?.setAttribute('hidden', '');
-      else empty?.removeAttribute('hidden');
+      state.filter=status;cap=10;render();
     };
     button.addEventListener('click', filter);
     listeners.push(() => button.removeEventListener('click', filter));
   }
+  const showMore=()=>{cap+=10;render();};more?.addEventListener('click',showMore);listeners.push(()=>more?.removeEventListener('click',showMore));render();
   return () => { for (const remove of listeners) remove(); };
 }
