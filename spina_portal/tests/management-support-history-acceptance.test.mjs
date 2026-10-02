@@ -93,15 +93,18 @@ test('Support failed history page and access denial are not empty success; Refre
   assert.match(h.root.textContent, /Support could not be loaded/);
   assert.equal(h.root.querySelector('[data-management-queue-empty="support"]'), null);
   assert.equal(h.root.querySelector('[data-support-previous]').disabled, false);
-  state = 'denied'; fire(h.root.querySelector('[data-support-refresh]'), 'click'); await tick();
-  assert.equal(h.calls.at(-1).url, path('cancelled', 100));
-  assert.match(h.root.textContent, /Synthetic access denied/);
-  assert.equal(h.root.querySelector('[data-management-queue-empty="support"]'), null);
-  assert.equal(h.root.querySelectorAll('[data-support-form]').length, 0);
   state = 'ready'; fire(h.root.querySelector('[data-support-refresh]'), 'click'); await tick();
   assert.equal(h.calls.at(-1).url, path('cancelled', 100));
   assert.match(h.root.textContent, /No cancelled support requests were returned/);
   assert.equal(filter.value, 'cancelled');
+  const refresh=h.root.querySelector('[data-support-refresh]');
+  state = 'denied'; fire(refresh, 'click'); await tick();
+  assert.equal(h.calls.at(-1).url, path('cancelled', 100));
+  assert.match(h.root.textContent, /Support access is unavailable/);
+  assert.equal(h.root.querySelector('[data-management-queue-empty="support"]'), null);
+  assert.equal(h.root.querySelectorAll('[data-support-form]').length, 0);
+  const calls=h.calls.length;state='ready';fire(refresh,'click');await tick();
+  assert.equal(h.calls.length,calls,'Access denial invalidates the old controls until a fresh authorized mount');
   assert.equal(h.calls.some(call => call.options.method), false);
 });
 
