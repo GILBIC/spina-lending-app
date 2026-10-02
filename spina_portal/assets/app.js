@@ -12,10 +12,10 @@ import {
   setButtonBusy,
   showToast,
 } from './ui.js';
-import { mountClientWorkspace } from './roles/client.js';
-import { mountEmployeeWorkspace } from './roles/employee.js';
-import { mountCollectorWorkspace } from './roles/collector.js';
-import { mountManagementWorkspace } from './roles/management.js';
+const mountClientWorkspace = async context => { const module = await import('./roles/client.js'); if (!context.signal?.aborted) return module.mountClientWorkspace(context); };
+const mountEmployeeWorkspace = async context => { const module = await import('./roles/employee.js'); if (!context.signal?.aborted) return module.mountEmployeeWorkspace(context); };
+const mountCollectorWorkspace = async context => { const module = await import('./roles/collector.js'); if (!context.signal?.aborted) return module.mountCollectorWorkspace(context); };
+const mountManagementWorkspace = async context => { const module = await import('./roles/management.js'); if (!context.signal?.aborted) return module.mountManagementWorkspace(context); };
 
 const sessionStore = new SessionStore();
 const api = new SpinaApi({

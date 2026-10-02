@@ -2,7 +2,7 @@ import {escapeHtml as h,hasPermission,formatExactMoney as money,formatDateTime,b
 import {buildCollectorRouteViewModel} from './presenters.js';
 import {buildCollectionSubmission,classifyLoanType} from './collector-contract.js';
 import {collectorMutation,collectionResultMatches} from './collector-workflow-contract.js';
-import {allocationField,followupFields,readFollowup,bindCollectorPaymentDetails} from './collector-workflows.js';
+import {allocationField,followupFields,readFollowup,bindCollectorPaymentDetails} from './collector-payment-details.js';
 
 export function collectorWithAttention(route) {
   return {...route,entries:(route.entries || []).map(entry=>{const short=entry.processed_today===true && entry.today_entry_type==='payment' && /^\d+(?:\.\d{1,2})?$/.test(String(entry.contract_today_unpaid_amount || '')) && /[1-9]/.test(entry.contract_today_unpaid_amount);return {...entry,attention_required:entry.attention_required===true || short,attention_reason:entry.attention_reason || (short?`Short ${money(entry.contract_today_unpaid_amount)}`:'')};})};
