@@ -2246,3 +2246,24 @@ button.management-audit-row { min-height: 48px; }
 #management-staff-device-detail > .section-heading { align-items: flex-start; gap: 12px; }
 #management-staff-device-detail > .section-heading > div { min-width: 0; flex: 1; }
 #management-staff-device-detail [data-managed-device-close] { flex: 0 0 auto; min-width: 64px; white-space: nowrap; }
+
+/* Employee local records retain their complete server facts on narrow screens. */
+#employee-operations .employee-details dd,
+#employee-payslips .employee-details dd,
+.employee-evidence-rows dd { overflow-wrap:anywhere; min-width:0; }
+#employee-operations .employee-evidence-rows,
+#employee-payslips .employee-evidence-rows { display:grid; gap:.75rem; }
+[data-employee-view][hidden] { display:none !important; }
+[data-office-case-strip] { margin-bottom:1rem; }
+.employee-payslip-copy { color:#111; background:white; font:12pt Arial,sans-serif; line-height:1.4; }
+.employee-payslip-copy table { width:100%; border-collapse:collapse; }
+.employee-payslip-copy th,.employee-payslip-copy td { position:static; color:#111; background:white; font:inherit; letter-spacing:normal; text-transform:none; padding:.4rem; text-align:left; border-bottom:1px solid #bbb; overflow-wrap:anywhere; }
+.employee-payslip-copy td { white-space:nowrap; }
+.employee-payslip-copy dl div { display:flex; justify-content:space-between; gap:1rem; }
+[data-employee-print-region] { padding:1rem; background:white; }
+@media print {
+ body:has([data-employee-print-region]) > * { display:none !important; }
+ body:has([data-employee-print-region]) > [data-employee-print-region] { display:block !important; position:static; padding:0; }
+ [data-employee-print-region] h1,[data-employee-print-region] h2 { break-after:avoid; }
+ [data-employee-print-region] tr,[data-employee-print-region] dl div { break-inside:avoid; }
+}

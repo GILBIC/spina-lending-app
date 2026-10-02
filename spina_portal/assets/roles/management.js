@@ -580,7 +580,7 @@ export async function mountManagementWorkspace(context) {
     context.refreshStaff=h.refresh;const invite=bindStaffInvite(context);await h.refresh();return{refresh:h.refresh,isWritePending:invite.isWritePending,dispose(){invite.dispose();h.dispose();}};
   });
   add('management-area-management','management-operations','Areas',()=>mountAreaManagement({...context,root:root.querySelector('#management-area-management')}));
-  add('management-employee-operations','management-operations','Employee work',()=>mountEmployeeOperations(options('[data-employee-operations]')));
+  add('management-employee-operations','management-operations','Employee work',()=>{let handle;const dispose=mountEmployeeOperations({...options('[data-employee-operations]'),onController:value=>{handle=value;}});return handle||{dispose};});
   add('management-support','management-operations','Client support',async()=>{
     const h=mountManagementSupport({...options('[data-management-support-list]'),onSaved:refreshOverview});await h.refresh();return h;
   },'support.manage');

@@ -210,9 +210,9 @@ test('a version conflict requires authoritative refresh before another mutation'
 
 for(const role of ['employee','collector','management'])test(`${role} mounts private employee panel through server capabilities`,async()=>{
  const names={employee:'mountEmployeeWorkspace',collector:'mountCollectorWorkspace',management:'mountManagementWorkspace'};
- const roleModule=await import(`../assets/roles/${role}.js`);const root=new Element();root.dataset={};let navigation;const calls=[];const controller=new AbortController();
+ const roleModule=await import(`../assets/roles/${role}.js`);const root=new Element();root.dataset={};let navigation,handle;const calls=[];const controller=new AbortController();
  const api={request:async(path)=>{calls.push(path);if(path==='/api/v1/employee-operations/workspace')return workspace();if(path==='/api/v1/account')return {profile:{full_name:'Synthetic employee'}};return {};}};
- await roleModule[names[role]]({root,api,session:{user:{id:SELF,role,roles:[role],permissions:[]}},signal:controller.signal,setNavigation:items=>{navigation=items;}});await setImmediate();
+ await roleModule[names[role]]({root,api,session:{user:{id:SELF,role,roles:[role],permissions:[]}},signal:controller.signal,setNavigation:items=>{navigation=items;},registerWorkspaceHandle:value=>{handle=value;}});if(role==='management')await handle.activate('management-operations','management-employee-operations');await setImmediate();
  assert.ok(calls.includes('/api/v1/employee-operations/workspace'));assert.ok(navigation.some(item=>role==='management'?item.id==='management-operations':item.id.includes('employee-operations')));assert.match(root.textContent,/My attendance/);
  controller.abort();assert.equal(root.querySelector('[data-employee-operations]').innerHTML,'');
 });
@@ -242,10 +242,10 @@ test('save restores the recreated action only after the refreshed workspace unlo
  await submit(h);const opener=h.root.querySelector('[data-employee-create="leave_request"]');assert.equal(opener.disabled,false);assert.equal(opener.focused,true);assert.equal(h.root.querySelector('[data-employee-form]'),null);
 });
 
-test('version conflict discards stale editor and focuses refresh without permitting another write',async()=>{
+test('version conflict retains the original draft and focuses refresh without permitting another write',async()=>{
  const h=await harness(workspace(),async(path,options,h)=>{if(options.method==='POST')throw Object.assign(new Error('Refresh the changed record.'),{status:409});return h.value;});
  await open(h,'leave_request');for(const [name,value] of Object.entries({work_date:'2026-10-01',minutes:'240',leave_kind:'ordinary',reason:'Stale draft'}))set(h,name,value);
- await submit(h);assert.equal(h.root.querySelector('[data-employee-form]'),null);assert.equal(h.root.querySelector('[data-employee-create="leave_request"]').disabled,true);assert.equal(h.root.querySelector('[data-employee-refresh]').focused,true);
+ await submit(h);assert.ok(h.root.querySelector('[data-employee-form]'));assert.equal(h.root.querySelector('[name="reason"]').value,'Stale draft');assert.equal(h.root.querySelector('[data-employee-create="leave_request"]').disabled,true);assert.equal(h.root.querySelector('[data-employee-refresh]').focused,true);
 });
 
 test('local validation retains the draft and focuses its associated feedback without a request',async()=>{
