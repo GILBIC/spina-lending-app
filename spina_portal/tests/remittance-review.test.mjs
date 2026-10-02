@@ -269,6 +269,7 @@ test('Employee workspace wires review and disposes it before remount', async (t)
   const controller = new AbortController(); t.after(() => controller.abort());
   const calls = [];
   const context = { root, session: SESSION, signal: controller.signal, setNavigation() {},
+    registerWorkspaceHandle(handle){this.handle=handle;},
     api: { async request(path, options = {}) {
       calls.push({ path, options });
       if (path === '/api/v1/notifications') return [notice];
@@ -276,12 +277,14 @@ test('Employee workspace wires review and disposes it before remount', async (t)
       return {};
     } } };
   await mountEmployeeWorkspace(context);
+  context.handle.activate('employee-remittance');await setImmediate();
   const reviewRoot = root.querySelector('[data-remittance-review]');
   assert.ok(reviewRoot, 'Employee remittance section must mount the full review');
   fire(reviewRoot.querySelector('[data-review-notification]'), 'click'); await setImmediate();
   const form = reviewRoot.querySelector('[data-remittance-accept-form]');
   assert.ok(form);
   await mountEmployeeWorkspace(context);
+  context.handle.activate('employee-remittance');await setImmediate();
   assert.equal(reviewRoot.innerHTML, '');
   fire(form, 'submit');
   assert.equal(calls.filter((call) => call.options.method === 'POST').length, 0);
