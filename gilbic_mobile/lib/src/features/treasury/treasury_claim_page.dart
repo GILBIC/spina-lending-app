@@ -84,10 +84,14 @@ class _TreasuryClaimPageState extends State<TreasuryClaimPage> {
     _media = null;
   }
 
+  bool _selecting = false;
   Future<void> _pick({bool camera = false}) async {
     if (_locked) return;
     final generation = ++_generation;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _selecting = true;
+    });
     try {
       final XFile? file;
       if (camera) {
@@ -134,7 +138,12 @@ class _TreasuryClaimPageState extends State<TreasuryClaimPage> {
         setState(() => _error = error.toString());
       }
     } finally {
-      if (mounted && generation == _generation) setState(() => _busy = false);
+      if (mounted && generation == _generation) {
+        setState(() {
+          _busy = false;
+          _selecting = false;
+        });
+      }
     }
   }
 
@@ -273,7 +282,11 @@ class _TreasuryClaimPageState extends State<TreasuryClaimPage> {
             'Send only your own payment proof or an assigned borrower’s authorized proof. Recipient statements remain private.',
           ),
           const SizedBox(height: 16),
-          if (_busy) const LinearProgressIndicator(),
+          if (_busy)
+            if (_selecting)
+              const Text('Selecting private proof')
+            else
+              const LinearProgressIndicator(),
           if (_error != null) Text(_error!),
           if (widget.repository.pendingRequestId != null) ...[
             const Text(

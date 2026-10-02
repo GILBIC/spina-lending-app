@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -49,9 +50,45 @@ Future<void> pumpAndroidRoleFixture(
   }
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
+  final originalPlatform = debugDefaultTargetPlatformOverride;
+  late ThemeData androidTheme;
+  try {
+    // Build the production theme under Android so its font families, as well
+    // as platform behavior, are Android's. Changing platform afterwards does
+    // not rebuild Windows text styles and would retain unavailable Segoe UI.
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final production = SpinaTheme.light;
+    // The Android engine defaults an omitted family to Roboto. The widget
+    // engine defaults it to Ahem instead, even after fonts are registered.
+    // Bind only that omitted family; retain production colors/sizes/weights.
+    androidTheme = production.copyWith(
+      appBarTheme: production.appBarTheme.copyWith(
+        titleTextStyle: production.appBarTheme.titleTextStyle?.copyWith(
+          fontFamily: 'Roboto',
+        ),
+        toolbarTextStyle: production.appBarTheme.toolbarTextStyle?.copyWith(
+          fontFamily: 'Roboto',
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: _androidFontFallback(production.filledButtonTheme.style),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: _androidFontFallback(production.outlinedButtonTheme.style),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: _androidFontFallback(production.textButtonTheme.style),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: _androidFontFallback(production.elevatedButtonTheme.style),
+      ),
+    );
+  } finally {
+    debugDefaultTargetPlatformOverride = originalPlatform;
+  }
   await tester.pumpWidget(
     MaterialApp(
-      theme: SpinaTheme.light.copyWith(platform: TargetPlatform.android),
+      theme: androidTheme,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
           size: size,
@@ -69,3 +106,10 @@ Future<void> pumpAndroidRoleFixture(
     ),
   );
 }
+
+ButtonStyle? _androidFontFallback(ButtonStyle? style) => style?.copyWith(
+  textStyle: WidgetStateProperty.resolveWith(
+    (states) =>
+        style.textStyle?.resolve(states)?.copyWith(fontFamily: 'Roboto'),
+  ),
+);

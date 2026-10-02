@@ -2,6 +2,7 @@ import 'package:gilbic_mobile/src/features/treasury/treasury_selectable_text.dar
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/treasury/collector_surplus_page.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
@@ -257,6 +258,19 @@ class _TreasuryWorkspacePageState extends State<TreasuryWorkspacePage> {
         ).scale(56).clamp(56, 112).toDouble(),
         title: const Text('Cash and GCash Control'),
         actions: [
+          if (w != null && _repository is CollectorSurplusRepository)
+            IconButton(
+              tooltip: 'Collector Excess',
+              onPressed: _loading
+                  ? null
+                  : () => _open(
+                      CollectorSurplusPage(
+                        session: widget.session,
+                        repository: _repository as CollectorSurplusRepository,
+                      ),
+                    ),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+            ),
           IconButton(
             tooltip: 'Refresh current records',
             onPressed: _loading ? null : () => _refresh(),

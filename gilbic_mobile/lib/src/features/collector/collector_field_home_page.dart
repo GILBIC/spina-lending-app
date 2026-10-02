@@ -2,6 +2,7 @@ import 'package:gilbic_mobile/src/features/treasury/treasury_workspace_page.dart
 import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
 import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
+import 'package:gilbic_mobile/src/features/treasury/collector_surplus_page.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
@@ -250,6 +251,23 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     style: Theme.of(sheetContext).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 14),
+                  _CollectorToolTile(
+                    key: const Key('collector-more-excess-credit'),
+                    icon: Icons.account_balance_outlined,
+                    title: 'My excess credit',
+                    subtitle:
+                        'Own pending identification, credit, requests and return history',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _open(
+                        CollectorSurplusPage(
+                          session: widget.session,
+                          ownMode: true,
+                          deviceIdentityProvider: widget.deviceIdentityProvider,
+                        ),
+                      );
+                    },
+                  ),
                   if (widget.session.hasAnyPermission(treasuryPermissionCodes))
                     _CollectorToolTile(
                       key: const Key('collector-more-treasury'),
