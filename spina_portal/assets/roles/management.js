@@ -1,6 +1,7 @@
 import {createManagementTaskController} from '../management-workspace-tasks.js';
 import {mountManagementPortfolio} from '../management-portfolio.js';
 import {mountManagementPersonalUpdates} from '../management-personal-updates.js';
+import {mountManagementSupport} from '../management-support.js';
 import { mountManagementCollectionActions } from '../management-collection-actions.js';
 import { mountManagementJournalActions } from '../management-journal-actions.js';
 import { mountManagementAccounting } from '../management-accounting.js';
@@ -19,7 +20,7 @@ import {
   bindClientAccountAdmin,
   clientAccountAdminMarkup,
 } from '../client-account-admin.js';
-import { staffInviteMarkup, submitStaffInvitation } from '../staff-invite.js';
+import { staffInviteMarkup, submitStaffInvitation, normalizeStaffInvitation } from '../staff-invite.js';
 import {
   bindManagedDevicePanel,
   changeManagedDeviceStatus,
@@ -203,10 +204,6 @@ function renewalQueue(items) {
   return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.loan_number || 'Loan')} · ${escapeHtml(request.loan_type_name || '')}</div></div>${badge(request.status)}</div><div class="detail-grid"><div class="detail-item"><span>Current principal</span><strong>${formatMoney(request.current_principal)}</strong></div><div class="detail-item"><span>Remaining</span><strong>${formatMoney(request.remaining_balance)}</strong></div><div class="detail-item"><span>Requested</span><strong>${formatMoney(request.requested_amount)}</strong></div></div>${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}<form class="entry-form management-renewal-review" data-request-id="${escapeHtml(request.request_id)}"><label>Decision<select name="decision"><option value="approved">Approve request</option><option value="rejected">Reject request</option></select></label><label>Review note<textarea name="reviewNote" maxlength="1000" placeholder="Required when rejecting"></textarea></label><button class="button button-primary" type="submit">Confirm review</button></form></article>`).join('')}</div>`;
 }
 
-function supportQueue(items) {
-  if (!items.length) return '<p class="management-queue-empty" role="status" data-management-queue-empty="support">No open support requests.</p>';
-  return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div></div>${badge(request.status)}</div><p>${escapeHtml(request.message || '')}</p>${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}<form class="entry-form management-support-review" data-request-id="${escapeHtml(request.request_id)}"><label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label><label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label><button class="button button-primary" type="submit">Save response</button></form></article>`).join('')}</div>`;
-}
 
 function staffRows(accounts, canManageDevices) {
   if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
@@ -225,29 +222,42 @@ function accountCard(account) {
   return `<div class="data-card"><div class="kv-list"><div class="kv-row"><span>Name</span><strong>${escapeHtml(profile.full_name || '—')}</strong></div><div class="kv-row"><span>Username</span><strong>${escapeHtml(profile.username || '—')}</strong></div><div class="kv-row"><span>Email</span><strong>${escapeHtml(profile.email || '—')}</strong></div><div class="kv-row"><span>Workspace</span><strong>Management</strong></div>${additionalAccess.length ? `<div class="kv-row"><span>Additional access</span><strong>${escapeHtml(additionalAccess.join(', '))}</strong></div>` : ''}<div class="kv-row"><span>Status</span>${badge(profile.status || 'unknown')}</div></div></div>`;
 }
 
-function bindStaffInvite(context) {
-  const form = context.root.querySelector('#management-staff-invite-form');
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const button = form.querySelector('button[type="submit"]');
-    setButtonBusy(button, true, 'Sending…');
-    try {
-      const result = await submitStaffInvitation(context.api, {
-        fullName: data.get('fullName'),
-        username: data.get('username'),
-        email: data.get('email'),
-        role: data.get('role'),
-      });
-      form.reset();
-      const invited = result?.account?.full_name || result?.account?.username || 'staff member';
-      showToast(`Invitation sent to ${invited}.`, 'success');
-      await mountManagementWorkspace(context);
-    } catch (error) {
-      showToast(error.message, 'error');
-      setButtonBusy(button, false);
-    }
-  });
+export function bindStaffInvite(context) {
+  const form=context.root.querySelector('#management-staff-invite-form');
+  if(!form)return {dispose(){},isWritePending:()=>false};
+  const button=form.querySelector('button[type="submit"]');
+  const feedback=context.root.querySelector('[data-staff-invite-feedback]');
+  const reconcile=context.root.querySelector('[data-staff-invite-reconcile]');
+  const current=()=>context.getSession ? context.getSession() : context.session;
+  const owner=current()?.user?.id;
+  let disposed=false,busy=false,uncertain=null;
+  const alive=()=>!disposed&&!context.signal?.aborted&&current()?.user?.id===owner&&hasPermission(current(),'account.manage');
+  const tell=text=>{if(feedback)feedback.textContent=text;};
+  const controls=()=>{button.disabled=busy||!!uncertain;if(reconcile){reconcile.hidden=!uncertain;reconcile.disabled=busy;}};
+  const matches=(record,expected)=>!!record?.id&&record.username===expected.username&&String(record.email||'').toLowerCase()===expected.email&&asArray(record.roles).includes(expected.role);
+  async function submit(event) {
+    event.preventDefault();if(!alive()||busy||uncertain)return;
+    const input=Object.fromEntries(['fullName','username','email','role'].map(name=>[name,form.querySelector(`[name="${name}"]`)?.value]));
+    let expected;try{expected=normalizeStaffInvitation(input);}catch(error){tell(error.message);return;}
+    busy=true;controls();tell('Sending invitation…');let attempted=false;
+    try{
+      attempted=true;const result=await submitStaffInvitation(context.api,input);if(!alive())return;
+      if(result?.invitation_sent!==true||!matches(result.account,expected))throw new Error('Invitation outcome could not be confirmed.');
+      form.reset();tell('Invitation sent.');
+      try{if(await context.refreshStaff?.()===false)tell('Invitation sent; staff list refresh failed. Refresh Staff for current records.');}catch{tell('Invitation sent; staff list refresh failed. Refresh Staff for current records.');}
+    }catch(error){if(alive()){if(attempted&&(!error.status||error.status>=500)){uncertain=expected;tell('Invitation outcome is uncertain. Check the account before sending again.');}else tell(error.message);}}
+    finally{busy=false;if(alive())controls();}
+  }
+  async function check(){
+    if(!alive()||busy||!uncertain)return;busy=true;controls();
+    try{const data=await context.api.request('/api/v1/management/accounts?staff_only=true');if(!alive())return;const found=asArray(data?.accounts).find(record=>matches(record,uncertain));if(found){uncertain=null;form.reset();tell('The staff account exists. Invitation delivery cannot be confirmed from this account read; do not resend the invitation.');}else tell('The invitation is still unconfirmed. Further submissions remain blocked.');}
+    catch{if(alive())tell('The account check failed. Further submissions remain blocked.');}
+    finally{busy=false;if(alive())controls();}
+  }
+  form.addEventListener('submit',submit);reconcile?.addEventListener('click',check);
+  function dispose(){if(disposed)return;disposed=true;form.removeEventListener('submit',submit);reconcile?.removeEventListener('click',check);context.signal?.removeEventListener('abort',dispose);}
+  context.signal?.addEventListener('abort',dispose,{once:true});
+  return{dispose,isWritePending:()=>busy||!!uncertain};
 }
 
 function deviceConfirmation(account, device, action) {
@@ -417,24 +427,6 @@ function bindRenewals(context) {
   }
 }
 
-function bindSupport(context) {
-  for (const form of context.root.querySelectorAll('.management-support-review')) {
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      const button = form.querySelector('button[type="submit"]');
-      setButtonBusy(button, true, 'Saving…');
-      try {
-        await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, { method: 'POST', body: { action: data.get('action'), response: String(data.get('response') || '').trim() } });
-        showToast('Support review saved.', 'success');
-        await mountManagementWorkspace(context);
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
-      }
-    });
-  }
-}
 
 export async function mountManagementWorkspace(context) {
   if(context.signal?.aborted)return;
@@ -542,7 +534,7 @@ export async function mountManagementWorkspace(context) {
   const options=selector=>({root:root.querySelector(selector),api,session:getSession(),getSession,signal:context.signal});
   function readTask({load,render,target,bind}){
     let version=0,cleanup=()=>{};
-    const refresh=async()=>{const request=++version;try{const data=await load();if(!active()||request!==version)return;cleanup();target.innerHTML=render(data);cleanup=bind?.(data)||(()=>{});}catch(error){if(active()&&request===version){cleanup();target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-read-retry>Retry</button>`;target.querySelector('[data-read-retry]')?.addEventListener('click',()=>void refresh(),{once:true});}}};
+    const refresh=async()=>{const request=++version;try{const data=await load();if(!active()||request!==version)return;cleanup();target.innerHTML=render(data);cleanup=bind?.(data)||(()=>{});return true;}catch(error){if(active()&&request===version){cleanup();target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-read-retry>Retry</button>`;target.querySelector('[data-read-retry]')?.addEventListener('click',()=>void refresh(),{once:true});}return false;}};
     return {refresh,dispose(){version++;cleanup();}};
   }
   add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
@@ -573,13 +565,12 @@ export async function mountManagementWorkspace(context) {
   add('management-staff','management-operations','Staff & devices',async()=>{
     const target=root.querySelector('[data-management-staff-list]');
     const h=readTask({target,load:()=>api.request('/api/v1/management/accounts?staff_only=true'),render:data=>staffRows(asArray(data.accounts),canManageDevices),bind:data=>bindStaffDevices(context,asArray(data.accounts))});
-    context.refreshStaff=h.refresh;bindStaffInvite(context);await h.refresh();return h;
+    context.refreshStaff=h.refresh;const invite=bindStaffInvite(context);await h.refresh();return{refresh:h.refresh,isWritePending:invite.isWritePending,dispose(){invite.dispose();h.dispose();}};
   });
   add('management-area-management','management-operations','Areas',()=>mountAreaManagement({...context,root:root.querySelector('#management-area-management')}));
   add('management-employee-operations','management-operations','Employee work',()=>mountEmployeeOperations(options('[data-employee-operations]')));
   add('management-support','management-operations','Client support',async()=>{
-    const target=root.querySelector('[data-management-support-list]');
-    const h=readTask({target,load:()=>api.request('/api/v1/management/support?status=open'),render:data=>supportQueue(asArray(data.requests)),bind:()=>bindSupport(context)});await h.refresh();return h;
+    const h=mountManagementSupport({...options('[data-management-support-list]'),onSaved:refreshOverview});await h.refresh();return h;
   },'support.manage');
   add('management-alerts','management-operations','Alerts & audit',async()=>{const h=readTask({target:root.querySelector('[data-management-alerts-audit]'),load:()=>api.request('/api/v1/management/alerts-audit?window_days=30&limit=100'),render:managementAlertsAuditMarkup,bind:()=>bindManagementAlertsAudit(root.querySelector('[data-management-alerts-audit]'),{signal:context.signal,navigateTask:async(group,id)=>{const accepted=await context.managementTaskController.activate(group,id);if(accepted)context.navigateTo?.(group);else showToast('That task is not available to this account.','error');}})});await h.refresh();return h;},'management.dashboard.view');
   add('management-profile','management-account','Profile & security',()=>({refresh:refreshAccount,dispose:mountAccountCredentials(options('[data-account-credentials]'))}));
