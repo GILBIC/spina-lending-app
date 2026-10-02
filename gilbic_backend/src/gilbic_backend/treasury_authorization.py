@@ -52,15 +52,17 @@ def require_account(conn, actor, account_id, permission, *, lock=True, private=F
         raise TreasuryDenied('The treasury account is unavailable.')
     if not account['active']:
         raise TreasuryDenied('The treasury account is inactive.')
-    if is_owner(actor):
+    context_owner=conn.execute('select created_by from treasury.contexts where id=%s',(account['ledger_context_id'],)).fetchone()
+    if is_owner(actor) and context_owner['created_by']==actor.user_id:
         return account
     grant = conn.execute('''select g.* from treasury.account_access g
         where g.account_id=%s and g.user_id=%s and g.enabled
-        and %s=any(g.permissions) and exists(select 1 from core.user_roles ur
-          join core.role_permissions rp on rp.role_id=ur.role_id
-          where ur.user_id=%s and rp.permission_code=%s) for share of g''',
-        (account_id, actor.user_id, permission, actor.user_id, permission)).fetchone()
-    if grant is None or (private and not grant['private_history']):
+        and %s=any(g.permissions) for share of g''',
+        (account_id, actor.user_id, permission)).fetchone()
+    live_permission=conn.execute('''select rp.permission_code from core.user_roles ur
+        join core.role_permissions rp on rp.role_id=ur.role_id where ur.user_id=%s and rp.permission_code=%s
+        order by ur.role_id for share of ur,rp''',(actor.user_id,permission)).fetchone()
+    if grant is None or live_permission is None or (private and not grant['private_history']):
         raise TreasuryDenied('Current permission and account scope are required.')
     account['_private_history'] = grant['private_history']
     return account
@@ -77,7 +79,9 @@ def require_borrower(conn, actor, client_id, loan_ids, *, staff_permission=None,
     client = conn.execute('select * from lending.clients where id=%s for share', (client_id,)).fetchone()
     if client is None:
         raise TreasuryDenied('The borrower or claim is unavailable.')
-    if not is_owner(actor) and client['user_id'] != actor.user_id:
+    roles={row['code'] for row in conn.execute('''select r.code from core.user_roles ur join core.roles r on r.id=ur.role_id
+        where ur.user_id=%s for share of ur,r''',(actor.user_id,)).fetchall()}
+    if client['user_id'] != actor.user_id:
         if staff_permission is None or account_id is None:
             raise TreasuryDenied('The borrower or claim is unavailable.')
         require_account(conn, actor, account_id, staff_permission)
@@ -85,8 +89,10 @@ def require_borrower(conn, actor, client_id, loan_ids, *, staff_permission=None,
         assigned = conn.execute('''select 1 from lending.clients c join lending.collector_area_assignments a
           on lower(a.area)=lower(c.area) where c.id=%s and a.collector_user_id=%s and a.is_active
           limit 1 for share of a''', (client_id, actor.user_id)).fetchone()
-        if 'collector' in actor.roles and assigned is None:
+        if (staff_permission=='treasury.proof.submit.assigned' or 'collector' in roles) and not is_owner(actor) and assigned is None:
             raise TreasuryDenied('Current borrower assignment is required.')
+    elif 'client' not in roles and not is_owner(actor):
+        raise TreasuryDenied('Current Client own-borrower authority is required.')
     if len(set(loan_ids)) != len(loan_ids):
         raise TreasuryConflict('Loan intentions must be distinct.')
     rows = conn.execute('select id from lending.loans where client_id=%s and id=any(%s) for share',

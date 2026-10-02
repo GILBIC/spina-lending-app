@@ -147,7 +147,7 @@ class Allocation(StrictModel):
 
 class LoanChoice(StrictModel):
     loan_id: UUID
-    expected_version: Version
+    expected_version: Annotated[StrictInt, Field(ge=0)]
 
 
 class ApplicationInput(StrictModel):
@@ -180,11 +180,14 @@ class DisbursementRecord(Command):
     effective_at: Instant
     evidence_id: UUID
     recipient_attestation: Text
-    purpose: Literal['unclassified', 'personal', 'loan_release', 'renewal', 'payroll', 'salary_advance', 'expense', 'refund', 'owner_withdrawal', 'deposit']
+    direction: Literal['credit', 'debit'] = 'debit'
+    purpose: Literal['unclassified', 'personal', 'loan_release', 'renewal', 'payroll', 'salary_advance', 'expense', 'refund', 'owner_contribution', 'owner_withdrawal', 'deposit']
     source_id: UUID | None = None
     source_version: Version | None = None
     payee_id: UUID | None = None
     destination_confirmed: StrictBool = False
+    destination_evidence_id: UUID | None = None
+    payee_acknowledgment: Text | None = None
     receipt_id: UUID | None = None
     reason: Text
 
