@@ -228,7 +228,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       target.focus({preventScroll:true});if(Number.isInteger(selection[0])&&Number.isInteger(selection[1]))target.setSelectionRange?.(...selection);
     };
   }
-  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;expireGuidance();beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
+  function selectView(next){if(!Object.hasOwn(VIEWS,next)||disposed)return;printing.close();expireGuidance();beforeTaskChange?.();view=next;for(const element of root.querySelectorAll('[data-employee-view]'))element.hidden=presentation==='employee'&&element.getAttribute('data-employee-view')!==view;for(const button of root.querySelectorAll('[data-employee-view-button]'))button.setAttribute('aria-pressed',String(button.getAttribute('data-employee-view-button')===view));afterTaskChange?.();}
   function expireGuidance(){
     if(disposed||!loadedDate||loadedDate===employeeWorkDate(now()))return;
     const guidance=root.querySelector('[data-employee-guidance]');if(guidance)guidance.textContent='Date changed. Refresh employee records before using attendance guidance.';
@@ -262,7 +262,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     if(target&&!target.disabled)target.focus();
     opener=null;
   }
-  function denied(error){if([401,403].includes(error?.status)){pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);return true;}return false;}
+  function denied(error){if([401,403].includes(error?.status)){printing.close();pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);return true;}return false;}
   function connection(){if(disposed)return;expireGuidance();lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
   function lock(){
     const offline=globalThis.navigator?.onLine===false;
@@ -275,7 +275,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   function setPending(value){pending=value;if(value)pendingBySession.set(session,value);else pendingBySession.delete(session);}
   async function load({recover=false,successMessage=''}={}) {
-    if(disposed||busy)return;const restoreEditorFocus=retainEditorFocus();busy=true;lock();
+    if(disposed||busy)return;printing.close();const restoreEditorFocus=retainEditorFocus();busy=true;lock();
     if(!currentScope()){setPending(null);dispose();return;}
     try {
       const value=await api.request(`${BASE}/workspace${recover&&pending?`?request_id=${encodeURIComponent(pending.request_id)}`:''}`,{signal:controller.signal});
@@ -452,6 +452,6 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
   }
   mounts.set(root,dispose);signal?.addEventListener('abort',dispose,{once:true});globalThis.addEventListener?.('focus',expireGuidance);root.ownerDocument?.addEventListener?.('visibilitychange',expireGuidance);globalThis.addEventListener?.('online',connection);globalThis.addEventListener?.('offline',connection);
   if(signal?.aborted){dispose();return dispose;}
-  onController?.({refresh:options=>load({recover:options?.recover===true}),selectView,isWritePending:()=>busy||Boolean(pending),dispose});
+  onController?.({refresh:options=>load({recover:options?.recover===true}),selectView,closePrint:printing.close,isWritePending:()=>busy||Boolean(pending),dispose});
   root.innerHTML=loadingPanel('Loading private employee records…');void load();return dispose;
 }
