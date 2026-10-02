@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 
@@ -28,6 +29,7 @@ class CollectionSourceEvent:
     amount: Decimal
     is_voided: bool
     voided_at: datetime | None
+    funding_source: str = "collector_cash"
     cash_received_amount: Decimal | None = None
     unallocated_amount: Decimal = ZERO
     journal_entry_id: UUID | None = None
@@ -119,7 +121,7 @@ def build_collection_accounting_preview(
     source_key = collection_source_event_key(event.transaction_id)
     receipt_cash = event.receipt_cash_amount
     unallocated = event.unallocated_amount
-    base = dict(
+    base: dict[str, Any] = dict(
         transaction_id=event.transaction_id,
         source_event_key=source_key,
         receipt_number=event.receipt_number,
@@ -145,6 +147,15 @@ def build_collection_accounting_preview(
         reversal_status=event.reversal_status,
         reversal_entry_number=event.reversal_entry_number,
     )
+
+    if event.funding_source != "collector_cash":
+        return CollectionAccountingPreview(
+            **base,
+            disposition="treasury_context_mapping_required",
+            posting_eligible=False,
+            message="Recipient-account funds require a reviewed account and legal-context journal mapping; Collector cash is not the source.",
+            proposed_lines=(),
+        )
 
     if event.entry_type == "pass":
         if event.journal_entry_id is not None:
@@ -172,7 +183,11 @@ def build_collection_accounting_preview(
             proposed_lines=(),
         )
 
-    if event.amount < ZERO or unallocated < ZERO or event.amount + unallocated != receipt_cash:
+    if (
+        event.amount < ZERO
+        or unallocated < ZERO
+        or event.amount + unallocated != receipt_cash
+    ):
         return CollectionAccountingPreview(
             **base,
             disposition="receipt_application_mismatch",

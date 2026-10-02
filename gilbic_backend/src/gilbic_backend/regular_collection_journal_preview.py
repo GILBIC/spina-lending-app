@@ -87,6 +87,13 @@ def build_regular_collection_journal_preview(
     stage. This preview therefore remains non-posting even when its lines balance.
     """
 
+    if allocation.funding_source != "collector_cash":
+        return _blocked(
+            allocation,
+            disposition="treasury_context_mapping_required",
+            message="Recipient-account funds require a reviewed account and legal-context mapping; no Collector cash debit is proposed.",
+        )
+
     if (
         allocation_result_status != "allocation_reference_ready"
         or allocation.disposition != "allocation_reference_ready"

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 CI_WORKFLOW = (ROOT / ".github" / "workflows" / "spina-ci.yml").read_text(
     encoding="utf-8"
@@ -10,11 +9,18 @@ MAINTENANCE_WORKFLOW = (
 ).read_text(encoding="utf-8")
 
 
-def test_unified_ci_has_three_hosted_validation_lanes() -> None:
+def test_unified_ci_has_three_gates_with_parallel_backend_workers() -> None:
     assert "name: SPINA CI" in CI_WORKFLOW
-    for job in ("backend", "client-apps", "financial-database"):
+    for job in (
+        "backend",
+        "backend-quality",
+        "backend-tests",
+        "client-apps",
+        "financial-database",
+    ):
         assert f"\n  {job}:\n" in CI_WORKFLOW
-    assert CI_WORKFLOW.count("runs-on: ubuntu-latest") == 3
+    assert CI_WORKFLOW.count("runs-on: ubuntu-latest") == 5
+    assert "needs: [backend-quality, backend-tests]" in CI_WORKFLOW
     assert "runs-on: [self-hosted" not in CI_WORKFLOW
 
 

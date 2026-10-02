@@ -58,6 +58,14 @@ def test_regular_cash_source_is_valid_but_eir_allocation_is_required() -> None:
     assert "Automatic source posting remains disabled" in preview.message
 
 
+def test_wallet_source_never_proposes_collector_cash_journal() -> None:
+    preview = build_collection_accounting_preview(event(funding_source="treasury_receipt"), cutover_date=CUTOVER)
+    assert preview.disposition == "treasury_context_mapping_required"
+    assert preview.posting_eligible is False
+    assert preview.proposed_lines == ()
+    assert "legal-context" in preview.message
+
+
 def test_unallocated_receipt_cash_blocks_loan_source_accounting() -> None:
     preview = build_collection_accounting_preview(
         event(

@@ -84,7 +84,7 @@ test('Clients & loans groups multiple loans under one Client parent', async () =
   root.dataset = {};
   const controller = new AbortController();
   try {
-    await mountManagementWorkspace({
+    const tasks = await mountManagementWorkspace({
       root,
       api: { async request(path) { return response(path); } },
       session: { user: { role: 'management', roles: ['management'] }, permissions: [] },
@@ -93,6 +93,7 @@ test('Clients & loans groups multiple loans under one Client parent', async () =
       activateNavigation() {},
     });
 
+    await tasks.activate('management-clients-loans');
     const screen = root.querySelector('#management-clients-loans');
     const groups = screen.querySelectorAll('[data-client-loan-group]');
     assert.equal(groups.length, 2);
@@ -122,7 +123,7 @@ test('Clients & loans uses clear portfolio language and keeps the existing serve
   const controller = new AbortController();
   const calls = [];
   try {
-    await mountManagementWorkspace({
+    const tasks = await mountManagementWorkspace({
       root,
       api: {
         async request(path) {
@@ -136,6 +137,7 @@ test('Clients & loans uses clear portfolio language and keeps the existing serve
       activateNavigation() {},
     });
 
+    await tasks.activate('management-clients-loans');
     const screen = root.querySelector('#management-clients-loans');
     assert.match(screen.textContent, /Outstanding balance/i);
     assert.match(screen.textContent, /Overdue loans/i);
@@ -143,7 +145,7 @@ test('Clients & loans uses clear portfolio language and keeps the existing serve
     assert.doesNotMatch(screen.textContent, /Overdue active/i);
     assert.match(screen.textContent, /Daily amount/i);
 
-    assert.ok(calls.includes('/api/v1/management/loans?status=active'));
+    assert.ok(calls.some(path => path.includes('/api/v1/management/loans?') && new URL(path, 'https://synthetic.invalid').searchParams.get('status') === 'active'));
     assert.equal(
       calls.some((path) => path.includes('area=') || path.includes('loan_type=')),
       false,

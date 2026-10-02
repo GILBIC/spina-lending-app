@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -149,6 +150,7 @@ class PostgresCollectionVoidRepository:
         transaction_id: UUID,
         reason: str,
         idempotency_key: UUID | None = None,
+        connection=None,
     ) -> CollectionVoidRecord | ExtraPrincipalReversalRequestResult:
         normalized_reason = " ".join(reason.split())
         if len(normalized_reason) < 3:
@@ -156,9 +158,13 @@ class PostgresCollectionVoidRepository:
                 "Enter a clear reason for voiding the collection."
             )
 
-        with open_connection() as connection:
-            with connection.transaction():
-                with connection.cursor(row_factory=dict_row) as cursor:
+        # An existing caller retains transaction ownership; nested transaction
+        # is a savepoint, never a commit of the treasury receipt/application.
+        with (
+            nullcontext(connection) if connection is not None else open_connection()
+        ) as active_connection:
+            with active_connection.transaction():
+                with active_connection.cursor(row_factory=dict_row) as cursor:
                     adjustment_row = cursor.execute(
                         """
                         select id

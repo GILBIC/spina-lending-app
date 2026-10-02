@@ -10,79 +10,76 @@ import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
 void main() {
-  testWidgets('recipient opens full payment list and acknowledges review before acceptance',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'recipient opens full payment list and acknowledges review before acceptance',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
 
-    final notifications = _NotificationRepository();
-    final remittances = _HistoryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RemittanceNotificationsPage(
-          session: _recipientSession,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          repository: notifications,
-          remittanceRepository: remittances,
+      final notifications = _NotificationRepository();
+      final remittances = _HistoryRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RemittanceNotificationsPage(
+            session: _recipientSession,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: notifications,
+            remittanceRepository: remittances,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Remittance requests (1)'), findsOneWidget);
-    expect(find.byTooltip('Refresh remittance requests'), findsOneWidget);
-    expect(find.textContaining('Collector One'), findsOneWidget);
-    expect(find.textContaining('₱600.00'), findsOneWidget);
-    expect(find.textContaining('Action required'), findsOneWidget);
+      expect(find.text('Remittance requests (1)'), findsOneWidget);
+      expect(find.byTooltip('Refresh remittance requests'), findsOneWidget);
+      expect(find.textContaining('Collector One'), findsOneWidget);
+      expect(find.textContaining('₱600.00'), findsOneWidget);
+      expect(find.textContaining('Action required'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('notification-notification-1')));
-    await tester.pumpAndSettle();
-    expect(notifications.markReadCount, 1);
-    expect(find.textContaining('Review every payment'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('notification-notification-1')));
+      await tester.pumpAndSettle();
+      expect(notifications.markReadCount, 1);
+      expect(find.textContaining('Review every payment'), findsOneWidget);
 
-    final reviewButton = find.byKey(
-      const Key('review-remittance-notification-notification-1'),
-    );
-    await tester.ensureVisible(reviewButton);
-    await tester.tap(reviewButton);
-    await tester.pumpAndSettle();
+      final reviewButton = find.byKey(
+        const Key('review-remittance-notification-notification-1'),
+      );
+      await tester.ensureVisible(reviewButton);
+      await tester.tap(reviewButton);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Review Remittance'), findsOneWidget);
-    expect(find.text('Full payment list'), findsOneWidget);
-    expect(find.text('Client A'), findsOneWidget);
-    expect(find.text('Client B'), findsOneWidget);
+      expect(find.text('Review Remittance'), findsOneWidget);
+      expect(find.text('Full payment list'), findsOneWidget);
+      expect(find.text('Client A'), findsOneWidget);
+      expect(find.text('Client B'), findsOneWidget);
 
-    final acceptButton = find.byKey(
-      const Key('receive-remittance-remittance-1'),
-    );
-    expect(
-      tester.widget<FilledButton>(acceptButton).onPressed,
-      isNull,
-    );
+      final acceptButton = find.byKey(
+        const Key('receive-remittance-remittance-1'),
+      );
+      expect(tester.widget<FilledButton>(acceptButton).onPressed, isNull);
 
-    await tester.tap(
-      find.byKey(const Key('review-remittance-remittance-1')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<FilledButton>(acceptButton).onPressed,
-      isNotNull,
-    );
+      await tester.tap(find.byKey(const Key('review-remittance-remittance-1')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(acceptButton).onPressed, isNotNull);
 
-    await tester.tap(acceptButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Confirm cash received?'), findsOneWidget);
-    expect(find.textContaining('reviewed all 2 payment records'), findsOneWidget);
+      await tester.tap(acceptButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm cash received?'), findsOneWidget);
+      expect(
+        find.textContaining('reviewed all 2 payment records'),
+        findsOneWidget,
+      );
 
-    await tester.tap(
-      find.byKey(const Key('confirm-remittance-remittance-1')),
-    );
-    await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('confirm-remittance-remittance-1')),
+      );
+      await tester.pumpAndSettle();
 
-    expect(remittances.confirmCount, 1);
-    expect(find.textContaining('Accepted'), findsWidgets);
-    expect(find.textContaining('permanent and read-only'), findsOneWidget);
-  });
+      expect(remittances.confirmCount, 1);
+      expect(find.textContaining('Accepted'), findsWidgets);
+      expect(find.textContaining('permanent and read-only'), findsOneWidget);
+    },
+  );
 }
 
 const UserSession _recipientSession = UserSession(
@@ -96,7 +93,8 @@ const UserSession _recipientSession = UserSession(
 );
 
 DeviceIdentityProvider _deviceIdentityProvider() {
-  final store = MemoryDeviceIdentityStore()..value = 'android-release-candidate';
+  final store = MemoryDeviceIdentityStore()
+    ..value = 'android-release-candidate';
   return DeviceIdentityProvider(
     store: store,
     platformResolver: () => 'android',
@@ -207,7 +205,20 @@ class _NotificationRepository implements RemittanceNotificationRepository {
   }
 }
 
-class _HistoryRepository implements RemittanceRepository {
+class _HistoryRepository
+    implements RemittanceRepository, RemittanceReceivingContractRepository {
+  @override
+  Future<RemittanceReceivingContract> loadReceivingContract(
+    UserSession session, {
+    required String deviceId,
+    required String remittanceId,
+  }) async => RemittanceReceivingContract(
+    remittanceId: remittanceId,
+    recipientUserId: session.userId,
+    countRequired: false,
+    legacyReceiveAllowed: true,
+  );
+
   int confirmCount = 0;
   RemittanceRecord current = _record();
 

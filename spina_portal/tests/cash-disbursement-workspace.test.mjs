@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {setImmediate} from 'node:timers/promises';
-import {mountEmployeeWorkspace} from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-cash-disbursement']);
 import {Element} from './helpers/dom.mjs';
 
 test('Employee workspace exposes Cash Disbursement only with its exact permission', async () => {

@@ -1,430 +1,54 @@
-import { mountAccountCredentials } from '../account-credentials.js';
-import { createCollectorWriteGuard } from '../collector-write-guard.js';
-import { buildCollectionSubmission, classifyLoanType } from '../collector-contract.js';
-import { collectorMutation, collectionResultMatches } from '../collector-workflow-contract.js';
-import { buildCollectorRouteViewModel } from '../presenters.js';
-import { mountCollectorOnboardingVisit } from '../collector-onboarding-visit.js';
-import { allocationField, followupFields, readFollowup, mountCollectorWorkflows } from '../collector-workflows.js';
-import { mountCollectorOtherArea } from '../collector-other-area.js';
-import { mountCollectorRenewals } from '../collector-renewals.js';
-import { mountEmployeeOperations } from '../employee-operations.js';
-import {
-  asArray,
-  badge,
-  emptyState,
-  errorCard,
-  escapeHtml,
-  formatDate,
-  formatDateTime,
-  formatMoney,
-  hasPermission,
-  loadingPanel,
-  metricCard,
-  settledRequest,
-  setButtonBusy,
-  clearButtonBusyFocus,
-  showToast,
-} from '../ui.js';
-
-function numeric(value) {
-  const amount = Number(String(value ?? '0').replaceAll(',', ''));
-  return Number.isFinite(amount) ? amount : 0;
-}
-
-function withAttention(route) {
-  return {
-    ...route,
-    entries: asArray(route.entries).map((entry) => {
-      const remainingToday = numeric(entry.contract_today_unpaid_amount);
-      const attentionRequired =
-        entry.processed_today === true &&
-        entry.today_entry_type === 'payment' &&
-        remainingToday > 0;
-      return {
-        ...entry,
-        attention_required: entry.attention_required === true || attentionRequired,
-        attention_reason:
-          entry.attention_reason ||
-          (attentionRequired ? `Short ${formatMoney(entry.contract_today_unpaid_amount)}` : ''),
-      };
-    }),
-  };
-}
-
-function entryStatus(entry) {
-  if (entry.attention_required) return badge(entry.attention_reason || 'attention', 'warning');
-  if (entry.processed_today) return badge(entry.today_entry_type || 'collected', 'success');
-  if (entry.contract_today_already_covered) return badge('ADV covered', 'success');
-  return badge(entry.status || 'not collected', 'warning');
-}
-
-function entryForm(entry, defaultAmount) {
-  return `<form class="entry-form collector-entry-form" data-route-entry-id="${escapeHtml(entry.route_entry_id)}" hidden style="grid-column:1/-1">
-    <input type="hidden" name="entryType" value="payment" />
-    <label class="payment-only">Amount<input name="amount" inputmode="decimal" value="${escapeHtml(defaultAmount)}" required /></label>
-    ${allocationField()}
-    ${followupFields()}
-    <label>Note<textarea name="note" maxlength="500" placeholder="Short factual note"></textarea></label>
-    <p class="notice-card danger" data-collection-feedback role="alert" tabindex="-1" hidden></p>
-    <div class="action-row"><button class="button button-primary" type="submit">Save official entry</button><button class="button button-quiet cancel-entry" type="button">Cancel</button></div>
-  </form>`;
-}
-
-function ledgerRow(entry, canCreate, online) {
-  const type = classifyLoanType(entry.loan_type);
-  const canEnter = canCreate && online && entry.can_enter_payment === true && entry.processed_today !== true;
-  const note = entry.note || entry.today_note || '';
-  const defaultAmount =
-    numeric(entry.contract_today_unpaid_amount) > 0
-      ? String(entry.contract_today_unpaid_amount)
-      : numeric(entry.daily_amount) > 0
-        ? String(entry.daily_amount)
-        : '';
-  return `<div class="ledger-row ${entry.attention_required || !entry.processed_today ? 'needs-attention' : ''}" data-entry-row="${escapeHtml(entry.route_entry_id)}">
-    <div class="ledger-cell"><strong class="ledger-client">${escapeHtml(entry.client_name || 'Client')}</strong>${note ? `<small>${escapeHtml(note)}</small>` : ''}${entry.collection_message && entry.collection_message !== note ? `<small>${escapeHtml(entry.collection_message)}</small>` : ''}</div>
-    <div class="ledger-cell"><span class="badge ${type === 'seven-by-seven' ? 'info' : 'warning'}">${type === 'seven-by-seven' ? '7x7' : escapeHtml(entry.loan_type || 'Regular')}</span><small>${escapeHtml(entry.contract_payment_frequency || '')}</small></div>
-    <div class="ledger-cell"><small>Daily / today</small><strong>${formatMoney(entry.contract_today_unpaid_amount || entry.daily_amount)}</strong><small>Balance ${formatMoney(entry.remaining_balance)}</small></div>
-    <div class="ledger-cell">${entryStatus(entry)}${entry.pass_count ? `<small>Missed / PASS ${escapeHtml(entry.pass_count)}</small>` : ''}${entry.advance_until ? `<small>ADV to ${formatDate(entry.advance_until)}</small>` : ''}</div>
-    <div class="ledger-actions action-row">
-      ${canEnter ? `<button class="button button-primary button-small collection-action" type="button" data-entry-action="payment" data-entry-id="${escapeHtml(entry.route_entry_id)}">Payment</button><button class="button button-outline button-small collection-action" type="button" data-entry-action="pass" data-entry-id="${escapeHtml(entry.route_entry_id)}">Unable to pay</button>` : `<span class="meta">${online ? (entry.processed_today ? 'Recorded today' : escapeHtml(entry.contract_readiness_message || 'Entry unavailable')) : 'Offline — read only'}</span>`}
-    </div>
-    ${canEnter ? entryForm(entry, defaultAmount) : ''}
-  </div>`;
-}
-
-function routeMarkup(model, canCreate, online) {
-  if (!model.totalCount) return emptyState('No assigned route entry is available for today.');
-  return model.areaGroups
-    .map(
-      (group) => `<section class="ledger-area">
-        <header class="ledger-area-header"><strong>${escapeHtml(group.name)}</strong><span>${escapeHtml(group.processedCount)} / ${escapeHtml(group.totalCount)} processed · ${escapeHtml(group.unresolvedCount)} unresolved</span></header>
-        <div class="ledger-list">${group.entries.map((entry) => ledgerRow(entry, canCreate, online)).join('')}</div>
-      </section>`,
-    )
-    .join('');
-}
-
-function unresolvedMarkup(items) {
-  if (!items.length) return `<div class="notice-card"><strong>Route review clear.</strong><br>Every current route row is processed with no detected short balance.</div>`;
-  return `<div class="table-wrap"><table><thead><tr><th>Area</th><th>Client</th><th>Loan</th><th>Reason</th><th>Today</th></tr></thead><tbody>${items
-    .map(
-      (entry) => `<tr><td>${escapeHtml(entry.area || '—')}</td><td><strong>${escapeHtml(entry.client_name || 'Client')}</strong></td><td>${escapeHtml(entry.loan_type || '—')}</td><td>${escapeHtml(entry.attention_reason || (entry.processed_today ? 'Needs review' : 'Not collected'))}</td><td>${formatMoney(entry.contract_today_unpaid_amount || entry.daily_amount)}</td></tr>`,
-    )
-    .join('')}</tbody></table></div>`;
-}
-
-function remittanceHistory(items) {
-  if (!items.length) return emptyState('No remittance history is available.');
-  return `<div class="list-stack">${items
-    .slice(0, 30)
-    .map(
-      (item) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(item.remittance_number || 'Remittance')}</strong><div class="meta">${formatDate(item.collection_date)} · To ${escapeHtml(item.recipient_name || 'recipient')}</div></div>${badge(item.status)}</div><div class="detail-grid"><div class="detail-item"><span>Total</span><strong>${formatMoney(item.total_amount)}</strong></div><div class="detail-item"><span>Clients</span><strong>${escapeHtml(item.client_count ?? '—')}</strong></div><div class="detail-item"><span>Transactions</span><strong>${escapeHtml(item.transaction_count ?? '—')}</strong></div></div></article>`,
-    )
-    .join('')}</div>`;
-}
-
-function remittanceSection(routeDate, preview, recipients, history, errors, canCreate) {
-  return `<section class="section-card" id="collector-remittance" data-workspace-section>
-    <div class="section-heading"><div><h2>Remittance</h2><p>Submit only after reviewing the complete server-calculated collection summary.</p></div></div>
-    ${errors.preview ? errorCard(errors.preview) : `<div class="metric-grid">${metricCard('Cash total', formatMoney(preview.total_amount || 0))}${metricCard('Transactions', escapeHtml(preview.transaction_count ?? 0))}${metricCard('Clients', escapeHtml(preview.client_count ?? 0))}${metricCard('Unable to pay', escapeHtml(preview.unable_to_pay_count ?? 0))}</div>`}
-    ${canCreate && recipients.length ? `<form id="collector-remittance-form" class="entry-form"><label>Recipient<select name="recipientUserId" required>${recipients.map((recipient) => `<option value="${escapeHtml(recipient.user_id)}">${escapeHtml(recipient.full_name)} · ${escapeHtml(recipient.role_name)}</option>`).join('')}</select></label><label>Collection date<input name="collectionDate" type="date" value="${escapeHtml(routeDate || '')}" readonly /></label><label>Note<textarea name="note" maxlength="500"></textarea></label><p class="notice-card danger" data-collection-feedback role="alert" tabindex="-1" hidden></p><button class="button button-primary" type="submit" ${numeric(preview.total_amount) <= 0 ? 'disabled' : ''}>Submit remittance</button></form>` : canCreate ? emptyState('No eligible remittance recipient is available.') : `<div class="notice-card warning">Your account can view remittance history but cannot create a remittance.</div>`}
-    <div class="section-heading" style="margin-top:1rem"><div><h2>History</h2></div></div>
-    ${errors.history ? errorCard(errors.history) : remittanceHistory(history)}
-  </section>`;
-}
-
-function activityMarkup(items) {
-  if (!items.length) return emptyState('No Collector update is available.');
-  return `<div class="timeline">${items.slice(0, 30).map((item) => `<article class="timeline-item"><strong>${escapeHtml(item.title || item.notification_type || 'Update')}</strong><span>${escapeHtml(item.message || '')}</span><span class="meta">${formatDateTime(item.created_at)}</span></article>`).join('')}</div>`;
-}
-
-function lockFinancialEntry(root, message) {
-  root.dataset.financialLocked = 'true';
-  for (const control of root.querySelectorAll('.collection-action, .collector-entry-form input, .collector-entry-form select, .collector-entry-form textarea, .collector-entry-form button, #collector-remittance-form input, #collector-remittance-form select, #collector-remittance-form textarea, #collector-remittance-form button, [data-collector-financial] input, [data-collector-financial] select, [data-collector-financial] textarea, [data-collector-financial] button')) {
-    control.disabled = true;
-  }
-  const existing = root.querySelector('#collector-uncertain-lock');
-  if (!existing) {
-    root.insertAdjacentHTML('afterbegin', `<div id="collector-uncertain-lock" class="notice-card danger"><strong>Financial entry locked for reconciliation.</strong><br>${escapeHtml(message)} Use Refresh to load authoritative SPINA state before any new attempt.</div>`);
-  }
-}
-
-function beginSubmissionFeedback(form, button) {
-  const feedback = form.querySelector('[data-collection-feedback]');
-  const document = form.ownerDocument;
-  let retainFocus = document?.activeElement === button;
-  const moved = (event) => { if (event.target !== button) retainFocus = false; };
-  document?.addEventListener('focusin', moved);
-  document?.addEventListener('pointerdown', moved);
-  document?.addEventListener('keydown', moved);
-  feedback.hidden = true;
-  feedback.textContent = '';
-  if (!feedback.getAttribute('id')) feedback.setAttribute('id', `collection-feedback-${globalThis.crypto.randomUUID()}`);
-  const descriptions = new Set((form.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
-  descriptions.add(feedback.getAttribute('id'));
-  form.setAttribute('aria-describedby', [...descriptions].join(' '));
-  return (error, canFocus) => {
-    document?.removeEventListener('focusin', moved);
-    document?.removeEventListener('pointerdown', moved);
-    document?.removeEventListener('keydown', moved);
-    if (!error || !form.isConnected) return;
-    feedback.hidden = false;
-    feedback.textContent = error.message;
-    if (canFocus && retainFocus && !form.closest('[hidden]') && !form.closest('[inert]') && form.getClientRects?.().length !== 0
-      && (document.activeElement === document.body || document.activeElement === button)) {
-      feedback.focus({ preventScroll: true });
-    }
-  };
-}
-
-function bindRouteActions(context, entryMap) {
-  const guard = context.collectorWriteGuard;
-  for (const button of context.root.querySelectorAll('.collection-action')) {
-    button.addEventListener('click', () => {
-      const row = context.root.querySelector(`[data-entry-row="${CSS.escape(button.dataset.entryId)}"]`);
-      const form = row?.querySelector('.collector-entry-form');
-      if (!form) return;
-      const isPass = button.dataset.entryAction === 'pass';
-      form.hidden = false;
-      form.elements.entryType.value = isPass ? 'pass' : 'payment';
-      form.querySelector('.payment-only').hidden = isPass;
-      form.querySelector('.allocation-only').hidden = isPass;
-      form.elements.amount.required = !isPass;
-      form.elements.reasonCode.required = isPass;
-      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (isPass ? form.elements.reasonCode : form.elements.amount)?.focus({ preventScroll: true });
-    });
-  }
-  for (const form of context.root.querySelectorAll('.collector-entry-form')) {
-    form.querySelector('.cancel-entry')?.addEventListener('click', () => {
-      const action = form.elements.entryType.value === 'pass' ? 'pass' : 'payment';
-      form.reset();
-      form.hidden = true;
-      form.closest('[data-entry-row]')?.querySelector(`[data-entry-action="${action}"]`)?.focus({ preventScroll: true });
-    });
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (context.root.dataset.financialLocked === 'true' || !guard.begin()) return;
-      const submitButton = form.querySelector('button[type="submit"]');
-      const finishFeedback = beginSubmissionFeedback(form, submitButton);
-      let submission;
-      let rejection;
-      try {
-        const entry = entryMap.get(form.dataset.routeEntryId);
-        if (!entry) throw new Error('The route entry is stale. Refresh the route.');
-        const data = new FormData(form);
-        const entryType = String(data.get('entryType') || 'payment');
-        const note = String(data.get('note') || '').trim();
-        const clientTransactionId = globalThis.crypto.randomUUID();
-        submission = buildCollectionSubmission({
-          entry,
-          routeDate: context.routeDate,
-          entryType,
-          amount: data.get('amount'),
-          note,
-          pastDueFollowup: readFollowup(form),
-          paymentAllocationIntent: entryType === 'pass' ? 'scheduled' : data.get('allocation'),
-          deviceId: context.sessionStore.deviceId(),
-          deviceSequence: context.sessionStore.nextDeviceSequence(),
-          clientTransactionId,
-          recordedAt: new Date().toISOString(),
-        });
-        setButtonBusy(submitButton, true, 'Saving…');
-        const result = await collectorMutation({api:context.api,guard,path:'/api/v1/collector/collections',options:{method:'POST',...submission},verify:collectionResultMatches(submission)});
-        if (!guard.current) return;
-        const receipt = result?.receipt_number ? ` Receipt ${result.receipt_number}.` : '';
-        const balance = result?.official_balance != null ? ` Official balance ${formatMoney(result.official_balance)}.` : '';
-        showToast(`${result?.message || 'Official entry saved.'}${receipt}${balance}`, 'success', 7600);
-        await mountCollectorWorkspace(context);
-      } catch (error) {
-        if (!guard.current) return;
-        if (error.code === 'network_uncertain') {
-          context.uncertainCollection = submission;
-          guard.lock(error.message);
-        }
-        rejection = error;
-        showToast(error.message, 'error', 7600);
-      } finally {
-        if (guard.current) setButtonBusy(submitButton, false);
-        else clearButtonBusyFocus(submitButton);
-        guard.finish();
-        finishFeedback(guard.current ? rejection : null, guard.current && !guard.locked);
-      }
-    });
-  }
-}
-
-function bindRemittance(context) {
-  const guard = context.collectorWriteGuard;
-  const form = context.root.querySelector('#collector-remittance-form');
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (context.root.dataset.financialLocked === 'true' || !guard.begin()) return;
-    const data = new FormData(form);
-    const button = form.querySelector('button[type="submit"]');
-    const finishFeedback = beginSubmissionFeedback(form, button);
-    let rejection;
-    setButtonBusy(button, true, 'Submitting…');
-    try {
-      const result = await context.api.request('/api/v1/collector/remittances', {
-        method: 'POST',
-        financial: true,
-        body: {
-          recipient_user_id: data.get('recipientUserId'),
-          collection_date: data.get('collectionDate'),
-          note: String(data.get('note') || '').trim(),
-        },
-      });
-      if (!guard.current) return;
-      showToast(`Remittance ${result.remittance_number || ''} submitted for recipient review.`, 'success');
-      await mountCollectorWorkspace(context);
-    } catch (error) {
-      if (!guard.current) return;
-      if (error.code === 'network_uncertain') {
-        guard.lock(error.message);
-      }
-      rejection = error;
-      showToast(error.message, 'error');
-    } finally {
-      if (guard.current) setButtonBusy(button, false);
-      else clearButtonBusyFocus(button);
-      guard.finish();
-      finishFeedback(guard.current ? rejection : null, guard.current && !guard.locked);
-    }
-  });
-}
+import {mountCollectorSurplus} from '../collector-surplus.js';
+import {createTreasuryRoleGate,mountTreasuryBorrowerClaims} from '../treasury-role-tasks.js';
+import {mountAccountCredentials} from '../account-credentials.js';
+import {createCollectorWriteGuard} from '../collector-write-guard.js';
+import {buildCollectorRouteViewModel} from '../presenters.js';
+import {mountCollectorOnboardingVisit} from '../collector-onboarding-visit.js';
+import {mountCollectorWorkflows} from '../collector-workflows.js';
+import {mountCollectorOtherArea} from '../collector-other-area.js';
+import {mountCollectorRenewals} from '../collector-renewals.js';
+import {mountEmployeeOperations} from '../employee-operations.js';
+import {mountCollectorRemittance} from '../collector-remittance.js';
+import {mountCollectorRouteView,collectorWithAttention} from '../collector-route-view.js';
+import {mountCollectorScheduleView} from '../collector-schedule-view.js';
+import {mountCollectorActivity} from '../collector-activity.js';
+import {escapeHtml as h,hasPermission,formatExactMoney as money,metricCard,showToast} from '../ui.js';
 
 export async function mountCollectorWorkspace(context) {
-  if (context.signal?.aborted) return;
-  context.collectorWriteGuard?.dispose();
-  context.accountCredentialsCleanup?.();
-  context.accountCredentialsCleanup = null;
-  context.employeeOperationsCleanup?.();
-  context.employeeOperationsCleanup = null;
-  context.collectorOnboardingCleanup?.();
-  context.collectorOnboardingCleanup = null;
-  for (const dispose of context.collectorWorkflowCleanups || []) dispose();
-  context.collectorWorkflowCleanups = [];
-  const { root, api, session, setNavigation } = context;
-  const online = globalThis.navigator?.onLine !== false;
-  const canViewRoute = hasPermission(session, 'route.view');
-  const canRecordVisit = hasPermission(session, 'client_onboarding.visit.record');
-  const canCreate = hasPermission(session, 'collection.create');
-  const canCorrect = hasPermission(session, 'collection.correct.own_unremitted');
-  const canRenew = hasPermission(session, 'renewal.recommend.assigned') || hasPermission(session, 'renewal.cash_custody.assigned');
-  const canCreateRemittance = hasPermission(session, 'remittance.create');
-  const canViewRemittance = hasPermission(session, 'remittance.view') || canCreateRemittance;
-  setNavigation([
-    { id: 'collector-overview', label: 'Today', group: 'Daily work' },
-    { id: 'collector-master-review', label: 'Needs attention', group: 'Daily work' },
-    { id: 'collector-route', label: "Today's route", group: 'Daily work' },
-    ...(canCreate || canCorrect ? [{ id: 'collector-workflows', label: 'Collections & corrections', group: 'Daily work' }] : []),
-    ...(canViewRemittance ? [{ id: 'collector-remittance', label: 'Remittance', group: 'Daily work' }] : []),
-    ...(canCreate ? [{ id: 'collector-other-area', label: 'Other-area collection', group: 'Daily work' }] : []),
-    ...(canRenew ? [{ id: 'collector-renewals', label: 'Renewal handover', group: 'Daily work' }] : []),
-    ...(canRecordVisit ? [{ id: 'collector-onboarding', label: 'Residence visit', group: 'Daily work' }] : []),
-    { id: 'collector-updates', label: 'Updates', group: 'Records' },
-    { id: 'collector-employee-operations', label: 'My tasks & attendance', group: 'Administration' },
-    { id: 'collector-account', label: 'My account', group: 'Administration' },
-  ]);
-  root.innerHTML = loadingPanel('Loading the authoritative Collector route…');
-  root.dataset.financialLocked = 'false';
-  const writeGuard = createCollectorWriteGuard({
-    signal: context.signal,
-    onLock: message => lockFinancialEntry(root, message),
-  });
-  context.collectorWriteGuard = writeGuard;
-
-  const [routeResult, account, activity, history] = await Promise.all([
-    canViewRoute
-      ? settledRequest(api, '/api/v1/collector/routes/today', {}, { route_date: null, areas: [], entries: [] })
-      : Promise.resolve({ data: { route_date: null, areas: [], entries: [] }, error: new Error('Route permission is required.') }),
-    settledRequest(api, '/api/v1/account', {}, {}),
-    settledRequest(api, '/api/v1/activity-notifications', {}, []),
-    canViewRemittance
-      ? settledRequest(api, '/api/v1/remittances', {}, [])
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-  const route = withAttention(routeResult.data);
-  context.routeDate = route.route_date;
-  const [recipients, preview] = canCreateRemittance && route.route_date
-    ? await Promise.all([
-        settledRequest(api, '/api/v1/collector/remittances/recipients', {}, []),
-        settledRequest(api, `/api/v1/collector/remittances/preview?collection_date=${encodeURIComponent(route.route_date)}`, {}, {}),
-      ])
-    : [{ data: [], error: null }, { data: {}, error: null }];
-  const model = buildCollectorRouteViewModel(route);
-  if (context.signal?.aborted || !writeGuard.current) return;
-  const entryMap = new Map(model.entries.map((entry) => [String(entry.route_entry_id), entry]));
-  const profile = account.data?.profile ?? {};
-  const routeUnavailable = Boolean(routeResult.error);
-
-  const dailyLinks = [
-    ['collector-master-review', 'Needs attention', routeUnavailable ? 'Route unavailable — refresh.' : `${model.unresolved.length} route entries`],
-    ['collector-route', "Open today's route", routeUnavailable ? 'Route unavailable — refresh.' : `${model.totalCount} client loans`],
-    ...(canCreate || canCorrect ? [['collector-workflows', 'Collections & corrections', 'Combined payments, advances and corrections.']] : []),
-    ...(canViewRemittance ? [['collector-remittance', 'Review remittance', preview.error ? 'Summary unavailable — refresh.' : 'Check the server-calculated cash summary.']] : []),
-    ...(canRenew ? [['collector-renewals', 'Renewal handover', 'Continue assigned requests.']] : []),
-  ];
-  root.innerHTML = `${!online ? `<div class="notice-card danger"><strong>No payment is accepted or queued while offline.</strong><br>Reconnect and refresh the route before collecting.</div>` : ''}<section class="section-card" id="collector-overview" data-workspace-section><header class="workspace-header">
-    <div><p class="eyebrow">Collector</p><h1>Today's route</h1><p>${formatDate(model.routeDate)} · Open an assigned task below.</p></div>
-    ${online ? `<span class="status-chip online">Online collection enabled</span>` : `<span class="status-chip offline">Offline copy — read only</span>`}
-  </header>
-  ${routeUnavailable ? '<div class="notice-card warning">The route could not load. Refresh before collecting or deciding there is no work.</div>' : ''}
-  <div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>
-  <section class="metric-grid">
-    ${metricCard('Expected today', routeUnavailable ? 'Unavailable' : formatMoney(model.expectedTotal))}
-    ${metricCard('Route clients / loans', routeUnavailable ? 'Unavailable' : escapeHtml(model.totalCount))}
-    ${metricCard('Processed', routeUnavailable ? 'Unavailable' : escapeHtml(model.processedCount))}
-    ${metricCard('Needs action', routeUnavailable ? 'Unavailable' : escapeHtml(model.unresolved.length))}
-  </section>
-  </section>
-  <section class="section-card" id="collector-route" data-workspace-section>
-    <div class="section-heading"><div><h2>Assigned area ledger</h2><p>Regular and 7x7 rows stay separate under the same Client context.</p></div></div>
-    ${routeResult.error ? errorCard(routeResult.error) : routeMarkup(model, canCreate, online)}
-  </section>
-  <section class="section-card" id="collector-master-review" data-workspace-section>
-    <div class="section-heading"><div><h2>Master Review</h2><p>Every assigned-area row still requiring action before route completion.</p></div></div>
-    ${routeResult.error ? errorCard(routeResult.error) : unresolvedMarkup(model.unresolved)}
-    ${!routeResult.error && model.unresolved.length ? '<div class="action-row"><button class="button button-secondary" type="button" data-nav-target="collector-route">Open today\'s route</button></div>' : ''}
-  </section>
-  <section class="section-card" id="collector-employee-operations" data-workspace-section><div data-employee-operations></div></section>
-  ${canCreate || canCorrect ? '<section class="section-card" id="collector-workflows" data-workspace-section data-collector-financial><div data-collector-workflows></div></section>' : ''}
-  ${canCreate ? '<section class="section-card" id="collector-other-area" data-workspace-section data-collector-financial><div data-collector-other-area></div></section>' : ''}
-  ${canRenew ? '<section class="section-card" id="collector-renewals" data-workspace-section data-collector-financial><div data-collector-renewals></div></section>' : ''}
-  ${canViewRemittance ? remittanceSection(route.route_date, preview.data, recipients.data, history.data, { preview: preview.error, history: history.error }, canCreateRemittance) : ''}
-  ${canRecordVisit ? '<section class="section-card" id="collector-onboarding" data-workspace-section><h2>Residence visit</h2><div data-collector-onboarding></div></section>' : ''}
-  <section class="section-card" id="collector-updates" data-workspace-section><div class="section-heading"><div><h2>Updates</h2><p>Activity and notices intended for this Collector account.</p></div></div>${activity.error ? errorCard(activity.error) : activityMarkup(activity.data)}</section>
-  <section class="section-card" id="collector-account" data-workspace-section><div class="section-heading"><div><h2>My account</h2></div></div><div data-account-credentials></div></section>`;
-
-  context.activateNavigation?.();
-  context.accountCredentialsCleanup = mountAccountCredentials({
-    root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
-  });
-  context.employeeOperationsCleanup = mountEmployeeOperations({
-    root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
-  });
-  bindRouteActions(context, entryMap);
-  bindRemittance(context);
-  const workflowContext = {
-    api, session, routeDate: route.route_date, guard: writeGuard, signal: context.signal,
-    identity: (sequenceCount = 1) => {
-      const firstSequence = context.sessionStore.nextDeviceSequence();
-      for (let index = 1; index < sequenceCount; index += 1) context.sessionStore.nextDeviceSequence();
-      return {deviceId: context.sessionStore.deviceId(), deviceSequence: firstSequence, clientTransactionId: globalThis.crypto.randomUUID(), recordedAt: new Date().toISOString()};
-    },
-    onSaved: async result => {
-      showToast(result?.message || 'Saved. Loading the authoritative result.', 'success');
-      await mountCollectorWorkspace(context);
-    },
-  };
-  if (canCreate || canCorrect) context.collectorWorkflowCleanups.push(mountCollectorWorkflows({...workflowContext, root: root.querySelector('[data-collector-workflows]'), entries: model.entries}));
-  if (canCreate) context.collectorWorkflowCleanups.push(mountCollectorOtherArea({...workflowContext, root: root.querySelector('[data-collector-other-area]')}));
-  if (canRenew) context.collectorWorkflowCleanups.push(mountCollectorRenewals({...workflowContext, root: root.querySelector('[data-collector-renewals]')}));
-  writeGuard.sync();
-  if (canRecordVisit) {
-    context.collectorOnboardingCleanup = mountCollectorOnboardingVisit({
-      root: root.querySelector('[data-collector-onboarding]'), api, session, signal: context.signal,
-    });
-  }
+  if(context.signal?.aborted)return;
+  context.collectorWorkspaceHandle?.dispose();
+  const {root,api:originalApi,signal}=context,getSession=context.getSession || (()=>context.session),beforeTaskChange=context.beforeTaskChange || (()=>{}),afterTaskChange=context.afterTaskChange || (()=>{}),navigate=context.navigateTo || (()=>{});
+  let disposed=false,route=null,routeVersion=0,routeRead=null,visible='collector-overview',routeError=null,remittance=null,renewalHandle=null,employeeHandle=null,treasuryHandle=null,surplusHandle=null;
+  const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>surplusHandle?.isWritePending()||treasuryHandle?.isWritePending()===true,isRolePending:()=>guard.busy||guard.locked||employeeHandle?.isWritePending()===true,getRoleWriteOwner:path=>path.startsWith('/api/v1/employee-operations/')?employeeHandle:{isWritePending:()=>guard.busy||guard.locked}}),api=treasuryGate.api;context.api=api;
+  const consumers=new Set(),mounted=new Map(),cleanups=[];
+  const can=permission=>hasPermission(getSession(),permission);
+  const current=()=>!disposed && !signal?.aborted && Boolean(getSession());
+  const canRenew=()=>can('renewal.recommend.assigned') || can('renewal.cash_custody.assigned');
+  const navigation=[{id:'collector-overview',label:'Today',group:'Daily work'},{id:'collector-master-review',label:'Needs attention',group:'Daily work'},{id:'collector-route',label:"Today's route",group:'Daily work'},...(can('collection.create') || can('collection.correct.own_unremitted')?[{id:'collector-workflows',label:'Collections & corrections',group:'Daily work'}]:[]),...(can('remittance.create') || can('remittance.view')?[{id:'collector-remittance',label:'Remittance',group:'Daily work'}]:[]),...(can('collection.create')?[{id:'collector-other-area',label:'Other-area collection',group:'Daily work'}]:[]),...(canRenew()?[{id:'collector-renewals',label:'Renewal handover',group:'Daily work'}]:[]),...(can('client_onboarding.visit.record')?[{id:'collector-onboarding',label:'Residence visit',group:'Daily work'}]:[]),...(can('treasury.proof.submit.assigned')?[{id:'collector-gcash-claims',label:'Report GCash proof',group:'Daily work'}]:[]),{id:'collector-surplus',label:'My excess credit',group:'Records'},{id:'collector-updates',label:'Updates',group:'Records'},{id:'collector-employee-operations',label:'My tasks & attendance',group:'Administration'},{id:'collector-account',label:'My account',group:'Administration'}];
+  context.setNavigation(navigation);
+  const section=(id,body,financial=false)=>`<section class="section-card" id="${id}" data-workspace-section${financial?' data-collector-financial':''}>${body}</section>`;
+  beforeTaskChange();root.innerHTML='<div class="notice-card danger" id="collector-uncertain-lock" hidden></div>'+section('collector-overview','<header class="workspace-header"><div><p class="eyebrow">Collector</p><h1>Today</h1><p>Open your assigned daily work.</p></div><span class="status-chip">Online-only collection</span></header><div data-collector-today></div><p data-collector-refresh-status role="status"></p>')+section('collector-route','<div data-collector-route></div><div data-collector-schedule data-private-panel hidden></div>')+section('collector-master-review','<div data-collector-attention><h2>Needs attention</h2><p>Loading the authoritative route…</p></div>')+navigation.filter(item=>!['collector-overview','collector-route','collector-master-review'].includes(item.id)).map(item=>section(item.id,`<div data-collector-task="${item.id}"><h2>${h(item.label)}</h2><p>Open this task to load its current permitted records.</p></div>`,['collector-workflows','collector-other-area','collector-renewals','collector-remittance'].includes(item.id))).join('');root.dataset.financialLocked='false';afterTaskChange();
+  function lock(message){root.dataset.financialLocked='true';const banner=root.querySelector('#collector-uncertain-lock');banner.hidden=false;banner.textContent='Financial entry locked for reconciliation. '+message+' Ordinary Refresh does not authorize another attempt. Check the authoritative saved record with the office before starting a new collection session.';for(const button of root.querySelectorAll('.collection-action'))button.disabled=true;for(const sectionRoot of root.querySelectorAll('[data-collector-financial]'))for(const form of sectionRoot.querySelectorAll('form'))for(const tag of ['input','select','textarea','button'])for(const control of form.querySelectorAll(tag))control.disabled=true;for(const form of root.querySelectorAll('.collector-entry-form'))for(const tag of ['input','select','textarea','button'])for(const control of form.querySelectorAll(tag))control.disabled=true;}
+  const guard=createCollectorWriteGuard({signal,onLock:lock});context.collectorWriteGuard=guard;
+  const identity=(count=1)=>{const sequence=context.sessionStore.nextDeviceSequence();for(let i=1;i<count;i++)context.sessionStore.nextDeviceSequence();return {deviceId:context.sessionStore.deviceId(),deviceSequence:sequence,clientTransactionId:globalThis.crypto.randomUUID(),recordedAt:new Date().toISOString()};};
+  const registerRouteConsumer=callback=>{consumers.add(callback);return ()=>consumers.delete(callback);};
+  const schedule=mountCollectorScheduleView({root:root.querySelector('[data-collector-schedule]'),api,getSession,getRoute:()=>route,signal,beforeTaskChange,afterTaskChange});cleanups.push(()=>schedule.dispose());
+  const routeView=mountCollectorRouteView({routeRoot:root.querySelector('[data-collector-route]'),attentionRoot:root.querySelector('[data-collector-attention]'),api,getSession,getRoute:()=>route,guard,identity,onSaved,navigate,openSchedule:selection=>schedule.open(selection),openRenewal:async requestId=>{await activate('collector-renewals');navigate('collector-renewals');if(!await renewalHandle?.openRequest(requestId))showToast('This assigned renewal is no longer available. Retry the renewal queue.','error');},signal,beforeTaskChange,afterTaskChange});cleanups.push(()=>routeView.dispose());
+  function today(){const target=root.querySelector('[data-collector-today]');if(!route){target.innerHTML=`<p>${routeError?'Route unavailable — refresh before collecting or deciding there is no work.':'Loading the authoritative route…'}</p>`;return;}const model=buildCollectorRouteViewModel(route);target.innerHTML=`<p>Route date ${h(route.route_date)}</p><div class="daily-actions">${navigation.filter(item=>item.group==='Daily work' && item.id!=='collector-overview').map(item=>`<button class="task-link" type="button" data-collector-nav="${item.id}" data-nav-target="${item.id}"><strong>${h(item.label)}</strong><span>${item.id==='collector-route'?`${model.totalCount} loaded loan entries`:item.id==='collector-master-review'?`${model.unresolved.length} route entries`:'Open permitted task'}</span></button>`).join('')}</div><div class="metric-grid">${metricCard('Expected today',route.expected_total==null?'Unavailable':money(route.expected_total))}${metricCard('Route loan entries',h(model.totalCount))}${metricCard('Processed',h(model.processedCount))}${metricCard('Needs action',h(model.unresolved.length))}</div>`;for(const button of target.querySelectorAll('[data-collector-nav]'))button.addEventListener('click',()=>navigate(button.getAttribute('data-collector-nav')));}
+  async function refreshRoute(change={}){if(!current())return false;if(routeRead)return routeRead;const version=++routeVersion;routeRead=(async()=>{try{if(!can('route.view'))throw Object.assign(new Error('Route permission is required.'),{status:403});const data=await api.request('/api/v1/collector/routes/today',{signal});if(!current() || version!==routeVersion)return false;if(!data || !/^\d{4}-\d{2}-\d{2}$/.test(data.route_date || '') || !Array.isArray(data.entries) || data.entries.some(entry=>!entry?.route_entry_id || !entry.loan_id || !entry.client_id) || new Set(data.entries.map(entry=>entry.route_entry_id)).size!==data.entries.length)throw new Error('The returned route is incomplete. Refresh before collecting.');route=collectorWithAttention(data);routeError=null;context.routeDate=route.route_date;routeView.applyRoute(route,{savedEntryIds:change.entryIds || []});for(const callback of consumers)callback(route,change);schedule.invalidate();today();return true;}catch(error){if(!current() || version!==routeVersion)return false;routeError=error;if(error.status===403){route={route_date:null,entries:[],areas:[]};beforeTaskChange();routeView.applyRoute(route);route=null;afterTaskChange();}routeView.setUnavailable(error);for(const callback of consumers)callback(null,change);remittance?.invalidatePreview('Route unavailable');schedule.close({restoreFocus:false});today();root.querySelector('[data-collector-refresh-status]').textContent=change.source?'Saved; latest route/summary could not refresh. '+error.message:error.message;return false;}})().finally(()=>{routeRead=null;});return routeRead;}
+  async function onSaved(result,change={}){if(!current())return;remittance?.invalidatePreview('Saved collection or cash change');const refreshed=await refreshRoute(change);if(!current())return;if(refreshed){root.querySelector('[data-collector-refresh-status]').textContent='Saved. Current authoritative route loaded.';if(remittance)await remittance.refresh();}return refreshed;}
+  const workflowContext=()=>({api,session:getSession(),getSession,getRoute:()=>route,getRouteDate:()=>route?.route_date,routeDate:route?.route_date,entries:route?.entries || [],guard,identity,onSaved,signal,registerRouteConsumer,beforeTaskChange,afterTaskChange});
+  function taskRoot(id){return root.querySelector(`[data-collector-task="${id}"]`);}
+  async function activate(id){if(!current() || !navigation.some(item=>item.id===id))return;visible=id;if(mounted.has(id))return mounted.get(id);let blocked=false;const load=(async()=>{const task=taskRoot(id);if(!task)return;
+      if(id==='collector-surplus'){surplusHandle=mountCollectorSurplus({root:task,api,getSession,signal,beforeTaskChange,afterTaskChange,canStartWrite:treasuryGate.canStartWrite,mode:'own'});cleanups.push(surplusHandle);await surplusHandle.ready;}else if(id==='collector-gcash-claims'){treasuryHandle=mountTreasuryBorrowerClaims({root:task,api,getSession,signal,mode:'collector',beforeTaskChange,afterTaskChange,canStartWrite:treasuryGate.canStartWrite});cleanups.push(treasuryHandle);await treasuryHandle.ready;}else if(id==='collector-remittance'){remittance=mountCollectorRemittance({root:task,api,getSession,getRouteDate:()=>routeError?null:route?.route_date,guard,onSaved,signal,beforeTaskChange,afterTaskChange});cleanups.push(()=>remittance.dispose());await remittance.refresh();}
+      else if(id==='collector-updates'){const activity=mountCollectorActivity({root:task,api,getSession,getTargets:()=>({route:routeError?null:route,remittances:remittance?.states.history.data || []}),navigate,openTarget:async target=>{if(target.sectionId==='collector-route'){routeView.focusEntry(target.routeEntryId);routeView.openReceipt({routeEntryId:target.routeEntryId,transactionId:target.recordId});}else{await activate('collector-remittance');remittance?.openRecord(target.recordId);}},signal,beforeTaskChange,afterTaskChange});cleanups.push(()=>activity.dispose());task.activityHandle=activity;await activity.refresh();}
+      else if(id==='collector-workflows' || id==='collector-other-area'){if(!route || routeError){task.innerHTML='<h2>'+h(id==='collector-workflows'?'Collections & corrections':'Other-area collection')+'</h2><p>Route unavailable — refresh before collecting.</p>';blocked=true;return;}const mount=id==='collector-workflows'?mountCollectorWorkflows:mountCollectorOtherArea;cleanups.push(mount({...workflowContext(),root:task}));}
+      else if(id==='collector-renewals'){cleanups.push(mountCollectorRenewals({...workflowContext(),root:task,registerHandle:handle=>{renewalHandle=handle;}}));}
+      else if(id==='collector-employee-operations'){task.setAttribute('data-employee-operations','');context.employeeOperationsCleanup=mountEmployeeOperations({...workflowContext(),root:task,onController:handle=>{employeeHandle=handle;}});cleanups.push(()=>context.employeeOperationsCleanup?.());}
+      else if(id==='collector-onboarding'){task.setAttribute('data-collector-onboarding','');context.collectorOnboardingCleanup=mountCollectorOnboardingVisit({...workflowContext(),root:task});cleanups.push(()=>context.collectorOnboardingCleanup?.());}
+      else if(id==='collector-account'){task.innerHTML='<h2>My account</h2><div data-collector-account-summary></div><div data-account-credentials></div>';context.accountCredentialsCleanup=mountAccountCredentials({root:task.querySelector('[data-account-credentials]'),api,session:getSession(),getSession,signal});cleanups.push(()=>context.accountCredentialsCleanup?.());try{const account=await api.request('/api/v1/account',{signal});if(current())task.querySelector('[data-collector-account-summary]').textContent=account.profile?.full_name || 'Signed-in Collector account';}catch(error){if(current())task.querySelector('[data-collector-account-summary]').textContent='Account details unavailable. '+error.message;}}
+      if(current())guard.sync();})();mounted.set(id,load);await load;if(blocked)mounted.delete(id);return load;}
+  async function refreshVisible(){if(!current())return false;if(guard.busy || guard.locked || surplusHandle?.isWritePending()||treasuryHandle?.isWritePending()||treasuryGate.isWritePending()||employeeHandle?.isWritePending()){root.querySelector('[data-collector-refresh-status]').textContent=guard.locked?'Financial uncertainty remains locked. Check the saved record before any new attempt.':'A protected write is in progress. Refresh after it finishes.';showToast('Refresh is paused while financial entry needs confirmation. Your drafts are retained.','warning');return false;}if(visible==='collector-surplus')return surplusHandle?.refreshReadOnly();if(visible==='collector-gcash-claims')return treasuryHandle?.refreshReadOnly();const refreshed=await refreshRoute();if(!current())return false;await activate(visible);if(visible==='collector-remittance' && remittance)await remittance.refresh();if(visible==='collector-updates')await taskRoot(visible)?.activityHandle?.refresh();if(visible==='collector-renewals')await renewalHandle?.refresh();if(visible==='collector-employee-operations')await employeeHandle?.refresh();return refreshed;}
+  function dispose(){if(disposed)return;disposed=true;routeVersion++;beforeTaskChange();for(const cleanup of cleanups)cleanup();consumers.clear();mounted.clear();route=null;guard.dispose();root.innerHTML='';signal?.removeEventListener('abort',dispose);afterTaskChange();}
+  const handle={activate,refreshVisible,dispose,isWritePending:()=>guard.busy||guard.locked||surplusHandle?.isWritePending()||treasuryHandle?.isWritePending()||treasuryGate.isWritePending()||Boolean(employeeHandle?.isWritePending())};context.collectorWorkspaceHandle=handle;context.registerWorkspaceHandle?.(handle);signal?.addEventListener('abort',dispose,{once:true});today();context.activateNavigation?.();await refreshRoute();
 }

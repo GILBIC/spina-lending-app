@@ -95,7 +95,7 @@ function entriesMarkup(entries) {
           <strong>${escapeHtml(entry.client_name || '—')}</strong>
           <span class="meta">${escapeHtml(entry.loan_number || '—')} · ${escapeHtml(entry.loan_type_name || '—')}</span>
         </div>
-        ${badge(entry.status || 'unknown')}
+        ${badge(entry.status === 'wallet_applied' ? 'Recipient funds applied' : entry.status || 'unknown')}
       </div>
       <div class="loan-operation-primary">
         <div><span>Amount</span><strong>${formatMoney(entry.amount)}</strong></div>
@@ -103,7 +103,7 @@ function entriesMarkup(entries) {
         <div><span>Receipt</span><strong>${escapeHtml(entry.receipt_number || '—')}</strong></div>
         <div><span>Collection date</span><strong>${formatDate(entry.collection_date)}</strong></div>
       </div>
-      <p class="meta">Collector: ${escapeHtml(entry.collector_name || '—')}${entry.remittance_number ? ` · Remittance ${escapeHtml(entry.remittance_number)}` : ''}</p>
+      <p class="meta">Recorded by: ${escapeHtml(entry.collector_name || '—')}${entry.remittance_number ? ` · Remittance ${escapeHtml(entry.remittance_number)}` : ''}</p>
       ${covered.length ? `<p class="meta"><strong>Covered dates:</strong> ${coveredDatesMarkup(covered)}</p>` : ''}
       <details class="loan-operation-technical" data-loan-ops-technical>
         <summary>Details</summary>
@@ -163,11 +163,16 @@ export function bindManagementLoanOperations(context) {
 
   const queryInput = form.querySelector('[name="q"]');
   const statusInput = form.querySelector('[name="status"]');
+  const owner=(context.getSession?.()||context.session)?.user?.id;
+  let disposed=false,generation=0,selectedView='activity';
+  const alive=()=>!disposed&&!context.signal?.aborted&&(!context.getSession||context.getSession()?.user?.id===owner);
 
   const bindLocalViews = () => {
     const tabs = context.root.querySelectorAll?.('[data-loan-ops-tab]') ?? [];
     const panels = context.root.querySelectorAll?.('[data-loan-ops-panel]') ?? [];
     const activate = (id) => {
+      context.beforeTaskChange?.();
+      selectedView=id;
       for (const panel of panels) {
         if (panel.getAttribute('data-loan-ops-panel') === id) panel.removeAttribute('hidden');
         else panel.setAttribute('hidden', '');
@@ -178,6 +183,7 @@ export function bindManagementLoanOperations(context) {
         if (selected) tab.setAttribute('class', 'loan-ops-tab active');
         else tab.setAttribute('class', 'loan-ops-tab');
       }
+      context.afterTaskChange?.();
     };
     for (const tab of tabs) {
       tab.addEventListener?.('click', (event) => {
@@ -185,26 +191,39 @@ export function bindManagementLoanOperations(context) {
         activate(tab.getAttribute('data-loan-ops-tab'));
       });
     }
+    activate(selectedView);
   };
 
   const reload = async () => {
+    if(!alive())return false;
+    const version=++generation;
+    context.beforeTaskChange?.();
     target.innerHTML = loadingPanel('Loading loan operations…');
     try {
       const data = await loadManagementLoanOperations(context.api, {
         query: queryInput?.value ?? '',
         status: statusInput?.value ?? 'all',
       });
+      if(!alive()||version!==generation)return false;
+      context.beforeTaskChange?.();
       target.innerHTML = managementLoanOperationsMarkup(data);
       bindLocalViews();
+      return true;
     } catch (error) {
-      target.innerHTML = errorCard(error);
+      if(alive()&&version===generation){context.beforeTaskChange?.();target.innerHTML = `${errorCard(error)}<button type="button" class="button button-outline" data-loan-operations-retry>Retry collection history</button>`;context.afterTaskChange?.();}
+      target.querySelector('[data-loan-operations-retry]')?.addEventListener('click',()=>void reload(),{once:true});
+      return false;
     }
   };
 
-  form.addEventListener('submit', async (event) => {
+  const submit=async (event) => {
     event.preventDefault();
     await reload();
-  });
+  };
+  form.addEventListener('submit', submit);
   statusInput?.addEventListener('change', reload);
   bindLocalViews();
+  function dispose(){if(disposed)return;disposed=true;generation++;form.removeEventListener('submit',submit);statusInput?.removeEventListener('change',reload);context.signal?.removeEventListener('abort',dispose);}
+  context.signal?.addEventListener('abort',dispose,{once:true});
+  return {refresh:reload,dispose};
 }

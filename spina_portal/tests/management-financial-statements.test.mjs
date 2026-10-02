@@ -133,7 +133,7 @@ test('Financial Statements markup displays server totals without recomputing acc
 
 test('Management workspace mounts Financial Statements only through the isolated accounting.view integration', () => {
   assert.match(managementSource, /management-financial-statements\.js/);
-  assert.match(managementSource, /hasPermission\(session, 'accounting\.view'\)/);
+  assert.match(managementSource, /can\('accounting\.view'\)/);
   assert.match(managementSource, /loadManagementFinancialStatements/);
   assert.match(managementSource, /financialStatementsMarkup/);
   assert.match(managementSource, /id="management-financial-statements"/);

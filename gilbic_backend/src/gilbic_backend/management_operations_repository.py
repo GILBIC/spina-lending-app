@@ -122,12 +122,14 @@ class PostgresManagementOperationsRepository:
                             where t.is_voided = false
                               and t.is_locked = false
                               and t.remittance_id is null
+                              and t.funding_source = 'collector_cash'
                               and t.entry_type <> 'pass'
                         ), 0) as unremitted_amount,
                         count(*) filter (
                             where t.is_voided = false
                               and t.is_locked = false
                               and t.remittance_id is null
+                              and t.funding_source = 'collector_cash'
                         ) as unremitted_entry_count
                     from lending.collection_transactions t
                     """,
@@ -198,6 +200,7 @@ class PostgresManagementOperationsRepository:
                         t.edit_version,
                         case
                             when t.is_voided then 'voided'
+                            when t.funding_source = 'treasury_receipt' then 'wallet_applied'
                             when remittance.status = 'received' then 'received'
                             when remittance.status = 'submitted' then 'submitted'
                             else 'unremitted'
@@ -234,6 +237,7 @@ class PostgresManagementOperationsRepository:
                         or (%s = 'unremitted'
                             and t.is_voided = false
                             and t.remittance_id is null
+                            and t.funding_source = 'collector_cash'
                             and t.is_locked = false)
                         or (%s = 'submitted'
                             and t.is_voided = false

@@ -80,24 +80,26 @@ class _OtherAreaCollectionSummaryPageState
 
   List<CrossCollectionStatus> get _visibleRecords {
     final query = _filterController.text.trim().toLowerCase();
-    return _records.where((record) {
-      if (_statusFilter != null && record.custodyStatus != _statusFilter) {
-        return false;
-      }
-      if (query.isEmpty) {
-        return true;
-      }
-      final haystack = <String>[
-        record.clientName,
-        record.receiptNumber,
-        record.loanType,
-        record.area,
-        record.assignedCollectorName,
-        record.remittanceNumber,
-        record.remittanceRecipientName,
-      ].join(' ').toLowerCase();
-      return haystack.contains(query);
-    }).toList(growable: false);
+    return _records
+        .where((record) {
+          if (_statusFilter != null && record.custodyStatus != _statusFilter) {
+            return false;
+          }
+          if (query.isEmpty) {
+            return true;
+          }
+          final haystack = <String>[
+            record.clientName,
+            record.receiptNumber,
+            record.loanType,
+            record.area,
+            record.assignedCollectorName,
+            record.remittanceNumber,
+            record.remittanceRecipientName,
+          ].join(' ').toLowerCase();
+          return haystack.contains(query);
+        })
+        .toList(growable: false);
   }
 
   Map<String, List<CrossCollectionStatus>> _groups(
@@ -116,16 +118,22 @@ class _OtherAreaCollectionSummaryPageState
     final visible = _visibleRecords;
     final groups = _groups(visible);
     final notRemitted = _records
-        .where((item) =>
-            item.custodyStatus == CrossCollectionCustodyStatus.notRemitted)
+        .where(
+          (item) =>
+              item.custodyStatus == CrossCollectionCustodyStatus.notRemitted,
+        )
         .length;
     final awaiting = _records
-        .where((item) =>
-            item.custodyStatus == CrossCollectionCustodyStatus.awaitingAcceptance)
+        .where(
+          (item) =>
+              item.custodyStatus ==
+              CrossCollectionCustodyStatus.awaitingAcceptance,
+        )
         .length;
     final accepted = _records
         .where(
-            (item) => item.custodyStatus == CrossCollectionCustodyStatus.accepted)
+          (item) => item.custodyStatus == CrossCollectionCustodyStatus.accepted,
+        )
         .length;
 
     return Scaffold(
@@ -186,7 +194,8 @@ class _OtherAreaCollectionSummaryPageState
                       onChanged: (_) => setState(() {}),
                       decoration: const InputDecoration(
                         labelText: 'Filter collections',
-                        hintText: 'Client, receipt, area, or assigned collector',
+                        hintText:
+                            'Client, receipt, area, or assigned collector',
                         prefixIcon: Icon(Icons.search),
                       ),
                     ),
@@ -203,13 +212,15 @@ class _OtherAreaCollectionSummaryPageState
                           value: null,
                           child: Text('All statuses'),
                         ),
-                        for (final status in CrossCollectionCustodyStatus.values)
+                        for (final status
+                            in CrossCollectionCustodyStatus.values)
                           DropdownMenuItem<CrossCollectionCustodyStatus?>(
                             value: status,
                             child: Text(status.label),
                           ),
                       ],
-                      onChanged: (value) => setState(() => _statusFilter = value),
+                      onChanged: (value) =>
+                          setState(() => _statusFilter = value),
                     ),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 10),
@@ -279,7 +290,9 @@ class _CollectionGroup extends StatelessWidget {
       child: ExpansionTile(
         initiallyExpanded: true,
         title: Text(first.assignedCollectorName),
-        subtitle: Text('$area • ${records.length} entr${records.length == 1 ? 'y' : 'ies'}'),
+        subtitle: Text(
+          '$area • ${records.length} entr${records.length == 1 ? 'y' : 'ies'}',
+        ),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         children: [
           for (final record in records) _CollectionStatusRow(record: record),
@@ -329,7 +342,9 @@ class _CollectionStatusRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 3),
-          Text('${record.receiptNumber} • ${record.loanType} • $collectionDate'),
+          Text(
+            '${record.receiptNumber} • ${record.loanType} • $collectionDate',
+          ),
           const SizedBox(height: 6),
           Text(
             record.custodyStatus.label,
@@ -342,7 +357,9 @@ class _CollectionStatusRow extends StatelessWidget {
           if (record.acceptedAt != null)
             Text('Recorded: ${formatSpinaBusinessDateTime(record.acceptedAt)}'),
           if (record.submittedAt != null)
-            Text('Submitted: ${formatSpinaBusinessDateTime(record.submittedAt)}'),
+            Text(
+              'Submitted: ${formatSpinaBusinessDateTime(record.submittedAt)}',
+            ),
           if (record.receivedAt != null)
             Text('Accepted: ${formatSpinaBusinessDateTime(record.receivedAt)}'),
         ],
@@ -354,6 +371,8 @@ class _CollectionStatusRow extends StatelessWidget {
 String _custodyDetail(CrossCollectionStatus record, {required bool isPass}) {
   if (isPass) {
     return switch (record.custodyStatus) {
+      CrossCollectionCustodyStatus.walletApplied =>
+        'Recipient funds applied; no Collector cash.',
       CrossCollectionCustodyStatus.notRemitted =>
         'Unable-to-pay record is still waiting for remittance.',
       CrossCollectionCustodyStatus.awaitingAcceptance =>
@@ -363,6 +382,8 @@ String _custodyDetail(CrossCollectionStatus record, {required bool isPass}) {
     };
   }
   return switch (record.custodyStatus) {
+    CrossCollectionCustodyStatus.walletApplied =>
+      'Recipient funds applied; no Collector cash.',
     CrossCollectionCustodyStatus.notRemitted =>
       'Cash remains under your custody.',
     CrossCollectionCustodyStatus.awaitingAcceptance =>

@@ -69,12 +69,8 @@ TARGET_TESTS = (
     / "tests"
     / "test_seven_by_seven_no_collection_voluntary_postgres.py",
 )
-# The shared branch schema is contiguous through 0111. Migration 0112 belongs to
-# the separately isolated onboarding work and is intentionally absent from this
-# Area Management branch, while current collection posting now depends on the
-# Area transfer table introduced by 0113. Replay the shared baseline through
-# 0111, then apply this branch's 0113 feature migration directly.
-BOOTSTRAP_THROUGH = 111
+# Current application readers must run against the complete current schema.
+BOOTSTRAP_THROUGH = 137
 REQUIRED_7X7_READER_RELATIONS = (
     "lending.seven_by_seven_extra_principal_adjustments",
     "lending.loan_contract_installments_operational",
@@ -138,8 +134,6 @@ def _bootstrap_database(test_url: str) -> None:
         disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        with psycopg.connect(test_url, autocommit=True) as connection:
-            connection.execute(AREA_MANAGEMENT_MIGRATION.read_text(encoding="utf-8"))
     finally:
         disposable.BOOTSTRAP_THROUGH = previous_bootstrap_through
 
@@ -202,7 +196,7 @@ def main() -> int:
 
         print(
             f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d} "
-            "plus Area Management migration 0113..."
+            "with recipient-funding guards..."
         )
         _bootstrap_database(test_url)
         _assert_current_7x7_reader_schema(test_url)
@@ -217,7 +211,7 @@ def main() -> int:
         # still clean. Existing 7x7 tests intentionally commit legacy Cardona
         # fixtures, which would otherwise create unrelated equal-specificity
         # owners and contaminate the delegated-ownership assertions.
-        print("Running Area Management PostgreSQL acceptance tests on clean 0113 state...")
+        print("Running Area Management PostgreSQL acceptance tests on the clean current schema...")
         _run(
             [
                 sys.executable,

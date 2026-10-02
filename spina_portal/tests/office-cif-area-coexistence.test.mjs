@@ -1,8 +1,10 @@
+import {mountRoleTask, activateManagementTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
 
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-area-management', 'employee-cif-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -70,13 +72,14 @@ function assertAreaLoaded(h, role) {
 }
 
 async function openCif(h, role) {
+  if (role === 'management') await activateManagementTask(h.context, 'management-clients-loans', 'management-office');
   const section = h.context.root.querySelector(`#${role}-cif-review`);
   const selection = section?.querySelector('[data-office-cif-selection]');
   assert.ok(selection?.querySelector('form'), 'office CIF selection must be mounted');
   const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
   assert.deepEqual(h.navigation.filter(({ id }) => id === navigationId), [role === 'management'
     ? {id: navigationId, label: 'Clients & loans'}
-    : {id: navigationId, label: 'CIF review', group: 'Daily work'}]);
+    : {id: navigationId, label: 'CIF review', group: 'Office work'}]);
   if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
   const input = selection.querySelector('input');
   input.value = REFERENCE;
@@ -96,7 +99,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: Area Management and CIF selection coexist without disrupting the CIF GET chain`, async (t) => {
     const h = harness(role, [AREA_PERMISSION, CIF_PERMISSION]);
     t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-operations', 'management-area-management');
     const area = assertAreaLoaded(h, role);
     const areaBefore = area.innerHTML;
     assert.deepEqual(cifRequests(h), []);
@@ -111,7 +114,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: Area-only permission does not expose CIF even with a similar permission string`, async (t) => {
     const h = harness(role, [AREA_PERMISSION, `${CIF_PERMISSION}.extra`]);
     t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-operations', 'management-area-management');
 
     assertAreaLoaded(h, role);
     assert.equal(h.context.root.querySelector(`#${role}-cif-review`), null);
@@ -123,7 +126,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: CIF-only permission never loads Area Management through a similar permission string`, async (t) => {
     const h = harness(role, [CIF_PERMISSION, `${AREA_PERMISSION}.extra`]);
     t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-operations', 'management-area-management');
 
     await openCif(h, role);
 

@@ -8,8 +8,9 @@ import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_schedule_page.dart';
 
 void main() {
-  testWidgets('Client schedule page renders authoritative server values only',
-      (tester) async {
+  testWidgets('Client schedule page renders authoritative server values only', (
+    tester,
+  ) async {
     final repository = _FakeClientScheduleRepository();
 
     await tester.pumpWidget(
@@ -31,8 +32,8 @@ void main() {
     expect(find.text('₱200.00'), findsWidgets);
     expect(find.text('₱150.00'), findsOneWidget);
     expect(find.text('Due Today'), findsOneWidget);
-    expect(find.text('Oct 10, 2026'), findsOneWidget);
-    expect(find.text('Oct 12, 2026'), findsOneWidget);
+    expect(find.text('2026-10-10'), findsOneWidget);
+    expect(find.text('2026-10-12'), findsOneWidget);
     expect(find.text('Management-approved extension'), findsOneWidget);
     expect(repository.loanId, 'regular-loan');
     expect(repository.deviceId, 'client-device');

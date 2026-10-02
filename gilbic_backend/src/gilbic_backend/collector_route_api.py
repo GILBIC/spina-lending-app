@@ -65,6 +65,9 @@ def _receipt_payload(receipt: CollectorRouteReceiptRecord) -> dict[str, object]:
         "collector_user_id": str(receipt.collector_user_id),
         "collector_name": receipt.collector_name,
         "is_locked": receipt.is_locked,
+        "funding_source": receipt.funding_source,
+        "funding_receipt_id": str(receipt.funding_receipt_id) if receipt.funding_receipt_id else None,
+        "funding_account_id": str(receipt.funding_account_id) if receipt.funding_account_id else None,
         "note": receipt.note,
         "covered_dates": [value.isoformat() for value in receipt.covered_dates],
         "accepted_at": receipt.accepted_at.isoformat() if receipt.accepted_at else None,
@@ -88,6 +91,8 @@ def _cross_collection_message(
     status: CollectorRouteCrossStatusRecord,
 ) -> str:
     recorder = status.recorder_name or entry.today_collector_name or "Collector"
+    if status.custody_status == "wallet_applied":
+        return "Verified recipient-account funds were applied to this loan. No Collector cash handover is due."
     origin = status.collection_origin.strip().lower()
     if origin == "management_direct":
         return (
@@ -144,6 +149,8 @@ def _cross_collection_message(
 
 
 def _cross_status_suffix(status: CollectorRouteCrossStatusRecord) -> str:
+    if status.custody_status == "wallet_applied":
+        return "Recipient funds applied - no Collector cash"
     if status.custody_status == "no_cash":
         return "No cash"
     if status.custody_status == "accepted":

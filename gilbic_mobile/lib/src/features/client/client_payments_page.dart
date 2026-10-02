@@ -1,5 +1,5 @@
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:flutter/material.dart';
-import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
@@ -509,7 +509,7 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-String _money(String value) => formatClientPaymentMoney(value);
+String _money(String value) => formatSpinaMoney(value);
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
@@ -517,9 +517,4 @@ String _date(DateTime value) {
       '${value.day.toString().padLeft(2, '0')}';
 }
 
-String _dateTime(DateTime value) {
-  final local = spinaBusinessWallClock(value);
-  return '${_date(local)} '
-      '${local.hour.toString().padLeft(2, '0')}:'
-      '${local.minute.toString().padLeft(2, '0')}';
-}
+String _dateTime(DateTime value) => formatSpinaInstant(value);

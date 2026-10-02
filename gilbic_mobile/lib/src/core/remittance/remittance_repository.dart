@@ -67,10 +67,21 @@ extension RemittanceRejectionCapability on RemittanceRepository {
   }
 }
 
+abstract interface class RemittanceReceivingContractRepository {
+  Future<RemittanceReceivingContract> loadReceivingContract(
+    UserSession session, {
+    required String deviceId,
+    required String remittanceId,
+  });
+}
+
 class SpinaRemittanceRepository
-    implements RemittanceRepository, RemittanceRejectionRepository {
+    implements
+        RemittanceRepository,
+        RemittanceRejectionRepository,
+        RemittanceReceivingContractRepository {
   SpinaRemittanceRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -83,7 +94,9 @@ class SpinaRemittanceRepository
       session,
       deviceId: deviceId,
       method: 'GET',
-      uri: ApiConfig.endpoint('/api/mobile/v1/collector/remittances/recipients'),
+      uri: ApiConfig.endpoint(
+        '/api/mobile/v1/collector/remittances/recipients',
+      ),
     );
     if (data is! Iterable) {
       return const <RemittanceRecipient>[];
@@ -100,7 +113,9 @@ class SpinaRemittanceRepository
     required String deviceId,
     required DateTime collectionDate,
   }) async {
-    final base = ApiConfig.endpoint('/api/mobile/v1/collector/remittances/preview');
+    final base = ApiConfig.endpoint(
+      '/api/mobile/v1/collector/remittances/preview',
+    );
     final uri = base.replace(
       queryParameters: <String, String>{
         'collection_date': _date(collectionDate),
@@ -163,6 +178,17 @@ class SpinaRemittanceRepository
     required String deviceId,
     required String remittanceId,
   }) async {
+    final contract = await loadReceivingContract(
+      session,
+      deviceId: deviceId,
+      remittanceId: remittanceId,
+    );
+    if (!contract.legacyReceiveAllowed) {
+      throw const SpinaApiException(
+        'Use the current actual cash count review.',
+        code: 'collector_count_required',
+      );
+    }
     final data = await _request(
       session,
       deviceId: deviceId,
@@ -170,9 +196,39 @@ class SpinaRemittanceRepository
       uri: ApiConfig.endpoint(
         '/api/mobile/v1/remittances/$remittanceId/receive',
       ),
-      body: const <String, Object?>{'review_acknowledged': true},
+      body: const {'review_acknowledged': true},
     );
-    return _recordOrThrow(data, 'receipt confirmation');
+    final result = _recordOrThrow(data, 'receipt confirmation');
+    if (result.remittanceId != remittanceId ||
+        result.recipientUserId != session.userId ||
+        !result.isReceived) {
+      throw const SpinaApiException(
+        'The exact remittance receipt is unconfirmed.',
+        code: 'invalid_remittance_response',
+      );
+    }
+    return result;
+  }
+
+  @override
+  Future<RemittanceReceivingContract> loadReceivingContract(
+    UserSession session, {
+    required String deviceId,
+    required String remittanceId,
+  }) async {
+    final data = await _request(
+      session,
+      deviceId: deviceId,
+      method: 'GET',
+      uri: ApiConfig.endpoint(
+        '/api/mobile/v1/treasury/collector-surplus/remittances/$remittanceId/receiving-contract',
+      ),
+    );
+    return RemittanceReceivingContract.fromPayload(
+      data,
+      remittanceId: remittanceId,
+      recipientUserId: session.userId,
+    );
   }
 
   @override
@@ -226,10 +282,10 @@ class SpinaRemittanceRepository
     try {
       response = switch (method) {
         'POST' => await _client.post(
-            uri,
-            headers: headers,
-            body: jsonEncode(body ?? const <String, Object?>{}),
-          ),
+          uri,
+          headers: headers,
+          body: jsonEncode(body ?? const <String, Object?>{}),
+        ),
         _ => await _client.get(uri, headers: headers),
       };
     } on Exception {

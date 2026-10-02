@@ -1,3 +1,10 @@
+import {mountTreasuryWorkspace} from '../treasury-workspace.js';
+import {createTreasuryRoleGate} from '../treasury-role-tasks.js';
+import {mountManagementRenewals} from '../management-renewals.js';
+import {createManagementTaskController} from '../management-workspace-tasks.js';
+import {mountManagementPortfolio} from '../management-portfolio.js';
+import {mountManagementPersonalUpdates} from '../management-personal-updates.js';
+import {mountManagementSupport} from '../management-support.js';
 import { mountManagementCollectionActions } from '../management-collection-actions.js';
 import { mountManagementJournalActions } from '../management-journal-actions.js';
 import { mountManagementAccounting } from '../management-accounting.js';
@@ -10,13 +17,14 @@ import { mountOfficeFirstLoan } from '../office-first-loan.js';
 import { mountOfficeOnboarding } from '../office-onboarding.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
+import { mountRemittanceReview } from '../remittance-review.js';
 import { mountCashDisbursement } from '../cash-disbursement.js';
 import { bindManagementAlertsAudit, managementAlertsAuditMarkup } from '../management-alerts-audit.js';
 import {
   bindClientAccountAdmin,
   clientAccountAdminMarkup,
 } from '../client-account-admin.js';
-import { staffInviteMarkup, submitStaffInvitation } from '../staff-invite.js';
+import { staffInviteMarkup, submitStaffInvitation, normalizeStaffInvitation } from '../staff-invite.js';
 import {
   bindManagedDevicePanel,
   changeManagedDeviceStatus,
@@ -27,6 +35,7 @@ import {
 import {
   financialStatementsMarkup,
   loadManagementFinancialStatements,
+  mountManagementFinancialStatements,
 } from '../management-financial-statements.js';
 import {
   bindManagementAccountingExport,
@@ -106,6 +115,7 @@ function managementMetricCard(metric) {
     <span class="metric-label">${escapeHtml(presentation.label)}</span>
     <strong class="metric-value">${value}</strong>
     ${details.length ? `<span class="meta">${details.join(' · ')}</span>` : ''}
+    ${metric.key==='activity.unread'?'<button type="button" class="button button-quiet" data-my-updates-shortcut>Open my updates</button>':''}
   </article>`;
 }
 
@@ -113,77 +123,19 @@ function overviewMetrics(metrics) {
   const known = asArray(metrics).filter((metric) => MANAGEMENT_METRIC_PRESENTATION[metric?.key]);
   if (!known.length) return emptyState('No Management metric is currently available.');
   return MANAGEMENT_METRIC_GROUPS.map(([group, title]) => {
-    const cards = known
-      .filter((metric) => MANAGEMENT_METRIC_PRESENTATION[metric.key].group === group)
+    const grouped=known.filter(metric=>MANAGEMENT_METRIC_PRESENTATION[metric.key].group===group);
+    const verifiedZero=metric=>group==='attention'&&metric.count===0&&(metric.amount==null||/^0+(?:\.0+)?$/.test(String(metric.amount)));
+    const cards = grouped.filter(metric=>!verifiedZero(metric))
       .map(managementMetricCard)
       .join('');
-    if (!cards) return '';
+    const zero=grouped.filter(verifiedZero);
+    if (!cards&&!zero.length) return '';
     return `<section class="management-overview-group" data-management-metric-group="${group}">
       <div class="section-heading"><div><h2>${escapeHtml(title)}</h2></div></div>
       <div class="metric-grid">${cards}</div>
+      ${zero.length?`<details class="management-zero-queues"><summary>${zero.length} queues with no pending work</summary><div class="metric-grid">${zero.map(managementMetricCard).join('')}</div></details>`:''}
     </section>`;
   }).join('');
-}
-
-function managementLoanTypeLabel(loan) {
-  const raw = String(loan.loan_type_name || loan.loan_type_code || 'Loan').trim();
-  const normalized = raw.toLowerCase().replaceAll('-', '').replaceAll('_', '').replaceAll(' ', '');
-  return normalized === '7x7' || normalized === 'sevenbyseven' ? '7x7' : raw || 'Loan';
-}
-
-function managementClientLoanGroups(loans) {
-  const groups = new Map();
-  for (const loan of loans) {
-    const key = String(
-      loan.client_id
-      || loan.client_code
-      || `${loan.client_name || ''}|${loan.client_area || ''}`,
-    );
-    if (!groups.has(key)) groups.set(key, { client: loan, loans: [] });
-    groups.get(key).loans.push(loan);
-  }
-  return [...groups.values()];
-}
-
-function managementLoanItem(loan) {
-  const typeLabel = managementLoanTypeLabel(loan);
-  const typeTone = typeLabel === '7x7' ? 'info' : 'warning';
-  return `<article class="client-loan-item" data-client-loan-item>
-    <div class="client-loan-item-heading">
-      <div class="inline-actions">
-        ${badge(typeLabel, typeTone)}
-        <strong>${escapeHtml(loan.loan_number || 'Loan')}</strong>
-      </div>
-      <div class="inline-actions">
-        ${badge(loan.loan_status || 'unknown')}
-        ${loan.is_overdue ? '<span class="badge danger">Overdue</span>' : ''}
-      </div>
-    </div>
-    <div class="detail-grid client-loan-detail-grid">
-      <div class="detail-item"><span>Principal</span><strong>${formatMoney(loan.principal)}</strong></div>
-      <div class="detail-item"><span>Official balance</span><strong>${formatMoney(loan.remaining_balance)}</strong></div>
-      <div class="detail-item"><span>Daily amount</span><strong>${formatMoney(loan.daily_amount)}</strong></div>
-      <div class="detail-item"><span>Due</span><strong>${formatDate(loan.due_date)}</strong></div>
-    </div>
-  </article>`;
-}
-
-function loanTable(data) {
-  const loans = asArray(data.loans);
-  if (!loans.length) return emptyState('No loan matches the current search.');
-  const groups = managementClientLoanGroups(loans);
-  return `<div class="client-loan-groups">${groups.map(({ client, loans: clientLoans }) => `
-    <section class="client-loan-group" data-client-loan-group="${escapeHtml(client.client_id || client.client_code || '')}">
-      <header class="client-loan-group-header">
-        <div>
-          <h3>${escapeHtml(client.client_name || 'Client')}</h3>
-          <p class="meta">${escapeHtml(client.client_code || 'No client code')}${client.client_area ? ` · ${escapeHtml(client.client_area)}` : ''}</p>
-        </div>
-        <span class="badge info">${clientLoans.length} ${clientLoans.length === 1 ? 'loan' : 'loans'}</span>
-      </header>
-      <div class="client-loan-items">${clientLoans.map(managementLoanItem).join('')}</div>
-    </section>
-  `).join('')}</div>`;
 }
 
 function bindManagementOfficeWorkflow(root) {
@@ -251,20 +203,10 @@ function bindManagementOfficeWorkflow(root) {
   return () => removers.forEach((remove) => remove());
 }
 
-function renewalQueue(items) {
-  if (!items.length) return '<p class="management-queue-empty" role="status" data-management-queue-empty="renewals">No renewal requests waiting.</p>';
-  return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.loan_number || 'Loan')} · ${escapeHtml(request.loan_type_name || '')}</div></div>${badge(request.status)}</div><div class="detail-grid"><div class="detail-item"><span>Current principal</span><strong>${formatMoney(request.current_principal)}</strong></div><div class="detail-item"><span>Remaining</span><strong>${formatMoney(request.remaining_balance)}</strong></div><div class="detail-item"><span>Requested</span><strong>${formatMoney(request.requested_amount)}</strong></div></div>${request.client_message ? `<p>${escapeHtml(request.client_message)}</p>` : ''}<form class="entry-form management-renewal-review" data-request-id="${escapeHtml(request.request_id)}"><label>Decision<select name="decision"><option value="approved">Approve request</option><option value="rejected">Reject request</option></select></label><label>Review note<textarea name="reviewNote" maxlength="1000" placeholder="Required when rejecting"></textarea></label><button class="button button-primary" type="submit">Confirm review</button></form></article>`).join('')}</div>`;
-}
-
-function supportQueue(items) {
-  if (!items.length) return '<p class="management-queue-empty" role="status" data-management-queue-empty="support">No open support requests.</p>';
-  return `<div class="list-stack">${items.map((request) => `<article class="list-item"><div class="section-heading"><div><strong>${escapeHtml(request.client_name || 'Client')}</strong><div class="meta">${escapeHtml(request.category || 'other')} · ${escapeHtml(request.subject || 'Support')}</div></div>${badge(request.status)}</div><p>${escapeHtml(request.message || '')}</p>${request.reference_text ? `<p class="meta">Reference: ${escapeHtml(request.reference_text)}</p>` : ''}<form class="entry-form management-support-review" data-request-id="${escapeHtml(request.request_id)}"><label>Action<select name="action"><option value="answered">Answer</option><option value="resolved">Resolve</option></select></label><label>Response<textarea name="response" minlength="3" maxlength="2000" required></textarea></label><button class="button button-primary" type="submit">Save response</button></form></article>`).join('')}</div>`;
-}
-
 function staffRows(accounts, canManageDevices) {
   if (!accounts.length) return emptyState('No staff account is visible under the current filters.');
   const actionLabel = canManageDevices ? 'Manage devices' : 'View account';
-  return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Account updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr data-staff-row-id="${escapeHtml(account.id || '')}" aria-selected="false"><td><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td>${escapeHtml(account.username || '—')}</td><td>${escapeHtml(asArray(account.roles).map((role) => titleCase(String(role).trim().toLowerCase())).join(', ') || '—')}</td><td>${badge(account.status)}</td><td>${escapeHtml(account.device_count ?? 'Not reported')}</td><td>${formatDateTime(account.updated_at)}</td><td><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table class="mobile-card-table management-staff-table"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Devices</th><th>Account updated</th><th>Action</th></tr></thead><tbody>${accounts.map((account) => `<tr data-staff-row-id="${escapeHtml(account.id || '')}" aria-selected="false"><td data-label="Name"><strong>${escapeHtml(account.full_name || '—')}</strong><br><span class="meta">${escapeHtml(account.email || '')}</span></td><td data-label="Username">${escapeHtml(account.username || '—')}</td><td data-label="Role">${escapeHtml(asArray(account.roles).map((role) => titleCase(String(role).trim().toLowerCase())).join(', ') || '—')}</td><td data-label="Status">${badge(account.status)}</td><td data-label="Devices">${escapeHtml(account.device_count ?? 'Not reported')}</td><td data-label="Account updated">${formatDateTime(account.updated_at)}</td><td data-label="Action"><button class="button button-outline button-small" type="button" data-manage-staff-id="${escapeHtml(account.id || '')}">${actionLabel}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function accountCard(account) {
@@ -278,29 +220,42 @@ function accountCard(account) {
   return `<div class="data-card"><div class="kv-list"><div class="kv-row"><span>Name</span><strong>${escapeHtml(profile.full_name || '—')}</strong></div><div class="kv-row"><span>Username</span><strong>${escapeHtml(profile.username || '—')}</strong></div><div class="kv-row"><span>Email</span><strong>${escapeHtml(profile.email || '—')}</strong></div><div class="kv-row"><span>Workspace</span><strong>Management</strong></div>${additionalAccess.length ? `<div class="kv-row"><span>Additional access</span><strong>${escapeHtml(additionalAccess.join(', '))}</strong></div>` : ''}<div class="kv-row"><span>Status</span>${badge(profile.status || 'unknown')}</div></div></div>`;
 }
 
-function bindStaffInvite(context) {
-  const form = context.root.querySelector('#management-staff-invite-form');
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const button = form.querySelector('button[type="submit"]');
-    setButtonBusy(button, true, 'Sending…');
-    try {
-      const result = await submitStaffInvitation(context.api, {
-        fullName: data.get('fullName'),
-        username: data.get('username'),
-        email: data.get('email'),
-        role: data.get('role'),
-      });
-      form.reset();
-      const invited = result?.account?.full_name || result?.account?.username || 'staff member';
-      showToast(`Invitation sent to ${invited}.`, 'success');
-      await mountManagementWorkspace(context);
-    } catch (error) {
-      showToast(error.message, 'error');
-      setButtonBusy(button, false);
-    }
-  });
+export function bindStaffInvite(context) {
+  const form=context.root.querySelector('#management-staff-invite-form');
+  if(!form)return {dispose(){},isWritePending:()=>false};
+  const button=form.querySelector('button[type="submit"]');
+  const feedback=context.root.querySelector('[data-staff-invite-feedback]');
+  const reconcile=context.root.querySelector('[data-staff-invite-reconcile]');
+  const current=()=>context.getSession ? context.getSession() : context.session;
+  const owner=current()?.user?.id;
+  let disposed=false,busy=false,uncertain=null;
+  const alive=()=>!disposed&&!context.signal?.aborted&&current()?.user?.id===owner&&hasPermission(current(),'account.manage');
+  const tell=text=>{if(feedback)feedback.textContent=text;};
+  const controls=()=>{button.disabled=busy||!!uncertain;if(reconcile){reconcile.hidden=!uncertain;reconcile.disabled=busy;}};
+  const matches=(record,expected)=>!!record?.id&&record.username===expected.username&&String(record.email||'').toLowerCase()===expected.email&&asArray(record.roles).includes(expected.role);
+  async function submit(event) {
+    event.preventDefault();if(!alive()||busy||uncertain)return;
+    const input=Object.fromEntries(['fullName','username','email','role'].map(name=>[name,form.querySelector(`[name="${name}"]`)?.value]));
+    let expected;try{expected=normalizeStaffInvitation(input);}catch(error){tell(error.message);return;}
+    busy=true;controls();tell('Sending invitation…');let attempted=false;
+    try{
+      attempted=true;const result=await submitStaffInvitation(context.api,input);if(!alive())return;
+      if(result?.invitation_sent!==true||!matches(result.account,expected))throw new Error('Invitation outcome could not be confirmed.');
+      form.reset();tell('Invitation sent.');
+      try{if(await context.refreshStaff?.()===false)tell('Invitation sent; staff list refresh failed. Refresh Staff for current records.');}catch{tell('Invitation sent; staff list refresh failed. Refresh Staff for current records.');}
+    }catch(error){if(alive()){if(attempted&&(!error.status||error.status>=500)){uncertain=expected;tell('Invitation outcome is uncertain. Check the account before sending again.');}else tell(error.message);}}
+    finally{busy=false;if(alive())controls();}
+  }
+  async function check(){
+    if(!alive()||busy||!uncertain)return;busy=true;controls();
+    try{const data=await context.api.request('/api/v1/management/accounts?staff_only=true');if(!alive())return;const found=asArray(data?.accounts).find(record=>matches(record,uncertain));if(found){uncertain=null;form.reset();tell('The staff account exists. Invitation delivery cannot be confirmed from this account read; do not resend the invitation.');}else tell('The invitation is still unconfirmed. Further submissions remain blocked.');}
+    catch{if(alive())tell('The account check failed. Further submissions remain blocked.');}
+    finally{busy=false;if(alive())controls();}
+  }
+  form.addEventListener('submit',submit);reconcile?.addEventListener('click',check);
+  function dispose(){if(disposed)return;disposed=true;form.removeEventListener('submit',submit);reconcile?.removeEventListener('click',check);context.signal?.removeEventListener('abort',dispose);}
+  context.signal?.addEventListener('abort',dispose,{once:true});
+  return{dispose,isWritePending:()=>busy||!!uncertain};
 }
 
 function deviceConfirmation(account, device, action) {
@@ -333,6 +288,9 @@ export function bindStaffDevices(context, accounts) {
   let selectedId = '';
   let disposed = false;
   let busy = false;
+  let opener = null;
+  let focusAtOpen = null;
+  const filters = context.staffDeviceFilters || (context.staffDeviceFilters = new Map());
   const active = (version) => !disposed && !context.signal?.aborted && version === selectionVersion;
 
   function select(id) {
@@ -342,18 +300,23 @@ export function bindStaffDevices(context, accounts) {
     }
   }
 
-  function close() {
+  function close(restoreFocus = true) {
     selectionVersion += 1;
     panelCleanup();
     select('');
     detail.innerHTML = '';
     detail.setAttribute('hidden', '');
+    if(restoreFocus&&!disposed){
+      const connected=Array.from(context.root.querySelectorAll('[data-manage-staff-id]')).includes(opener);
+      (connected?opener:context.root.querySelector('[data-management-staff-heading]'))?.focus?.();
+    }
   }
 
   function showPanel(account, devices, version) {
     panelCleanup();
     detail.innerHTML = renderManagedDevicePanel(account, devices, { canManageDevices });
-    const removeFilters = bindManagedDevicePanel(detail);
+    if(!filters.has(account.id))filters.set(account.id,{});
+    const removeFilters = bindManagedDevicePanel(detail,{state:filters.get(account.id)});
     const remove = [removeFilters];
     const on = (button, handler) => {
       button?.addEventListener('click', handler);
@@ -389,6 +352,7 @@ export function bindStaffDevices(context, accounts) {
       });
     }
     panelCleanup = () => { for (const cleanup of remove) cleanup(); };
+    if(!globalThis.document||globalThis.document.activeElement===focusAtOpen)detail.querySelector('[data-managed-device-heading]')?.focus?.();
   }
 
   for (const button of context.root.querySelectorAll('[data-manage-staff-id]')) {
@@ -396,6 +360,7 @@ export function bindStaffDevices(context, accounts) {
       if (disposed || context.signal?.aborted || busy) return;
       const account = accountById.get(String(button.getAttribute('data-manage-staff-id') || ''));
       const version = ++selectionVersion;
+      opener=button;focusAtOpen=globalThis.document?.activeElement;
       panelCleanup();
       detail.removeAttribute('hidden');
       if (!account) {
@@ -425,7 +390,7 @@ export function bindStaffDevices(context, accounts) {
   function cleanup() {
     if (disposed) return;
     disposed = true;
-    close();
+    close(false);
     for (const remove of listeners) remove();
     context.signal?.removeEventListener('abort', cleanup);
   }
@@ -434,120 +399,28 @@ export function bindStaffDevices(context, accounts) {
   return cleanup;
 }
 
-function bindRenewals(context) {
-  for (const form of context.root.querySelectorAll('.management-renewal-review')) {
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      const decision = String(data.get('decision'));
-      const reviewNote = String(data.get('reviewNote') || '').trim();
-      if (decision === 'rejected' && reviewNote.length < 3) {
-        showToast('Enter a clear rejection reason.', 'error');
-        return;
-      }
-      if (!globalThis.confirm?.(`Confirm ${decision} for this renewal request?`)) return;
-      const button = form.querySelector('button[type="submit"]');
-      setButtonBusy(button, true, 'Saving…');
-      try {
-        await context.api.request(`/api/v1/management/renewals/${encodeURIComponent(form.dataset.requestId)}/review`, { method: 'POST', body: { decision, review_note: reviewNote } });
-        showToast(`Renewal request ${decision}.`, 'success');
-        await mountManagementWorkspace(context);
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
-      }
-    });
-  }
-}
-
-function bindSupport(context) {
-  for (const form of context.root.querySelectorAll('.management-support-review')) {
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      const button = form.querySelector('button[type="submit"]');
-      setButtonBusy(button, true, 'Saving…');
-      try {
-        await context.api.request(`/api/v1/management/support/${encodeURIComponent(form.dataset.requestId)}/review`, { method: 'POST', body: { action: data.get('action'), response: String(data.get('response') || '').trim() } });
-        showToast('Support review saved.', 'success');
-        await mountManagementWorkspace(context);
-      } catch (error) {
-        showToast(error.message, 'error');
-        setButtonBusy(button, false);
-      }
-    });
-  }
-}
-
-function bindLoanSearch(context) {
-  const form = context.root.querySelector('#management-loan-search');
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const target = context.root.querySelector('#management-loan-results');
-    const button = form.querySelector('button[type="submit"]');
-    setButtonBusy(button, true, 'Searching…');
-    target.innerHTML = '<div class="loading-panel"><div class="spinner"></div></div>';
-    try {
-      const loans = await context.api.request(`/api/v1/management/loans?q=${encodeURIComponent(String(data.get('query') || '').trim())}&status=${encodeURIComponent(String(data.get('status') || 'active'))}`);
-      target.innerHTML = loanTable(loans);
-    } catch (error) {
-      target.innerHTML = errorCard(error);
-    } finally {
-      setButtonBusy(button, false);
-    }
-  });
-}
-
 export async function mountManagementWorkspace(context) {
-  if (context.signal?.aborted) return;
-  const journalEvidenceVersion = context.journalEvidenceVersion = (context.journalEvidenceVersion || 0) + 1;
-  for (const key of ['collectionActionsCleanup', 'journalActionsCleanup', 'managementAccountingCleanup']) { context[key]?.(); context[key] = null; }
-  context.accountCredentialsCleanup?.();
-  context.accountCredentialsCleanup = null;
-  context.clientAccountAdminCleanup?.();
-  context.clientAccountAdminCleanup = null;
-  context.staffDevicesCleanup?.();
-  context.staffDevicesCleanup = null;
-  context.managementAlertsAuditCleanup?.();
-  context.managementAlertsAuditCleanup = null;
-  context.cashDisbursementCleanup?.();
-  context.cashDisbursementCleanup = null;
-  context.accountingExportCleanup?.();
+  if(context.signal?.aborted)return;
+  context.managementTaskController?.dispose();
   context.accountingExportCleanup = null;
-  context.employeeOperationsCleanup?.();
-  context.employeeOperationsCleanup = null;
-  context.paymentProofCleanup?.();
-  context.paymentProofCleanup = null;
-  context.officeCifCleanup?.();
-  context.officeCifCleanup = null;
-  context.officeApplicationCleanup?.();
-  context.officeApplicationCleanup = null;
-  context.officeFirstLoanCleanup?.();
-  context.officeFirstLoanCleanup = null;
-  context.officeOnboardingCleanup?.();
-  context.officeOnboardingCleanup = null;
-  context.officeWorkflowCleanup?.();
-  context.officeWorkflowCleanup = null;
-  const { root, api, session, setNavigation } = context;
-  const canCollectionActions = ['collection.create', 'collection.void.unremitted', 'lending.no_collection.manage', 'lending.contract_collection.activate'].some(permission => hasPermission(session, permission));
-  const canReviewCif = hasPermission(session, 'client_onboarding.requirement.review');
-  const canDashboard = hasPermission(session, 'management.dashboard.view');
-  const canViewFinancialStatements = hasPermission(session, 'accounting.view');
-  const canPrepareCashDisbursement = hasPermission(session, 'cash_disbursement.prepare');
-  const canViewGeneralJournal = canViewFinancialStatements;
-  const canRenewals = hasPermission(session, 'renewal.manage');
-  const canSupport = hasPermission(session, 'support.manage');
-  const canReviewPaymentProof = hasPermission(session, 'client_payment_proof.review');
-  const canManageAccounts = hasPermission(session, 'account.manage');
-  const canManageDevices = hasPermission(session, 'device.manage');
-  const canViewStaff = canManageAccounts || canManageDevices;
-  const canUseAreaManagement = [
-    'area.manage',
-    'area.collector.assign',
-    'area.client.assign',
-    'area.retire',
-  ].some((permission) => hasPermission(session, permission));
+  const {root,api:originalApi,session,setNavigation}=context;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>context.managementTaskController?.isWritePending('management-treasury')===true,getRoleWriteOwner:()=>context.managementTaskController?.writeOwner?.()});const api=treasuryGate.api;context.api=api;
+  const getSession=context.getSession || (()=>context.signal?.aborted?null:context.session);
+  const active=()=>!context.signal?.aborted && !!getSession();
+  const can=permission=>hasPermission(getSession(),permission);
+  const canCollectionActions=['collection.create','collection.void.unremitted','lending.no_collection.manage','lending.contract_collection.activate'].some(can);
+  const canReviewCif=can('client_onboarding.requirement.review');
+  const canDashboard=can('management.dashboard.view');
+  const canViewFinancialStatements=can('accounting.view'),canViewGeneralJournal=canViewFinancialStatements;
+  const canPrepareCashDisbursement=can('cash_disbursement.prepare');
+  const canRenewals=can('renewal.manage'),canSupport=can('support.manage'),canReviewPaymentProof=can('client_payment_proof.review');
+  const canManageAccounts=can('account.manage'),canManageDevices=can('device.manage'),canViewStaff=canManageAccounts||canManageDevices;
+  const canViewRemittance=can('remittance.view');
+  const canUseAreaManagement=['area.manage','area.collector.assign','area.client.assign','area.retire'].some(can);
+  const empty={data:{},error:null};
+  const account=empty,overview=empty,loans=empty,loanOperations=empty,pastDueReport=empty,financialStatements=empty,generalJournal=empty,trialBalance=empty,alerts=empty,renewals=empty,support=empty,staff=empty;
+  const model=buildManagementViewModel({account:{},overview:{},loans:{},alerts:{},renewals:{},support:{}});
+  const staffAccounts=[];
+  const dailyLinks=[['management-clients-loans','Clients & loan decisions','Review borrowers, applications, loans, and evidence.'],['management-collections','Collections','Review collection activity, corrections, and past-due work.'],['management-operations','People & operations','Manage staff, areas, employee work, and audit activity.'],...(canViewFinancialStatements||canPrepareCashDisbursement?[['management-accounting-hub','Accounting','Open statements, journals and accounting work.']]:[])];
   setNavigation([
     { id: 'management-overview', label: 'Today' },
     { id: 'management-clients-loans', label: 'Clients & loans' },
@@ -556,63 +429,15 @@ export async function mountManagementWorkspace(context) {
     { id: 'management-operations', label: 'People & operations' },
     { id: 'management-account', label: 'Account' },
   ]);
-  root.innerHTML = loadingPanel('Loading server-authoritative Management priorities…');
-
-  const [account, overview, loans, loanOperations, pastDueReport, financialStatements, generalJournal, trialBalance, alerts, renewals, support, staff] = await Promise.all([
-    settledRequest(api, '/api/v1/account', {}, {}),
-    canDashboard ? settledRequest(api, '/api/v1/management/dashboard-overview', {}, { metrics: [] }) : Promise.resolve({ data: { metrics: [] }, error: null }),
-    settledRequest(api, '/api/v1/management/loans?status=active', {}, { summary: {}, loans: [] }),
-    loadManagementLoanOperations(api)
-      .then((data) => ({ data, error: null }))
-      .catch((error) => ({ data: { summary: {}, entries: [], audits: [], notice: '' }, error })),
-    canDashboard
-      ? loadManagementPastDueReport(api)
-          .then((data) => ({ data, error: null }))
-          .catch((error) => ({ data: { schema_available: true, summary: {}, rows: [] }, error }))
-      : Promise.resolve({ data: { schema_available: true, summary: {}, rows: [] }, error: null }),
-    canViewFinancialStatements
-      ? loadManagementFinancialStatements(api)
-          .then((data) => ({ data, error: null }))
-          .catch((error) => ({ data: { statements: null }, error }))
-      : Promise.resolve({ data: { statements: null }, error: null }),
-    canViewGeneralJournal
-      ? loadManagementGeneralJournal(api)
-          .then((data) => ({ data, error: null }))
-          .catch((error) => ({ data: { entries: [], can_manage: false, automatic_loan_posting_enabled: false }, error }))
-      : Promise.resolve({ data: { entries: [], can_manage: false, automatic_loan_posting_enabled: false }, error: null }),
-    canViewGeneralJournal
-      ? loadManagementTrialBalance(api)
-          .then((data) => ({ data, error: null }))
-          .catch((error) => ({ data: { trial_balance: null }, error }))
-      : Promise.resolve({ data: { trial_balance: null }, error: null }),
-    canDashboard ? settledRequest(api, '/api/v1/management/alerts-audit?window_days=30&limit=100', {}, { alerts: [], events: [] }) : Promise.resolve({ data: { alerts: [], events: [] }, error: null }),
-    canRenewals ? settledRequest(api, '/api/v1/management/renewals?status=pending', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
-    canSupport ? settledRequest(api, '/api/v1/management/support?status=open', {}, { requests: [] }) : Promise.resolve({ data: { requests: [] }, error: null }),
-    canViewStaff ? settledRequest(api, '/api/v1/management/accounts?staff_only=true', {}, { accounts: [] }) : Promise.resolve({ data: { accounts: [] }, error: null }),
-  ]);
-  if (context.signal?.aborted) return;
-  const model = buildManagementViewModel({ account: account.data, overview: overview.data, loans: loans.data, alerts: alerts.data, renewals: renewals.data, support: support.data });
-  const staffAccounts = asArray(staff.data.accounts);
-  const dailyLinks = [
-    ['management-clients-loans', 'Clients & loan decisions',
-      canRenewals && !renewals.error ? String(model.pendingRenewals.length) + ' renewals waiting' : 'Review borrowers, applications, loans, and evidence.'],
-    ['management-collections', 'Collections', 'Review collection activity, corrections, and past-due work.'],
-    ['management-operations', 'People & operations',
-      canSupport && !support.error ? String(model.openSupport.length) + ' client support requests open' : 'Manage staff, areas, employee work, and audit activity.'],
-    ...(canViewFinancialStatements || canViewGeneralJournal || canPrepareCashDisbursement
-      ? [['management-accounting-hub', 'Accounting', 'Open accounting, statements, journals, and trial balance.']]
-      : []),
-  ];
-
   root.innerHTML = `<section class="section-card management-today" id="management-overview" data-workspace-section><header class="workspace-header"><div><p class="eyebrow">Management</p><h1>Today</h1><p>Today's portfolio, collections, and work requiring attention.</p></div>${model.generatedAt ? `<span class="meta">Updated ${formatDateTime(model.generatedAt)}</span>` : ''}</header>
   ${renewals.error || support.error ? '<div class="notice-card warning">Some work queues are unavailable. Open the task or refresh before deciding there is no pending work.</div>' : ''}
-  ${canDashboard ? (overview.error ? errorCard(overview.error) : overviewMetrics(model.metrics)) : `<div class="notice-card warning">Your account does not have Management dashboard permission.</div>`}
+  <div data-management-overview>${loadingPanel('Loading current Management overview…')}</div>
   <div class="section-heading management-work-queues-heading"><div><h2>Work queues</h2><p>Open the area you need to work on.</p></div></div>
   ${dailyLinks.length ? `<div class="daily-actions">${dailyLinks.map(([target, label, detail]) => `<button class="task-link" type="button" data-nav-target="${target}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail)}</span></button>`).join('')}</div>` : emptyState('No review queue is assigned to this account.')}
   </section>
   <section class="workspace-group" id="management-clients-loans" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Clients & loans</h1><p>Review borrowers, applications, loans, renewals, and payment evidence.</p></div></header>
-  ${canReviewCif ? `<section class="section-card office-workflow-card" data-office-workflow>
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Clients & loans</h1><p>Review borrowers, applications, loans, renewals, and payment evidence.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>
+  ${canReviewCif ? `<section class="section-card office-workflow-card" id="management-office" data-office-workflow>
     <div class="office-workflow-nav" role="group" aria-label="Office workflow">
       <button class="office-workflow-step" type="button" data-office-step-target="intake" aria-current="step">1. Office intake</button>
       <button class="office-workflow-step" type="button" data-office-step-target="cif">2. CIF review</button>
@@ -632,94 +457,114 @@ export async function mountManagementWorkspace(context) {
       <section id="management-first-loan"><h2>First-loan approval and office release</h2><p class="meta">Selected references are carried forward for convenience and revalidated by the protected first-loan workflow.</p><div data-office-first-loan></div></section>
     </div>
   </section>` : ''}
-  <section class="section-card" id="management-loans" data-screen-share-section><div class="section-heading"><div><h2>Clients & loans</h2><p>Search the official portfolio. A Client may have both Regular and 7x7 loans.</p></div></div><form id="management-loan-search" class="search-bar"><input name="query" aria-label="Search clients and loans" placeholder="Client name, code, area, or loan number" /><select name="status" aria-label="Loan status"><option value="active">Active</option><option value="paid">Paid</option><option value="all">All</option></select><button class="button button-primary" type="submit">Search</button></form><div class="metric-grid management-loan-summary">${metricCard('Active clients', escapeHtml(model.loanSummary.active_client_count ?? 0))}${metricCard('Active loans', escapeHtml(model.loanSummary.active_loan_count ?? 0))}${metricCard('Outstanding balance', formatMoney(model.loanSummary.active_remaining_total || 0))}${metricCard('Overdue loans', escapeHtml(model.loanSummary.overdue_active_count ?? 0))}</div><div id="management-loan-results">${loans.error ? errorCard(loans.error) : loanTable(loans.data)}</div></section>
-  ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Approval records the decision only; it does not itself release a new loan.</p></div></div>${renewals.error ? errorCard(renewals.error) : renewalQueue(model.pendingRenewals)}</section>` : ''}
+  <section class="section-card" id="management-loans" data-screen-share-section><div data-management-portfolio></div></section>
+  ${canRenewals ? `<section class="section-card" id="management-renewals"><div class="section-heading"><div><h2>Renewal review</h2><p>Review authoritative terms, borrower readiness and protected continuation.</p></div></div><div data-management-renewal-workflow></div></section>` : ''}
   ${canReviewPaymentProof ? '<section class="section-card" id="management-payment-proofs"><h2>Payment evidence review</h2><div data-management-payment-proofs></div></section>' : ''}
   ${canManageAccounts ? `<section class="section-card" id="management-client-accounts"><div class="section-heading"><div><h2>Client accounts</h2><p>Select an existing borrower record, enter the borrower's email, and let SPINA generate the credentials.</p></div></div>${clientAccountAdminMarkup()}</section>` : ''}
   </section>
   <section class="workspace-group" id="management-collections" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Collections</h1><p>Monitor collections, protected corrections, and past-due reasons.</p></div></header>
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Collections</h1><p>Monitor collections, protected corrections, and past-due reasons.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>
   ${canCollectionActions ? '<section class="section-card" id="management-collection-actions"><div data-management-collection-actions></div></section>' : ''}
   <section class="section-card" id="management-loan-operations" data-screen-share-section><div class="section-heading"><div><h2>Loan operations</h2><p>Read-only monitoring of authoritative collections, remittances, corrections, and void history. Use the dedicated protected workflows for authorized changes.</p></div></div><form id="management-loan-operations-search" class="search-bar"><input name="q" aria-label="Search collection history" placeholder="Client, receipt, loan, or collector" /><select name="status" aria-label="Collection status"><option value="all">All entries</option><option value="unremitted">Unremitted</option><option value="submitted">Remittance submitted</option><option value="received">Received</option><option value="voided">Voided</option></select><button class="button button-primary" type="submit">Search</button></form><div id="management-loan-operations-results">${loanOperations.error ? errorCard(loanOperations.error) : managementLoanOperationsMarkup(loanOperations.data)}</div></section>
   ${canDashboard ? `<section class="section-card" id="management-past-due-report"><div class="section-heading"><div><h2>Past-due reasons</h2><p>Review recorded past-due reasons and amounts by date, area, reason, or event.</p></div></div><form id="management-past-due-report-search" class="past-due-filter-grid"><label>Start date<input type="date" name="start_date" /></label><label>End date<input type="date" name="end_date" /></label><label>Area<input name="area" maxlength="200" placeholder="All areas" /></label><label>Reason<select name="reason_code"><option value="">All reasons</option><option value="no_cash">No cash</option><option value="client_absent">Client absent</option><option value="business_slow">Business slow</option><option value="sick_hospital">Sick/Hospital</option><option value="emergency">Emergency</option><option value="promised_to_pay_later">Promised to pay later</option><option value="other">Other</option></select></label><label>Event<select name="event_kind"><option value="">All events</option><option value="unable_to_pay">Unable to pay</option><option value="partial_payment">Partial payment</option></select></label><button class="button button-primary" type="submit">Filter</button></form><div id="management-past-due-report-results">${pastDueReport.error ? errorCard(pastDueReport.error) : managementPastDueReportMarkup(pastDueReport.data)}</div></section>` : ''}
-  </section>
+  ${canViewRemittance ? '<section class="section-card" id="management-remittances"><h2>Remittance review</h2><p>Review cash handovers assigned to your account and their saved history.</p><div data-management-remittance-review></div></section>' : ''}</section>
   <section class="workspace-group" id="management-accounting-hub" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header>\n  ${!canViewFinancialStatements && !canViewGeneralJournal && !canPrepareCashDisbursement ? emptyState('No accounting tools are assigned to this account.') : ''}
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Accounting</h1><p>Review accounting records, statements, journals, and trial balance.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>\n  <section class="section-card" id="management-treasury" data-private-panel><div data-management-treasury></div></section>
+  ${!canViewFinancialStatements && !canViewGeneralJournal && !canPrepareCashDisbursement ? emptyState('No accounting tools are assigned to this account.') : ''}
   ${canPrepareCashDisbursement ? '<section class="section-card" id="management-cash-disbursement"><div data-cash-disbursement></div></section>' : ''}
   ${canViewFinancialStatements ? '<section class="section-card" id="management-accounting"><div data-management-accounting></div></section>' : ''}
   ${canViewFinancialStatements ? `<section class="section-card" id="management-financial-statements"><div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements from the protected SPINA accounting service.</p></div></div>${financialStatements.error ? errorCard(financialStatements.error) : financialStatementsMarkup(financialStatements.data)}</section>` : ''}
   ${canViewGeneralJournal ? `<section class="section-card" id="management-general-journal"><div class="section-heading"><div><h2>General journal & trial balance</h2><p>Review accounting evidence and use the authorized journal actions below.</p></div></div>${generalJournal.error ? errorCard(generalJournal.error) : ''}${trialBalance.error ? errorCard(trialBalance.error) : ''}<div data-management-journal-evidence>${managementGeneralJournalMarkup({ journals: generalJournal.data, trialBalance: trialBalance.data })}</div><div data-management-journal-actions></div></section>` : ''}
   </section>
   <section class="workspace-group" id="management-operations" data-workspace-section>
-    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>People & operations</h1><p>Manage staff, areas, employee work, support, and audit activity.</p></div></header>
+    <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>People & operations</h1><p>Manage staff, areas, employee work, support, and audit activity.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>
   ${canDashboard ? `<section class="section-card" id="management-alerts"><div class="section-heading"><div><h2>Alerts and audit</h2></div></div><div data-management-alerts-audit>${alerts.error ? errorCard(alerts.error) : managementAlertsAuditMarkup(alerts.data)}</div></section>` : ''}
   ${canUseAreaManagement ? '<section class="section-card" id="management-area-management"></section>' : ''}
-  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2>Staff and devices</h2><p>Invite staff and manage registered devices.</p></div></div>${staffInviteMarkup(session)}${staff.error ? errorCard(staff.error) : staffRows(staffAccounts, canManageDevices)}<div id="management-staff-device-detail" class="section-card" hidden></div></section>` : ''}
+  ${canViewStaff ? `<section class="section-card" id="management-staff"><div class="section-heading"><div><h2 tabindex="-1" data-management-staff-heading>Staff and devices</h2><p>Invite staff and manage registered devices.</p></div></div>${staffInviteMarkup(session)}<div data-management-staff-list></div><div id="management-staff-device-detail" class="section-card" hidden></div></section>` : ''}
   <section class="section-card" id="management-employee-operations"><div data-employee-operations></div></section>
-  ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div>${support.error ? errorCard(support.error) : supportQueue(model.openSupport)}</section>` : ''}
+  ${canSupport ? `<section class="section-card" id="management-support"><div class="section-heading"><div><h2>Client support</h2><p>Answer concerns without changing financial records.</p></div></div><div data-management-support-list></div></section>` : ''}
   </section>
-  <section class="section-card" id="management-account" data-workspace-section><div class="section-heading"><div><h2>My account</h2></div></div>${account.error ? errorCard(account.error) : accountCard(account.data)}<div data-account-credentials></div></section>`;
+  <section class="workspace-group" id="management-account" data-workspace-section><h1>Account</h1><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Account tasks"></div><section class="section-card" id="management-profile"><h2>My account</h2><div data-management-account-profile></div><div data-account-credentials></div></section><section class="section-card" id="management-updates"><h2>My updates</h2><div data-management-updates></div></section></section>`;
 
+
+  const cleanups=[];
+  let overviewVersion=0,accountVersion=0;
+  async function refreshOverview(){
+    if(!active())return;const version=++overviewVersion;const target=root.querySelector('[data-management-overview]');
+    if(!target)return;
+    if(!canDashboard){target.innerHTML='<p>Management dashboard permission is not assigned.</p>';return true;}
+    try{const data=await api.request('/api/v1/management/dashboard-overview');if(active()&&version===overviewVersion){target.innerHTML=`${data.generated_at ? `<p class="meta">Updated ${formatDateTime(data.generated_at)}</p>` : ''}${overviewMetrics(asArray(data.metrics))}`;target.querySelector('[data-my-updates-shortcut]')?.addEventListener('click',async()=>{await context.managementTaskController?.activate('management-account','management-updates');context.navigateTo?.('management-account');});return true;}return false;}
+    catch(error){if(active()&&version===overviewVersion){target.innerHTML=`<p role="status">Today overview is unavailable. Retry to load current totals.</p>${errorCard(error)}<button type="button" class="button button-outline" data-overview-retry>Retry overview</button>`;target.querySelector('[data-overview-retry]')?.addEventListener('click',()=>void refreshOverview(),{once:true});}return false;}
+  }
+  async function refreshAccount(){
+    const version=++accountVersion;const target=root.querySelector('[data-management-account-profile]');
+    try{const data=await api.request('/api/v1/account');if(active()&&target&&version===accountVersion)target.innerHTML=accountCard(data);}
+    catch(error){if(active()&&target&&version===accountVersion)target.innerHTML=errorCard(error);}
+  }
+  const tasks=[];
+  const add=(id,group,label,mount,permission)=>{if(root.querySelector(`#${id}`))tasks.push({id,group,label,mount,allowed:()=>!permission||can(permission)});};
+  const options=selector=>({root:root.querySelector(selector),api,session:getSession(),getSession,signal:context.signal,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange});
+  function readTask({load,render,target,bind}){
+    let version=0,cleanup=()=>{};
+    const refresh=async()=>{const request=++version;try{const data=await load();if(!active()||request!==version)return;cleanup();target.innerHTML=render(data);cleanup=bind?.(data)||(()=>{});return true;}catch(error){if(active()&&request===version){cleanup();target.innerHTML=`${errorCard(error)}<button type="button" class="button button-outline" data-read-retry>Retry</button>`;target.querySelector('[data-read-retry]')?.addEventListener('click',()=>void refresh(),{once:true});}return false;}};
+    return {refresh,dispose(){version++;cleanup();}};
+  }
+  add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
+  add('management-loans','management-clients-loans','Portfolio',async()=>{const h=mountManagementPortfolio({...options('[data-management-portfolio]')});await h.refresh();return h;});
+  add('management-office','management-clients-loans','Office applications',()=>{
+    const handlers=[mountOfficeFirstLoan(options('[data-office-first-loan]')),mountOfficeOnboarding(options('[data-office-onboarding]')),mountOfficeCifSelection(options('[data-office-cif-selection]')),mountOfficeApplicationReview(options('[data-office-application-review]')),bindManagementOfficeWorkflow(root)];
+    return ()=>handlers.forEach(dispose=>dispose?.());
+  },'client_onboarding.requirement.review');
+  add('management-renewals','management-clients-loans','Renewals',async()=>{
+    const h=mountManagementRenewals({...options('[data-management-renewal-workflow]'),onSaved:refreshOverview});await h.refresh();return h;
+  },'renewal.manage');
+  add('management-payment-proofs','management-clients-loans','Payment evidence',()=>{
+    let handle;const dispose=mountPaymentProofs({...options('[data-management-payment-proofs]'),mode:'management',registerHandle:value=>{handle=value;}});
+    return{dispose,refresh:()=>handle?.refreshReadOnly(),isWritePending:()=>handle?.isUncertain()===true};
+  },'client_payment_proof.review');
+  add('management-client-accounts','management-clients-loans','Client accounts',()=>bindClientAccountAdmin(context),'account.manage');
+  add('management-collection-actions','management-collections','Collection actions',()=>mountManagementCollectionActions({...options('[data-management-collection-actions]'),sessionStore:context.sessionStore}));
+  add('management-loan-operations','management-collections','Loan operations & history',async()=>{
+    const h=bindManagementLoanOperations(context);await h.refresh();return h;
+  });
+  add('management-past-due-report','management-collections','Past-due report',async()=>{const h=bindManagementPastDueReport(context);await h.refresh();return h;},'management.dashboard.view');
+  add('management-remittances','management-collections','Remittance review',async()=>{
+    let handle;
+    const dispose=mountRemittanceReview({...options('[data-management-remittance-review]'),notifications:null,
+      receivingContractRequired:true,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange,canStartCountWrite:()=>!context.managementTaskController?.isWritePending('management-remittances')&&!treasuryGate.isWritePending(),loadNotifications:()=>api.request('/api/v1/notifications',{signal:context.signal}),
+      registerHandle:value=>{handle=value;},onNoticesChanged:()=>{void refreshOverview();}});
+    await handle?.refreshReadOnly();
+    return{dispose,refresh:()=>handle?.refreshReadOnly(),isWritePending:()=>handle?.isUncertain()===true||handle?.isWritePending()===true};
+  },'remittance.view');
+  add('management-financial-statements','management-accounting-hub','Financial statements',async()=>{const h=mountManagementFinancialStatements(options('#management-financial-statements'));await h.refresh();return h;},'accounting.view');
+  add('management-general-journal','management-accounting-hub','Journal & Trial Balance',async()=>{
+    const target=root.querySelector('[data-management-journal-evidence]');let actions=()=>{},exports=()=>{},version=0;
+    const refresh=async()=>{const generation=++version;const [journals,trialBalance]=await Promise.all([loadManagementGeneralJournal(api),loadManagementTrialBalance(api)]);if(!active()||generation!==version)return;exports();target.innerHTML=managementGeneralJournalMarkup({journals,trialBalance});exports=bindManagementAccountingExport(context);context.accountingExportCleanup=exports;return journals;};
+    const journals=await refresh();if(active())actions=mountManagementJournalActions({...options('[data-management-journal-actions]'),evidenceRoot:target,initialJournals:journals,onSaved:refresh});return{refresh,dispose(){version++;actions?.();exports?.();}};
+  },'accounting.view');
+  add('management-cash-disbursement','management-accounting-hub','Cash Disbursement',()=>mountCashDisbursement(options('[data-cash-disbursement]')),'cash_disbursement.prepare');
+  add('management-accounting','management-accounting-hub','Accounting workflows',()=>mountManagementAccounting(options('[data-management-accounting]')),'accounting.view');
+  add('management-staff','management-operations','Staff & devices',async()=>{
+    const target=root.querySelector('[data-management-staff-list]');
+    const h=readTask({target,load:()=>api.request('/api/v1/management/accounts?staff_only=true'),render:data=>staffRows(asArray(data.accounts),canManageDevices),bind:data=>bindStaffDevices(context,asArray(data.accounts))});
+    context.refreshStaff=h.refresh;const invite=bindStaffInvite(context);await h.refresh();return{refresh:h.refresh,isWritePending:invite.isWritePending,dispose(){invite.dispose();h.dispose();}};
+  });
+  add('management-area-management','management-operations','Areas',()=>mountAreaManagement({...context,root:root.querySelector('#management-area-management')}));
+  add('management-employee-operations','management-operations','Employee work',()=>{let handle;const dispose=mountEmployeeOperations({...options('[data-employee-operations]'),onController:value=>{handle=value;}});return handle||{dispose};});
+  add('management-support','management-operations','Client support',async()=>{
+    const h=mountManagementSupport({...options('[data-management-support-list]'),onSaved:refreshOverview});await h.refresh();return h;
+  },'support.manage');
+  add('management-alerts','management-operations','Alerts & audit',async()=>{const h=readTask({target:root.querySelector('[data-management-alerts-audit]'),load:()=>api.request('/api/v1/management/alerts-audit?window_days=30&limit=100'),render:managementAlertsAuditMarkup,bind:()=>bindManagementAlertsAudit(root.querySelector('[data-management-alerts-audit]'),{signal:context.signal,navigateTask:async(group,id)=>{const accepted=await context.managementTaskController.activate(group,id);if(accepted)context.navigateTo?.(group);else showToast('That task is not available to this account.','error');}})});await h.refresh();return h;},'management.dashboard.view');
+  add('management-treasury','management-accounting-hub','Cash & GCash',async()=>{treasuryHandle=mountTreasuryWorkspace({...options('[data-management-treasury]'),canStartWrite:treasuryGate.canStartWrite});await treasuryHandle.ready;return {refresh:treasuryHandle.refreshReadOnly,isWritePending:treasuryHandle.isWritePending,dispose:treasuryHandle};});
+  add('management-profile','management-account','Profile & security',()=>({refresh:refreshAccount,dispose:mountAccountCredentials(options('[data-account-credentials]'))}));
+  add('management-updates','management-account','My updates',async()=>{const handle=mountManagementPersonalUpdates({...options('[data-management-updates]'),onRead:refreshOverview});await handle.refresh();return handle;});
+  for(const task of tasks)if(task.id!==task.group)root.querySelector(`#${task.id}`).hidden=true;
+  const taskController=createManagementTaskController({root,signal:context.signal,getSession,tasks,beforeTaskChange:context.beforeTaskChange,afterTaskChange:context.afterTaskChange});
+  context.managementTaskController=taskController;
+  context.refreshOverview=refreshOverview;
+  context.registerWorkspaceHandle?.(taskController);
   context.activateNavigation?.();
-  context.accountCredentialsCleanup = mountAccountCredentials({
-    root: root.querySelector('[data-account-credentials]'), api, session, signal: context.signal,
-  });
-  if (canReviewCif) {
-    context.officeFirstLoanCleanup = mountOfficeFirstLoan({
-      root: root.querySelector('[data-office-first-loan]'), api, session, signal: context.signal,
-    });
-    context.officeOnboardingCleanup = mountOfficeOnboarding({
-      root: root.querySelector('[data-office-onboarding]'), api, session, signal: context.signal,
-    });
-    context.officeCifCleanup = mountOfficeCifSelection({
-      root: root.querySelector('[data-office-cif-selection]'), api, session, signal: context.signal,
-    });
-    context.officeApplicationCleanup = mountOfficeApplicationReview({
-      root: root.querySelector('[data-office-application-review]'), api, session, signal: context.signal,
-    });
-    context.officeWorkflowCleanup = bindManagementOfficeWorkflow(root);
-  }
-  context.employeeOperationsCleanup = mountEmployeeOperations({
-    root: root.querySelector('[data-employee-operations]'), api, session, signal: context.signal,
-  });
-  if (canPrepareCashDisbursement) context.cashDisbursementCleanup = mountCashDisbursement({
-    root: root.querySelector('[data-cash-disbursement]'), api, session, signal: context.signal,
-  });
-  context.managementAlertsAuditCleanup = bindManagementAlertsAudit(
-    root.querySelector('[data-management-alerts-audit]'), { signal: context.signal },
-  );
-  if (canReviewPaymentProof) {
-    context.paymentProofCleanup = mountPaymentProofs({
-      root: root.querySelector('[data-management-payment-proofs]'), api, mode: 'management', signal: context.signal,
-    });
-  }
-  if (canCollectionActions) context.collectionActionsCleanup = mountManagementCollectionActions({root: root.querySelector('[data-management-collection-actions]'), api, session, sessionStore: context.sessionStore, signal: context.signal});
-  if (canViewFinancialStatements) context.managementAccountingCleanup = await mountManagementAccounting({root: root.querySelector('[data-management-accounting]'), api, session, signal: context.signal});
-  if (context.signal?.aborted) return;
-  bindLoanSearch(context);
-  bindManagementLoanOperations(context);
-  bindManagementPastDueReport(context);
-  if (canViewGeneralJournal) {
-    context.accountingExportCleanup = bindManagementAccountingExport(context);
-    context.journalActionsCleanup = mountManagementJournalActions({
-      root: root.querySelector('[data-management-journal-actions]'), api, session, signal: context.signal,
-      evidenceRoot: root.querySelector('[data-management-journal-evidence]'), initialJournals: generalJournal.data,
-      onSaved: async (freshJournals) => {
-        const [journals, trialBalance] = await Promise.all([freshJournals || loadManagementGeneralJournal(api), loadManagementTrialBalance(api)]);
-        if (context.signal?.aborted || context.journalEvidenceVersion !== journalEvidenceVersion) return;
-        context.accountingExportCleanup?.();
-        root.querySelector('[data-management-journal-evidence]').innerHTML = managementGeneralJournalMarkup({journals, trialBalance});
-        context.accountingExportCleanup = bindManagementAccountingExport(context);
-      },
-    });
-  }
-  bindRenewals(context);
-  bindSupport(context);
-  context.clientAccountAdminCleanup = bindClientAccountAdmin(context);
-  bindStaffInvite(context);
-  context.staffDevicesCleanup = bindStaffDevices(context, staffAccounts);
-  if (canUseAreaManagement) {
-    const areaRoot = root.querySelector('#management-area-management');
-    if (areaRoot) await mountAreaManagement({ ...context, root: areaRoot });
-  }
+  void taskController.activate('management-overview');
+  void refreshAccount();void refreshOverview();
+  return taskController;
 }

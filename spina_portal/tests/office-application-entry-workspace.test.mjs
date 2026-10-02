@@ -1,7 +1,9 @@
+import {mountRoleTask, activateManagementTask} from './helpers/management-task-harness.mjs';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
-import { mountEmployeeWorkspace } from '../assets/roles/employee.js';
+import {mountEmployeeAt} from './helpers/employee-activation.mjs';
+const mountEmployeeWorkspace=context=>mountEmployeeAt(context,['employee-application-review']);
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -81,14 +83,17 @@ function posts(h) { return h.requests.filter((r) => r.options.method === 'POST')
 for (const role of ['employee', 'management']) {
   test(`${role}: creates application with exact request values then refreshes authoritative review`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
+    if (role === 'management') { await activateManagementTask(h.context, 'management-operations', 'management-area-management'); await activateManagementTask(h.context, 'management-clients-loans', 'management-office'); }
     const cif = h.root.querySelector('[data-office-cif-selection]').innerHTML;
     const area = h.root.querySelector(`#${role}-area-management`).innerHTML;
     const entry = await newEntry(h);
     fill(entry); save(entry); save(entry);
     await setImmediate();
     assert.equal(posts(h).length, 1);
-    assert.deepEqual(posts(h)[0], { path: `${BASE}/drafts`, options: { method: 'POST', signal: h.controller.signal, body: {
+    assert.ok(posts(h)[0].options.signal instanceof AbortSignal);
+    assert.equal(posts(h)[0].options.signal.aborted,false);
+    assert.deepEqual(posts(h)[0], { path: `${BASE}/drafts`, options: { method: 'POST', signal: posts(h)[0].options.signal, body: {
       cif_version_id: CIF, application_reference: REFERENCE, information: information(),
     } } });
     assert.equal(h.requests.at(-1).path, SUMMARY);
@@ -101,14 +106,16 @@ for (const role of ['employee', 'management']) {
 
   test(`${role}: appends from reviewed identity and version without modifying earlier facts`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = select(h); fire(root.querySelector('form'), 'submit'); await setImmediate();
     fire(button(root, 'Edit application information'), 'click'); await setImmediate();
     const entry = root.querySelector('[data-application-entry]');
     assert.equal(input(entry, 'requested_amount').value, '9007199254740993.01');
     set(entry, 'purpose', 'Updated private purpose'); save(entry); await setImmediate();
     const expected = information(); expected.request.purpose = 'Updated private purpose';
-    assert.deepEqual(posts(h)[0], { path: `${BASE}/${APP}/draft-versions`, options: { method: 'POST', signal: h.controller.signal, body: {
+    assert.ok(posts(h)[0].options.signal instanceof AbortSignal);
+    assert.equal(posts(h)[0].options.signal.aborted,false);
+    assert.deepEqual(posts(h)[0], { path: `${BASE}/${APP}/draft-versions`, options: { method: 'POST', signal: posts(h)[0].options.signal, body: {
       cif_version_id: CIF, expected_version_number: 1, information: expected,
     } } });
     assert.match(root.textContent, /Updated private purpose/);
@@ -120,7 +127,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: ${closeAction} after uncertain save reloads the reference and never replays POST`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
     h.saveError = Object.assign(new Error('Connection interrupted'), { status: 0 });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const entry = await newEntry(h); fill(entry); save(entry); await setImmediate();
     assert.equal(button(entry, 'Save application')?.disabled ?? true, true);
     assert.equal(posts(h).length, 1);
@@ -134,7 +141,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: changing reference clears form and ignores a late save callback`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
     let resolve; h.holdSave = new Promise((done) => { resolve = done; });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const entry = await newEntry(h); fill(entry); save(entry); await setImmediate();
     const oldField = input(entry, 'purpose');
     const root = h.root.querySelector('[data-office-application-review]');
@@ -150,7 +157,7 @@ for (const role of ['employee', 'management']) {
   test(`${role}: logout clears editor values while a save is pending`, async () => {
     const h = harness(role); let resolve;
     h.holdSave = new Promise((done) => { resolve = done; });
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const entry = await newEntry(h); fill(entry); save(entry); await setImmediate();
     const oldField = input(entry, 'purpose'); h.controller.abort();
     resolve(h.saved); await setImmediate();
@@ -161,7 +168,7 @@ for (const role of ['employee', 'management']) {
 
   test(`${role}: stale detached edit button cannot open an editor for a changed selection`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
-    await mounts[role](h.context);
+    await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = select(h); fire(root.querySelector('form'), 'submit'); await setImmediate();
     const oldEdit = button(root, 'Edit application information');
     set(root, 'intakeReference', 'Other intake');

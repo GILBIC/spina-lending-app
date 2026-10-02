@@ -63,6 +63,7 @@ class PostgresCollectorRouteCrossStatusRepository:
                             ''
                         ) as remittance_recipient_name,
                         case
+                            when transaction.funding_source = 'treasury_receipt' then 'wallet_applied'
                             when transaction.entry_type = 'pass'
                                  or transaction.amount <= 0
                                 then 'no_cash'
@@ -73,6 +74,7 @@ class PostgresCollectorRouteCrossStatusRepository:
                             else 'awaiting_acceptance'
                         end as custody_status,
                         case
+                            when transaction.funding_source = 'treasury_receipt' then ''
                             when transaction.entry_type = 'pass'
                                  or transaction.amount <= 0
                                 then ''

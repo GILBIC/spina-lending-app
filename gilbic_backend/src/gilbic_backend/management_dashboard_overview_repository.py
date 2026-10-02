@@ -141,11 +141,13 @@ class PostgresManagementDashboardOverviewRepository:
                                 where transaction.is_voided = false
                                   and transaction.is_locked = false
                                   and transaction.remittance_id is null
+                                  and transaction.funding_source = 'collector_cash'
                             ) as unremitted_count,
                             coalesce(sum(transaction.amount) filter (
                                 where transaction.is_voided = false
                                   and transaction.is_locked = false
                                   and transaction.remittance_id is null
+                                  and transaction.funding_source = 'collector_cash'
                                   and transaction.entry_type <> 'pass'
                             ), 0)::numeric(18,2) as unremitted_amount
                         from latest_collection latest

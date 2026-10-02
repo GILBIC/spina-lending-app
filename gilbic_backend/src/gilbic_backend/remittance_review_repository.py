@@ -136,7 +136,10 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
         with open_connection() as connection:
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
+                    from .collector_settlement import guard_legacy_receive
+
                     row = self._locked_remittance(cursor, remittance_id)
+                    guard_legacy_receive(cursor, remittance_id)
                     self._verify_actionable_recipient(
                         row,
                         recipient_user_id=recipient_user_id,
@@ -227,6 +230,9 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
                     row = self._locked_remittance(cursor, remittance_id)
+                    from .collector_settlement import guard_legacy_rejection
+
+                    guard_legacy_rejection(cursor, remittance_id)
                     self._verify_actionable_recipient(
                         row,
                         recipient_user_id=recipient_user_id,

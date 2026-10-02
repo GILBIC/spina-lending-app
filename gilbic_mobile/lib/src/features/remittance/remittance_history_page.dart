@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/features/treasury/collector_surplus_page.dart';
+import 'package:gilbic_mobile/src/core/treasury/treasury_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -11,6 +13,7 @@ class RemittanceHistoryPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.surplusRepository,
     this.focusRemittanceId,
     super.key,
   });
@@ -18,6 +21,7 @@ class RemittanceHistoryPage extends StatefulWidget {
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final RemittanceRepository? repository;
+  final CollectorSurplusRepository? surplusRepository;
   final String? focusRemittanceId;
 
   @override
@@ -118,57 +122,76 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm cash received?'),
-        content: Text(
-          'You reviewed all ${record.summary.transactionCount} payment records.\n\n'
-          'Confirm that you physically received ${_money(record.summary.totalAmount)} '
-          'from ${record.collectorName}?\n\n'
-          'After confirmation, this cash becomes your responsibility and the '
-          'itemized handover stays permanently in Received Remittance History.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: Key('confirm-remittance-${record.remittanceId}'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirm received'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
     setState(() {
       _actionId = record.remittanceId;
       _errorMessage = null;
     });
     try {
-      final updated = await _repository.confirmReceived(
-        widget.session,
-        deviceId: deviceId,
-        remittanceId: record.remittanceId,
-      );
-      _replaceRecord(updated);
-    } on SpinaApiException catch (error) {
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
+      final repository = _repository;
+      if (repository is! RemittanceReceivingContractRepository) {
+        throw const SpinaApiException(
+          'Update required: current receiving capability is unavailable.',
+          code: 'collector_count_contract_unavailable',
+        );
       }
-    } on Object {
-      if (mounted) {
-        setState(() => _errorMessage = 'Receipt confirmation failed.');
+      final contract =
+          await (repository as RemittanceReceivingContractRepository)
+              .loadReceivingContract(
+                widget.session,
+                deviceId: deviceId,
+                remittanceId: record.remittanceId,
+              );
+      if (!mounted) return;
+      setState(() => _actionId = null);
+      if (contract.countRequired) {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => CollectorSurplusPage(
+              session: widget.session,
+              deviceIdentityProvider: widget.deviceIdentityProvider,
+              repository: widget.surplusRepository,
+              focusRemittanceId: record.remittanceId,
+            ),
+          ),
+        );
+        if (mounted) await _load();
+      } else if (contract.legacyReceiveAllowed) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Confirm cash received?'),
+            content: Text(
+              'You reviewed all ${record.summary.transactionCount} payment records.\n\nConfirm that you physically received ${_money(record.summary.totalAmount)} from ${record.collectorName}?\n\nAfter confirmation this cash becomes your responsibility and the itemized handover remains permanent and read-only.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: Key('confirm-remittance-${record.remittanceId}'),
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('Confirm received'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true && mounted) {
+          setState(() => _actionId = record.remittanceId);
+          final updated = await _repository.confirmReceived(
+            widget.session,
+            deviceId: deviceId,
+            remittanceId: record.remittanceId,
+          );
+          _replaceRecord(updated);
+        }
       }
+    } on SpinaApiException catch (e) {
+      if (mounted) setState(() => _errorMessage = e.message);
+    } on Object catch (e) {
+      if (mounted) setState(() => _errorMessage = e.toString());
     } finally {
-      if (mounted) {
-        setState(() => _actionId = null);
-      }
+      if (mounted) setState(() => _actionId = null);
     }
   }
 

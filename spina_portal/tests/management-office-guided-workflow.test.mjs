@@ -26,7 +26,7 @@ test('Management office workflow shows one stage at a time and carries reference
   const calls = [];
   const controller = new AbortController();
   try {
-    await mountManagementWorkspace({
+    const tasks = await mountManagementWorkspace({
       root,
       api: { async request(path, options = {}) { calls.push({ path, options }); return response(path); } },
       session: {
@@ -42,6 +42,7 @@ test('Management office workflow shows one stage at a time and carries reference
       },
     });
 
+    await tasks.activate('management-clients-loans', 'management-office');
     const hub = root.querySelector('#management-clients-loans');
     const workflow = hub.querySelector('[data-office-workflow]');
     assert.ok(workflow);

@@ -23,6 +23,7 @@ function projectedSchedule(overrides = {}) {
     loan_id: 'seven/active',
     loan_number: '7X7-001',
     loan_type: '7x7',
+    read_only: true,
     calculation_mode: 'seven_by_seven',
     is_7x7: true,
     penalty_status: 'projected',
@@ -106,7 +107,7 @@ test('Web Client Home loads the protected schedule only for active 7x7 loans', a
   assert.deepEqual(requestedPaths, [
     '/api/v1/client/loans/seven%2Factive/schedule',
   ]);
-  assert.equal(result['seven/active'].exact_payoff_total, '90071992547409.93');
+  assert.equal(result['seven/active'].data.exact_payoff_total, '90071992547409.93');
 });
 
 test('Web Client workspace wires the authoritative Home obligation loader', () => {
@@ -115,3 +116,4 @@ test('Web Client workspace wires the authoritative Home obligation loader', () =
     /loadClientHomeObligationSchedules/,
   );
 });
+

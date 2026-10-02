@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/treasury/treasury_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -14,6 +15,7 @@ class RemittanceNotificationsPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     this.repository,
     this.remittanceRepository,
+    this.surplusRepository,
     super.key,
   });
 
@@ -21,6 +23,7 @@ class RemittanceNotificationsPage extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final RemittanceNotificationRepository? repository;
   final RemittanceRepository? remittanceRepository;
+  final CollectorSurplusRepository? surplusRepository;
 
   @override
   State<RemittanceNotificationsPage> createState() =>
@@ -39,8 +42,7 @@ class _RemittanceNotificationsPageState
   @override
   void initState() {
     super.initState();
-    _repository =
-        widget.repository ?? SpinaRemittanceNotificationRepository();
+    _repository = widget.repository ?? SpinaRemittanceNotificationRepository();
     _load();
   }
 
@@ -106,6 +108,7 @@ class _RemittanceNotificationsPageState
           session: widget.session,
           deviceIdentityProvider: widget.deviceIdentityProvider,
           repository: widget.remittanceRepository,
+          surplusRepository: widget.surplusRepository,
           focusRemittanceId: notification.remittanceId,
         ),
       ),
@@ -117,31 +120,35 @@ class _RemittanceNotificationsPageState
 
   void _replace(RemittanceNotification updated) {
     setState(() {
-      _notifications = _notifications
-          .map(
-            (item) => item.notificationId == updated.notificationId
-                ? updated
-                : item,
-          )
-          .toList(growable: false)
-        ..sort((left, right) {
-          if (left.isPending != right.isPending) {
-            return left.isPending ? -1 : 1;
-          }
-          final leftDate = left.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final rightDate =
-              right.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return rightDate.compareTo(leftDate);
-        });
+      _notifications =
+          _notifications
+              .map(
+                (item) => item.notificationId == updated.notificationId
+                    ? updated
+                    : item,
+              )
+              .toList(growable: false)
+            ..sort((left, right) {
+              if (left.isPending != right.isPending) {
+                return left.isPending ? -1 : 1;
+              }
+              final leftDate =
+                  left.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final rightDate =
+                  right.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return rightDate.compareTo(leftDate);
+            });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount =
-        _notifications.where((notification) => notification.isPending).length;
-    final canReceiveRemittance =
-        widget.session.hasPermission('remittance.receive');
+    final pendingCount = _notifications
+        .where((notification) => notification.isPending)
+        .length;
+    final canReceiveRemittance = widget.session.hasPermission(
+      'remittance.receive',
+    );
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -234,13 +241,13 @@ class _NotificationCard extends StatelessWidget {
     final stateText = notification.isPending
         ? 'Action required — review full handover'
         : notification.isRejected
-            ? 'Rejected — cash stayed with sender'
-            : 'Accepted — money under your custody';
+        ? 'Rejected — cash stayed with sender'
+        : 'Accepted — money under your custody';
     final stateIcon = notification.isPending
         ? Icons.notifications_active
         : notification.isRejected
-            ? Icons.cancel_outlined
-            : Icons.verified;
+        ? Icons.cancel_outlined
+        : Icons.verified;
 
     return Card(
       child: ExpansionTile(
@@ -254,8 +261,7 @@ class _NotificationCard extends StatelessWidget {
         title: Row(
           children: [
             Expanded(child: Text(notification.title)),
-            if (notification.readAt == null)
-              const Chip(label: Text('New')),
+            if (notification.readAt == null) const Chip(label: Text('New')),
           ],
         ),
         subtitle: Text(
@@ -282,9 +288,7 @@ class _NotificationCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                key: Key(
-                  'view-handover-photo-${notification.notificationId}',
-                ),
+                key: Key('view-handover-photo-${notification.notificationId}'),
                 onPressed: () => _openPhoto(context),
                 icon: const Icon(Icons.photo_outlined),
                 label: Text(
@@ -300,7 +304,8 @@ class _NotificationCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          if (notification.isRejected && notification.rejectionReason.isNotEmpty) ...[
+          if (notification.isRejected &&
+              notification.rejectionReason.isNotEmpty) ...[
             Align(
               alignment: Alignment.centerLeft,
               child: Text(

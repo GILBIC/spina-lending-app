@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -22,10 +24,12 @@ class CollectorCashStatusCard extends StatefulWidget {
     required this.onOpenCashToReceive,
     required this.onOpenCashToClient,
     this.onCashReleaseAlert,
+    this.onSignOut,
     super.key,
   });
 
   final UserSession session;
+  final Future<void> Function()? onSignOut;
   final DeviceIdentityProvider deviceIdentityProvider;
 
   /// Retained for Collector-shell compatibility. Daily Collection intentionally
@@ -53,6 +57,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
   CollectorCashAccountability? _accountability;
   bool _loading = true;
   bool _renewalAlertLoading = false;
+  int? _failureStatus;
+  int _generation = 0;
+  int _privacyGeneration = 0;
 
   @override
   void initState() {
@@ -60,8 +67,21 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(CollectorCashStatusCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider) {
+      _privacyGeneration++;
+      unawaited(_load());
+    }
+  }
+
   Future<void> _load() async {
     if (!mounted) return;
+    final generation = ++_generation;
+    final session = widget.session;
+    _failureStatus = null;
 
     final canLoadCash = widget.session.hasPermission('remittance.view');
     final canLoadRenewals = widget.session.hasAnyPermission(const <String>[
@@ -95,9 +115,15 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       if (canLoadCash) {
         try {
           accountability = await _cashAccountability.load(
-            widget.session,
+            session,
             deviceId: identity.installationId,
           );
+        } on SpinaApiException catch (error) {
+          if (generation != _generation || !mounted) return;
+          _failureStatus = error.statusCode;
+          if (_failureStatus == 401 || _failureStatus == 403) {
+            _privacyGeneration++;
+          }
         } on Object {
           // Cash status must not block Daily Collection if the summary is unavailable.
         }
@@ -106,12 +132,15 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       // Device/network status is secondary to keeping Daily Collection available.
     }
 
-    if (!mounted) return;
+    if (!mounted || generation != _generation) return;
     setState(() {
       _accountability = accountability;
       _loading = false;
     });
-    if (canLoadRenewals && deviceId != null) {
+    if (canLoadRenewals &&
+        deviceId != null &&
+        _failureStatus != 401 &&
+        _failureStatus != 403) {
       unawaited(_loadCashReleaseAlert(deviceId));
     }
   }
@@ -121,9 +150,11 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     // renewal request per card so responses cannot race to show older alerts.
     if (!mounted || _renewalAlertLoading) return;
     _renewalAlertLoading = true;
+    final generation = _privacyGeneration;
+    final session = widget.session;
     try {
-      final requests = await _renewals.list(widget.session, deviceId: deviceId);
-      if (!mounted) return;
+      final requests = await _renewals.list(session, deviceId: deviceId);
+      if (!mounted || generation != _privacyGeneration) return;
       for (final request in requests) {
         if (request.canConfirmCashReceived) {
           widget.onCashReleaseAlert?.call(request);
@@ -173,9 +204,17 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               ),
               IconButton(
                 key: const Key('collector-cash-status-refresh'),
-                tooltip: 'Refresh cash status',
+                tooltip: _failureStatus == 401
+                    ? 'Sign in again'
+                    : 'Refresh cash status',
                 visualDensity: VisualDensity.compact,
-                onPressed: _loading ? null : _load,
+                onPressed: _loading || _failureStatus == 403
+                    ? null
+                    : _failureStatus == 401
+                    ? widget.onSignOut == null
+                          ? null
+                          : () => unawaited(widget.onSignOut!())
+                    : _load,
                 icon: _loading
                     ? const SizedBox(
                         width: 16,
@@ -196,7 +235,12 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               otherAreaByCollector: accountability.otherAreaByCollector,
             )
           else
-            const Text('Cash status unavailable. Connect and refresh.'),
+            Text(switch (_failureStatus) {
+              401 => 'Cash status unavailable. Sign in again to continue.',
+              403 =>
+                'Access unavailable. This account or device cannot view cash status.',
+              _ => 'Cash status unavailable. Connect and refresh.',
+            }),
         ],
       ),
     );
@@ -228,62 +272,83 @@ class _PrimaryCashHeldTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cash held',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: SpinaTheme.brandPinkDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final labels = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cash held',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: SpinaTheme.brandPinkDark,
+                      fontWeight: FontWeight.w900,
                     ),
-                    const SizedBox(height: 1),
-                    Text(
-                      'Collection cash still under your responsibility',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    'Collection cash still under your responsibility',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ],
+              );
+              final value = Text(
                 _money(amount),
                 key: const Key('collector-total-cash-held-value'),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: SpinaTheme.brandPinkDark,
                   fontWeight: FontWeight.w900,
                 ),
-              ),
-            ],
+              );
+              if (constraints.maxWidth < 350 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 16 ||
+                  _money(amount).length > 14) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [labels, const SizedBox(height: 4), value],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: labels),
+                  const SizedBox(width: 8),
+                  value,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 9),
           Container(height: 1, color: SpinaTheme.line),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _CashHeldBreakdown(
-                  key: const Key('collector-assigned-area-cash-held'),
-                  title: 'My assigned areas',
-                  amount: assignedAreaAmount,
-                  subtitle: 'Your route cash',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _CashHeldBreakdown(
-                  key: const Key('collector-other-area-cash-held'),
-                  title: 'Different collectors',
-                  amount: otherAreaAmount,
-                  subtitle: 'Cash from their assigned areas',
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final assigned = _CashHeldBreakdown(
+                key: const Key('collector-assigned-area-cash-held'),
+                title: 'My assigned areas',
+                amount: assignedAreaAmount,
+                subtitle: 'Your route cash',
+              );
+              final other = _CashHeldBreakdown(
+                key: const Key('collector-other-area-cash-held'),
+                title: 'Different collectors',
+                amount: otherAreaAmount,
+                subtitle: 'Cash from their assigned areas',
+              );
+              if (constraints.maxWidth < 350 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 16) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [assigned, const SizedBox(height: 8), other],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: assigned),
+                  const SizedBox(width: 12),
+                  Expanded(child: other),
+                ],
+              );
+            },
           ),
           if (otherAreaByCollector.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -349,8 +414,6 @@ class _CashHeldBreakdown extends StatelessWidget {
       children: [
         Text(
           title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: Theme.of(
             context,
           ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -363,29 +426,12 @@ class _CashHeldBreakdown extends StatelessWidget {
             fontWeight: FontWeight.w900,
           ),
         ),
-        Text(
-          subtitle,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 9),
-        ),
+        Text(subtitle, style: Theme.of(context).textTheme.labelSmall),
       ],
     );
   }
 }
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2).split('.');
-  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
-}
-
-String _groupDigits(String digits) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[index]);
-  }
-  return buffer.toString();
-}
+// Legacy cash/route models are numeric; this preserves their existing display conversion.
+String _money(double value) =>
+    value.isFinite ? formatSpinaMoney(value.toStringAsFixed(2)) : 'Unavailable';

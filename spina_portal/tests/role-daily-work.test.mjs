@@ -1,3 +1,4 @@
+import {setImmediate} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -70,6 +71,7 @@ for (const { role, mount, permissions } of scenarios) {
       } else {
         assert.equal(navigation[0].group, 'Daily work');
       }
+      if (role === 'management') await setImmediate();
       const today = root.querySelector(`#${role}-overview`);
       if (today.innerHTML.includes('metric-grid')) {
         assert.ok(today.innerHTML.indexOf('daily-actions') < today.innerHTML.indexOf('metric-grid'),
@@ -91,8 +93,8 @@ for (const { role, mount, permissions } of scenarios) {
 
 for (const request of [
   { request_id: 'renewal-decision', status: 'approved' },
-  { request_id: 'renewal-sign', status: 'approved', client_decision: 'accepted', signers: [{
-    signer_id: 'borrower-signer', party_role: 'borrower', signed: false,
+  { request_id: 'renewal-sign', status: 'approved', client_decision: 'accepted', signer_readiness_status:'pending',office_processing_required:false,signers: [{
+    signer_id: 'borrower-signer', party_role: 'borrower', signed: false, has_app:true,
     government_id_verified: true, selfie_verified: true,
   }] },
   { request_id: 'renewal-cash', status: 'approved', client_decision: 'accepted',
@@ -109,6 +111,7 @@ for (const request of [
       } },
       setNavigation() {},
     });
+    await setImmediate();
     const today = root.querySelector('#client-overview');
     assert.ok(today.querySelector('[data-nav-target="client-renewals"]'));
     assert.match(today.textContent, /1 action for you/);
@@ -125,7 +128,7 @@ test('Collector attention list offers the route action without changing the entr
     api: { async request(path) {
       if (path === '/api/v1/collector/routes/today') return {
         route_date: '2026-10-01', entries: [{
-          route_entry_id: 'synthetic-entry', area: 'Synthetic Area', client_name: 'Synthetic Client',
+          route_entry_id: 'synthetic-entry',client_id:'synthetic-client',loan_id:'synthetic-loan', area: 'Synthetic Area', client_name: 'Synthetic Client',
           loan_type: 'Regular', processed_today: false, daily_amount: '100.00',
         }],
       };
@@ -142,7 +145,7 @@ const failedReads = [
   { role: 'client', mount: mountClientWorkspace, permissions: [], paths: ['/api/v1/client/loans', '/api/v1/client/payments', '/api/v1/client/renewals', '/api/v1/client/support'] },
   { role: 'collector', mount: mountCollectorWorkspace, permissions: ['route.view'], paths: ['/api/v1/collector/routes/today'] },
   { role: 'employee', mount: mountEmployeeWorkspace, permissions: ['support.manage', 'remittance.view'], paths: ['/api/v1/management/support?status=open', '/api/v1/notifications', '/api/v1/activity-notifications'] },
-  { role: 'management', mount: mountManagementWorkspace, permissions: ['renewal.manage', 'support.manage'], paths: ['/api/v1/management/renewals?status=pending', '/api/v1/management/support?status=open'] },
+  { role: 'management', mount: mountManagementWorkspace, permissions: ['management.dashboard.view', 'renewal.manage', 'support.manage'], paths: ['/api/v1/management/dashboard-overview'] },
 ];
 
 for (const { role, mount, permissions, paths } of failedReads) {
@@ -161,6 +164,7 @@ for (const { role, mount, permissions, paths } of failedReads) {
         signal: controller.signal,
         setNavigation() {},
       });
+      if (role === 'management') await setImmediate();
       const today = root.querySelector(`#${role}-overview`);
       assert.ok(today.textContent.includes('Unavailable') || today.textContent.includes('unavailable'));
       assert.match(today.textContent, /could not load|unavailable/i);

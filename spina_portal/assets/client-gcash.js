@@ -61,7 +61,7 @@ export function buildClientGcashIntentRequest({ idempotencyKey, selections }) {
 }
 
 export function createClientGcashActions({ api, keyFactory = defaultIdempotencyKey }) {
-  let retryKey = null;
+  let retryKey = null;let retryBody=null;
   return {
     async start(selections) {
       const normalizedSelections = normalizeSelections(selections).map((item) => ({
@@ -69,7 +69,7 @@ export function createClientGcashActions({ api, keyFactory = defaultIdempotencyK
         amount: item.amount,
       }));
       retryKey ||= keyFactory();
-      const body = buildClientGcashIntentRequest({
+      const body = retryBody ||= buildClientGcashIntentRequest({
         idempotencyKey: retryKey,
         selections: normalizedSelections,
       });
@@ -77,7 +77,7 @@ export function createClientGcashActions({ api, keyFactory = defaultIdempotencyK
         method: 'POST',
         body,
       });
-      retryKey = null;
+      retryKey = null;retryBody=null;
       return intent;
     },
     async refresh(intentId) {
@@ -132,7 +132,9 @@ export function renderClientGcashIntent(intent = {}) {
   </div>`;
 }
 
-export function renderClientGcashPanel({ capability = {}, loans = [], intent = null } = {}) {
+export function renderClientGcashPanel({ capability = {}, loans = [], loansState, capabilityState, intent = null } = {}) {
+  if(capabilityState&&capabilityState.status!=='ready')return '<div class="notice-card warning">Payment configuration unavailable. Retry payment options.</div>';
+  if(loansState&&loansState.status!=='ready')return '<div class="notice-card warning">Loan records unavailable. Retry before selecting a loan for checkout.</div>';
   const activeLoans = asArray(loans).filter(
     (loan) => String(loan?.status ?? loan?.loan_status ?? '').trim().toLowerCase() === 'active',
   );
@@ -185,7 +187,7 @@ function readSelections(form) {
 }
 
 export function bindClientGcashPanel(context) {
-  const { root, api } = context;
+  const { root, api, signal } = context;const current=()=>!signal?.aborted&&(context.clientIsCurrent?.()??true);
   const form = root.querySelector('#client-gcash-form');
   const statusPanel = root.querySelector('[data-client-gcash-status]');
   if (!form || !statusPanel) return;
@@ -210,11 +212,11 @@ export function bindClientGcashPanel(context) {
     const refreshButton = statusPanel.querySelector('[data-gcash-refresh-intent]');
     refreshButton?.addEventListener('click', async () => {
       const intentId = String(refreshButton.getAttribute('data-gcash-refresh-intent') || '').trim();
-      if (!intentId) return;
+      if (!intentId||refreshButton.disabled||!current()) return;
       setButtonBusy(refreshButton, true, 'Refreshing…');
       try {
         const intent = await actions.refresh(intentId);
-        statusPanel.innerHTML = renderClientGcashIntent(intent);
+        if(!current())return;statusPanel.innerHTML = renderClientGcashIntent(intent);
         bindIntentControls(intent);
       } catch (error) {
         showToast(error?.message || 'GCash status could not be refreshed.', 'error');
@@ -226,6 +228,8 @@ export function bindClientGcashPanel(context) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = form.querySelector('button[type="submit"]');
+    if(button.disabled)return;const loansState=context.clientReads?.state('loans');const capabilityState=context.clientReads?.state('gcash');if(loansState&&(loansState.status!=='ready'||capabilityState?.status!=='ready'||capabilityState.data?.payment_available!==true)){showToast('Refresh loan records and payment options before checkout.','error');return;}
+    if(loansState&&!readSelections(form).every(selection=>asArray(loansState.data?.loans).some(loan=>loan.loan_id===selection.loanId&&String(loan.status||loan.loan_status).toLowerCase()==='active'))){showToast('This loan selection has changed. Review current loans before checkout.','error');return;}
     setButtonBusy(button, true, 'Preparing GCash…');
     try {
       const intent = await actions.start(readSelections(form));

@@ -153,6 +153,9 @@ class CollectorRouteReceipt {
     required this.collectorName,
     required this.isLocked,
     this.note = '',
+    this.fundingSource = 'collector_cash',
+    this.fundingReceiptId,
+    this.fundingAccountId,
     this.coveredDates = const <DateTime>[],
     this.acceptedAt,
   });
@@ -165,6 +168,9 @@ class CollectorRouteReceipt {
   final String collectorName;
   final bool isLocked;
   final String note;
+  final String fundingSource;
+  final String? fundingReceiptId, fundingAccountId;
+  bool get isTreasuryFunded => fundingSource == 'treasury_receipt';
   final List<DateTime> coveredDates;
   final DateTime? acceptedAt;
 
@@ -177,6 +183,9 @@ class CollectorRouteReceipt {
     'collector_name': collectorName,
     'is_locked': isLocked,
     'note': note,
+    'funding_source': fundingSource,
+    'funding_receipt_id': fundingReceiptId,
+    'funding_account_id': fundingAccountId,
     'covered_dates': coveredDates
         .map((value) => value.toIso8601String())
         .toList(growable: false),
@@ -211,6 +220,10 @@ class CollectorRouteReceipt {
           'Collector',
       isLocked: _boolValue(data['is_locked'], fallback: false),
       note: firstNonEmptyString(<Object?>[data['note']]) ?? '',
+      fundingSource:
+          firstNonEmptyString([data['funding_source']]) ?? 'collector_cash',
+      fundingReceiptId: firstNonEmptyString([data['funding_receipt_id']]),
+      fundingAccountId: firstNonEmptyString([data['funding_account_id']]),
       coveredDates: _dateList(data['covered_dates']),
       acceptedAt: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['accepted_at']]) ?? '',

@@ -21,10 +21,10 @@ env:
   GITLEAKS_VERSION: "8.30.1"
 
 jobs:
-  backend:
-    name: Backend, quality, and security
+  backend-quality:
+    name: Backend quality and security scans
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 30
 
     steps:
       - name: Check out exact revision and history
@@ -206,20 +206,6 @@ jobs:
           bash -n ops/digitalocean/bootstrap.sh
           python tools/test_digitalocean_deployment_contract.py
 
-      - name: Run Python test suite once with coverage and timings
-        shell: bash
-        env:
-          GILBIC_TEST_DATABASE_URL: ""
-          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
-        run: |
-          set -euo pipefail
-          python -m pytest -q gilbic_backend/tests spina_backend_mobile/tests tests \
-            --cov=gilbic_backend --cov=spina_mobile_collections \
-            --cov-report=term-missing \
-            --cov-report=xml:ci-artifacts/backend/coverage.xml \
-            --cov-report=json:ci-artifacts/backend/coverage.json \
-            --durations=20 | tee ci-artifacts/backend/pytest.txt
-
       - name: Publish backend summary
         if: always()
         shell: bash
@@ -257,9 +243,150 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.0
         with:
-          name: spina-ci-backend-${{ github.event.pull_request.head.sha || github.sha }}
+          name: spina-ci-backend-quality-${{ github.event.pull_request.head.sha || github.sha }}
           path: ci-artifacts/backend
           if-no-files-found: warn
+          retention-days: 14
+
+  backend-tests:
+    name: Backend tests (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
+            requirements.txt
+
+      - name: Install backend and coverage dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check \
+            -e './spina_backend_mobile[test]' -e './gilbic_backend[test]' 'pytest-cov>=6,<8'
+          mkdir -p ci-artifacts/backend-tests
+
+      - name: Run one disjoint part of the complete Python suite
+        shell: bash
+        env:
+          GILBIC_TEST_DATABASE_URL: ""
+          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
+          SPINA_TEST_SHARD_INDEX: ${{ matrix.shard }}
+          SPINA_TEST_SHARD_COUNT: "8"
+          COVERAGE_FILE: ci-artifacts/backend-tests/coverage.shard-${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          python -m pytest -q -p tools.pytest_ci_shard gilbic_backend/tests spina_backend_mobile/tests tests \
+            --cov=gilbic_backend --cov=spina_mobile_collections --cov-report= \
+            --junitxml=ci-artifacts/backend-tests/junit-${{ matrix.shard }}.xml \
+            --durations=20 | tee ci-artifacts/backend-tests/pytest-${{ matrix.shard }}.txt
+
+      - name: Require clean tracked files
+        if: always()
+        shell: bash
+        run: |
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
+
+      - name: Upload shard coverage and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: spina-ci-backend-tests-${{ matrix.shard }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ci-artifacts/backend-tests
+          if-no-files-found: error
+          retention-days: 14
+
+  backend:
+    name: Backend, quality, and security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-quality, backend-tests]
+    if: always()
+    steps:
+      - name: Require every scan and every test shard to pass
+        env:
+          QUALITY_RESULT: ${{ needs.backend-quality.result }}
+          TEST_RESULT: ${{ needs.backend-tests.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$QUALITY_RESULT" = success
+          test "$TEST_RESULT" = success
+
+      - name: Check out exact revision for coverage sources
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download scanner evidence
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: spina-ci-backend-quality-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ci-artifacts/backend
+
+      - name: Download all test shard evidence
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: spina-ci-backend-tests-*-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ci-artifacts/backend/tests
+          merge-multiple: true
+
+      - name: Require complete coverage inputs and combine them
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'pytest-cov>=6,<8'
+          for shard in 0 1 2 3 4 5 6 7; do
+            test -s "ci-artifacts/backend/tests/coverage.shard-$shard"
+            test -s "ci-artifacts/backend/tests/junit-$shard.xml"
+            test -s "ci-artifacts/backend/tests/pytest-$shard.txt"
+          done
+          python - <<'PY'
+          from pathlib import Path
+          from coverage import CoverageData
+
+          for index in range(8):
+              path = Path(f"ci-artifacts/backend/tests/coverage.shard-{index}")
+              data = CoverageData(basename=str(path))
+              data.read()
+              if not any(data.lines(filename) for filename in data.measured_files()):
+                  raise SystemExit(f"Shard {index} has no readable line coverage")
+          PY
+          python -m coverage combine --keep ci-artifacts/backend/tests/coverage.shard-*
+          python -m coverage report --show-missing
+          python -m coverage xml -o ci-artifacts/backend/coverage.xml
+          python -m coverage json -o ci-artifacts/backend/coverage.json
+          cat ci-artifacts/backend/tests/pytest-*.txt > ci-artifacts/backend/pytest.txt
+
+      - name: Upload complete backend evidence under the existing release contract
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: spina-ci-backend-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ci-artifacts/backend
+          if-no-files-found: error
           retention-days: 14
 
   client-apps:
@@ -318,6 +445,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          flutter precache --universal
           flutter pub get --enforce-lockfile
           flutter analyze --fatal-infos
           flutter test
@@ -333,6 +461,7 @@ jobs:
             --source-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
             --mode debug --api-url https://spina.157-230-250-111.sslip.io
           cd "$host"
+          flutter precache --universal
           flutter pub get --enforce-lockfile
           flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub \
             --dart-define=GILBIC_API_URL=https://spina.157-230-250-111.sslip.io
@@ -440,13 +569,14 @@ jobs:
             tools/run_0099_remittance_capacity_disposable_postgres_validation.py \
             tools/run_0102_remittance_review_disposable_postgres_validation.py \
             tools/run_v1_tax_evidence_disposable_postgres_validation.py \
-            tools/run_mvp_private_schema_barrier_validation.py
+            tools/run_mvp_private_schema_barrier_validation.py \
+            tools/run_treasury_disposable_postgres_validation.py
 
       - name: Create isolated validation databases
         shell: bash
         run: |
           set -euo pipefail
-          for database in x7preview combinedrenewal delegatedarea initialcapital periodclose remittancecap remittancereview v1tax mvp_private_schema_test; do
+          for database in x7preview combinedrenewal delegatedarea initialcapital periodclose remittancecap remittancereview v1tax treasury_test mvp_private_schema_test; do
             docker exec "${{ job.services.postgres.id }}" createdb -U postgres "$database"
           done
 
@@ -462,6 +592,7 @@ jobs:
           REMIT_CAP_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancecap?sslmode=disable
           REMIT_REVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancereview?sslmode=disable
           TAX_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/v1tax?sslmode=disable
+          TREASURY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/treasury_test?sslmode=disable
           GILBIC_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mvp_private_schema_test?sslmode=disable
         run: |
           set -euo pipefail
@@ -476,6 +607,7 @@ jobs:
             python tools/run_0102_remittance_review_disposable_postgres_validation.py
             python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
             python tools/run_mvp_private_schema_barrier_validation.py
+            python tools/run_treasury_disposable_postgres_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
       - name: Restore synthetic database and private evidence from backup

@@ -64,6 +64,7 @@ class PostgresCrossRemittanceRepository:
                       and transaction.collection_origin = 'cross_collector'
                       and transaction.assigned_collector_user_id is not null
                       and transaction.remittance_id is null
+                      and transaction.funding_source = 'collector_cash'
                       and transaction.is_locked = false
                       and transaction.is_voided = false
                     group by
@@ -92,6 +93,7 @@ class PostgresCrossRemittanceRepository:
                       and transaction.collection_date = %s
                       and transaction.collection_origin = 'cross_collector'
                       and transaction.remittance_id is null
+                      and transaction.funding_source = 'collector_cash'
                       and transaction.is_locked = false
                       and transaction.is_voided = false
                     """,
@@ -340,6 +342,7 @@ class PostgresCrossRemittanceRepository:
                               and assigned_collector_user_id = %s
                               and collection_origin = 'cross_collector'
                               and remittance_id is null
+                              and funding_source = 'collector_cash'
                               and is_locked = false
                               and is_voided = false
                             """,
@@ -368,6 +371,7 @@ class PostgresCrossRemittanceRepository:
                               and collector_user_id = %s
                               and collection_origin = 'cross_collector'
                               and remittance_id is null
+                              and funding_source = 'collector_cash'
                               and is_locked = false
                               and is_voided = false
                             """,
@@ -567,6 +571,7 @@ class PostgresCrossRemittanceRepository:
               and transaction.collection_origin = 'cross_collector'
               and transaction.collection_date = %s
               and transaction.remittance_id is null
+              and transaction.funding_source = 'collector_cash'
               and transaction.is_locked = false
               and transaction.is_voided = false
             order by transaction.accepted_at, transaction.id

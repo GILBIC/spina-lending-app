@@ -9,18 +9,19 @@ async function harness(t, kind) {
  globalThis.FormData = class { constructor(form) {this.form=form;} get(name) {return this.form.querySelector(`[name="${name}"]`)?.value ?? null;} };
  t.after(()=>{globalThis.FormData=original;});
  const doc=new EventTarget();const listeners=new Map();const add=doc.addEventListener.bind(doc),remove=doc.removeEventListener.bind(doc);doc.addEventListener=(type,handler,...args)=>{if(!listeners.has(type))listeners.set(type,new Set());listeners.get(type).add(handler);add(type,handler,...args);};doc.removeEventListener=(type,handler,...args)=>{listeners.get(type)?.delete(handler);remove(type,handler,...args);};doc.listenerCount=()=>[...listeners.values()].reduce((sum,set)=>sum+set.size,0);doc.body=new Element('body');doc.activeElement=doc.body;
- const root=new Element();root.dataset={};const controller=new AbortController();t.after(()=>controller.abort());
- let reject;const writes=[];
- await mountCollectorWorkspace({root,signal:controller.signal,setNavigation(){},
-  session:{user:{role:'collector'},permissions:['route.view','collection.create','remittance.create']},
+ const root=new Element();root.dataset={};root.ownerDocument=doc;doc.createElement=tag=>{const node=new Element(tag);node.ownerDocument=doc;return node;};const controller=new AbortController();t.after(()=>controller.abort());
+ let reject;const writes=[];let handle;
+ await mountCollectorWorkspace({root,signal:controller.signal,setNavigation(){},registerWorkspaceHandle:value=>{handle=value;},
+  session:{user:{role:'collector',id:'collector'},permissions:['route.view','collection.create','remittance.create']},
   sessionStore:{deviceId:()=> 'synthetic-device',nextDeviceSequence:()=>1},
   api:{async request(path,options={}) {
    if(options.method){writes.push({path,options});return new Promise((_,no)=>{reject=no;});}
    if(path==='/api/v1/collector/routes/today')return {route_date:'2026-10-01',entries:[{route_entry_id:'route-1',client_id:'client-1',loan_id:'loan-1',loan_type:'Regular',route_revision:'v1',can_enter_payment:true,daily_amount:'250.00'}]};
    if(path.endsWith('/remittances/recipients'))return [{user_id:'recipient',full_name:'Synthetic recipient',role_name:'Management'}];
-   if(path.includes('/remittances/preview'))return {total_amount:'250.01'};
+   if(path.includes('/remittances/preview'))return {collector_user_id:'collector',collection_date:'2026-10-01',total_amount:'250.01',transaction_count:1,payment_count:1,unable_to_pay_count:0,covered_payment_count:0,client_count:1,refund_due_release_count:0,refund_due_release_total:'0.00',refund_due_releases:[],items:[{transaction_id:'txn',client_id:'client-1',loan_id:'loan-1',collection_date:'2026-10-01',entry_type:'payment',amount:'250.01',receipt_number:'R',covered_dates:[]}]};
    return {};
   }}});
+ if(kind==='remittance')await handle.activate('collector-remittance');
  function decorate(node,parent=null) {
   node.parentElement=parent;node.ownerDocument=doc;let connected=true;Object.defineProperty(node,'isConnected',{get:()=>connected&&parent?.isConnected!==false,set:value=>{connected=value;}});node.hidden=node.getAttribute('hidden')!==null;
   node.dataset=Object.fromEntries(Object.entries(node.attributes).filter(([k])=>k.startsWith('data-')).map(([k,v])=>[k.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase()),v]));
@@ -34,7 +35,7 @@ async function harness(t, kind) {
  const form=root.querySelector(kind==='remittance'?'#collector-remittance-form':'.collector-entry-form');form.hidden=false;
  const set=(name,value)=>{form.querySelector(`[name="${name}"]`).value=value;};
  set('note','Synthetic retained note');
- if(kind==='remittance'){set('recipientUserId','recipient');set('collectionDate','2026-10-01');}
+ if(kind==='remittance'){set('recipientUserId','recipient');set('collectionDate','2026-10-01');form.querySelector('[name="reviewed"]').checked=true;fire(form,'change');}
  else {set('entryType',kind);set('amount','250.01');set('allocation','scheduled');if(kind==='pass')set('reasonCode','no_cash');}
  const button=form.querySelector('button[type="submit"]');button.focus();
  return {root,doc,form,button,writes,controller,start(){fire(form,'submit');},async reject(){assert.equal(typeof reject,'function','must reach actual API write');reject(Object.assign(new Error('Synthetic rejection; review entered values.'),{status:422}));await setImmediate();await setImmediate();}};
