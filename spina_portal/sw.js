@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v25-exact-plan-followthrough';
+const CACHE_NAME = 'spina-company-shell-v26-employee-plan-followthrough';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
