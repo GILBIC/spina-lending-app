@@ -1,120 +1,176 @@
 # SPINA Management Web UI Completion — Design and Acceptance
 
-Date: 2 October 2026 (Asia/Manila)
+Date: 2 October 2026 (Asia/Manila). **Revision 2: original UI review plus functional re-review.**
 
 ## Status, ownership, and authority
 
-**Planning only.** The owner requested: “Plan everything and create a pr i will make codex do this.” This change packages the complete Management Web re-review for owner-directed Codex implementation. It does not implement the fixes or authorize merging, marking ready, deployment, migrations, live financial operations, credentials, or screen capture. Keep the handoff PR Draft/open/unmerged. The owner will start Codex; do not automatically invoke an agent through PR comments.
+**Planning only, on existing Draft PR #485.** The owner first requested “Plan everything and create a pr i will make codex do this” and, after the functional re-review, “Update the current pr and include thing everything.” This revision incorporates every finding from both reviews into the same design, implementation checklist and acceptance ledger. The owner will start Codex separately. Publishing this revision does not implement fixes, start an agent, mark ready, merge, deploy, run migrations or authorize production operations. Keep #485 Draft/open/unmerged with automatic merge off.
 
-Planning baseline: `GILBIC/spina-lending-app`, main `41a13eb59c9cc1b65a0a6a51f3b73db4a0895013`, after merged PR #484. No open PRs were returned at planning preflight. Re-read live main and open PRs before execution; this SHA is the reviewed baseline, not a claim that main never changes. Older PRs #466–#483 are integrated, not outstanding work. Frozen Master #296 stays unchanged.
+Reviewed main: `41a13eb59c9cc1b65a0a6a51f3b73db4a0895013`, after merged #484. Previous planning head: `7fdf54edad8186bd0dca6d7209aeac68dbce48e1`. Same branch: `plan/management-web-ui-completion-20261002`. Original requirements R1–R7 and Tasks 0–8 are retained; new R8–R14 and inserted tasks are mandatory before final Task 8. Older integrated PRs #466–#484 are not outstanding implementations. Frozen Master #296 is unchanged.
 
-Authorities, read before asking the owner to repeat decisions:
-- [Frozen Master #296](https://github.com/GILBIC/spina-lending-app/issues/296).
-- [Integrated release PR #484](https://github.com/GILBIC/spina-lending-app/pull/484).
-- [Detailed re-review](https://github.com/GILBIC/spina-lending-app/pull/484#issuecomment-5942508315) and [earlier UI findings](https://github.com/GILBIC/spina-lending-app/issues/448#issuecomment-5942333897).
-- [Notion Current Project State](https://www.notion.so/3cd5ade7bef48106b2c2ff97182001dd), latest dated Management UI checkpoint.
-- Create State project `69a61c48-f842-44ac-aa11-e987ffec4a36`; semantic search can return older checkpoints, so compare with exact GitHub/Notion evidence.
+Read before asking the owner to repeat decisions:
+- [Frozen Master #296](https://github.com/GILBIC/spina-lending-app/issues/296) and [release #484](https://github.com/GILBIC/spina-lending-app/pull/484).
+- [Original detailed review](https://github.com/GILBIC/spina-lending-app/pull/484#issuecomment-5942508315), [earlier error findings](https://github.com/GILBIC/spina-lending-app/issues/448#issuecomment-5942333897), and [functional re-review addendum](https://github.com/GILBIC/spina-lending-app/pull/485#issuecomment-5943820685).
+- [Notion Current Project State](https://www.notion.so/3cd5ade7bef48106b2c2ff97182001dd), newest Management checkpoint.
+- Create State project `69a61c48-f842-44ac-aa11-e987ffec4a36`; semantic results may be older than exact GitHub/Notion evidence.
+- Separate Collector #486, Employee #487, and Client #488 workstreams. Recheck live heads/diffs before execution rather than assuming their planning state persists.
 
-The re-review used released code/CSS and synthetic records in local Chromium at 1440, 390, and 320px. It was not signed-in production acceptance, a live latency measurement, or a complete accessibility/security audit. The conversation evidence ZIP is optional reference, not a required file in Codex's workspace. Reproduce the scenarios below from source; never invent access to an unavailable artifact.
+Review evidence was local Chromium with released assets and synthetic responses, including 18 core layouts at 1440/390/320px. It was not signed-in production acceptance, a live latency measurement, physical cash acceptance, real renewal approval/signing/release, a document export, or complete security/native acceptance. `SPINA_Management_Functional_ReReview_41a13eb5.zip` and previous review archives are optional conversation artifacts, not guaranteed Codex workspace files. Reproduce the documented cases when absent.
 
-## Goal and approach
+## Goal, selected approach, and coordination
 
-Make Management daily work accurate, state-preserving, readable on phones, and easy to reach without changing business outcomes. Preserve **Today / Clients & loans / Collections / Accounting / People & operations / Account** and the current pink/white visual identity.
+Make Management work accurate, complete for existing protected workflows, state-preserving, readable on phones and easy to reach. Preserve **Today / Clients & loans / Collections / Accounting / People & operations / Account**, their IDs and the pink/white identity. Reuse guided Office intake/CIF/application/first-loan, proof review, account/device/credential controls, collection/void/history/past-due, accounting/capital/tax/ECL/close/journal/statements/export, Employee Operations, Support and Area Management. Source presence is not full acceptance.
 
-Use targeted repairs to existing vanilla JavaScript modules, local task selection, and a small Management-scoped load/cleanup controller. Keep already-mounted task forms in place while switching views. Do not add a frontend framework, global state library, router, persistence layer, virtual-list framework, or backend endpoint. A visual-only patch would leave incorrect totals and lost drafts unresolved; a full redesign would duplicate working functionality and widen risk. The selected approach fixes those causes first and reuses existing components.
+Selected approach: targeted existing ES-module changes, focused renewal and remittance integration, and small mount-local controllers. A CSS-only patch leaves false results and unusable workflows. A framework/router/accounting rewrite duplicates working behavior. Neither is selected.
 
-Implementation order: truthful portfolio states; local refresh; independent Today loading; Staff mobile/focus; local task navigation; long-list presentation; visual density; integrated verification. Each step must stand on an independently testable commit. Use one branch owner for the shared Management/app/CSS files rather than parallel agents editing those files simultaneously.
+Keep this branch separate. Before editing shared `app.js`, `ui.js`, `app.css`, `payment-proofs.js`, `remittance-review.js`, Employee/Office helpers or `sw.js`, inspect #486/#487/#488 and record one integration owner/order. In particular reuse Employee #487's verified remittance Reject/recovery work when available; do not create a competing receiver implementation. Reuse one compatible optional shell lifecycle hook, not a fourth routing/refresh registry. Do not import unmerged role-specific controllers or overwrite another executor's work. Continue nonoverlapping tasks while a shared dependency is resolved, but leave integration acceptance pending.
 
 ## Permanent boundaries
 
-- Web Management is the change surface. Client, Employee, Collector, native Android/iOS, and Desktop are regression surfaces, not redesign targets.
-- Keep endpoint paths/query semantics, server-side permissions, exact server amounts/order, and existing role precedence. No new financial arithmetic, inferred balance, penalty, schedule, tax/ECL rule, or total derived from a partial list.
-- Financial writes remain online-only through their existing protected workflows. Keep duplicate-submit prevention, uncertain-result lockout, exact retry identity, version/conflict checks, confirmations, and source restrictions.
-- Cash Disbursement prepares an expense draft; it does not send money. Employee remains prepare-only; Management posting stays separately permission-gated. `automatic_source_posting=false` remains unchanged.
-- Keep one-time credentials, borrower/email stale-selection invalidation, password-reset separation, and identity/permission/logout cleanup. Never persist form contents, credentials, or new authenticated data in localStorage, sessionStorage, IndexedDB, URLs, or the service worker for this work.
-- Preserve device approval/revocation safeguards, permanent audit evidence, journal deduplication, immutable posting/reversal behavior, and private-screen restrictions.
-- No production writes, real credentials, screen sharing/capture, migrations, deployment/delivery runs, CI weakening, dependency upgrades, changes to Master #296, or expansion of capture-eligible screens.
+- Web Management is the change surface; other roles, Desktop and native Android/iOS are regression surfaces, not redesign targets.
+- Keep endpoint paths, query/body semantics, server RBAC and object scope, exact decimal money, source ordering and role precedence. No new endpoint/schema/grant, financial calculator, inferred balance/allocation, penalty/schedule/tax/ECL policy or partial-list total.
+- Protected writes remain online-only. Keep confirmations, duplicate-submit locks, exact supported retry identity, expected-version/conflict checks, uncertain-result reconciliation, independent approvals and immutable financial/audit records. A resolved promise is not verified success. Do not invent request UUID/digest/version fields a contract does not accept.
+- Cash Disbursement prepares an expense draft; it does not send money. Employee stays prepare-only and Management posting remains separately gated. `automatic_source_posting=false` remains unchanged.
+- Drafts and selected files remain only in the current mounted session; no new localStorage/sessionStorage/IndexedDB/URL/service-worker persistence. Retained text is not retained authorization. Logout, role/device/identity change or expiry disposes private data; ordinary token rotation must not erase existing uncertain-request recovery. Do not extend password/one-time-secret lifetime.
+- Preserve borrower/email stale-selection invalidation, device protections, password/reset separation, journal deduplication, posting/reversal rules and private-screen boundaries. New private detail/photo panels are not capture-eligible by default.
+- No real credentials, payments, cash receipt, signatures, photo/proof uploads, screen sharing/capture, migrations, delivery/deployment, dependency upgrades, CI weakening or Master acceptance edits. Some GETs can finalize financial state; use synthetic/disposable fixtures, not production probes.
 
-## R1 — Truthful portfolio states and recovery
+## R1 — Truthful portfolio states and recovery (retained)
 
-The current initial failure falls back to an empty summary and renders four zeros. A later successful Search updates only loan cards, leaving those zeros above real results. Repair both paths.
+The initial failed loan read renders four false zeros; a later successful Search replaces cards without updating that summary. Fix both. The existing `GET /api/v1/management/loans` returns global active `summary` separately from filtered/paged `loans`. Label them **Active portfolio · all clients** and **Search results**. A paid/no-match search is not an empty active portfolio.
 
-The existing `GET /api/v1/management/loans` response includes `summary` plus `loans`. In `management_loan_repository.py`, the summary query covers the whole active portfolio; `q`, `status`, `limit`, and `offset` apply to the separate loan-list query. Preserve that distinction. Label the summary **Active portfolio · all clients** and the list **Search results**. A paid-only search or no matching rows must not imply the active portfolio is empty.
+Loading shows dashes and Loading. Failure shows dashes, **Portfolio summary unavailable** and local Retry preserving query/status/page. Success updates summary and results from the accepted response. Validate fields independently: null/missing/invalid is unavailable; explicit zero is real. Preserve exact decimal strings; no `?? 0` or `|| 0` missing-value substitution. Last-request and mount/session guards reject earlier or aborted responses. Limited rows are not all records. R10 now adds the previously omitted paging requirement.
 
-On initial load/search/refresh: mark the summary Loading and show dashes, not fabricated zeros. On failure: show dashes and **Portfolio summary unavailable**, with a local retry preserving query/status. On a successful response: update both summary and results from that response. Validate displayed fields independently: missing/null/invalid count or money is unavailable; explicit server zero is valid. Preserve valid exact decimal strings through existing money presentation. Do not coerce missing fields using `?? 0` or `|| 0`.
+Acceptance: initial failure; recovery with ten sample loans; true zero; missing fields; paid/no-match with nonzero global summary; partial pages; rapid searches and logout during a read. Expected totals come from fixture summary, never cards.
 
-Use last-request-wins and mount/session guards: a slower earlier search or response after logout must not overwrite the newer view. No success message should imply all records are shown when the endpoint returned a limited list. No new paging feature is required here.
+## R2 — Preserve unrelated work through saves and refresh (retained, extended)
 
-Acceptance: failed initial read, successful recovery with ten sample loans, genuine all-zero success, missing summary/field, paid/no-match searches with nonzero portfolio summary, partial list, rapid searches, and late response after abort. Expected portfolio values come from fixture summary, never the sample cards.
+Ordinary navigation already preserves inputs. Replace Support, renewal and staff-invitation full-workspace success remounts with affected-region refresh. Apply the same rule to new R8/R9 actions. Clear only the confirmed submitted editor; retain other draft nodes, file inputs, search/status/page, Office references, local task selection, focus and scroll context.
 
-## R2 — Preserve unrelated work across saves and refreshes
+Distinguish **Saved; refresh failed** from failed or uncertain mutation. Preserve confirmed result evidence and do not offer a duplicate write. Refresh dashboard/global counts from authoritative reads, not local arithmetic. Preserve another queue row's unsent response. Changed versions/permissions/readiness invalidate actions without silently attaching a new review version to an old draft.
 
-Ordinary navigation already preserves values; retain that behavior. Support save and Renewal review rebuild Management; Staff invitation uses the same pattern in current source. Replace these full remounts with affected-region refreshes. Clear only the successfully submitted form where appropriate. Keep unrelated draft nodes, search/status selections, Office intake references, local selected tasks, focus, and scroll context.
+Routine header/local Refresh retains unrelated inputs and does not replace workflow locks. While a write is in flight, block/defer destructive refresh. If a dirty same-task form cannot safely refresh, require a deliberate discard choice; never use that as permission to discard an uncertain command. Explicit reconciliation is distinct from ordinary refresh and remains blocked until current authoritative evidence resolves the outcome. Authentication/authority changes retain stronger teardown rules.
 
-A successful mutation followed by a failed read must say the save succeeded but refreshing failed; do not present it as a failed mutation or offer a new duplicate submission. Refresh dashboard/queue counts from authoritative reads; never decrement or infer global totals locally. Refresh only the changed row when possible; preserve unsent text in other queue rows.
+Acceptance: search + intake + another support draft + selected proof file survive unrelated verified Support/renewal/staff/remittance actions; same-record conflict; mutation success/read failure; manual Refresh; double click; abort; same-user token refresh; identity/permission change. Do not manufacture successful legacy renewal approval fixtures: use R8's real terms contract.
 
-Routine data refresh, including the Management header Refresh action, must not silently discard drafts. Refresh read-only summaries/lists and relevant server-state checks while retaining unrelated inputs. Where an existing protected editor necessarily resets its own controls, require an explicit discard choice for dirty input; do not serialize every form into a generic cache. Logout, identity/device change, authorization change, or expiry must still dispose old state. Same-identity token rotation must not lose the existing Cash Disbursement uncertain-request recovery.
+## R3 — Independent Today and guarded task loading (retained)
 
-Acceptance: input a search value and intake reference; navigate; submit mocked Support, Renewal, and Staff invitation independently; values survive each save. Also cover another unsent support response, failed post-save refresh, manual Refresh, duplicate submission, and disposal.
+Render shell/placeholders promptly; load account and dashboard independently. Today never awaits loan operations, portfolio lists, statements, journals, trial balance, audit, staff, renewals, remittance, personal Updates or proof lists. Use authoritative dashboard queue metrics or explicit unavailable counts/neutral links, not zeros from unopened tasks.
 
-## R3 — Load Today without waiting for other groups
+Load secondary data AND module mounts on first activation. Deduplicate activation reads/listeners, retry locally and retain mounted editors through navigation. Use current session getters, per-mount generations/abort and child cleanup. Late data cannot cross identity or permission boundaries. New renewal/remittance controls must obey current online/uncertainty state even if mounted after a lock. Initial account/dashboard failure must not destroy unrelated authorized read navigation.
 
-Render the shell and placeholders immediately. Load account/profile and dashboard information independently; dashboard failure should not remove navigation or break Account. Today must not await loan operations, portfolio lists, statements, journals, trial balance, audit, staff, or other non-Today task loads. Use dashboard-provided queue metrics where available. Otherwise use neutral links or an explicit unavailable count, not zero from an unloaded queue.
+## R4 — Staff phone readability and device focus (retained)
 
-Initialize non-Today groups/tasks on first activation, not merely hide already-eager data loads. A failing task gets a local retry; other groups remain usable. Deduplicate simultaneous activation loads. Keep loaded editor DOM during navigation. Scope load state, listeners, and results to the mounted account/permission session, and dispose all registered child cleanups on abort. Use current authority before delayed mounts; permission revocation or a new account cannot inherit a late response.
+Reuse `mobile-card-table` below the existing 680px breakpoint with Staff-scoped labels/classes; retain the seven desktop columns. Phone cards prioritize name/status, role/device count and readable Manage devices/View account. Keep username/email/date accessible without shrinking fonts or 48px controls. Preserve exact IDs/counts, selected row and permission-specific actions.
 
-Acceptance: hold only loan operations indefinitely and confirm Today is usable; also hold accounting/staff/audit. Visit a group twice without duplicate mounting/listeners; fail one group and recover locally. No speculative hidden-screen refresh should recreate an unrelated form.
+Opening current device detail moves focus into its heading/Close only if the user has not deliberately moved elsewhere. Close returns to the exact opener or visible Staff heading. Late responses cannot steal focus. Test long names/emails, 390/320px, read-only account access, rapid selection, busy/error/denied states and opener removal. No-overflow alone is not readable UI acceptance.
 
-## R4 — Staff mobile readability and device focus
+## R5 — Focused local tasks and precise destinations (retained, extended)
 
-Reuse the existing `mobile-card-table` pattern below its current 680px breakpoint. Add explicit labels and a Staff-scoped class rather than changing all tables. On desktop retain the seven-column table. On phones prioritize name/status, role/device count, then a readable Manage devices or View account action. Username/email/date remain available without narrow character stacks. Do not shrink typography or touch targets to force columns to fit.
+Keep six top-level groups and IDs. Use local permission-filtered hide/show views, not duplicated workflows:
 
-Preserve account IDs, selected-row state, exact server device count, permission-dependent action, and protected device reloads. Opening details moves focus to a focusable panel heading/Close control after current selection resolves, unless the user deliberately moved elsewhere during loading. Close returns focus to the originating visible control, or a sensible Staff heading if it no longer exists. Stale responses never steal focus. Busy controls and permission/error panels retain correct Close/recovery behavior.
-
-Acceptance: desktop plus 390/320px; long names/emails; no device permission; rapid account selection; slow read with user focus moved; Close; mutation failure. No horizontal document overflow alone is not visual acceptance: manually inspect names, status, dates, and buttons.
-
-## R5 — Local task navigation and precise destinations
-
-Keep the six top-level labels and IDs. Add small permission-filtered local navigation within the three dense groups. Use the existing hide/show approach; do not create a second workspace or duplicate workflows.
-
-| Group | Local tasks, default first permitted |
+| Group | Local tasks; first permitted is default |
 | --- | --- |
 | Clients & loans | Portfolio; Office applications; Renewals; Payment evidence; Client accounts |
-| People & operations | Staff & devices; Areas; Employee work; Client support; Alerts & audit |
+| Collections | Collection actions; Loan operations & history; Past-due report; Remittance review |
 | Accounting | Financial statements; Journal & Trial Balance; Cash Disbursement; Accounting workflows |
+| People & operations | Staff & devices; Areas; Employee work; Client support; Alerts & audit |
+| Account | Profile & security; My updates |
 
-Office applications contains the existing four-step intake/CIF/application/first-loan workflow unchanged. Accounting workflows contains existing capital/source/tax/ECL/close controls unchanged; do not invent an Accounting Overview calculation. Preserve journal/trial-balance subviews, collection-action subviews, and existing guided Office reference revalidation.
+Preserve the four guided Office steps and reference revalidation, existing collection-action subviews, journal/TB controls, and accounting capital/source/tax/ECL/close workflows. No new financial Overview calculation. Task choice stays mount-local and keyboard-operable with clear selected state.
 
-All accessible destinations must be keyboard-operable with a clear selected state. Remember task choice only in the current mounted session. Open known alerts to the exact permitted local task: staff_devices -> Staff & devices; renewals -> Renewals; support -> Client support; client_registrations -> Client accounts; financial_accounting -> Accounting workflows. For remittance_review, resolve the existing authorized remittance surface instead of claiming a read-only history panel is a review action. If a precise permitted target is absent, show a read-only item or an honestly labeled group destination. Unknown codes remain noninteractive. No arbitrary URL, record ID, or permission inferred from a label.
+Map known alert codes to actual tasks: staff_devices -> Staff & devices; renewals -> Renewals; support -> Client support; client_registrations -> Client accounts; financial_accounting -> Accounting workflows; remittance_review -> R9's recipient remittance queue. A permitted receiver must reach real review, not a collection-history placeholder. Wrong/absent authority gets an honest unavailable/read-only destination. Unknown codes are noninteractive; do not invent object IDs or URL targets. Personal unread shortcuts go to My updates, not audit.
 
-Local navigation can change private content without changing the top-level ID. Before hiding/replacing a capture panel, stop or invalidate active/preparing capture through existing controls; re-evaluate eligibility after the change. Keep exact `data-screen-share-section` boundaries; never move a capture marker onto a whole group to make tests pass. Use mocked lifecycle tests, not a real capture session.
+Before hiding/replacing an active or preparing captured panel, stop/invalidate existing capture and re-evaluate eligibility. Preserve exact `data-screen-share-section` markers; never move one to the group ancestor or make new private financial/photo panels eligible. Test mocked tracks/visibility, not real capture.
 
-## R6 — Shorter visible lists without losing evidence
+## R6 — Compact audit/device presentation, evidence retained (retained)
 
-Retain all authorized loaded records and their server order/identity. No deduplication, deletion, new backend filtering contract, or inference about unloaded records.
+Keep all authorized loaded records and original order/identity. Device filters remain All/Active/Pending/Revoked with counts. First account-open defaults Pending if present, else Active if present, else All; explicit selection persists through refresh even if empty. Show 10 matching rows, add 10 per Show more and label visible/loaded counts. All reaches unknown statuses. Actions retain original device identity after filtering.
 
-Device details: retain All/Active/Pending/Revoked and counts. On first opening an account, default to Pending if any pending devices exist, otherwise Active if any active devices exist, otherwise All. Preserve the user's explicit filter through a status mutation/refresh, including an empty result. Render/show the first 10 matching rows and a **Show more** control adding up to 10; expose displayed/loaded counts. All eventually exposes every loaded record, including unknown statuses. Keep actions keyed to original identity, not a reindexed filtered subset.
+Audit uses compact rows and expanded facts, first 10 matching events then batches of 10. Preserve severity, timestamps, maker/checker/reason, `visible_domains`, `window_days=30&limit=100`, and immutable event identity. Filter resets cap, not data. Distinguish server authorized total/time window from loaded/visible rows. Do not delete or deduplicate similar-looking evidence. Test 36 devices/two Pending; audit 0/12/100, unknown domain and server total greater than loaded.
 
-Audit: use compact rows and optional expanded facts; start with 10 matching returned events and Show more in blocks of 10. Preserve severity, timestamps, maker/checker/reason, domain chips from visible_domains, the protected `window_days=30&limit=100` request, and permanent event identity. Distinguish loaded/visible counts from server authorized total and time window. Filter changes reset the display cap, not the data. Alerts and history remain distinct.
+## R7 — Targeted density and copy polish (retained)
 
-Acceptance: 36 devices with exactly two Pending; inspect all records via All/Show more; mutate after filtering and prove correct device ID. Audit snapshots of 0/12/100 events, duplicate-looking events, unknown domain, total greater than loaded count, and repeated filter/show-more actions.
+Today keeps Portfolio/Collections and prioritizes nonzero attention/useful actions; verified zero queues become compact but remain accessible. Unavailable never becomes nothing to do. Do not invent metrics/charts. Cash Disbursement mounts only on task selection; retain Prepare draft, does-not-send-money wording, receipt requirements, uncertainty recovery and separate posting. Purpose/evidence fields use full-row width; no new uploader/schema.
 
-## R7 — Targeted visual polish
+Account profile targets max-width 720px, fluid on phones; keep Workspace/Additional access and My password/admin reset distinct. Reuse colors/spacing/48px controls/readable typography/reduced motion and primary/secondary hierarchy. Remove only redundant nesting/copy, not warnings or status. Shared CSS/helper changes require other-role regression.
 
-Today: retain Portfolio and Collections information; prioritize nonzero Needs attention and useful work actions. Compact successfully loaded zero queues into a quiet summary/disclosure that still exposes their exact labels/counts. Unknown/unavailable is never folded into “nothing to do.” Do not invent charts or performance metrics.
+## R8 — Real Management renewal workflow and verified decisions (new)
 
-Accounting: selecting the group must not mount/fetch the full Cash Disbursement editor unless that task is selected. Preserve the does-not-send-money explanation, Prepare draft label, pending recovery, receipt requirements, and separate journal posting. Give Purpose and Supporting evidence full-row width within the existing form layout; no file uploader or request-schema change is required.
+Stop offering approval through legacy `POST /api/v1/management/renewals/{id}/review`; its repository explicitly refuses approval. Do not weaken that backend guard. Use `GET /api/v1/management/renewal-workflow?status=pending|approved|rejected` and protected `POST /api/v1/management/renewals/{id}/terms`, under current `renewal.manage` authority.
 
-Account: constrain profile content to a readable maximum width (target 720px, fluid on phones). Keep Workspace and Additional access distinct, and keep My password separate from higher-risk account reset. Do not hide actual authority cosmetically.
+Render borrower/loan/request identity, requested/current amounts, Collector recommendation/reason/comment, client message, approved terms, override/review note, signers and readiness, office-processing, locked offset/net cash, custody/photo/activation states. Missing money/readiness is unavailable, not zero/approved. The richer query is capped at 200 per status at baseline, not lifetime history. Show returned-count limitations without invented offset support.
 
-Shared styling: reuse colors, 48px baseline controls, spacing tokens, readable font sizes, reduced-motion behavior, and action hierarchy. Scope Management-specific density changes. Remove redundant nesting/copy only when it does not remove required warnings or status context. Verify Client/Employee/Collector screens after any shared CSS/module change.
+Terms form: approved principal (exact decimal input), required signer parties/account identities, office-processing choice, review note and override reason where required. Missing Collector recommendation blocks decision; do_not_recommend requires actual Management override explanation. Rejection requires reason. Signer identity verification is an explicit evidence-backed act, never a default checked flag; do not guess account IDs from names or mark absent evidence verified. Preserve own-account signing and borrower-only acceptance/cash confirmation. Office-processing shows the existing boundary, not a new remote bypass.
 
-## Release evidence and completion
+Connect authorized continuation using existing release-to-collector, handover-photo view, proof-review and activate contracts. Validate prerequisites and returned same-request state; never calculate offset/net locally. Cash lock requires authoritative execution; missing execution/CIF/readiness gets a truthful blocker. Proof viewing is private and current-request scoped; no external storage or shareable URL. Clear/revoke photo objects on switch, denial and disposal.
 
-Every implementation task requires a failing behavioral test before its fix, passing focused tests afterward, and a checkpoint tied to its exact commit. Existing presentation assertions may change to reflect intentional lazy/local navigation, but permission, identity, uncertainty, and privacy assertions must not be weakened.
+**Important existing behavior:** approving handover proof can call `_try_activate` inside the backend. Confirmation must disclose that approval may also activate if requirements pass. Do not promise review-only effects or automatically call activate again. A successful photo review can remain activation-blocked after CIF changes; show saved review plus the separate blocker. Explicit Activate is only for eligible pending activation, with a separate deliberate action.
 
-Final evidence includes all six sections at 1440, 390, and 320px (18 layout samples), long and empty data, error/recovery, keyboard and 200% zoom checks, real browser screenshots, console results, and exact-head existing CI. Visual data is synthetic. Browser-automation limitations must be reported; a DOM string test is not a screenshot or production acceptance.
+Before each consequential action, re-read the appropriate authorized request/evidence and invalidate changed terms/selection/confirmation. Do not claim a client-side read atomically pins a server revision. Current endpoints do not all accept expected versions/request UUIDs, and latest-photo review has version/concurrency limits; do not invent request fields. Map exact available metadata and disclose an unresolvable pinning gap under R14 instead of faking proof certainty.
 
-Before review completion, reconcile every requirement R1–R7 to tests and evidence; leave unverified items unchecked. Synchronize GitHub, Notion, and Create State with branch, SHA, outcomes, limitations, and next action. No merge/deploy or Master acceptance checkbox is authorized by completion of this plan.
+Verify response request ID, borrower/loan identity, expected action-specific status/fields and exact approved amount where applicable. `{}`, wrong ID, contradictory status, timeout/5xx or unknown outcomes must not announce approval/release, discard the attempt or automatically POST again. Retain blocked state and reconcile by authoritative read; a read that cannot disambiguate remains blocked. Mere HTTP success is insufficient. Keep later borrower/signature/custody/activation events independent.
+
+Acceptance covers recommended/not-recommended/missing recommendation, principal/signers/override, office-only, same-name borrowers, all statuses, malformed results, concurrent change, double click, denied/offline, saved review/CIF activation blocker, proof approval with/without activation, private photo disposal and no auto-repeat.
+
+## R9 — Management recipient remittance review and history (new)
+
+Mount the existing shared `remittance-review.js` path inside Collections for the actual permitted receiver; role registry metadata is not a screen. Reuse authorized `/api/v1/notifications` and `/api/v1/remittances` reads. Distinguish `remittance.view` from `remittance.receive`; view-only has history, not receive controls. Current shared review requires both and exact actor-recipient identity. A Management role is not authority to receive for another recipient or accept its own outgoing cash.
+
+Use the existing notification acceptance contract `/api/v1/notifications/{id}/accept-remittance` when reusing the receiver component, and the existing `/api/v1/remittances/{id}/reject` for rejection. Do not issue both notification acceptance and raw receive for one action. Acceptance returns notification-shaped custody confirmation; rejection returns a remittance record. Validate them separately. Retain raw receive as an existing backend capability, not a second UI path.
+
+Load and verify the complete matching pending record: sender/recipient/date, exact total/counts, all payment items/receipts/covered dates, refund outflows/evidence, notes and saved status/history. Missing/malformed/inconsistent evidence blocks decisions; it is not empty. No local sum, second manually entered remitted total or shortage tolerance is introduced.
+
+Both decisions require full-evidence review acknowledgment. **Accept cash custody** additionally requires the user to confirm physically receiving/counting cash equal to the server total. **Reject remittance** requires a reason, but never requires falsely affirming receipt of matching cash. Close is not Reject. Confirmations invalidate on different record, changed evidence or authority. Sender responsibility is not cleared until verified server acceptance.
+
+Use one decision lock for Accept/Reject. Wrong identity/status, `{}`, timeout or ambiguous outcome blocks both; do not auto-retry or switch decisions. Reconcile exact notice/remittance status with current reads; failure or ambiguity stays locked. Verified success updates only affected notice/detail/counts; preserve unrelated drafts. Show submitted/reviewed/received/rejected times and reason without changing immutable history. Add initial/detail local retry and open/Close focus restoration, respecting user movement.
+
+Coordinate extension with Employee #487 and Collector #486; keep the shared cleanup return and other-role behavior compatible. Collector sender review does not gain receiver authority. Notifications/records not belonging to the actor remain nonactionable even if injected in fixtures.
+
+## R10 — Loan detail and complete supported portfolio browsing (new)
+
+Add View loan details from the exact loaded `loan_id`/`client_id`, not borrower-name fallback. Display existing API facts: principal/balance/agreed daily amount, paid amount/percentage, release/due/last-payment/ADV dates, PASS and payment counts, renewal status, loan/client status and source state version when useful. Missing values are unavailable; no local percent or balance calculation. Keep cards compact and detail mobile-readable with Close/focus. Refresh invalidates a changed/removed selection. Viewing never opens an editor or grants broader borrower access.
+
+Add Previous/Next page with explicit `limit=100` and `offset` using the existing query/status contract (max limit 200, not a reason to request everything). Changing query/status resets offset to zero. Fewer than 100 returned rows ends that query page chain; a full page may offer Next, and an empty next page remains honest/recoverable with Previous. No invented total/has_more/cursor; global active summary is not a filtered-results total. Show current page and number of returned loan entries, preserve server order/IDs, update R1 summary from each accepted response and reject stale searches/pages. Offset paging is not a stable snapshot under concurrent writes; disclose changed results and provide fresh search/refresh.
+
+Test 150 global loans with 100 then 50 returned, zero/paid/no-match, failed next page, rapid queries, repeated names, two loans/client, missing detail fields and removal/denial. Broader borrower schedule/statement/document controls are R14 contract assessment, not Client/Collector endpoint reuse.
+
+## R11 — Financial statement period selection and local recovery (new)
+
+Extend the existing statements loader to accept `period_id`; reuse authorized `fiscal_periods` from `GET /api/v1/management/financial-accounting` rather than inventing a GET fiscal-periods endpoint. The statements API still requires Management plus `accounting.view`. Share an existing successful read within the mount when safe, without eagerly mounting the full accounting editor.
+
+Default selection follows the returned default statement's period; explicit selection loads `/api/v1/management/financial-accounting/statements?period_id={uuid}`. Show period label/dates/status from the returned pack. Validate response period equals explicit selection; Loading/unavailable replaces current-looking figures during switches, with local Retry preserving selection. Late period A cannot overwrite B. No-period, denied and removed-period states are distinct; no auto-create/reopen or writes.
+
+Keep posted-General-Ledger-only totals, exact amounts, draft exclusion, closed-period rules and existing financial statements/journal/TB/export. A period selector does not deliver a new printable statement pack. R14 maps additional output requirements.
+
+## R12 — Personal Updates separate from audit (new)
+
+Add My updates inside Account and a truthful Today unread shortcut without adding a seventh top-level group. Use own-recipient `GET /api/v1/activity-notifications` and `/api/v1/activity-notifications/{id}/read`. Initial load is local/on demand, not a Today prerequisite. Validate notification/recipient/read state and update the affected row only; failed or wrong-user result is not success. Audit is permanent evidence and is never marked read in place of personal updates.
+
+Show 30 loaded records then batches of 30, preserving all distinct returned items/order; fixture 65 progresses 30/60/65. Baseline API is limit-only (default100/max200); do not invent offset paging or lifetime completeness. Visible/loaded/unread-among-loaded and authoritative dashboard unread totals are distinct. Refresh global metrics authoritatively, not by assuming the loaded list is complete.
+
+Related-record links require verified producer type/metadata and current authorized object resolution. Remittance goes to the actual recipient queue; loan/renewal/Support uses exact owned/permitted IDs. Unknown/malformed/absent target stays neutral or an honestly labeled queue link, never arbitrary URLs or a financial action. Retain draft nodes, guard locks and focus on local reads/mark-read/navigation; abort across scope change.
+
+## R13 — Local proof retry and supported queue history (new)
+
+Initial Management payment-proof list failure must retain a local Retry control. Keep paging/current-version review/correction history, no-payment-posted wording, byte/file validation, role mode and exact uncertain-submission lock. Retry replays a read only; it cannot clear an unresolved review or remount a dirty editor. Coordinate `payment-proofs.js` with #488 and preserve Client upload/file behavior.
+
+Renewal status/history is covered by R8's richer pending/approved/rejected query. Support adds local status filtering/paging from actual `SupportStatus` and existing Management support API; map the executable allowed values before binding controls, with no invented all-status query. Preserve current review actions, another row's unfinished response and changed-state checks. History is read-only unless the backend currently authorizes an action. Unknown/failed/denied is not an empty queue. Refresh, filter changes and selected-object links follow R2, including deliberate discard for unavoidable same-editor replacement.
+
+## R14 — Borrower/report/output and integration gap register (new)
+
+Complete an evidence-backed matrix: requested screen/output; existing endpoint/source; exact role/permission and object scope; available fields; implement-now versus blocked/follow-up; tests/evidence. Cover Management borrower details, broader schedules/statements/receipts/issued documents, financial-statement print packs, existing accounting-review ZIP, renewal office-processing/execution/photo-version limits, receiver-vs-sender remittance actions, unsupported notification identifiers and shared Employee work/pay.
+
+Existing supplied-field details, pagination, periods, renewal workflow, remittance receiving, personal Updates and local recovery above are required implementations—not optional assessments. For a missing broader output contract or unsafe metadata/version gap, record the precise blocker and smallest proposed follow-up. Do not create fake buttons, reuse Client-only/assigned-Collector APIs, query financial tables directly, expand grants or claim that a disabled stub is completion. No new endpoint/backend change is authorized by this planning revision. Share Employee work/pay improvements from #487 rather than rebuilding them inside Management.
+
+## Integrated acceptance and handoff
+
+Every original R1–R7 and new R8–R14 needs an explicit implementation/test or documented contract-gap disposition. Task IDs remain stable with inserted stages. Product stages use failing behavioral tests, focused passing checks, reviewable commits and exact-SHA checkpoints. Do not weaken identity/permission/uncertainty assertions or count an old docs-only Green as implementation evidence.
+
+Keep 18 core layouts (six groups at1440/390/320) and add renewal terms/all continuations and blocked states, full remittance evidence/rejection/history, paged loan detail, periods, Updates and failed-proof retry at those widths. Include long names/money, 36 devices/two Pending, 100 audit records, 150-loan paging, 65 updates, empty/malformed/error cases, keyboard/Close/focus,200% zoom/reduced motion. Browser screenshot/no-overflow alone is not functional/security acceptance.
+
+Test exact malformed-response behavior, selected-record changes during reads/confirmations, proof-review automatic activation semantics, recipient mismatches, online-only/uncertain locks, same-user token refresh, authority teardown, privacy and other-role shared-shell/CSS/helper/PWA regression. Use mock/disposable data, never live financial probes. Verify public output contains no private/test data and new modules upgrade coherently.
+
+Run existing portal/build/public-output checks and the three required CI jobs on the actual final integration head without duplicate unchanged validation. Keep pending/blocked items explicit. Synchronize GitHub, Notion and Create State with exact branch/head, completed/pending stages, checks, evidence, R14 dispositions and next action; disclose failed connectors. No merge, mark-ready, deploy or Master acceptance is authorized.
 
 Implementation checklist: [2026-10-02-management-web-ui-completion.md](../plans/2026-10-02-management-web-ui-completion.md).
