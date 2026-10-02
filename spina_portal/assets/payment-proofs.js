@@ -105,7 +105,7 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
     const paging=`<div class="inline-actions">${offset>0?'<button type="button" data-proof-previous>Previous</button>':''}${listing.has_more?'<button type="button" data-proof-next>Next</button>':''}</div>`;
     if(management&&records.length===0&&!proof){
       root.innerHTML=`<div class="payment-proof-empty-row" data-payment-proof-empty>
-        <div><strong>${offset>0?'No payment evidence on this page.':'No payment evidence awaiting review.'}</strong>
+        <div><strong>${!loaded?'Payment evidence has not loaded. Retry this read.':offset>0?'No payment evidence on this page.':'No payment evidence awaiting review.'}</strong>
           <span class="meta">Evidence review does not post a payment or change a borrower balance.</span></div>
         <button type="button" class="button button-secondary" data-proof-refresh>Refresh</button>
       </div>
@@ -116,7 +116,7 @@ export function mountPaymentProofs({root, api, loans = [], loansState, getLoansS
         <button type="button" class="button button-secondary" data-proof-refresh>Refresh</button>
         ${records.length?records.map((record)=>`<article class="list-item"><strong>${escapeHtml(record.loan_number||'Loan')}</strong>
           ${management?`<span>${escapeHtml(record.client_name||'')} ${escapeHtml(record.client_code||'')}</span>`:''}${badge(record.status)}
-          <button type="button" class="button button-secondary" data-proof-detail="${escapeHtml(record.proof_id)}">Open evidence and history</button></article>`).join(''):emptyState('No payment-proof submissions on this page.')}
+          <button type="button" class="button button-secondary" data-proof-detail="${escapeHtml(record.proof_id)}">Open evidence and history</button></article>`).join(''):emptyState(loaded?'No payment-proof submissions on this page.':'Payment-proof records have not loaded. Retry this read.')}
         ${paging}
         ${proof?`<article class="notice-card"><h3>${escapeHtml(proof.loan_number||'Payment proof')}</h3>${badge(proof.status)}
           ${proof.latest_review?.reason?`<p>Review note: ${escapeHtml(proof.latest_review.reason)}</p>`:''}
