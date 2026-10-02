@@ -101,6 +101,15 @@ restore an acknowledgment-only receiving bypass or reinterpret a partially
 returned credit as unrecorded cash. Retained runtime compatibility checks and
 backup/restore verification are rollout prerequisites.
 
+For remittances with no counted state, ordinary feature-off receiving remains
+available only when the server explicitly permits it for that remittance and
+recipient. A missing response, old server or access denial never selects this
+path. The server checks the rule again when receiving is committed.
+
+If an account has both Collector and independent staff permissions, its selected
+own view stays own through details and exports. Staff access remains a separate
+authorized view; choosing the own page does not grant approval rights.
+
 ## Blocked and unconfigured paths
 
 Future credit application records explicit intent only where its capability is
@@ -116,8 +125,15 @@ decision, not negative credit or an automatic wage deduction. Unmapped GL postin
 also stays blocked; no tax, income or accounting policy is invented here.
 
 Owner opening anchors require an actual existing opening, cutoff, amount,
-evidence and overlap review. Activation recognizes an already-included liability
-without adding cash. Missing opening values are unavailable, not assumed zero.
+evidence and overlap review. A credit anchor recognizes an already-included
+liability; an unidentified-excess anchor creates a pending identification case
+without assuming Collector entitlement. Neither adds cash. All anchors share
+the opening's capacity, and activation checks overlap again using the actual
+cash count date. Missing opening values are unavailable, not assumed zero.
+
+A matched cash reconciliation does not resolve unidentified sources or settle
+Collector liabilities. Later source classification requires review of affected
+closed periods while preserving their original captured evidence and cash.
 
 See the [strict API contract](collector-surplus-api-contract.md),
 [source map](collector-surplus-contract-map.md) and accepted design for exact
