@@ -394,7 +394,7 @@ export function mountManagementRenewals({
       const message=command.action==='terms'?'Terms saved.':command.action==='proof-review'?'Photo review saved. '+(data.request.activation_status==='active'?'Renewal is active.':'Activation remains separate or blocked. '+(data.message?'Complete required CIF re-verification and refresh before activation.':'')):command.action==='activate'?'Activation saved.':'Server execution validated; cash release recorded.';
       saved(node,command,data,message);
       try{
-        await onSaved?.(data.request);
+        if (await onSaved?.(data.request) === false) throw new Error('Overview refresh failed.');
       }
       catch{
         local(node,message+' Overview refresh failed; the saved action must not be repeated.');
