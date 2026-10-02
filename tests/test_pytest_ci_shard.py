@@ -139,3 +139,27 @@ def test_nested_paths_with_same_basename_use_relative_posix_file_keys(suite):
         "zeta/test_a.py",
     }
     assert selected == nodes(collect(suite, {INDEX: "0", COUNT: "2"}, reverse=True))
+
+
+def test_eight_shards_cover_larger_suite_once_without_splitting_files(suite):
+    for name in "fghijkl":
+        (suite / f"test_{name}.py").write_text(
+            "def test_case_0():\n    assert True\n\ndef test_case_1():\n    assert True\n",
+            encoding="utf-8",
+        )
+    all_nodes = nodes(collect(suite))
+    assert len(all_nodes) == 26
+    shards = []
+    for index in range(8):
+        settings = {INDEX: str(index), COUNT: "8"}
+        selected = nodes(collect(suite, settings))
+        assert selected
+        assert selected == nodes(collect(suite, settings, reverse=True))
+        files = {node.split("::")[0] for node in selected}
+        assert files == {
+            f"test_{name}.py" for n, name in enumerate("abcdefghijkl") if n % 8 == index
+        }
+        assert selected == {node for node in all_nodes if node.split("::")[0] in files}
+        assert all(not selected & previous for previous in shards)
+        shards.append(selected)
+    assert set().union(*shards) == all_nodes
