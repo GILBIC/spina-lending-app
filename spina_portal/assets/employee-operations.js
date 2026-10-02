@@ -195,7 +195,7 @@ function recordMarkup(workspace,record,index) {
   const components=asArray(data.components);
   const rows=(name,label,fields)=>asArray(data[name]).length?`<h4>${label}</h4><div class="employee-evidence-rows">${data[name].map(row=>`<dl class="employee-details">${fields.map(key=>`<div><dt>${esc(key==='due_date'?'Due date':titleCase(key))}</dt><dd>${display(key,row[key])}</dd></div>`).join('')}</dl>`).join('')}</div>`:'';
   const original=data.request_kind==='correction'?`<h4>Original recorded events for the requested date</h4>${workspace.attendance.filter(event=>event.employee_id===record.employee_id&&manilaDate(event.payload.captured_at)===data.work_date).map(event=>`<p>${esc(titleCase(event.payload.event_type))} · ${esc(event.payload.captured_at)} · ${esc(titleCase(event.status))}</p>`).join('')||'<p>No original events recorded.</p>'}`:'';
-  const proposed=object(data.proposed_terms)?`<div class="notice-card"><h4>Proposed advance terms awaiting review</h4><p>${esc(data.proposed_terms.reason)}</p><p>Employee agreement: ${esc(data.proposed_terms.employee_acknowledgment)}</p><p>Payroll authorization: ${esc(data.proposed_terms.payroll_authorization)}</p><table><thead><tr><th>Proposed due date</th><th>Proposed installment</th></tr></thead><tbody>${asArray(data.proposed_terms.installments).map(item=>`<tr><td>${esc(item.due_date)}</td><td>${currency(item.amount)}</td></tr>`).join('')}</tbody></table></div>`:'';
+  const proposed=object(data.proposed_terms)?`<div class="notice-card"><h4>Proposed advance terms awaiting review</h4><p>${esc(data.proposed_terms.reason)}</p><p>Employee agreement: ${esc(data.proposed_terms.employee_acknowledgment)}</p><p>Payroll authorization: ${esc(data.proposed_terms.payroll_authorization)}</p><div class="employee-evidence-rows" data-employee-proposed-installments>${asArray(data.proposed_terms.installments).map(item=>`<dl class="employee-details"><div><dt>Proposed due date</dt><dd>${esc(item.due_date)}</dd></div><div><dt>Proposed installment</dt><dd>${currency(item.amount)}</dd></div></dl>`).join('')}</div></div>`:'';
   return `<article class="data-card employee-record"><div class="section-heading"><h3>${esc(record.employee_id?employeeName(workspace,record.employee_id):COLLECTIONS[index.split(':')[0]])}</h3>${badge(record.status)}</div>
     <p class="meta">Updated ${esc(record.updated_at||'')}</p><p class="meta">Record reference: ${esc(record.id)}</p>
     <dl class="employee-details">${scalar.map(([key,value])=>`<div><dt>${esc(LABELS[key])}</dt><dd>${display(key,value)}</dd></div>`).join('')}</dl>
@@ -242,8 +242,8 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     let target=null;
     if(opener?.recordId){
       target=[...root.querySelectorAll('[data-employee-action]')].find(button=>{
-        const [key,index]=button.getAttribute('data-employee-record').split(':');
-        return button.getAttribute('data-employee-action')===opener.action&&workspace?.[key]?.[Number(index)]?.id===opener.recordId;
+        const [key,id]=button.getAttribute('data-employee-record').split(':');
+        return button.getAttribute('data-employee-action')===opener.action&&id===opener.recordId&&workspace?.[key]?.some(record=>record.id===id);
       });
     }else if(opener)target=root.querySelector(`[data-employee-create="${opener.action}"]`);
     const recordGroup=target?.getAttribute('data-employee-record')?.split(':')[0];
@@ -370,15 +370,12 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     const reviewer=workspace.capabilities.can_manage_staff||workspace.capabilities.can_configure
       ||workspace.capabilities.can_prepare_payroll||workspace.capabilities.can_approve_payroll
       ||workspace.capabilities.can_review_requests||workspace.capabilities.can_review_shortages;
-    const latestAttendance=workspace.attendance_days[0]||null;
-    const latestLeave=workspace.leave_balances[0]||null;
-    const recordCounts={
-      requests:workspace.requests.length,
-      tasks:workspace.tasks.length,
-      advances:workspace.advances.length,
-      shortages:workspace.shortages.length,
-      payroll:workspace.payroll.length,
-    };
+    const personal=key=>presentation==='employee'?workspace[key].filter(record=>workspace.actor.employee_id&&record.employee_id===workspace.actor.employee_id):workspace[key];
+    const latestAttendance=[...personal('attendance_days')].sort((a,b)=>String(b.work_date).localeCompare(String(a.work_date)))[0]||null;
+    const latestLeave=[...personal('leave_balances')].sort((a,b)=>String(b.as_of).localeCompare(String(a.as_of)))[0]||null;
+    const recordCounts=Object.fromEntries(['requests','tasks','advances','shortages','payroll'].map(key=>[key,presentation==='employee'&&!workspace.actor.employee_id?'Unavailable':personal(key).length]));
+    const dateHasRecords=workspace.attendance_days.some(day=>dateVisible(day.work_date))||workspace.attendance.some(record=>dateVisible(employeeWorkDate(record.payload.captured_at)));
+    const dateEmpty=presentation==='employee'&&!dateHasRecords?`<p data-employee-date-empty data-employee-view="workday">${allDates?'No attendance records loaded.':dateFrom===dateTo?'No record for this date.':'No records for this date range.'}</p>`:'';
     const setupNotice=workspace.setup_missing.length?`<div class="notice-card warning employee-setup-notice">
       <h3>Employee setup incomplete</h3>
       <p>Some employee or payroll information still needs setup before all records are available.</p>
@@ -386,7 +383,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       <p class="meta">Missing setup does not mean zero pay.</p>
     </div>`:'';
     const summary=`<div class="employee-work-summary" data-employee-work-summary>
-      <article><span>Attendance</span><strong>${latestAttendance?esc(latestAttendance.work_date):'No records'}</strong></article>
+      <article><span>Latest attendance</span><strong>${latestAttendance?esc(latestAttendance.work_date):'No records'}</strong></article>
       <article><span>Leave</span><strong>${latestLeave?esc(latestLeave.available_minutes)+' min available':'Not configured'}</strong></article>
       <article><span>Requests</span><strong>${recordCounts.requests}</strong></article>
       <article><span>Tasks</span><strong>${recordCounts.tasks}</strong></article>
@@ -397,6 +394,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       <p class="meta" data-employee-connection></p>
       ${setupNotice}
       ${summary}
+      ${dateEmpty}
       ${presentation==='employee'?`<nav class="inline-actions" aria-label="Work and pay views">${Object.entries(VIEWS).map(([id,label])=>`<button class="button button-outline" type="button" data-employee-view-button="${id}">${label}</button>`).join('')}</nav>`:''}
       ${presentation==='employee'?`<section data-employee-view="workday"><h3>Loaded attendance dates</h3><label>From<input type="date" name="attendanceFrom" value="${esc(dateFrom)}" /></label><label>Through<input type="date" name="attendanceTo" value="${esc(dateTo)}" /></label><button class="button button-outline" type="button" data-employee-all-dates>${allDates?'Show current date':'Show all loaded dates'}</button><p>This filters loaded records. It does not fetch or delete earlier days.</p></section>`:''}
       ${workspace.capabilities.can_self_service?`<section class="employee-time" data-employee-view="workday"><h3>My attendance</h3><p>${esc(attendanceGuidance({events:workspace.attendance,employeeId:workspace.actor.employee_id,workDate:loadedDate}).label)}</p><div class="inline-actions">${[['clock_in','Clock in'],['break_start','Start break'],['break_end','End break'],['clock_out','Clock out']].map(([value,label])=>`<button class="button button-secondary" type="button" data-employee-attendance="${value}">${label}</button>`).join('')}</div><p>Record actual time. Paid or interrupted-break exceptions can be submitted for review.</p></section>`:''}
@@ -404,9 +402,9 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       <div id="${feedbackId}" data-employee-status role="status" aria-live="polite" tabindex="-1"></div>
       ${pending?'<div class="notice-card warning"><h3>Confirm previous submission</h3><p>The same request identity is retained. Check its result before creating any other change.</p><button type="button" class="button button-secondary" data-employee-check>Check saved result</button><button type="button" class="button button-outline" data-employee-retry>Retry same unchanged request</button></div>':''}
       ${editorMarkup()}
-      ${workspace.attendance_days.length?`<section><h3>Attendance day review</h3>${workspace.attendance_days.filter(day=>presentation!=='employee'||dateVisible(day.work_date)).map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
+      ${workspace.attendance_days.length?`<section data-employee-attendance-days><h3>Attendance day review</h3>${workspace.attendance_days.filter(day=>presentation!=='employee'||dateVisible(day.work_date)).map(day=>`<article class="data-card"><strong>${esc(employeeName(workspace,day.employee_id))} · ${esc(day.work_date)}</strong>${badge(day.status)}<p>Working minutes: ${esc(day.working_minutes)} · Unpaid break minutes: ${esc(day.unpaid_break_minutes)}</p>${asArray(day.issues).map(issue=>`<p>${esc(issue)}</p>`).join('')}</article>`).join('')}</section>`:''}
       ${workspace.leave_balances.length?`<section><h3>Leave balances</h3>${workspace.leave_balances.map(balance=>`<article class="data-card"><strong>${esc(employeeName(workspace,balance.employee_id))}</strong><p>As of ${esc(balance.as_of)} · ${balance.eligible?'Eligible':'Not yet eligible'}</p><p>Available: ${esc(balance.available_minutes)} minutes · Used: ${esc(balance.used_minutes)} · Reserved: ${esc(balance.reserved_minutes)} · Accrued: ${esc(balance.accrued_minutes)} · Verified opening: ${esc(balance.opening_minutes)}</p></article>`).join('')}</section>`:''}
-      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length} loaded)</summary><div class="employee-record-grid">${workspace[key].map((record,index)=>({record,index})).filter(({record})=>presentation!=='employee'||key!=='attendance'||dateVisible(employeeWorkDate(record.payload.captured_at))).map(({record,index})=>recordMarkup(workspace,record,`${key}:${index}`)+(presentation==='employee'&&key==='payroll'&&record.employee_id===workspace.actor.employee_id&&payslipPrintable(record)?`<button class="button button-secondary" type="button" data-employee-print-payroll="${record.id}" data-employee-print-version="${record.version}">Print payslip</button>`:'')).join('')}</div></details>`).join('')}`;
+      ${Object.entries(COLLECTIONS).filter(([key])=>workspace[key].length>0).map(([key,label])=>`<details class="employee-record-section" data-employee-collection="${key}"><summary>${esc(label)} (${workspace[key].length} loaded)</summary><div class="employee-record-grid">${workspace[key].filter(record=>presentation!=='employee'||key!=='attendance'||dateVisible(employeeWorkDate(record.payload.captured_at))).map(record=>recordMarkup(workspace,record,`${key}:${record.id}`)+(presentation==='employee'&&key==='payroll'&&record.employee_id===workspace.actor.employee_id&&payslipPrintable(record)?`<button class="button button-secondary" type="button" data-employee-print-payroll="${record.id}" data-employee-print-version="${record.version}">Print payslip</button>`:'')).join('')}</div></details>`).join('')}`;
     if(retained)root.querySelector('[data-employee-editor]')?.replaceWith(retained);
     renderedSelection=selected;
     listen(root.querySelector('[data-employee-all-dates]'),'click',()=>{allDates=!allDates;if(!allDates)dateFrom=dateTo=employeeWorkDate(now());render();});
@@ -424,7 +422,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     listen(root.querySelector('[data-employee-check]'),'click',()=>load({recover:true}));
     listen(root.querySelector('[data-employee-retry]'),'click',()=>{if(pending)void execute(pending);});
     for(const button of root.querySelectorAll('[data-employee-create]'))listen(button,'click',()=>editor(button.getAttribute('data-employee-create')));
-    for(const button of root.querySelectorAll('[data-employee-action]'))listen(button,'click',()=>{const [key,index]=button.getAttribute('data-employee-record').split(':');editor(button.getAttribute('data-employee-action'),workspace[key][Number(index)]);});
+    for(const button of root.querySelectorAll('[data-employee-action]'))listen(button,'click',()=>{const [key,id]=button.getAttribute('data-employee-record').split(':');const record=workspace[key]?.find(item=>item.id===id);if(record)editor(button.getAttribute('data-employee-action'),record);});
     for(const button of root.querySelectorAll('[data-employee-attendance]'))listen(button,'click',()=>attendance(button.getAttribute('data-employee-attendance')));
     listen(root.querySelector('[data-employee-cancel]'),'click',()=>{if(busy||pending)return;selected=null;editorStale=false;render();restoreFocus();});
     const form=root.querySelector('[data-employee-form]');
