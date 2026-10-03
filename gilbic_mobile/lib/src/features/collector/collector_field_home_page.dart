@@ -158,6 +158,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   }
 
   Future<void> _openCashRelease(CollectorRenewalRequest request) async {
+    if (!mounted || !_canReadRenewals) return;
     ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
     await _open(
       CollectorRenewalCashReleasePage(
@@ -171,6 +172,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
 
   void _showCashReleaseAlert(CollectorRenewalRequest request) {
     if (!mounted ||
+        !_canReadRenewals ||
         _lastCashReleaseAlertRequestId == request.requestId ||
         !request.canConfirmCashReceived) {
       return;

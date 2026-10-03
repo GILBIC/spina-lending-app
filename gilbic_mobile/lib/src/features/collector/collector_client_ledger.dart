@@ -4,6 +4,9 @@ import 'package:gilbic_mobile/src/features/collector/collector_loan_balance_head
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
+import 'package:gilbic_mobile/src/core/payments/combined_payment_submission.dart';
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 typedef CollectorEntryReason = String? Function(CollectorRouteEntry entry);
@@ -25,6 +28,8 @@ class CollectorClientLedgerSection extends StatelessWidget {
     required this.directPayBlockedReasonFor,
     required this.payingLoanIds,
     required this.pendingDirectLoanIds,
+    this.pendingDirectDrafts = const {},
+    this.pendingCombinedDrafts = const {},
     required this.onToggleClient,
     required this.onRecord,
     required this.onRecordCombined,
@@ -37,6 +42,8 @@ class CollectorClientLedgerSection extends StatelessWidget {
   final CollectorEntryReason directPayBlockedReasonFor;
   final Set<String> payingLoanIds;
   final Set<String> pendingDirectLoanIds;
+  final Map<String, PaymentSubmissionDraft> pendingDirectDrafts;
+  final Map<String, CombinedPaymentSubmissionDraft> pendingCombinedDrafts;
   final void Function(String clientId) onToggleClient;
   final CollectorEntryAction onRecord;
   final CollectorClientAction onRecordCombined;
@@ -87,6 +94,8 @@ class CollectorClientLedgerSection extends StatelessWidget {
               directPayBlockedReasonFor: directPayBlockedReasonFor,
               payingLoanIds: payingLoanIds,
               pendingDirectLoanIds: pendingDirectLoanIds,
+              pendingDirectDrafts: pendingDirectDrafts,
+              pendingCombinedDrafts: pendingCombinedDrafts,
               onToggle: () => onToggleClient(group.clients[index].clientId),
               onRecord: onRecord,
               onRecordCombined: onRecordCombined,
@@ -139,6 +148,8 @@ class _ClientRow extends StatelessWidget {
     required this.directPayBlockedReasonFor,
     required this.payingLoanIds,
     required this.pendingDirectLoanIds,
+    required this.pendingDirectDrafts,
+    required this.pendingCombinedDrafts,
     required this.onToggle,
     required this.onRecord,
     required this.onRecordCombined,
@@ -151,6 +162,8 @@ class _ClientRow extends StatelessWidget {
   final CollectorEntryReason directPayBlockedReasonFor;
   final Set<String> payingLoanIds;
   final Set<String> pendingDirectLoanIds;
+  final Map<String, PaymentSubmissionDraft> pendingDirectDrafts;
+  final Map<String, CombinedPaymentSubmissionDraft> pendingCombinedDrafts;
   final VoidCallback onToggle;
   final CollectorEntryAction onRecord;
   final CollectorClientAction onRecordCombined;
@@ -169,6 +182,8 @@ class _ClientRow extends StatelessWidget {
       directPayBlockedReasonFor: directPayBlockedReasonFor,
       payingLoanIds: payingLoanIds,
       pendingDirectLoanIds: pendingDirectLoanIds,
+      pendingDirectDrafts: pendingDirectDrafts,
+      pendingCombinedDrafts: pendingCombinedDrafts,
     );
     final chips = _statusChips(client);
 
@@ -320,9 +335,10 @@ class _TodayAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entry =
-        state.singleEntry ??
-        (client.loans.length == 1 ? client.loans.single : null);
+    final entry = state.pendingCombined
+        ? null
+        : state.singleEntry ??
+              (client.loans.length == 1 ? client.loans.single : null);
     final key = entry != null
         ? Key('record-collection-${entry.id}')
         : Key('record-client-${client.clientId}');
@@ -348,7 +364,9 @@ class _TodayAction extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 48),
         child: FilledButton(
           key: key,
-          onPressed: () => onRecordCombined(client),
+          onPressed: state.blockedReason == null
+              ? () => onRecordCombined(client)
+              : null,
           style: _buttonStyle(context),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -356,9 +374,13 @@ class _TodayAction extends StatelessWidget {
             children: [
               Text(state.pendingRetry ? 'Retry' : 'Pay'),
               Text(
-                _moneyShort(state.payableAmount),
+                state.retainedAmountText ?? _moneyShort(state.payableAmount),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: state.blockedReason == null
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: .38),
                 ),
               ),
             ],
@@ -382,9 +404,10 @@ class _TodayAction extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(label),
-            if (amount > 0 && (label == 'Pay' || label == 'Retry'))
+            if ((amount > 0 || state.retainedAmountText != null) &&
+                (label == 'Pay' || label == 'Retry'))
               Text(
-                _moneyShort(amount),
+                state.retainedAmountText ?? _moneyShort(amount),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: enabled
                       ? Theme.of(context).colorScheme.onPrimary
@@ -499,6 +522,8 @@ class _ClientActionState {
     required this.actionAmount,
     this.singleEntry,
     this.blockedReason,
+    this.pendingCombined = false,
+    this.retainedAmountText,
   });
 
   final List<CollectorRouteEntry> payableEntries;
@@ -509,15 +534,68 @@ class _ClientActionState {
   final double actionAmount;
   final CollectorRouteEntry? singleEntry;
   final String? blockedReason;
+  final bool pendingCombined;
+  final String? retainedAmountText;
 
-  bool get requiresAtomicCombinedPosting => payableEntries.length > 1;
+  bool get requiresAtomicCombinedPosting =>
+      pendingCombined || payableEntries.length > 1;
 
   factory _ClientActionState.from(
     CollectorRouteClientGroup client, {
     required CollectorEntryReason directPayBlockedReasonFor,
     required Set<String> payingLoanIds,
     required Set<String> pendingDirectLoanIds,
+    required Map<String, PaymentSubmissionDraft> pendingDirectDrafts,
+    required Map<String, CombinedPaymentSubmissionDraft> pendingCombinedDrafts,
   }) {
+    // Attempt type/amount come from the retained command, never from a newly
+    // paid snapshot or a changed count of payable loans for the same client.
+    final combined = pendingCombinedDrafts[client.clientId];
+    if (combined != null) {
+      final originalLoans = combined.legs.map((leg) => leg.loanId).toSet();
+      final entries = client.loans
+          .where((entry) => originalLoans.contains(entry.loanId))
+          .toList();
+      String? blocked = entries.length != originalLoans.length
+          ? 'Refresh the route to check the original payment.'
+          : null;
+      for (final entry in entries) {
+        blocked ??= directPayBlockedReasonFor(entry);
+      }
+      return _ClientActionState(
+        payableEntries: entries,
+        payableAmount: 0,
+        paying: entries.any((entry) => payingLoanIds.contains(entry.loanId)),
+        pendingRetry: true,
+        label: 'Retry',
+        actionAmount: 0,
+        blockedReason: blocked,
+        pendingCombined: true,
+        retainedAmountText: formatSpinaMoney(
+          requestMoney(combined.cashReceivedAmount),
+          compact: true,
+        ),
+      );
+    }
+    for (final entry in client.loans) {
+      final draft = pendingDirectDrafts[entry.loanId];
+      if (draft != null && draft.clientId == client.clientId) {
+        return _ClientActionState(
+          payableEntries: [entry],
+          payableAmount: 0,
+          paying: payingLoanIds.contains(entry.loanId),
+          pendingRetry: true,
+          label: 'Retry',
+          actionAmount: 0,
+          singleEntry: entry,
+          blockedReason: directPayBlockedReasonFor(entry),
+          retainedAmountText: formatSpinaMoney(
+            requestMoney(draft.amount),
+            compact: true,
+          ),
+        );
+      }
+    }
     final payable = <CollectorRouteEntry>[];
     for (final entry in client.loans) {
       if (directPayBlockedReasonFor(entry) == null) {

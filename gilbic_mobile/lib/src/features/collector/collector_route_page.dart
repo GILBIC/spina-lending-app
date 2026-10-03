@@ -223,6 +223,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       return common;
     }
 
+    if (_pendingPaymentLoanIds().contains(entry.loanId)) return null;
+
     if (entry.contractCollectionReady) {
       if (entry.contractTodayScheduledAmount <= 0) {
         return 'No scheduled payment is due today. Open payment details for voluntary payment or other actions.';
@@ -246,6 +248,17 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     final common = _commonWriteBlockedReason(loaded, entry);
     if (common != null) {
       return common;
+    }
+    if (_pendingCombinedDrafts.containsKey(entry.clientId) ||
+        _pendingDirectDrafts.values.any(
+          (draft) => draft.clientId == entry.clientId,
+        ) ||
+        loaded.route.entries.any(
+          (loan) =>
+              loan.clientId == entry.clientId &&
+              _payingLoanIds.contains(loan.loanId),
+        )) {
+      return 'A payment for this client is in progress or not confirmed. Check the same payment with Retry before starting another payment.';
     }
     final canAddPartialContractReceipt =
         entry.contractCollectionReady && entry.contractTodayUnpaidAmount > 0;
@@ -340,6 +353,18 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     if (_payingLoanIds.contains(entry.loanId)) {
       return;
     }
+    if (_pendingCombinedDrafts.containsKey(entry.clientId) ||
+        _pendingDirectDrafts.values.any(
+          (draft) =>
+              draft.clientId == entry.clientId && draft.loanId != entry.loanId,
+        ) ||
+        loaded.route.entries.any(
+          (loan) =>
+              loan.clientId == entry.clientId &&
+              _payingLoanIds.contains(loan.loanId),
+        )) {
+      return;
+    }
 
     setState(() => _payingLoanIds.add(entry.loanId));
     try {
@@ -417,9 +442,31 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteClientGroup client,
   ) async {
+    if (_pendingDirectDrafts.values.any(
+          (draft) => draft.clientId == client.clientId,
+        ) ||
+        loaded.route.entries.any(
+          (loan) =>
+              loan.clientId == client.clientId &&
+              _payingLoanIds.contains(loan.loanId),
+        )) {
+      return;
+    }
+    final pending = _pendingCombinedDrafts[client.clientId];
+    final originalLoans = pending?.legs.map((leg) => leg.loanId).toSet();
     final payable = client.loans
-        .where((entry) => _directPayBlockedReason(loaded, entry) == null)
+        .where(
+          (entry) => originalLoans == null
+              ? _directPayBlockedReason(loaded, entry) == null
+              : originalLoans.contains(entry.loanId),
+        )
         .toList(growable: false);
+    if (pending != null &&
+        payable.any(
+          (entry) => _commonWriteBlockedReason(loaded, entry) != null,
+        )) {
+      return;
+    }
     if (payable.length != 2 ||
         payable.where((entry) => _isSevenBySevenLoan(entry.loanType)).length !=
             1) {
@@ -851,6 +898,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
                   _directPayBlockedReason(loaded, entry),
               payingLoanIds: _payingLoanIds,
               pendingDirectLoanIds: _pendingPaymentLoanIds(),
+              pendingDirectDrafts: _pendingDirectDrafts,
+              pendingCombinedDrafts: _pendingCombinedDrafts,
               onToggleArea: _toggleArea,
               onToggleClient: _toggleClient,
               onRecord: (entry) => _payNow(loaded, entry),
@@ -876,6 +925,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
                     _directPayBlockedReason(loaded, entry),
                 payingLoanIds: _payingLoanIds,
                 pendingDirectLoanIds: _pendingPaymentLoanIds(),
+                pendingDirectDrafts: _pendingDirectDrafts,
+                pendingCombinedDrafts: _pendingCombinedDrafts,
                 onToggleClient: _toggleClient,
                 onRecord: (entry) => _payNow(loaded, entry),
                 onRecordCombined: (client) => _payCombined(loaded, client),
