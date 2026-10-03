@@ -332,9 +332,14 @@ def upload_evidence(
             if purpose != "recipient":
                 raise
             account = None
-            for suffix in ["receive", "resolve", "settle"]:
+            for upload_permission in [
+                "treasury.disbursement.record",
+                *[
+                    "treasury.collector_surplus." + suffix
+                    for suffix in ["receive", "resolve", "settle"]
+                ],
+            ]:
                 try:
-                    upload_permission = "treasury.collector_surplus." + suffix
                     account = require_account(
                         conn, actor, account_id, upload_permission
                     )

@@ -89,9 +89,19 @@ jobs:
         run: |
           # Source: microsoft/winget-pkgs, LibreOffice 26.2.5.2 installer manifest
           # Git blob: 63fdc92e77144fe63f8703dc8b2027ec0372db07 (x64 entry).
-          $url = 'https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.5.2/win/x86_64/LibreOffice_26.2.5.2_Win_x86-64.msi'
+          # The publisher's stable and archive endpoints serve the same pinned bytes.
+          # Keep an archive fallback when this release leaves the stable mirror set.
+          $urls = @(
+            'https://download.documentfoundation.org/libreoffice/stable/26.2.5/win/x86_64/LibreOffice_26.2.5_Win_x86-64.msi',
+            'https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.5.2/win/x86_64/LibreOffice_26.2.5.2_Win_x86-64.msi'
+          )
           $installer = Join-Path $env:RUNNER_TEMP 'libreoffice-26.2.5.2.msi'
-          Invoke-WebRequest -Uri $url -OutFile $installer -TimeoutSec 300
+          $downloaded = $false
+          foreach ($url in $urls) {
+            & curl.exe --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --connect-timeout 20 --max-time 300 --output $installer $url
+            if ($LASTEXITCODE -eq 0) { $downloaded = $true; break }
+          }
+          if (-not $downloaded) { throw 'LibreOffice download failed from both publisher endpoints' }
           $expected = 'F15BA07BFCB0186986CF3171063506F5D207C11F8CC051BA0D135209E9E915F9'
           if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) { throw 'LibreOffice installer hash mismatch' }
           $process = Start-Process msiexec.exe -ArgumentList @('/i', "`"$installer`"", '/qn', '/norestart', 'REGISTER_ALL_MSO_TYPES=0') -WindowStyle Hidden -Wait -PassThru

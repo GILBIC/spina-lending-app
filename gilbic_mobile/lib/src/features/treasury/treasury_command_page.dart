@@ -723,6 +723,11 @@ class _TreasuryCommandPageState extends State<TreasuryCommandPage> {
     final choices =
         ((widget.repository.workspace?.raw['source_choices'] as List?) ?? [])
             .whereType<Map<String, dynamic>>()
+            .where(
+              (row) =>
+                  row['account_id'] == null ||
+                  row['account_id'] == widget.account?.id,
+            )
             .toList();
     if (widget.action != TreasuryAction.disbursementRecord || choices.isEmpty) {
       return const SizedBox.shrink();
@@ -746,7 +751,7 @@ class _TreasuryCommandPageState extends State<TreasuryCommandPage> {
                 value: row['id'] as String,
                 enabled: row['supported'] == true,
                 child: Text(
-                  '${row['payee_name'] ?? row['kind']} · PHP ${row['amount']} · ${row['status']}',
+                  '${row['label'] ?? row['kind']}${row['payee_name'] == null ? '' : ' · ${row['payee_name']}'}${row['destination'] == null ? '' : ' · ${row['destination']}'} · PHP ${row['amount']} · ${row['status']}',
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -763,6 +768,10 @@ class _TreasuryCommandPageState extends State<TreasuryCommandPage> {
                   _controllers['payee_id']!.text =
                       row['payee_id'] as String? ?? '';
                   _values['purpose'] = row['kind'];
+                  if (row['provider'] != null) {
+                    _controllers['provider']!.text = row['provider'] as String;
+                  }
+                  _values['direction'] = 'debit';
                   _changed();
                 },
         ),

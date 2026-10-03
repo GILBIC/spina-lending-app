@@ -59,6 +59,21 @@ class TreasuryMoney {
 }
 
 enum TreasuryAction {
+  loanPayoutAcknowledge('loan_payout_acknowledge', 'Loan payout acknowledge'),
+  loanPayoutCancel('loan_payout_cancel', 'Loan payout cancel'),
+  loanPayoutFirstLoanComplete(
+    'loan_payout_first_loan_complete',
+    'Loan payout first loan complete',
+  ),
+  loanPayoutPrepare('loan_payout_prepare', 'Loan payout prepare'),
+  loanPayoutRecipientConfirm(
+    'loan_payout_recipient_confirm',
+    'Loan payout recipient confirm',
+  ),
+  loanPayoutRenewalComplete(
+    'loan_payout_renewal_complete',
+    'Loan payout renewal complete',
+  ),
   collectorSurplusReturnReverse(
     'collector_surplus_return_reverse',
     'Record observed return reversal',
@@ -478,6 +493,177 @@ const transactionFields = [
   reasonField,
 ];
 final Map<TreasuryAction, List<TreasuryField>> treasuryFields = {
+  TreasuryAction.loanPayoutAcknowledge: [
+    TreasuryField('payout_id', 'Payout id', TreasuryFieldKind.id),
+    TreasuryField(
+      'payout_version',
+      'Payout version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField(
+      'stage',
+      'Stage',
+      TreasuryFieldKind.choice,
+      choices: ["recipient", "borrower_handover", "borrower"],
+    ),
+    TreasuryField('received', 'Received', TreasuryFieldKind.boolean),
+    TreasuryField(
+      'reviewed_amount',
+      'Reviewed amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField(
+      'receipt_method',
+      'Receipt method',
+      TreasuryFieldKind.choice,
+      choices: ["cash", "gcash", "bank"],
+    ),
+    TreasuryField(
+      'acknowledged_at',
+      'Acknowledged at',
+      TreasuryFieldKind.instant,
+    ),
+    TreasuryField(
+      'attestation',
+      'Attestation',
+      TreasuryFieldKind.text,
+      maxLength: 1000,
+    ),
+  ],
+  TreasuryAction.loanPayoutCancel: [
+    TreasuryField('payout_id', 'Payout id', TreasuryFieldKind.id),
+    TreasuryField(
+      'payout_version',
+      'Payout version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
+  TreasuryAction.loanPayoutFirstLoanComplete: [
+    TreasuryField('payout_id', 'Payout id', TreasuryFieldKind.id),
+    TreasuryField(
+      'payout_version',
+      'Payout version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'reviewed_amount',
+      'Reviewed amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField(
+      'borrower_confirmed',
+      'Borrower confirmed',
+      TreasuryFieldKind.boolean,
+    ),
+    TreasuryField(
+      'receipt_method',
+      'Receipt method',
+      TreasuryFieldKind.choice,
+      choices: ["cash", "gcash", "bank"],
+    ),
+    TreasuryField(
+      'acknowledged_at',
+      'Acknowledged at',
+      TreasuryFieldKind.instant,
+    ),
+    TreasuryField(
+      'borrower_attestation',
+      'Borrower attestation',
+      TreasuryFieldKind.text,
+      maxLength: 1000,
+    ),
+  ],
+  TreasuryAction.loanPayoutPrepare: [
+    TreasuryField(
+      'source_kind',
+      'Source kind',
+      TreasuryFieldKind.choice,
+      choices: ["first_loan", "renewal"],
+    ),
+    TreasuryField('source_id', 'Source id', TreasuryFieldKind.id),
+    TreasuryField(
+      'destination',
+      'Destination',
+      TreasuryFieldKind.choice,
+      required: false,
+      choices: ["collector", "borrower"],
+      defaultValue: "collector",
+    ),
+    TreasuryField(
+      'recipient_reference',
+      'Recipient reference',
+      TreasuryFieldKind.text,
+      maxLength: 200,
+    ),
+    TreasuryField(
+      'authorization_id',
+      'Authorization id',
+      TreasuryFieldKind.id,
+      required: false,
+    ),
+    TreasuryField(
+      'packet_hash',
+      'Packet hash',
+      TreasuryFieldKind.digest,
+      required: false,
+    ),
+    TreasuryField(
+      'contract_evidence_reference',
+      'Contract evidence reference',
+      TreasuryFieldKind.text,
+      required: false,
+      maxLength: 200,
+    ),
+    TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
+  ],
+  TreasuryAction.loanPayoutRecipientConfirm: [
+    TreasuryField('payout_id', 'Payout id', TreasuryFieldKind.id),
+    TreasuryField(
+      'payout_version',
+      'Payout version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'reviewed_amount',
+      'Reviewed amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField('received', 'Received', TreasuryFieldKind.boolean),
+    TreasuryField(
+      'acknowledged_at',
+      'Acknowledged at',
+      TreasuryFieldKind.instant,
+    ),
+    TreasuryField(
+      'recipient_attestation',
+      'Recipient attestation',
+      TreasuryFieldKind.text,
+      maxLength: 1000,
+    ),
+  ],
+  TreasuryAction.loanPayoutRenewalComplete: [
+    TreasuryField('payout_id', 'Payout id', TreasuryFieldKind.id),
+    TreasuryField(
+      'payout_version',
+      'Payout version',
+      TreasuryFieldKind.integer,
+    ),
+    TreasuryField('evidence_id', 'Evidence id', TreasuryFieldKind.id),
+    TreasuryField(
+      'reviewed_amount',
+      'Reviewed amount',
+      TreasuryFieldKind.positiveMoney,
+    ),
+    TreasuryField(
+      'proof_review_confirmed',
+      'Proof review confirmed',
+      TreasuryFieldKind.boolean,
+    ),
+    TreasuryField('reason', 'Reason', TreasuryFieldKind.text, maxLength: 1000),
+  ],
   TreasuryAction.collectorSurplusReturnReverse: [
     TreasuryField('action_id', 'Action id', TreasuryFieldKind.id),
     TreasuryField(
@@ -1140,7 +1326,9 @@ class TreasuryCommand {
     int? expectedVersion,
     required Map<String, dynamic> fields,
   }) {
-    final own = collectorOwnActions.contains(action);
+    final own =
+        collectorOwnActions.contains(action) ||
+        action == TreasuryAction.loanPayoutAcknowledge;
     if (own && (accountId != null || expectedVersion != null)) {
       throw const FormatException("Own requests carry no account authority.");
     }
@@ -1187,6 +1375,21 @@ class TreasuryCommand {
       throw const FormatException(
         'Choose one exact case or credit with its version.',
       );
+    }
+    if (action == TreasuryAction.loanPayoutPrepare) {
+      const authority = [
+        'authorization_id',
+        'packet_hash',
+        'contract_evidence_reference',
+      ];
+      if (body['source_kind'] == 'first_loan' &&
+              authority.any((k) => body[k] == null) ||
+          body['source_kind'] == 'renewal' &&
+              authority.any((k) => body[k] != null)) {
+        throw const FormatException(
+          'The exact approved source authority is required.',
+        );
+      }
     }
     _body = treasuryObject(immutableTreasury(body));
   }
@@ -1418,3 +1621,6 @@ String collectorCapability(TreasuryAction action) => switch (action) {
     'exception_acknowledge',
   _ => action.code.replaceFirst('collector_surplus_', ''),
 };
+
+bool isLoanPayoutAction(TreasuryAction action) =>
+    action.code.startsWith('loan_payout_');

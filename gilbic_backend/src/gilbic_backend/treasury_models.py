@@ -208,6 +208,96 @@ class ReceiptApply(Command, ApplicationInput):
     digest: Digest
 
 
+class LoanPayoutInput(StrictModel):
+    source_kind: Literal["first_loan", "renewal"]
+    source_id: UUID
+    destination: Literal["collector", "borrower"] = "collector"
+    recipient_reference: Reference
+    authorization_id: UUID | None = None
+    packet_hash: Digest | None = None
+    contract_evidence_reference: Reference | None = None
+
+    @model_validator(mode="after")
+    def exact_source_authority(self):
+        values = (
+            self.authorization_id,
+            self.packet_hash,
+            self.contract_evidence_reference,
+        )
+        if self.source_kind == "first_loan" and not all(values):
+            raise ValueError(
+                "The exact signed packet and release authorization are required."
+            )
+        if self.source_kind == "renewal" and any(values):
+            raise ValueError(
+                "Renewal authority must come from its own protected source."
+            )
+        return self
+
+
+class LoanPayoutPreview(LoanPayoutInput):
+    account_id: UUID
+    expected_version: Version
+
+
+class LoanPayoutPrepare(Command, LoanPayoutInput):
+    action: Literal["loan_payout_prepare"]
+    source_digest: Digest
+
+
+class LoanPayoutRecipientConfirm(Command):
+    action: Literal["loan_payout_recipient_confirm"]
+    payout_id: UUID
+    payout_version: Version
+    evidence_id: UUID
+    reviewed_amount: PositiveMoney
+    received: StrictBool
+    acknowledged_at: Instant
+    recipient_attestation: Text
+
+
+class LoanPayoutFirstLoanComplete(Command):
+    action: Literal["loan_payout_first_loan_complete"]
+    payout_id: UUID
+    payout_version: Version
+    evidence_id: UUID
+    reviewed_amount: PositiveMoney
+    borrower_confirmed: StrictBool
+    receipt_method: Literal["cash", "gcash", "bank"]
+    acknowledged_at: Instant
+    borrower_attestation: Text
+
+
+class LoanPayoutAcknowledge(StrictModel):
+    action: Literal["loan_payout_acknowledge"]
+    request_id: UUID
+    payout_id: UUID
+    payout_version: Version
+    stage: Literal["recipient", "borrower_handover", "borrower"]
+    received: StrictBool
+    reviewed_amount: PositiveMoney
+    receipt_method: Literal["cash", "gcash", "bank"]
+    acknowledged_at: Instant
+    attestation: Text
+
+
+class LoanPayoutRenewalComplete(Command):
+    action: Literal["loan_payout_renewal_complete"]
+    payout_id: UUID
+    payout_version: Version
+    evidence_id: UUID
+    reviewed_amount: PositiveMoney
+    proof_review_confirmed: StrictBool
+    reason: Text
+
+
+class LoanPayoutCancel(Command):
+    action: Literal["loan_payout_cancel"]
+    payout_id: UUID
+    payout_version: Version
+    reason: Text
+
+
 class DisbursementRecord(Command):
     action: Literal["disbursement_record"]
     amount: PositiveMoney
@@ -580,6 +670,12 @@ TreasuryCommand = Annotated[
     | ClaimReview
     | ReceiptVerify
     | ReceiptApply
+    | LoanPayoutPrepare
+    | LoanPayoutRecipientConfirm
+    | LoanPayoutFirstLoanComplete
+    | LoanPayoutAcknowledge
+    | LoanPayoutRenewalComplete
+    | LoanPayoutCancel
     | DisbursementRecord
     | TransferRecord
     | MovementClassify

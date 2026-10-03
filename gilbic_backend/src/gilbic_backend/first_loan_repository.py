@@ -9,6 +9,13 @@ from uuid import UUID, uuid4
 from psycopg.rows import dict_row, tuple_row
 from psycopg.types.json import Jsonb
 
+from .client_cif_identity_information import cif_information_from_row
+from .contract_schedule_registration_repository import (
+    SevenBySevenPricingComplianceReview,
+    build_7x7_penalty_policy_schedule_settings,
+    build_7x7_pricing_compliance_terms_fingerprint,
+)
+from .contract_schedule_registration_service import register_verified_contract_schedule
 from .database import open_connection
 from .first_loan_terms import (
     FirstLoanTerms,
@@ -17,22 +24,15 @@ from .first_loan_terms import (
     snapshot_digest,
 )
 from .loan_application_information import parse_loan_application_information
-from .contract_schedule_registration_service import register_verified_contract_schedule
-from .contract_schedule_registration_repository import (
-    SevenBySevenPricingComplianceReview,
-    build_7x7_penalty_policy_schedule_settings,
-    build_7x7_pricing_compliance_terms_fingerprint,
-)
 from .office_review_evidence_repository import (
-    capture_evidence,
-    require_evidence,
-    cif_review_snapshot,
-    application_review_snapshot,
     OfficeReviewEvidenceConflict,
+    application_review_snapshot,
+    capture_evidence,
+    cif_review_snapshot,
+    require_evidence,
 )
 from .office_review_evidence_storage import PrivateEvidenceStore
 from .privacy_record_repository import build_privacy_context
-from .client_cif_identity_information import cif_information_from_row
 
 APPROVE_PERMISSION = "lending.first_loan.approve"
 RELEASE_PERMISSION = "lending.first_loan.release"
@@ -351,6 +351,10 @@ def _pricing_settings(cursor, row, terms, rows):
 
 
 def _public(cursor, row, actor_user_id=None):
+    payout = cursor.execute(
+        "select id,status,destination,amount,version from treasury.loan_payouts where source_kind='first_loan' and source_id=%s and status<>'cancelled'",
+        (row["loan_id"],),
+    ).fetchone()
     release = cursor.execute(
         "select * from lending.first_loan_releases where loan_id=%s", (row["loan_id"],)
     ).fetchone()
@@ -406,6 +410,9 @@ def _public(cursor, row, actor_user_id=None):
         "packet": row["packet"],
         "loan_number": row["loan_number"],
         "evidence": evidence,
+        "funding_payout": None
+        if payout is None
+        else {**payout, "id": str(payout["id"]), "amount": str(payout["amount"])},
         "pricing_snapshot": pricing_snapshot,
         "status": "released"
         if release
@@ -889,6 +896,13 @@ class PostgresFirstLoanRepository:
                 raise FirstLoanConflict(
                     "Only the exact unreleased approval can be cancelled."
                 )
+            if cursor.execute(
+                "select 1 from treasury.loan_payouts where loan_id=%s and status<>'cancelled'",
+                (loan_id,),
+            ).fetchone():
+                raise FirstLoanConflict(
+                    "Complete or cancel the protected payout before cancelling this loan approval."
+                )
             cursor.execute(
                 "update lending.loans set status='cancelled',updated_at=now() where id=%s",
                 (loan_id,),
@@ -1111,197 +1125,265 @@ class PostgresFirstLoanRepository:
         borrower_confirmed,
         request_id,
     ):
-        from .first_loan_disclosure_binding import require_packet_source
-
-        if borrower_confirmed is not True:
-            raise FirstLoanConflict(
-                "The named borrower must confirm actual cash received."
-            )
-        cash = Decimal(cash_amount)
-        if not cash.is_finite() or cash <= 0 or cash != cash.quantize(Decimal("0.01")):
-            raise FirstLoanConflict("Exact cash received is required.")
         with (
             open_connection() as connection,
             connection.transaction(),
             connection.cursor(row_factory=dict_row) as cursor,
         ):
-            _actor(cursor, actor_user_id, registered_device_id, RELEASE_PERMISSION)
-            row = _load(cursor, loan_id)
-            existing = cursor.execute(
-                "select * from lending.first_loan_releases where loan_id=%s or request_id=%s",
-                (loan_id, request_id),
+            return release_in_transaction(
+                connection,
+                cursor,
+                actor_user_id=actor_user_id,
+                registered_device_id=registered_device_id,
+                loan_id=loan_id,
+                packet_hash=packet_hash,
+                authorization_id=authorization_id,
+                contract_evidence_reference=contract_evidence_reference,
+                cash_evidence_reference=cash_evidence_reference,
+                cash_amount=cash_amount,
+                borrower_confirmed=borrower_confirmed,
+                request_id=request_id,
+            )
+
+
+def release_in_transaction(
+    connection,
+    cursor,
+    *,
+    actor_user_id,
+    registered_device_id,
+    loan_id,
+    packet_hash,
+    authorization_id,
+    contract_evidence_reference,
+    cash_evidence_reference,
+    cash_amount,
+    borrower_confirmed,
+    request_id,
+    payout_receipt=None,
+):
+    """One atomic source transaction, shared by Office cash and typed Treasury funding."""
+    from .first_loan_disclosure_binding import require_packet_source
+
+    if borrower_confirmed is not True:
+        raise FirstLoanConflict("The named borrower must confirm actual cash received.")
+    cash = Decimal(cash_amount)
+    if not cash.is_finite() or cash <= 0 or cash != cash.quantize(Decimal("0.01")):
+        raise FirstLoanConflict("Exact cash received is required.")
+    _actor(cursor, actor_user_id, registered_device_id, RELEASE_PERMISSION)
+    row = _load(cursor, loan_id)
+    active_payout = cursor.execute(
+        "select id from treasury.loan_payouts where source_kind='first_loan' and source_id=%s and status<>'cancelled'",
+        (loan_id,),
+    ).fetchone()
+    if active_payout and (
+        payout_receipt is None or active_payout["id"] != payout_receipt["payout_id"]
+    ):
+        raise FirstLoanConflict(
+            "The existing loan payout must be completed or cancelled through its protected workflow."
+        )
+    existing = cursor.execute(
+        "select * from lending.first_loan_releases where loan_id=%s or request_id=%s",
+        (loan_id, request_id),
+    ).fetchone()
+    if existing:
+        if (
+            existing["loan_id"] != row["loan_id"]
+            or existing["request_id"] != request_id
+            or existing["released_by_user_id"] != actor_user_id
+            or existing["packet_hash"] != packet_hash
+            or existing["authorization_id"] != authorization_id
+            or (
+                existing["received_amount"]
+                if payout_receipt
+                else existing["cash_amount"]
+            )
+            != cash
+            or existing["contract_evidence_reference"] != contract_evidence_reference
+            or (
+                existing["borrower_receipt_reference"]
+                if payout_receipt
+                else existing["cash_evidence_reference"]
+            )
+            != cash_evidence_reference
+            or existing["funding_payout_id"]
+            != (payout_receipt["payout_id"] if payout_receipt else None)
+        ):
+            raise FirstLoanConflict(
+                "The release request conflicts with the recorded handoff; reload its receipt."
+            )
+        return _public(cursor, row, actor_user_id)
+    if row["loan_status"] != "approved" or row["packet_hash"] != packet_hash:
+        raise FirstLoanConflict("The exact unreleased approved packet is required.")
+    require_packet_source(cursor, row=row)
+    _template(cursor, row, execution=True)
+    document = _document(cursor, row, execution=True)
+    _locked_source(cursor, row)
+    authorization = _authorization(cursor, row, authorization_id)
+    terms = FirstLoanTerms.model_validate(row["packet"]["terms"])
+    if cash != terms.net_cash:
+        raise FirstLoanConflict(
+            "Actual cash must equal the approved net cash exactly; partial release is not allowed."
+        )
+    moment = cursor.execute(
+        "with instant as materialized (select clock_timestamp() as ts) select ts,(ts at time zone 'Asia/Manila')::date as d from instant"
+    ).fetchone()
+    if moment["d"] != terms.schedule_basis_date:
+        raise FirstLoanConflict(
+            "Actual release date differs from the signed basis; obtain a revised approved packet and signatures."
+        )
+    for purpose, reference, snapshot in (
+        (
+            "borrower_contract_signed",
+            contract_evidence_reference,
+            _sign_snapshot(row, document),
+        ),
+        (
+            "borrower_payout_received" if payout_receipt else "borrower_cash_received",
+            cash_evidence_reference,
+            payout_receipt["snapshot"]
+            if payout_receipt
+            else _cash_snapshot(row, authorization_id, document),
+        ),
+    ):
+        witness_id = actor_user_id
+        if purpose == "borrower_contract_signed":
+            witness = cursor.execute(
+                "select captured_by_user_id from lending.office_review_evidence where ('office-evidence:'||id::text)=%s and subject_id=%s and purpose='borrower_contract_signed'",
+                (reference, row["id"]),
             ).fetchone()
-            if existing:
-                if (
-                    existing["loan_id"] != row["loan_id"]
-                    or existing["request_id"] != request_id
-                    or existing["released_by_user_id"] != actor_user_id
-                    or existing["packet_hash"] != packet_hash
-                    or existing["authorization_id"] != authorization_id
-                    or existing["cash_amount"] != cash
-                    or existing["contract_evidence_reference"]
-                    != contract_evidence_reference
-                    or existing["cash_evidence_reference"] != cash_evidence_reference
-                ):
-                    raise FirstLoanConflict(
-                        "The release request conflicts with the recorded handoff; reload its receipt."
-                    )
-                return _public(cursor, row, actor_user_id)
-            if row["loan_status"] != "approved" or row["packet_hash"] != packet_hash:
+            if witness is None:
                 raise FirstLoanConflict(
-                    "The exact unreleased approved packet is required."
+                    "Protected exact contract signing evidence is required."
                 )
-            require_packet_source(cursor, row=row)
-            _template(cursor, row, execution=True)
-            document = _document(cursor, row, execution=True)
-            _locked_source(cursor, row)
-            authorization = _authorization(cursor, row, authorization_id)
-            terms = FirstLoanTerms.model_validate(row["packet"]["terms"])
-            if cash != terms.net_cash:
-                raise FirstLoanConflict(
-                    "Actual cash must equal the approved net cash exactly; partial release is not allowed."
-                )
-            moment = cursor.execute(
-                "with instant as materialized (select clock_timestamp() as ts) select ts,(ts at time zone 'Asia/Manila')::date as d from instant"
-            ).fetchone()
-            if moment["d"] != terms.schedule_basis_date:
-                raise FirstLoanConflict(
-                    "Actual release date differs from the signed basis; obtain a revised approved packet and signatures."
-                )
-            for purpose, reference, snapshot in (
-                (
-                    "borrower_contract_signed",
-                    contract_evidence_reference,
-                    _sign_snapshot(row, document),
-                ),
-                (
-                    "borrower_cash_received",
-                    cash_evidence_reference,
-                    _cash_snapshot(row, authorization_id, document),
-                ),
-            ):
-                witness_id = actor_user_id
-                if purpose == "borrower_contract_signed":
-                    witness = cursor.execute(
-                        "select captured_by_user_id from lending.office_review_evidence where ('office-evidence:'||id::text)=%s and subject_id=%s and purpose='borrower_contract_signed'",
-                        (reference, row["id"]),
-                    ).fetchone()
-                    if witness is None:
-                        raise FirstLoanConflict(
-                            "Protected exact contract signing evidence is required."
-                        )
-                    witness_id = witness["captured_by_user_id"]
-                require_evidence(
-                    cursor,
-                    evidence_reference=reference,
-                    actor_user_id=witness_id,
-                    client_id=row["client_id"],
-                    purpose=purpose,
-                    subject_id=row["id"],
-                    review_snapshot=snapshot,
-                )
-            rows = generate_first_loan_schedule(terms)
-            if schedule_payload(rows) != row["packet"]["schedule"]:
-                raise FirstLoanConflict(
-                    "The authoritative schedule no longer matches the locked packet."
-                )
-            settings = _pricing_settings(cursor, row, terms, rows)
-            settings["first_loan_packet_hash"] = packet_hash
-            release_id = uuid4()
-            receipt_reference = f"FLR-{release_id.hex.upper()}"
-            cursor.execute(
-                "update lending.loans set status='active',date_released=%s,due_date=%s,updated_at=now() where id=%s",
-                (moment["d"], rows[-1].due_date, loan_id),
-            )
-            with connection.cursor(row_factory=tuple_row) as schedule_cursor:
-                schedule_id = register_verified_contract_schedule(
-                    schedule_cursor,
-                    loan_id=UUID(str(loan_id)),
-                    payment_frequency=terms.payment_frequency,
-                    contract_reference=str(row["id"]),
-                    contract_signed_date=terms.schedule_basis_date,
-                    effective_from=moment["d"],
-                    grace_days=terms.grace_days,
-                    installments=rows,
-                    evidence_basis="signed_contract",
-                    evidence_reference=contract_evidence_reference,
-                    verification_note=f"Exact office first-loan packet {packet_hash}",
-                    verified_by_user_id=authorization["authorized_by_user_id"],
-                    agreed_daily_payment=terms.installment_amount
-                    if terms.product_code == "seven_by_seven"
-                    else None,
-                    schedule_settings=settings,
-                    confirmed=True,
-                )
-            event = cursor.execute(
-                "select accounting.record_loan_disbursement_evidence(%s,%s,'new_loan_release',%s,%s,%s,0,%s,'cash_office',%s,%s) as id",
-                (
-                    loan_id,
-                    actor_user_id,
-                    moment["d"],
-                    moment["ts"],
-                    cash,
-                    terms.total_deductions,
-                    receipt_reference,
-                    f"Office first-loan packet {packet_hash}",
-                ),
-            ).fetchone()
-            remaining = (
-                terms.principal
-                if terms.product_code == "seven_by_seven"
-                else sum((r.contractual_amount for r in rows), Decimal("0.00"))
-            )
-            cursor.execute(
-                "insert into lending.loan_collection_state(loan_id,remaining_balance) values(%s,%s)",
-                (loan_id, remaining),
-            )
-            receipt = {
-                "receipt_reference": receipt_reference,
-                "loan_id": str(loan_id),
-                "loan_number": row["loan_number"],
-                "client_id": str(row["client_id"]),
-                "borrower_name": row["packet"]["borrower"]["full_name"],
-                "packet_id": str(row["id"]),
-                "packet_hash": packet_hash,
-                "gross_principal": str(terms.principal),
-                "deductions": str(terms.total_deductions),
-                "actual_cash_received": str(cash),
-                "released_at": moment["ts"].isoformat(),
-                "management_authorizer_id": str(authorization["authorized_by_user_id"]),
-                "releasing_staff_id": str(actor_user_id),
-                "contract_evidence_reference": contract_evidence_reference,
-                "cash_evidence_reference": cash_evidence_reference,
-            }
-            cursor.execute(
-                """insert into lending.first_loan_releases(id,request_id,loan_id,authorization_id,packet_hash,contract_evidence_reference,cash_evidence_reference,cash_amount,receipt_reference,schedule_id,disbursement_event_id,released_by_user_id,released_device_id,released_at,receipt)
-                values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (
-                    release_id,
-                    request_id,
-                    loan_id,
-                    authorization_id,
-                    packet_hash,
-                    contract_evidence_reference,
-                    cash_evidence_reference,
-                    cash,
-                    receipt_reference,
-                    schedule_id,
-                    event["id"],
-                    actor_user_id,
-                    registered_device_id,
-                    moment["ts"],
-                    Jsonb(receipt),
-                ),
-            )
-            cursor.execute(
-                """insert into lending.first_loan_credential_intents(client_id,loan_id,release_id,email,requested_by_user_id)
-                values(%s,%s,%s,%s,%s)""",
-                (
-                    row["client_id"],
-                    loan_id,
-                    release_id,
-                    terms.account_email,
-                    actor_user_id,
-                ),
-            )
-            return _public(cursor, _load(cursor, loan_id), actor_user_id)
+            witness_id = witness["captured_by_user_id"]
+        require_evidence(
+            cursor,
+            evidence_reference=reference,
+            actor_user_id=witness_id,
+            client_id=row["client_id"],
+            purpose=purpose,
+            subject_id=payout_receipt["payout_id"]
+            if payout_receipt is not None and purpose == "borrower_payout_received"
+            else row["id"],
+            review_snapshot=snapshot,
+        )
+    rows = generate_first_loan_schedule(terms)
+    if schedule_payload(rows) != row["packet"]["schedule"]:
+        raise FirstLoanConflict(
+            "The authoritative schedule no longer matches the locked packet."
+        )
+    settings = _pricing_settings(cursor, row, terms, rows)
+    settings["first_loan_packet_hash"] = packet_hash
+    release_id = uuid4()
+    receipt_reference = f"FLR-{release_id.hex.upper()}"
+    cursor.execute(
+        "update lending.loans set status='active',date_released=%s,due_date=%s,updated_at=now() where id=%s",
+        (moment["d"], rows[-1].due_date, loan_id),
+    )
+    with connection.cursor(row_factory=tuple_row) as schedule_cursor:
+        schedule_id = register_verified_contract_schedule(
+            schedule_cursor,
+            loan_id=UUID(str(loan_id)),
+            payment_frequency=terms.payment_frequency,
+            contract_reference=str(row["id"]),
+            contract_signed_date=terms.schedule_basis_date,
+            effective_from=moment["d"],
+            grace_days=terms.grace_days,
+            installments=rows,
+            evidence_basis="signed_contract",
+            evidence_reference=contract_evidence_reference,
+            verification_note=f"Exact office first-loan packet {packet_hash}",
+            verified_by_user_id=authorization["authorized_by_user_id"],
+            agreed_daily_payment=terms.installment_amount
+            if terms.product_code == "seven_by_seven"
+            else None,
+            schedule_settings=settings,
+            confirmed=True,
+        )
+    event = cursor.execute(
+        "select accounting.record_loan_disbursement_evidence(%s,%s,'new_loan_release',%s,%s,%s,0,%s,%s,%s,%s) as id",
+        (
+            loan_id,
+            actor_user_id,
+            moment["d"],
+            moment["ts"],
+            cash,
+            terms.total_deductions,
+            "cash_bank_gcash" if payout_receipt else "cash_office",
+            receipt_reference,
+            f"Office first-loan packet {packet_hash}",
+        ),
+    ).fetchone()
+    remaining = (
+        terms.principal
+        if terms.product_code == "seven_by_seven"
+        else sum((r.contractual_amount for r in rows), Decimal("0.00"))
+    )
+    cursor.execute(
+        "insert into lending.loan_collection_state(loan_id,remaining_balance) values(%s,%s)",
+        (loan_id, remaining),
+    )
+    receipt = {
+        "receipt_reference": receipt_reference,
+        "loan_id": str(loan_id),
+        "loan_number": row["loan_number"],
+        "client_id": str(row["client_id"]),
+        "borrower_name": row["packet"]["borrower"]["full_name"],
+        "packet_id": str(row["id"]),
+        "packet_hash": packet_hash,
+        "gross_principal": str(terms.principal),
+        "deductions": str(terms.total_deductions),
+        "actual_cash_received": str(cash),
+        "released_at": moment["ts"].isoformat(),
+        "management_authorizer_id": str(authorization["authorized_by_user_id"]),
+        "releasing_staff_id": str(actor_user_id),
+        "contract_evidence_reference": contract_evidence_reference,
+        "cash_evidence_reference": cash_evidence_reference,
+    }
+    if payout_receipt:
+        receipt.pop("actual_cash_received")
+        receipt.pop("cash_evidence_reference")
+        receipt.update(
+            actual_proceeds_received=str(cash),
+            receipt_method=payout_receipt["method"],
+            funding_payout_id=str(payout_receipt["payout_id"]),
+            borrower_receipt_reference=cash_evidence_reference,
+        )
+    cursor.execute(
+        """insert into lending.first_loan_releases(id,request_id,loan_id,authorization_id,packet_hash,contract_evidence_reference,cash_evidence_reference,cash_amount,receipt_reference,schedule_id,disbursement_event_id,released_by_user_id,released_device_id,released_at,receipt,funding_payout_id,receipt_method,received_amount,borrower_receipt_reference)
+        values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (
+            release_id,
+            request_id,
+            loan_id,
+            authorization_id,
+            packet_hash,
+            contract_evidence_reference,
+            None if payout_receipt else cash_evidence_reference,
+            None if payout_receipt else cash,
+            receipt_reference,
+            schedule_id,
+            event["id"],
+            actor_user_id,
+            registered_device_id,
+            moment["ts"],
+            Jsonb(receipt),
+            payout_receipt["payout_id"] if payout_receipt else None,
+            payout_receipt["method"] if payout_receipt else "cash",
+            cash if payout_receipt else None,
+            cash_evidence_reference if payout_receipt else None,
+        ),
+    )
+    cursor.execute(
+        """insert into lending.first_loan_credential_intents(client_id,loan_id,release_id,email,requested_by_user_id)
+        values(%s,%s,%s,%s,%s)""",
+        (
+            row["client_id"],
+            loan_id,
+            release_id,
+            terms.account_email,
+            actor_user_id,
+        ),
+    )
+    return _public(cursor, _load(cursor, loan_id), actor_user_id)

@@ -31,6 +31,7 @@ REQUIRED_TABLES = (
     "core.employee_profile_versions",
     "core.employee_action_receipts",
     "core.employee_history",
+    "treasury.loan_payouts",
     "treasury.accounts",
     "treasury.evidence",
     "treasury.events",
@@ -144,7 +145,13 @@ def probe_database(settings: Settings) -> dict[str, bool]:
                     ('accounting.journal_entries', 'treasury_collection_journal_guard',
                      'accounting.guard_treasury_collection_journal()', 23),
                     ('lending.collection_remittances','guard_collector_legacy_receive','treasury.guard_collector_legacy_receive()',19),
-                    ('lending.collection_remittance_rejections','guard_collector_rejection','treasury.guard_collector_rejection()',7)
+                    ('lending.collection_remittance_rejections','guard_collector_rejection','treasury.guard_collector_rejection()',7),
+                    ('treasury.loan_payouts','loan_payout_identity','treasury.guard_loan_payout_identity()',27),
+                    ('lending.first_loan_releases','first_loan_payout_release','lending.guard_first_loan_payout_release()',7),
+                    ('lending.client_renewal_requests','renewal_payout_cash','lending.guard_renewal_payout_cash()',19),
+                    ('accounting.journal_entries','loan_payout_journal_guard','accounting.guard_loan_payout_journal()',23),
+                    ('lending.loan_disbursement_events','payout_source_void','lending.guard_payout_source_void()',19),
+                    ('lending.loan_renewal_execution_events','payout_source_void','lending.guard_payout_source_void()',19)
                 )
                 SELECT bool_and(EXISTS (
                     SELECT 1 FROM pg_trigger t
