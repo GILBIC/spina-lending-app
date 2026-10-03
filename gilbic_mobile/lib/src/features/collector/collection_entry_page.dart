@@ -354,6 +354,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final growAllocationText = MediaQuery.textScalerOf(context).scale(16) > 16;
     return Scaffold(
       appBar: AppBar(title: const Text('Record Collection')),
       body: SafeArea(
@@ -446,10 +447,17 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                               key: const Key('regular-extra-allocation-choice'),
                               initialValue: _paymentAllocationIntent,
                               isExpanded: true,
-                              decoration: const InputDecoration(
+                              isDense: !growAllocationText,
+                              decoration: InputDecoration(
                                 labelText: 'If there is extra cash',
-                                helperText:
-                                    'Choose only when the borrower gives more than required.',
+                                helperText: growAllocationText
+                                    ? null
+                                    : 'Choose only when the borrower gives more than required.',
+                                helper: growAllocationText
+                                    ? const Text(
+                                        'Choose only when the borrower gives more than required.',
+                                      )
+                                    : null,
                                 isDense: true,
                               ),
                               items: const [

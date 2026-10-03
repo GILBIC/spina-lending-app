@@ -1,5 +1,6 @@
 import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_loan_balance_header.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
@@ -452,23 +453,15 @@ class _ExpandedLoanHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            _loanLabel(entry.loanType),
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
-          ),
-        ),
-        Text(
-          'Balance ${_moneyShort(entry.balance)}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ],
+    return CollectorLoanBalanceHeader(
+      label: _loanLabel(entry.loanType),
+      balance: 'Balance ${_moneyShort(entry.balance)}',
+      labelStyle: Theme.of(
+        context,
+      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+      balanceStyle: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }
