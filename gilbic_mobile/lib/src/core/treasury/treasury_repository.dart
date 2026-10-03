@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/treasury/loan_payout_models.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -133,7 +134,19 @@ abstract interface class CollectorSurplusRepository
   });
 }
 
-class SpinaTreasuryRepository implements CollectorSurplusRepository {
+abstract interface class LoanPayoutRepository implements TreasuryRepository {
+  Future<Map<String, dynamic>> loadLoanPayouts({
+    String mode = 'own',
+    String? accountId,
+    int limit = 50,
+    int offset = 0,
+  });
+  Future<Map<String, dynamic>> loanPayoutSources(String accountId);
+  Future<Map<String, dynamic>> loanPayoutPreview(Map<String, dynamic> input);
+}
+
+class SpinaTreasuryRepository
+    implements CollectorSurplusRepository, LoanPayoutRepository {
   SpinaTreasuryRepository({
     required UserSession session,
     required this.deviceId,
@@ -160,6 +173,8 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
   final PrivateImageStore _images;
   final String _initialScope;
   TreasuryWorkspace? _workspace;
+  Map<String, dynamic>? _payoutPage, _payoutPreview, _payoutInput;
+  final Map<String, Map<String, dynamic>> _payoutRows = {};
   CollectorSurplusWorkspace? _surplus;
   String? _surplusAuthorization;
   String? _surplusMode;
@@ -216,6 +231,10 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     _workspace = null;
     _surplus = null;
     _settlementPreview = null;
+    _payoutPage = null;
+    _payoutPreview = null;
+    _payoutInput = null;
+    _payoutRows.clear();
     _attempt = null;
     _lastPreview = null;
     _previewInput = null;
@@ -900,6 +919,221 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     );
   }
 
+  @override
+  Future<Map<String, dynamic>> loadLoanPayouts({
+    String mode = 'own',
+    String? accountId,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    if (_workspace == null) await loadWorkspace();
+    if (!['own', 'staff'].contains(mode) ||
+        mode == 'staff' && !treasuryUuid(accountId) ||
+        mode == 'own' && accountId != null ||
+        limit < 1 ||
+        limit > 100 ||
+        offset < 0 ||
+        offset > 100000) {
+      throw const FormatException('Select a valid payout page.');
+    }
+    final query = Uri(
+      queryParameters: {
+        'mode': mode,
+        'limit': '$limit',
+        'offset': '$offset',
+        if (accountId != null) 'account_id': accountId,
+      },
+    ).query;
+    final value = treasuryObject(await _request('/loan-payouts?$query'));
+    _payoutActor(value);
+    if (value['mode'] != mode ||
+        value['account_id'] != accountId ||
+        value['limit'] != limit ||
+        value['offset'] != offset ||
+        value['has_more'] is! bool ||
+        value['enabled'] is! bool ||
+        value['items'] is! List) {
+      throw const FormatException('The payout page is incomplete.');
+    }
+    final rows = (value['items'] as List)
+        .map((raw) => validateLoanPayoutRow(raw, own: mode == 'own'))
+        .toList();
+    for (final row in rows) {
+      requireTreasuryId(row['account_id']);
+      requireTreasuryId(row['ledger_context_id']);
+      if (mode == 'staff' && row['account_id'] != accountId ||
+          row['stages'] is! List ||
+          (row['stages'] as List).any(
+            (s) => !['recipient', 'borrower_handover', 'borrower'].contains(s),
+          )) {
+        throw const FormatException('Payout scope changed.');
+      }
+    }
+    if (_payoutPage?['mode'] != mode) _payoutRows.clear();
+    _payoutPage = treasuryObject(immutableTreasury(value));
+    for (final row in rows) {
+      _payoutRows[row['id'] as String] = treasuryObject(immutableTreasury(row));
+    }
+    return value;
+  }
+
+  void _payoutActor(Map<String, dynamic> value) {
+    final actor = treasuryObject(value['actor']);
+    if (value['contract_version'] != 1 ||
+        actor['user_id'] != _workspace?.actor.userId ||
+        actor['device_id'] != _workspace?.actor.deviceId) {
+      throw const FormatException('Payout actor or device changed.');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> loanPayoutSources(String accountId) async {
+    if (_workspace == null) await loadWorkspace();
+    if (_workspace?.account(accountId)?.permits('loan_payout_prepare') != true) {
+      throw const TreasuryAccessChanged();
+    }
+    final value = treasuryObject(
+      await _request(
+        '/loan-payout-sources?account_id=${requireTreasuryId(accountId)}',
+      ),
+    );
+    _payoutActor(value);
+    if (value['account_id'] != accountId ||
+        value['account_version'] != _workspace!.account(accountId)!.version ||
+        value['items'] is! List) {
+      throw const FormatException('Refresh the current payout sources.');
+    }
+    for (final raw in value['items'] as List) {
+      final row = treasuryObject(raw);
+      requireTreasuryId(row['source_id']);
+      TreasuryMoney(row['amount'], positive: true);
+      loanPayoutPreparation(_workspace!.account(accountId)!, row, 'unselected');
+      if (!['first_loan', 'renewal'].contains(row['source_kind'])) {
+        throw const FormatException('Unsupported loan source.');
+      }
+    }
+    return value;
+  }
+
+  @override
+  Future<Map<String, dynamic>> loanPayoutPreview(
+    Map<String, dynamic> input,
+  ) async {
+    _online();
+    if (_busy || _attempt != null) {
+      throw StateError('Recover the unchanged pending request first.');
+    }
+    _payoutInput = null;
+    _payoutPreview = null;
+    final account = _workspace?.account(requireTreasuryId(input['account_id']));
+    if (account?.permits('loan_payout_prepare') != true ||
+        account?.version != input['expected_version']) {
+      throw const TreasuryAccessChanged();
+    }
+    final frozen = treasuryObject(immutableTreasury(input));
+    final value = treasuryObject(
+      await _request('/loan-payout-preview', method: 'POST', body: frozen),
+    );
+    _payoutActor(value);
+    final source = value['source_snapshot'] is Map
+        ? treasuryObject(value['source_snapshot'])
+        : <String, dynamic>{};
+    if (value['account_id'] != account!.id ||
+        value['account_version'] != account.version ||
+        value['ledger_context_id'] != account.ledgerContextId ||
+        !treasuryUuid(value['payee_id']) ||
+        !treasuryUuid(value['client_id']) ||
+        value['source_digest'] is! String ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(value['source_digest'] as String) ||
+        frozen.entries.any(
+          (e) =>
+              canonicalTreasury(value[e.key] ?? source[e.key]) !=
+              canonicalTreasury(e.value),
+        )) {
+      throw const FormatException(
+        'The payout preview does not match this selection.',
+      );
+    }
+    TreasuryMoney(value['amount'], positive: true);
+    _payoutInput = frozen;
+    _payoutPreview = treasuryObject(immutableTreasury(value));
+    return value;
+  }
+
+  Future<TreasuryResult> _executeLoanPayout(TreasuryCommand command) async {
+    _online();
+    if (_busy || _attempt != null) {
+      throw StateError('Recover the unchanged pending request first.');
+    }
+    _busy = true;
+    try {
+      await loadWorkspace();
+      if (_workspace!.raw['enabled'] != true ||
+          _workspace!.raw['owner_configured'] != true) {
+        throw const TreasuryAccessChanged();
+      }
+      final body = command.toJson(),
+          own = command.action == TreasuryAction.loanPayoutAcknowledge;
+      final row = _payoutRows[body['payout_id']];
+      final accountId = own
+          ? requireTreasuryId(row?['account_id'])
+          : command.accountId;
+      final account = _workspace!.account(accountId);
+      if (!own) {
+        _permitted(command.action.code, accountId);
+        if (account?.version != command.expectedVersion) {
+          throw StateError('The funding account changed. Refresh the payout.');
+        }
+      }
+      if (command.action == TreasuryAction.loanPayoutPrepare) {
+        if (_payoutPreview == null ||
+            body['source_digest'] != _payoutPreview!['source_digest'] ||
+            _payoutInput!.entries.any(
+              (e) =>
+                  canonicalTreasury(body[e.key]) != canonicalTreasury(e.value),
+            )) {
+          throw StateError(
+            'Review the unchanged payout source and destination first.',
+          );
+        }
+      } else {
+        if (row == null ||
+            row['version'] != body['payout_version'] ||
+            (row['blocker'] != null &&
+                command.action != TreasuryAction.loanPayoutCancel) ||
+            row['account_id'] != accountId) {
+          throw StateError('Open the current available payout first.');
+        }
+        if (own &&
+            (_payoutPage?['mode'] != 'own' ||
+                _payoutPage?['enabled'] != true ||
+                !(row['stages'] as List).contains(body['stage']))) {
+          throw const TreasuryAccessChanged();
+        }
+      }
+      final held = _held(
+        requestId: command.requestId,
+        action: command.action.code,
+        accountId: accountId,
+        path: '/actions',
+        body: body,
+        targetId: body['payout_id'] as String?,
+      );
+      held['ledger_context_id'] = own
+          ? row!['ledger_context_id']
+          : account!.ledgerContextId;
+      held['payout_reference'] = row;
+      held['payout_preview'] =
+          command.action == TreasuryAction.loanPayoutPrepare
+          ? _payoutPreview
+          : null;
+      await _hold(held);
+      return await _send();
+    } finally {
+      _busy = false;
+    }
+  }
+
   TreasuryResult _validate(Object? raw, Map<String, dynamic> held) {
     try {
       if (held['surplus'] == true) return validateCollectorOutcome(raw, held);
@@ -915,6 +1149,9 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
         throw const TreasuryUncertain();
       }
       if (value.status == 'saved') {
+        if ((held['action'] as String).startsWith('loan_payout_')) {
+          validateLoanPayoutOutcome(value, held);
+        }
         final body = held['body'] as Map?;
         if (body != null) {
           final entity = switch (held['action']) {
@@ -954,6 +1191,7 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
           }
         }
         final keys = [
+          'payout',
           'account',
           'claim',
           'receipt',
@@ -1086,6 +1324,7 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     TreasuryCommand command, {
     String? targetId,
   }) async {
+    if (isLoanPayoutAction(command.action)) return _executeLoanPayout(command);
     if (isCollectorSurplusAction(command.action)) {
       return _executeCollectorSurplus(command);
     }
@@ -1204,6 +1443,11 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
         // Recovery is read-only even after entry disable. Explicit resend still requires current capability.
         final action = TreasuryAction.fromCode(_attempt!['action'] as String);
         _collectorPermitted(action, _attempt!['account_id'] as String);
+      } else if (_attempt!['action'] == 'loan_payout_acknowledge') {
+        if (_workspace?.raw['enabled'] != true ||
+            _workspace?.raw['owner_configured'] != true) {
+          throw const TreasuryAccessChanged();
+        }
       } else {
         _permitted(
           _attempt!['action'] as String,
@@ -1524,6 +1768,10 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
     _workspace = null;
     _surplus = null;
     _settlementPreview = null;
+    _payoutPage = null;
+    _payoutPreview = null;
+    _payoutInput = null;
+    _payoutRows.clear();
     _lastPreview = null;
     _previewInput = null;
     _attempt = null;

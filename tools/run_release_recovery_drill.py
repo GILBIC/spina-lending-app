@@ -306,6 +306,9 @@ def seed(dsn: str, private_root: Path) -> None:
             ),
         )
     seed_treasury(dsn, private_root, user, device, client, loan)
+    from recovery_loan_payout_seed import seed_loan_payouts
+
+    seed_loan_payouts(dsn, private_root, PDF)
 
 
 def seed_treasury(dsn, private_root, user, device, client, loan):
@@ -1025,7 +1028,35 @@ def verify_relationships(
         raise DrillError(
             "Restored populated Collector settlement/liability/own-acknowledgment relationships are incomplete."
         )
+    payout_relationships = connection.execute("""select count(*) from treasury.loan_payouts p
+        join treasury.events e on e.id=p.event_id and e.account_id=p.account_id and e.ledger_context_id=p.ledger_context_id and e.direction='debit' and e.amount=p.amount
+        join treasury.source_links link on link.event_id=e.id and link.source_id=p.id and link.source_kind='loan_payout_funding'
+        join lending.first_loan_releases r on r.funding_payout_id=p.id and r.loan_id=p.loan_id and r.received_amount=p.amount
+        join lending.loan_contract_schedules s on s.id=r.schedule_id and s.loan_id=p.loan_id
+        join lending.first_loan_credential_intents i on i.loan_id=p.loan_id
+        where p.status='completed' and r.cash_amount is null and r.cash_evidence_reference is null
+        and r.borrower_receipt_reference=p.payload->'borrower_receipt'->>'office_evidence_reference'
+        and r.receipt_method=case when p.destination='collector' then 'cash' else 'gcash' end""").fetchone()[
+        0
+    ]
+    if payout_relationships != 2:
+        raise DrillError(
+            "Restored loan payouts lost their protected debit/borrower receipt/schedule relationships."
+        )
+    source_store = PrivateEvidenceStore(
+        private_root / "loan-payout-support" / "evidence"
+    )
+    office_files = connection.execute(
+        "select request_id,content_sha256,byte_count from lending.office_review_evidence"
+    ).fetchall()
+    document_files = connection.execute(
+        "select storage_key,content_sha256,byte_count from lending.first_loan_packet_documents"
+    ).fetchall()
+    for key, digest, size in [*office_files, *document_files]:
+        source_store.read(key, digest, size)
     return {
+        "loan_payout_completed_relationships": payout_relationships,
+        "loan_payout_source_private_files": len(office_files) + len(document_files),
         "collector_surplus_tables": surplus_counts,
         "collector_surplus_paid_relationship": relationships,
         "borrower_loan_device_proof_file": len(proofs),

@@ -50,6 +50,16 @@ def test_treasury_only_runtime_cannot_replace_retained_surplus_runtime(tmp_path)
     (tmp_path / "release-capabilities.json").write_text(
         json.dumps({"treasury_funding_schema": 1, "collector_surplus_schema": 1})
     )
+    assert not guard.compatible(tmp_path)
+    (tmp_path / "release-capabilities.json").write_text(
+        json.dumps(
+            {
+                "treasury_funding_schema": 1,
+                "collector_surplus_schema": 1,
+                "loan_payout_schema": 1,
+            }
+        )
+    )
     assert guard.compatible(tmp_path)
     (tmp_path / "gilbic_backend/sql/0138_add_collector_surplus.sql").unlink()
     assert not guard.compatible(tmp_path)

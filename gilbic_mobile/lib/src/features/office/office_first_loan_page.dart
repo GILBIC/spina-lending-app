@@ -830,7 +830,9 @@ class _OfficeFirstLoanPageState extends OfficeScreenState<OfficeFirstLoanPage> {
                   ? () => _capture(true)
                   : null,
             ),
-            if (authorized) ...[
+            if (current['funding_payout'] != null)
+              const Text('Complete this loan’s funded payout and actual borrower receipt in Cash and GCash Control / Loan payouts.'),
+            if (authorized && current['funding_payout'] == null) ...[
               officeHeading('Actual cash acknowledgment'),
               Text(
                 cash

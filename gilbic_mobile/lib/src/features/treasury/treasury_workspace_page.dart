@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/treasury/loan_payout_page.dart';
 import 'package:gilbic_mobile/src/features/treasury/treasury_selectable_text.dart';
 import 'dart:math';
 import 'dart:typed_data';
@@ -258,6 +259,21 @@ class _TreasuryWorkspacePageState extends State<TreasuryWorkspacePage> {
         ).scale(56).clamp(56, 112).toDouble(),
         title: const Text('Cash and GCash Control'),
         actions: [
+          if (w != null && _repository is LoanPayoutRepository)
+            IconButton(
+              tooltip: 'Loan payouts',
+              onPressed: _loading
+                  ? null
+                  : () => _open(
+                      LoanPayoutPage(
+                        repository: _repository as LoanPayoutRepository,
+                        accountId: a?.permits('loan_payout_prepare') == true
+                            ? a!.id
+                            : null,
+                      ),
+                    ),
+              icon: const Icon(Icons.payments_outlined),
+            ),
           if (w != null && _repository is CollectorSurplusRepository)
             IconButton(
               tooltip: 'Collector Excess',
@@ -505,7 +521,10 @@ class _TreasuryWorkspacePageState extends State<TreasuryWorkspacePage> {
                 ],
                 const SizedBox(height: 20),
                 for (final action in TreasuryAction.values.where(
-                  (v) => v != TreasuryAction.receiptApply && a.permits(v.code),
+                  (v) =>
+                      v != TreasuryAction.receiptApply &&
+                      !isLoanPayoutAction(v) &&
+                      a.permits(v.code),
                 ))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
