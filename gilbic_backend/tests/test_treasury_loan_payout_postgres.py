@@ -405,11 +405,16 @@ def test_unfunded_or_mismatched_recipient_confirmation_cannot_advance(
 
 
 @pytest.mark.parametrize(
-    "destination,method",
-    [("collector", "cash"), ("collector", "gcash"), ("borrower", "gcash")],
+    "destination,method,revoked_recipient_device",
+    [
+        ("collector", "cash", False),
+        ("collector", "gcash", False),
+        ("borrower", "gcash", False),
+        ("collector", "cash", True),
+    ],
 )
 def test_protected_first_loan_completion_uses_actual_borrower_receipt_and_one_debit(
-    payout_case, destination, method
+    payout_case, destination, method, revoked_recipient_device
 ):
     from gilbic_backend.treasury_models import COMMAND_ADAPTER
 
@@ -433,6 +438,37 @@ def test_protected_first_loan_completion_uses_actual_borrower_receipt_and_one_de
             "borrower_attestation": "Office witnessed the named borrower acknowledge the full net proceeds with this signed receipt.",
         }
     )
+    if revoked_recipient_device:
+        from dataclasses import replace
+
+        current_device = uuid4()
+        with connect() as conn:
+            conn.execute(
+                "insert into core.devices(id,user_id,device_identifier_hash,platform) values(%s,%s,%s,'web')",
+                (current_device, f["owner"].user_id, uuid4().hex),
+            )
+            conn.execute(
+                "update core.devices set status='revoked' where id=%s",
+                (f["owner"].registered_device_id,),
+            )
+        current_owner = replace(f["owner"], registered_device_id=current_device)
+        with pytest.raises(TreasuryDenied):
+            f["service"].execute(current_owner, command)
+        with connect() as conn:
+            assert (
+                conn.execute(
+                    "select status from lending.loans where id=%s", (f["loan_id"],)
+                ).fetchone()["status"]
+                == "approved"
+            )
+            assert (
+                conn.execute(
+                    "select count(*) as n from treasury.events where account_id=%s",
+                    (f["account_id"],),
+                ).fetchone()["n"]
+                == 1
+            )
+        return
     result = f["service"].execute(f["owner"], command)
     assert result["result"]["payout"]["status"] == "completed"
     assert f["service"].execute(f["owner"], command) == result

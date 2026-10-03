@@ -10,7 +10,7 @@ from . import first_loan_repository as source
 from .loan_payouts import (
     check_account,
     load,
-    revalidate,
+    replay_authority,
     source_command,
     verified_debit,
 )
@@ -31,7 +31,7 @@ def complete(service, conn, actor, account, command):
         raise TreasuryConflict(
             "The named borrower must acknowledge the whole net proceeds of the current first-loan payout."
         )
-    revalidate(conn, actor, row)
+    replay_authority(service, conn, actor, row)
     event = verified_debit(service, conn, account, row, row["event_id"])
     recipient = row["payload"]["recipient_confirmation"]
     service.evidence(conn, account["id"], UUID(recipient["evidence_id"]), {"recipient"})
