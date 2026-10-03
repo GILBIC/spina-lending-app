@@ -757,7 +757,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
                   excluding: _coverAuthorizationChange,
                   child: IgnorePointer(
                     ignoring: _coverAuthorizationChange,
-                    child: child!,
+                    child: ExcludeFocus(
+                      excluding: _coverAuthorizationChange,
+                      child: child!,
+                    ),
                   ),
                 ),
                 if (_coverAuthorizationChange)

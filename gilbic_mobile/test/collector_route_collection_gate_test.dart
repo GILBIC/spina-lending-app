@@ -40,6 +40,99 @@ import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dar
 
 void main() {
   testWidgets(
+    'A9 authorization cover blocks late route autofocus traversal and activation during classification',
+    (tester) async {
+      final identity = _A9Identity(MemoryDeviceIdentityStore());
+      final images = testAppImageRecovery();
+      final payments = _RetryRepository();
+      await _pumpA9DirectApp(
+        tester,
+        _GrantRefreshAuth(),
+        identity: identity,
+        images: images,
+        payments: payments,
+      );
+      final root = tester.state(find.byType(CollectorRoutePage));
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      await tester.tap(find.byKey(const Key('record-collection-entry-1')));
+      await tester.pumpAndSettle();
+      final original = payments.drafts.single.toJson();
+      final fieldFocus = FocusNode();
+      final actionFocus = FocusNode();
+      addTearDown(fieldFocus.dispose);
+      addTearDown(actionFocus.dispose);
+      var activations = 0;
+      identity.delayed = Completer<DeviceIdentity>();
+      final classification = identity.delayed!;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      for (
+        var frame = 0;
+        frame < 12 && (!identity.held || images.ready);
+        frame++
+      ) {
+        await tester.pump();
+      }
+      expect(identity.held, isTrue);
+      expect(images.ready, isFalse);
+
+      // A mounted-only async continuation can push above the guard before the
+      // awaited installation lookup finishes. The app's cover must also block
+      // this newly pushed route's keyboard access for the whole interval.
+      unawaited(
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: Column(
+                children: [
+                  TextField(autofocus: true, focusNode: fieldFocus),
+                  FilledButton(
+                    focusNode: actionFocus,
+                    onPressed: () => activations++,
+                    child: const Text('Late private action'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      final autofocusDuringCover = fieldFocus.hasFocus;
+      final fieldEligibleDuringCover = fieldFocus.canRequestFocus;
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final traversalDuringCover = actionFocus.hasFocus;
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      actionFocus.requestFocus();
+      await tester.pump();
+      final requestedFocusDuringCover = actionFocus.hasFocus;
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      final activationsDuringCover = activations;
+      classification.complete(await identity.unheld());
+      await tester.pumpAndSettle();
+
+      expect(autofocusDuringCover, isFalse);
+      expect(fieldEligibleDuringCover, isFalse);
+      expect(traversalDuringCover, isFalse);
+      expect(requestedFocusDuringCover, isFalse);
+      expect(activationsDuringCover, 0);
+      expect(find.text('Late private action'), findsNothing);
+      expect(
+        identical(root, tester.state(find.byType(CollectorRoutePage))),
+        isTrue,
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      expect(payments.drafts, hasLength(1));
+      expect(payments.drafts.single.toJson(), original);
+      expect(images.ready, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'A9 blocked combined Retry amount uses readable disabled foreground',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
