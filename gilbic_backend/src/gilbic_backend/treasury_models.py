@@ -332,14 +332,29 @@ class ReconciliationSupersede(ReconciliationCloseFields):
     prior_reconciliation_id: UUID
 
 
-class SettlementPreview(StrictModel):
+class RetainedCashSelection(StrictModel):
+    retained_exception_id: UUID | None = None
+    retained_exception_version: Version | None = None
+
+    @model_validator(mode="after")
+    def paired_retained_selection(self):
+        if (self.retained_exception_id is None) != (
+            self.retained_exception_version is None
+        ):
+            raise ValueError(
+                "Select the retained cash record and its exact version together."
+            )
+        return self
+
+
+class SettlementPreview(RetainedCashSelection):
     account_id: UUID
     expected_version: Version
     credit_application_id: UUID | None = None
     credit_application_version: Version | None = None
 
 
-class CollectorCountRecord(Command):
+class CollectorCountRecord(Command, RetainedCashSelection):
     action: Literal["collector_count_record"]
     remittance_id: UUID
     source_digest: Digest
@@ -596,9 +611,15 @@ COMMAND_ADAPTER = TypeAdapter(TreasuryCommand)
 
 
 def command_hash(command: BaseModel) -> str:
-    encoded = json.dumps(
-        command.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
-    )
+    payload = command.model_dump(mode="json")
+    # Preserve durable retries saved before this optional count extension existed.
+    if (
+        payload.get("action") == "collector_count_record"
+        and payload.get("retained_exception_id") is None
+    ):
+        payload.pop("retained_exception_id", None)
+        payload.pop("retained_exception_version", None)
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 

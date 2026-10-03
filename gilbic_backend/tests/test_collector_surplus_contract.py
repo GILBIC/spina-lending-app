@@ -28,6 +28,43 @@ def test_zero_count_is_a_valid_saved_fact_not_a_payment():
     assert parsed.action == "collector_count_record"
 
 
+def test_ordinary_count_retry_keeps_its_pre_extension_request_hash():
+    import hashlib
+    import json
+
+    from gilbic_backend.treasury_models import command_hash
+
+    old_body = count()
+    old_hash = hashlib.sha256(
+        json.dumps(old_body, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert command_hash(COMMAND_ADAPTER.validate_python(old_body)) == old_hash
+    assert (
+        command_hash(
+            COMMAND_ADAPTER.validate_python(
+                dict(
+                    old_body,
+                    retained_exception_id=None,
+                    retained_exception_version=None,
+                )
+            )
+        )
+        == old_hash
+    )
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        {"retained_exception_id": str(uuid4())},
+        {"retained_exception_version": 1},
+    ],
+)
+def test_retained_selection_requires_both_identity_and_version(selection):
+    with pytest.raises(ValidationError):
+        COMMAND_ADAPTER.validate_python(count(**selection))
+
+
 @pytest.mark.parametrize("amount", ["-1.00", "1.001", 1.0, "10000000000000000.00"])
 def test_counts_reject_invalid_money(amount):
     with pytest.raises(ValidationError):

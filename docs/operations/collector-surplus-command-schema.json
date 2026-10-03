@@ -327,6 +327,32 @@
     "CollectorCountRecord": {
       "additionalProperties": false,
       "properties": {
+        "retained_exception_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retained Exception Id"
+        },
+        "retained_exception_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retained Exception Version"
+        },
         "request_id": {
           "format": "uuid",
           "title": "Request Id",

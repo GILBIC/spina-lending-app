@@ -6,14 +6,21 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from .collector_surplus import PREFIX, load, outcome, require_enabled, save
+from .collector_surplus import (
+    PREFIX,
+    exception_change,
+    load,
+    outcome,
+    require_enabled,
+    save,
+)
 from .treasury_authorization import (
     TreasuryConflict,
     TreasuryDenied,
     require_account,
     require_live_permission,
 )
-from .treasury_repository import identity, json_value
+from .treasury_repository import event_projection, identity, json_value
 
 
 def source_snapshot(conn, remittance_id):
@@ -98,14 +105,84 @@ def preview(service, conn, actor, remittance_id, command):
             }
         )
     held = conn.execute(
-        "select 1 from treasury.collector_exceptions where (payload->>'remittance_id')::uuid=%s and (payload->>'remaining_held_amount')::numeric>0",
+        "select id from treasury.collector_exceptions where (payload->>'remittance_id')::uuid=%s and (payload->>'remaining_held_amount')::numeric>0 order by id for update",
         (remittance_id,),
-    ).fetchone()
-    if held:
+    ).fetchall()
+    retained_amount = Decimal("0.00")
+    if command.retained_exception_id:
+        retained = load(
+            conn,
+            "exceptions",
+            command.retained_exception_id,
+            command.retained_exception_version,
+        )
+        if (
+            retained["account_id"] != str(account["id"])
+            or retained["ledger_context_id"] != str(account["ledger_context_id"])
+            or retained["holder_user_id"] != str(actor.user_id)
+            or retained["collector_user_id"] != str(row["collector_user_id"])
+            or retained["remittance_id"] != str(remittance_id)
+        ):
+            raise TreasuryDenied(
+                "Select retained cash for this exact remittance, holder and account."
+            )
+        retained_amount = Decimal(retained["remaining_held_amount"])
+        if (
+            len(held) != 1
+            or held[0]["id"] != command.retained_exception_id
+            or retained_amount <= 0
+            or retained_amount > gross - refund
+            or Decimal(retained["reserved_amount"]) != 0
+            or Decimal(retained["available_amount"]) != retained_amount
+            or retained["source_digest"] != digest
+        ):
+            raise TreasuryConflict(
+                "Retained cash changed, is reserved for return, or does not match the current source."
+            )
+        service.evidence(
+            conn, account["id"], UUID(retained["evidence_id"]), {"recipient"}
+        )
+        original = conn.execute(
+            "select * from treasury.events where id=%s for update",
+            (UUID(retained["event_id"]),),
+        ).fetchone()
+        if (
+            not original
+            or original["account_id"] != account["id"]
+            or original["ledger_context_id"] != account["ledger_context_id"]
+            or original["provider"] != "physical_cash"
+            or original["direction"] != "credit"
+            or str(original["evidence_id"]) != retained["evidence_id"]
+            or original["amount"] != Decimal(retained["retained_amount"])
+        ):
+            raise TreasuryConflict(
+                "The original retained cash receipt is unavailable or changed."
+            )
+        projected = event_projection(conn, original)
+        if (
+            projected["corrected"]
+            or projected["classification"] != "collector_retained_dispute"
+        ):
+            raise TreasuryConflict(
+                "The original retained cash receipt requires investigation."
+            )
+        snapshot["retained_cash"] = {
+            "exception_id": retained["id"],
+            "exception_version": retained["version"],
+            "amount": str(retained_amount),
+            "event_id": retained["event_id"],
+            "event_version": projected["version"],
+            "evidence_id": retained["evidence_id"],
+            "effective_at": original["effective_at"].isoformat(),
+        }
+        digest = hashlib.sha256(
+            json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    elif held:
         blockers.append(
             {
                 "code": "retained_cash_dispute",
-                "message": "Previously retained disputed cash requires its explicit return before a new full acceptance.",
+                "message": "Select the current retained cash record for inclusion, or complete its evidenced return before full acceptance.",
             }
         )
     return json_value(
@@ -126,7 +203,10 @@ def preview(service, conn, actor, remittance_id, command):
             "gross_obligation": gross,
             "refund_due_total": refund,
             "authorized_credit_application": "0.00",
-            "physical_cash_required": gross - refund,
+            "physical_cash_required": gross - refund - retained_amount,
+            "retained_cash_amount": retained_amount,
+            "retained_exception_id": command.retained_exception_id,
+            "retained_exception_version": command.retained_exception_version,
             "source_snapshot": snapshot,
             "source_items": snapshot["items"],
             "refund_due_releases": snapshot["refund_due_releases"],
@@ -149,7 +229,10 @@ def settlement_action(service, conn, actor, account, command):
             actor,
             command.remittance_id,
             SettlementPreview(
-                account_id=account["id"], expected_version=account["version"]
+                account_id=account["id"],
+                expected_version=account["version"],
+                retained_exception_id=command.retained_exception_id,
+                retained_exception_version=command.retained_exception_version,
             ),
         )
         if (
@@ -157,6 +240,11 @@ def settlement_action(service, conn, actor, account, command):
             or p["source_digest"] != command.source_digest
             or not command.review_acknowledged
             or command.counted_at > service.clock()
+            or p["source_snapshot"].get("retained_cash") is not None
+            and command.counted_at
+            < datetime.fromisoformat(
+                p["source_snapshot"]["retained_cash"]["effective_at"]
+            )
         ):
             raise TreasuryConflict(
                 "Review matching current source and actual count time."
@@ -174,6 +262,9 @@ def settlement_action(service, conn, actor, account, command):
                 "gross_obligation",
                 "refund_due_total",
                 "physical_cash_required",
+                "retained_cash_amount",
+                "retained_exception_id",
+                "retained_exception_version",
             ]
         }
         data.update(
@@ -212,6 +303,8 @@ def settlement_action(service, conn, actor, account, command):
             credit_application_version=getattr(
                 command, "credit_application_version", None
             ),
+            retained_exception_id=count.get("retained_exception_id"),
+            retained_exception_version=count.get("retained_exception_version"),
         ),
     )
     if (
@@ -221,6 +314,10 @@ def settlement_action(service, conn, actor, account, command):
         raise TreasuryConflict("Source changed since the actual count; review again.")
     service.evidence(conn, account["id"], UUID(count["evidence_id"]), {"recipient"})
     if tag == "collector_custody_exception_record":
+        if count.get("retained_exception_id"):
+            raise TreasuryConflict(
+                "A short additional handover cannot create another retained-cash exception here."
+            )
         if not p["can_count"]:
             raise TreasuryConflict("; ".join(b["message"] for b in p["blockers"]))
         if (
@@ -303,6 +400,27 @@ def settlement_action(service, conn, actor, account, command):
                 "reason": "Counted cash settlement; excess remains pending identification.",
             },
         )
+    included = None
+    if count.get("retained_exception_id"):
+        retained = load(
+            conn,
+            "exceptions",
+            UUID(count["retained_exception_id"]),
+            count["retained_exception_version"],
+        )
+        included = exception_change(
+            conn, retained, included_amount=Decimal(p["retained_cash_amount"])
+        )
+        conn.execute(
+            "insert into treasury.source_links(id,event_id,ledger_context_id,source_kind,source_id,source_version,linked_amount) values(%s,%s,%s,'collector_remittance_physical',%s,1,%s)",
+            (
+                identity(UUID(retained["event_id"]), "remittance-portion"),
+                UUID(retained["event_id"]),
+                account["ledger_context_id"],
+                UUID(count["remittance_id"]),
+                Decimal(p["retained_cash_amount"]),
+            ),
+        )
     now = service.clock()
     conn.execute(
         "insert into lending.collection_remittance_reviews(remittance_id,reviewed_by_user_id,reviewed_at) values(%s,%s,%s) on conflict(remittance_id) do nothing",
@@ -329,6 +447,9 @@ def settlement_action(service, conn, actor, account, command):
             "recipient_user_id": str(actor.user_id),
             "event_id": str(event["id"]) if event else None,
             "physical_amount": count["counted_amount"],
+            "retained_cash_amount": p["retained_cash_amount"],
+            "retained_exception_id": count.get("retained_exception_id"),
+            "retained_exception_version": count.get("retained_exception_version"),
             "authorized_credit_amount": "0.00",
             "gross_obligation": count["gross_obligation"],
             "accepted_at": now,
@@ -380,6 +501,7 @@ def settlement_action(service, conn, actor, account, command):
         "accepted_pending_identification" if case else "accepted_exact",
         count=count,
         case=case,
+        exception=included,
     )
 
 

@@ -532,6 +532,18 @@ final Map<TreasuryAction, List<TreasuryField>> treasuryFields = {
   ],
   TreasuryAction.collectorCountRecord: [
     TreasuryField('remittance_id', 'Remittance id', TreasuryFieldKind.id),
+    TreasuryField(
+      'retained_exception_id',
+      'Retained cash record',
+      TreasuryFieldKind.id,
+      required: false,
+    ),
+    TreasuryField(
+      'retained_exception_version',
+      'Retained cash version',
+      TreasuryFieldKind.integer,
+      required: false,
+    ),
     TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
     TreasuryField('counted_amount', 'Counted amount', TreasuryFieldKind.money),
     TreasuryField('counted_at', 'Counted at', TreasuryFieldKind.instant),
@@ -1169,6 +1181,12 @@ class TreasuryCommand {
     }
     if (action == TreasuryAction.openingActivate && body['confirmed'] != true) {
       throw const FormatException('Confirm the actual observed opening.');
+    }
+    if ((body['retained_exception_id'] == null) !=
+        (body['retained_exception_version'] == null)) {
+      throw const FormatException(
+        'Review the retained cash identity and version together.',
+      );
     }
     for (final key in [
       'review_acknowledged',

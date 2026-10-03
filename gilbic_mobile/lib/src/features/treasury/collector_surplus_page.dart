@@ -604,11 +604,21 @@ class _CollectorSurplusRecordPageState
 
   Future<void> _countPreview() async {
     if (_locked || _accountId == null) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _preview = null;
+      _error = null;
+    });
     try {
       final p = await widget.repository.collectorSettlementPreview(
-        _record['id'] as String,
+        (_record['remittance_id'] ?? _record['id']) as String,
         _accountId!,
+        retainedExceptionId: widget.kind == CollectorSurplusKind.exceptions
+            ? _record['id'] as String
+            : null,
+        retainedExceptionVersion: widget.kind == CollectorSurplusKind.exceptions
+            ? _record['version'] as int
+            : null,
       );
       if (mounted) setState(() => _preview = p);
     } catch (e) {
@@ -785,9 +795,18 @@ class _CollectorSurplusRecordPageState
                           _preview = null;
                         }),
                 ),
-              if (widget.kind == CollectorSurplusKind.remittances && !own) ...[
+              if ((widget.kind == CollectorSurplusKind.remittances ||
+                      widget.kind == CollectorSurplusKind.exceptions &&
+                          r['remaining_held_amount'] != '0.00') &&
+                  !own) ...[
+                if (widget.kind == CollectorSurplusKind.exceptions)
+                  const Text(
+                    'Include this already held cash in the original remittance. Count only new cash handed over now; the held amount will not be received twice.',
+                  ),
                 action(
-                  'Review current count snapshot',
+                  widget.kind == CollectorSurplusKind.exceptions
+                      ? 'Review inclusion of retained cash'
+                      : 'Review current count snapshot',
                   'count_record',
                   _countPreview,
                 ),
@@ -800,8 +819,14 @@ class _CollectorSurplusRecordPageState
                       'Record actual cash count',
                       'count_record',
                       () => _open(TreasuryAction.collectorCountRecord, {
-                        'remittance_id': r['id'],
+                        'remittance_id': _preview!.raw['remittance_id'],
                         'source_digest': _preview!.digest,
+                        'retained_exception_id':
+                            _preview!.raw['retained_exception_id'],
+                        'retained_exception_version':
+                            _preview!.raw['retained_exception_version'],
+                        'retained_cash_amount':
+                            _preview!.raw['retained_cash_amount'],
                       }, account: a),
                     ),
                 ],
@@ -819,7 +844,8 @@ class _CollectorSurplusRecordPageState
                       'source_digest': r['source_digest'],
                     }, account: a),
                   ),
-                if (r['disposition'] == 'counted_short_rejected') ...[
+                if (r['disposition'] == 'counted_short_rejected' &&
+                    r['retained_exception_id'] == null) ...[
                   const Text(
                     'Rejected count does not clear custody. Record retained cash only if it was actually held during the dispute.',
                   ),
@@ -1482,10 +1508,19 @@ class _CollectorSurplusActionFormState
             ),
           ],
           if (widget.reviewLabel != null) Text(widget.reviewLabel!),
+          if (widget.initial['retained_exception_id'] != null)
+            const Text(
+              'Enter only new cash counted now. Previously retained cash is included separately from the reviewed record.',
+            ),
+          if (widget.initial['retained_cash_amount'] != null)
+            ..._recordFacts({
+              'retained_cash_amount': widget.initial['retained_cash_amount'],
+            }),
           for (final f in _fields.where(
             (f) =>
-                !widget.initial.containsKey(f.key) ||
-                !_technicalReference(f.key),
+                !f.key.startsWith('retained_exception_') &&
+                (!widget.initial.containsKey(f.key) ||
+                    !_technicalReference(f.key)),
           ))
             _field(f),
           if (_fields.any(
