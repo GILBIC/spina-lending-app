@@ -495,6 +495,20 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
         childrenPadding: const EdgeInsets.all(14),
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              for (final action in actions)
+                OutlinedButton(
+                  key: Key('employee-action-$action-${record['id']}'),
+                  onPressed: _loading || _offline || _denied
+                      ? null
+                      : () => _command(action, record: record),
+                  child: Text(employeeLabel(action)),
+                ),
+            ],
+          ),
           ExpansionTile(
             title: const Text('Details'),
             expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
@@ -533,20 +547,6 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
                   ),
               ],
             ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 6,
-            children: [
-              for (final action in actions)
-                OutlinedButton(
-                  key: Key('employee-action-$action-${record['id']}'),
-                  onPressed: _loading || _offline || _denied
-                      ? null
-                      : () => _command(action, record: record),
-                  child: Text(employeeLabel(action)),
-                ),
-            ],
-          ),
         ],
       ),
     );
