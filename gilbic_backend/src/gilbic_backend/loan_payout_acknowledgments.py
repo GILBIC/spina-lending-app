@@ -6,7 +6,7 @@ from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from .loan_payouts import load, replay_authority, revalidate, verified_debit
+from .loan_payouts import load, replay_authority, verified_debit
 from .treasury_authorization import TreasuryConflict, TreasuryDenied, require_actor
 from .treasury_repository import json_value
 
@@ -51,7 +51,9 @@ def own_account(conn, actor, payout_id, stage, *, lock=True):
     row = load(conn, payout_id, lock=False)
     own_scope(conn, actor, row, stage)
     account = conn.execute(
-        "select * from treasury.accounts where id=%s" + (" for update" if lock else ""),
+        "select * from treasury.accounts where id=%s for update"
+        if lock
+        else "select * from treasury.accounts where id=%s",
         (row["account_id"],),
     ).fetchone()
     if account is None or not account["active"]:
@@ -110,7 +112,7 @@ def acknowledge(service, conn, actor, account, command):
         raise TreasuryConflict(
             "Review the current payout with verified destination receipt first."
         )
-    revalidate(conn, actor, row, staff_authority=False)
+    replay_authority(service, conn, actor, row, staff_authority=False)
     event = verified_debit(service, conn, account, row, row["event_id"])
     acknowledgments = dict(row["payload"].get("acknowledgments", {}))
     if command.stage in acknowledgments and acknowledgments[command.stage]["received"]:

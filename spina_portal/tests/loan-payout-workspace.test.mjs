@@ -41,3 +41,30 @@ test('staff disabled history renders without asking for new payout sources',asyn
  const handle=module.mountLoanPayouts({root,client,account:()=>account,mode:'staff'});t.after(handle);await handle.ready;
  assert.equal(catalogue,0);assert.match(root.querySelector('[data-payout-detail]').textContent,/1000.00/);assert.equal(root.querySelector('[data-payout-save]').disabled,true);
 });
+
+
+test('prepared payout becomes a movement source without discarding other drafts',async t=>{
+ const {mountTreasuryWorkspace}=await import('../assets/treasury-workspace.js');
+ const root=new Element(),actor={user_id:id,device_id:id},payoutId='20000000-0000-4000-8000-000000000001';
+ const account={id,ledger_context_id:id,version:1,alias:'Funding wallet',kind:'gcash',context:'synthetic',actions:['loan_payout_prepare','disbursement_record'],balance:null};
+ const source={source_kind:'first_loan',source_id:id,amount:'1000.00',label:'Approved loan',authorization_id:id,packet_hash:'b'.repeat(64),contract_evidence_reference:'office-evidence:'+id};
+ let prepared=null;
+ const api={request:async(path,options={})=>{
+  if(path.endsWith('/workspace'))return {contract_version:1,actor,enabled:true,owner_configured:true,capabilities:{disbursement_record:true},claims:[],blockers:[],accounts:[{...account}],source_choices:prepared?[{purpose:'loan_release',id:payoutId,version:1,label:'Prepared approved loan',account_id:id,payee_id:id,amount:'1000.00',provider:'gcash'}]:[]};
+  if(path.includes('/loan-payout-sources'))return {contract_version:1,actor,account_id:id,account_version:account.version,items:prepared?[]:[source]};
+  if(path.endsWith('/loan-payout-preview'))return {...options.body,contract_version:1,actor,ledger_context_id:id,account_version:account.version,amount:'1000.00',payee_id:id,payee_name:'Assigned Collector',client_id:id,source_digest:'a'.repeat(64)};
+  if(path.endsWith('/actions')){const b=options.body;prepared={...b,id:payoutId,version:1,status:'prepared',amount:'1000.00',ledger_context_id:id,stages:[]};account.version=2;return {contract_version:1,action:b.action,request_id:b.request_id,target_id:payoutId,version:1,status:'saved',result:{actor_user_id:id,device_id:id,account_id:id,ledger_context_id:id,payout:prepared}};}
+  if(path.includes('/loan-payouts?'))return {contract_version:1,actor,mode:'staff',account_id:id,enabled:true,items:prepared?[prepared]:[],limit:50,offset:0,has_more:false};
+  return {items:[],total_count:0,limit:50,offset:0,has_more:false,totals:null};
+ }};
+ const handle=mountTreasuryWorkspace({root,api,getSession:()=>({user:{id,role:'management',status:'active'},device_id:id,permissions:[]})});t.after(handle);await handle.ready;
+ const file=root.querySelector('[data-treasury-evidence-file]'),bytes=new Blob(['reviewed proof'],{type:'image/png'});file.files=[bytes];
+ await handle.activate('payouts');root.querySelector('[data-payout-source]').value=id;root.querySelector('[data-payout-recipient]').value='Reviewed Collector wallet';
+ fire(root.querySelector('[data-payout-preview]'),'click');for(let i=0;i<5;i++)await tick();
+ fire(root.querySelector('[data-payout-prepare]'),'click');for(let i=0;i<5;i++)await tick();
+ assert.ok(prepared,'actual prepare command saved');
+ fire(root.querySelector('[data-payout-movement]'),'click');for(let i=0;i<5;i++)await tick();
+ const movement=root.querySelector('[data-treasury-action="disbursement_record"]');
+ assert.match(movement.querySelector('[name="source_id"]').innerHTML,new RegExp(payoutId));
+ assert.equal(root.querySelector('[data-treasury-evidence-file]'),file);assert.equal(file.files[0],bytes);
+});

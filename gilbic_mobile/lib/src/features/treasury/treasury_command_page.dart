@@ -751,7 +751,7 @@ class _TreasuryCommandPageState extends State<TreasuryCommandPage> {
                 value: row['id'] as String,
                 enabled: row['supported'] == true,
                 child: Text(
-                  '${row['payee_name'] ?? row['kind']} · PHP ${row['amount']} · ${row['status']}',
+                  '${row['label'] ?? row['kind']}${row['payee_name'] == null ? '' : ' · ${row['payee_name']}'}${row['destination'] == null ? '' : ' · ${row['destination']}'} · PHP ${row['amount']} · ${row['status']}',
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

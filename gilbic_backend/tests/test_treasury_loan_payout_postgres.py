@@ -305,6 +305,57 @@ def test_failed_loan_source_link_preserves_actual_debit_without_funding_the_loan
         )
 
 
+@pytest.mark.parametrize("source_file", ["packet", "contract"])
+@pytest.mark.parametrize("damage", ["missing", "corrupt"])
+def test_unavailable_signed_source_file_preserves_observed_debit(
+    payout_case, source_file, damage
+):
+    f = payout_case
+    _, prepared = prepare(f)
+    with connect() as conn:
+        key = (
+            conn.execute(
+                "select storage_key from lending.first_loan_packet_documents where loan_id=%s",
+                (f["loan_id"],),
+            ).fetchone()["storage_key"]
+            if source_file == "packet"
+            else conn.execute(
+                "select request_id from lending.office_review_evidence where id=%s",
+                (f["release"]["contract_evidence_reference"].split(":")[1],),
+            ).fetchone()["request_id"]
+        )
+    path = PrivateEvidenceStore().root / f"{key.hex}.bin"
+    if damage == "missing":
+        path.unlink()
+    else:
+        content = path.read_bytes()
+        path.write_bytes(bytes([content[0] ^ 1]) + content[1:])
+    command, saved = debit(f, prepared)
+    assert saved["result"]["source_link"]["status"] == "blocked"
+    assert (
+        saved["result"]["source_link"]["requested_payout_id"] == prepared["target_id"]
+    )
+    assert f["service"].execute(f["owner"], command) == saved
+    with connect() as conn:
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.events where account_id=%s",
+                (f["account_id"],),
+            ).fetchone()["n"]
+            == 1
+        )
+        assert conn.execute(
+            "select status,event_id from treasury.loan_payouts where id=%s",
+            (prepared["target_id"],),
+        ).fetchone() == {"status": "prepared", "event_id": None}
+        assert (
+            conn.execute(
+                "select status from lending.loans where id=%s", (f["loan_id"],)
+            ).fetchone()["status"]
+            == "approved"
+        )
+
+
 def test_second_real_debit_does_not_fund_the_same_payout_twice(payout_case):
     f = payout_case
     _, prepared = prepare(f)
@@ -569,9 +620,17 @@ def own_ack(f, prepared, who, stage, payout_version, **changes):
     return command, f["service"].execute(who, command)
 
 
-@pytest.mark.parametrize("destination", ["collector", "borrower"])
+@pytest.mark.parametrize(
+    "destination,revocation",
+    [
+        ("collector", None),
+        ("borrower", None),
+        ("collector", "collector_device"),
+        ("borrower", "borrower_role"),
+    ],
+)
 def test_renewal_completion_requires_independent_borrower_and_reviewed_proof(
-    renewal_payout_case, destination
+    renewal_payout_case, destination, revocation
 ):
     from gilbic_backend.treasury_models import COMMAND_ADAPTER
 
@@ -636,6 +695,57 @@ def test_renewal_completion_requires_independent_borrower_and_reviewed_proof(
             ).fetchone()["n"]
             == 1
         )
+
+    if revocation:
+        with connect() as conn:
+            if revocation == "collector_device":
+                conn.execute(
+                    "update core.devices set status='revoked' where id=%s",
+                    (f["collector"].registered_device_id,),
+                )
+            else:
+                conn.execute(
+                    "delete from core.user_roles where user_id=%s and role_id=(select id from core.roles where code='client')",
+                    (f["borrower"].user_id,),
+                )
+        with pytest.raises(TreasuryDenied):
+            f["service"].execute(f["owner"], command)
+        history = f["service"].loan_payout_workspace(
+            f["owner"], mode="staff", account_id=f["account_id"]
+        )
+        saved_row = next(
+            row for row in history["items"] if row["id"] == prepared["target_id"]
+        )
+        assert saved_row["status"] == "completed"
+        assert saved_row["blocker"]
+
+
+def test_receipt_reviewers_revoked_device_blocks_later_reads_and_borrower_stage(
+    renewal_payout_case,
+):
+    from dataclasses import replace
+
+    f = renewal_payout_case
+    prepared = prepare_renewal(f, "borrower")
+    debit(f, prepared, purpose="renewal")
+    confirm(f, prepared["target_id"])
+    current_device = uuid4()
+    with connect() as conn:
+        conn.execute(
+            "insert into core.devices(id,user_id,device_identifier_hash,platform) values(%s,%s,%s,'web')",
+            (current_device, f["owner"].user_id, uuid4().hex),
+        )
+        conn.execute(
+            "update core.devices set status='revoked' where id=%s",
+            (f["owner"].registered_device_id,),
+        )
+    current_owner = replace(f["owner"], registered_device_id=current_device)
+    history = f["service"].loan_payout_workspace(
+        current_owner, mode="staff", account_id=f["account_id"]
+    )
+    assert history["items"][0]["blocker"]
+    with pytest.raises(TreasuryDenied):
+        own_ack(f, prepared, f["borrower"], "borrower", 3)
 
 
 def test_denied_receipt_does_not_advance_and_can_be_followed_by_actual_receipt(

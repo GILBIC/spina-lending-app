@@ -19,3 +19,12 @@ test('drafts expose explicit reset without replacing sibling file nodes',async t
 test('missing provider reference is an explicit unresolved owner observation, never guessed',()=>{assert.equal(typeof module.treasuryObservedReference,'function');assert.equal(module.treasuryObservedReference({reference:'',reference_unavailable:true},{owner:true,unclassified:true}),null);assert.throws(()=>module.treasuryObservedReference({reference:'',reference_unavailable:true},{owner:false,unclassified:true}),/owner/i);assert.throws(()=>module.treasuryObservedReference({reference:'',reference_unavailable:true},{owner:true,unclassified:false}),/unclassified|source/i);assert.throws(()=>module.treasuryObservedReference({reference:'',reference_unavailable:false},{owner:true,unclassified:true}),/reference/i);assert.equal(module.treasuryObservedReference({reference:'SYN-001',reference_unavailable:false},{owner:true,unclassified:true}),'SYN-001');});
 
 test('Collector Excess is a lazy private task inside the existing Treasury workspace',async t=>{const h=await mount(t);assert.ok(h.root.querySelector('[data-task="surplus"]'));assert.equal(h.calls.some(c=>c.path.includes('/collector-surplus/')),false);await h.handle.activate('surplus');assert.ok(h.root.querySelector('[data-treasury-surplus]').querySelector('[data-private-panel]'));assert.ok(h.calls.some(c=>c.path.includes('/collector-surplus/workspace')));assert.match(h.root.textContent,/incomplete|unavailable|Collector/);});
+
+
+test('equal-amount payouts to one Collector retain distinct loan labels',async t=>{
+ const choices=['LN-001','LN-002'].map((label,i)=>({id:`30000000-0000-4000-8000-00000000000${i+1}`,account_id:account,kind:'loan_release',label,payee_name:'Assigned Collector',amount:'1000.00',supported:true}));
+ const h=await mount(t,{...workspace,source_choices:choices});
+ const options=h.root.querySelector('[data-treasury-action="disbursement_record"]').querySelector('[name="source_id"]').innerHTML;
+ for(const loan of ['LN-001','LN-002'])assert.match(options,new RegExp(loan));
+ assert.match(options,/Assigned Collector/);
+});

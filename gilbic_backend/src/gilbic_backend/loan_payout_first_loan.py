@@ -118,6 +118,7 @@ def complete(service, conn, actor, account, command):
             "snapshot": snapshot,
             "office_evidence_reference": receipt.evidence_reference,
             "witness_id": str(actor.user_id),
+            "device_id": str(actor.registered_device_id),
         },
         "source_receipt": result["release"],
     }

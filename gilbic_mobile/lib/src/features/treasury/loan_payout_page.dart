@@ -346,8 +346,12 @@ class _LoanPayoutPageState extends State<LoanPayoutPage> {
     final command = TreasuryCommand(
       action,
       requestId: newTreasuryRequestId(),
-      accountId: row['account_id'] as String,
-      expectedVersion: _account?.version ?? 0,
+      accountId: action == TreasuryAction.loanPayoutAcknowledge
+          ? null
+          : row['account_id'] as String,
+      expectedVersion: action == TreasuryAction.loanPayoutAcknowledge
+          ? null
+          : _account?.version ?? 0,
       fields: fields,
     );
     command.toJson();
@@ -394,15 +398,19 @@ class _LoanPayoutPageState extends State<LoanPayoutPage> {
           ? await widget.repository.retrySame()
           : await widget.repository.recover();
       if (!mounted) return;
-      if (result?.status == 'saved' &&
-          result!.raw['action'] == 'evidence_upload') {
-        _evidence = treasuryObject(result.result['evidence']);
-      }
+      final recoveredUpload =
+          result?.status == 'saved' &&
+          result!.raw['action'] == 'evidence_upload';
+      // The generic upload journal binds the account, not a payout selection.
+      // Recovery must never attach its file to whichever payout opened first.
+      if (recoveredUpload) _evidence = null;
       if (result != null) await _refresh();
       if (mounted) {
         setState(
           () => _error = result == null
               ? 'Outcome still unconfirmed. Keep this request.'
+              : recoveredUpload
+              ? 'Upload recovered without assigning it to a payout. Choose and review the receipt again for the selected payout.'
               : 'Outcome recovered. Review the separate next step before submitting.',
         );
       }
@@ -651,7 +659,9 @@ class _LoanPayoutPageState extends State<LoanPayoutPage> {
                   ],
                   TextField(
                     controller: _note,
-                    enabled: available,
+                    enabled:
+                        available ||
+                        (!_own && _writable && row['status'] == 'prepared'),
                     maxLength: 1000,
                     maxLines: 3,
                     decoration: const InputDecoration(

@@ -1,7 +1,6 @@
 """Final renewal activation after independent receipt and Management proof review."""
 
 from decimal import Decimal
-from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
@@ -34,11 +33,7 @@ def complete(service, conn, actor, account, command):
         raise TreasuryConflict(
             "The named borrower must independently confirm the actual proceeds first."
         )
-    from dataclasses import replace
-
-    from .loan_payout_acknowledgments import own_scope
-
-    # Every positive attestation still belongs to an active, authorized actor/device.
+    # replay_authority already checked every retained positive actor/device.
     for stage in (
         ("recipient", "borrower_handover", "borrower")
         if row["destination"] == "collector"
@@ -49,16 +44,6 @@ def complete(service, conn, actor, account, command):
             raise TreasuryConflict(
                 "Every required independent receipt and handover must be confirmed."
             )
-        own_scope(
-            conn,
-            replace(
-                actor,
-                user_id=UUID(attestation["actor_user_id"]),
-                registered_device_id=UUID(attestation["device_id"]),
-            ),
-            row,
-            stage,
-        )
     if (
         str(renewal["old_loan_status"]).lower() != "paid"
         or Decimal(renewal["remaining_balance"] or 0) != 0

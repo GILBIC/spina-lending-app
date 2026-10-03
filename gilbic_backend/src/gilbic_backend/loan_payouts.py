@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from dataclasses import replace
 from decimal import Decimal
 from uuid import UUID
 
@@ -73,8 +74,9 @@ def preview(service, actor, command):
 
 def load(conn, payout_id, *, lock=True):
     row = conn.execute(
-        "select * from treasury.loan_payouts where id=%s"
-        + (" for update" if lock else ""),
+        "select * from treasury.loan_payouts where id=%s for update"
+        if lock
+        else "select * from treasury.loan_payouts where id=%s",
         (payout_id,),
     ).fetchone()
     if row is None:
@@ -114,6 +116,9 @@ def revalidate(conn, actor, row, *, staff_authority=True):
 
 
 def replay_authority(service, conn, actor, row, *, staff_authority=True):
+    from .loan_payout_acknowledgments import own_scope
+    from .loan_payout_reads import staff_scope
+
     if row["status"] == "cancelled":
         from .loan_payout_reads import staff_scope
 
@@ -121,6 +126,18 @@ def replay_authority(service, conn, actor, row, *, staff_authority=True):
             staff_scope(conn, actor, row["source_kind"])
         return
     revalidate(conn, actor, row, staff_authority=staff_authority)
+    for stage, acknowledgment in row["payload"].get("acknowledgments", {}).items():
+        if acknowledgment.get("received"):
+            own_scope(
+                conn,
+                replace(
+                    actor,
+                    user_id=UUID(acknowledgment["actor_user_id"]),
+                    registered_device_id=UUID(acknowledgment["device_id"]),
+                ),
+                row,
+                stage,
+            )
     if row["event_id"]:
         account = conn.execute(
             "select * from treasury.accounts where id=%s", (row["account_id"],)
@@ -130,6 +147,23 @@ def replay_authority(service, conn, actor, row, *, staff_authority=True):
         receipt = row["payload"].get(key)
         if not receipt:
             continue
+        reviewer = replace(
+            actor,
+            user_id=UUID(
+                receipt["witness_id"]
+                if key == "borrower_receipt"
+                else receipt["reviewed_by"]
+            ),
+            registered_device_id=UUID(receipt["device_id"]),
+        )
+        require_account(
+            conn,
+            reviewer,
+            row["account_id"],
+            "treasury.disbursement.record",
+            lock=False,
+        )
+        staff_scope(conn, reviewer, row["source_kind"])
         service.evidence(
             conn, row["account_id"], UUID(receipt["evidence_id"]), {"recipient"}
         )

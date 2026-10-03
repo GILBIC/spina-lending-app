@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from .office_review_evidence_storage import EvidenceFileError
 from .treasury_authorization import TreasuryConflict, TreasuryDenied
 
 
@@ -70,7 +71,11 @@ def first_loan_source(conn, actor, command, *, released=False, staff_authority=T
             }
     except source.FirstLoanAccessDenied as error:
         raise TreasuryDenied(str(error)) from error
-    except (source.FirstLoanConflict, source.OfficeReviewEvidenceConflict) as error:
+    except (
+        source.FirstLoanConflict,
+        source.OfficeReviewEvidenceConflict,
+        EvidenceFileError,
+    ) as error:
         raise TreasuryConflict(str(error)) from error
 
 

@@ -4,7 +4,7 @@ import {escapeHtml as esc} from './ui.js';
 const button = (key,label) => `<button type="button" class="button button-secondary" data-payout-${key}>${label}</button>`;
 const option = (id,label) => `<option value="${esc(id)}">${esc(label)}</option>`;
 const text = value => String(value??'').replaceAll('_',' ');
-export function mountLoanPayouts({root,api,getSession,signal,client:shared,account:accountProvider,mode='own',beforeTaskChange=()=>{},afterTaskChange=()=>{},canStartWrite=()=>true,onMovement=()=>{}}={}) {
+export function mountLoanPayouts({root,api,getSession,signal,client:shared,account:accountProvider,mode='own',beforeTaskChange=()=>{},afterTaskChange=()=>{},canStartWrite=()=>true,onMovement=()=>{},onWorkspace=()=>{}}={}) {
  let disposed=false,busy=false,page=null,sources=[],selected='',review=null,intent=null,epoch=0,offset=0,draftAccount=null;
  const removers=[],client=shared??createTreasuryClient(api,{getSession,signal,canStartWrite,onDenied:()=>dispose()});
  const current=()=>!disposed&&client.isCurrent();
@@ -24,7 +24,7 @@ export function mountLoanPayouts({root,api,getSession,signal,client:shared,accou
   find('stage-note').textContent=mode==='own'?'Confirm only the money you personally received or handed to the named borrower.':item?.status==='prepared'?'Preparation does not send money. Record the actual debit in Money movements using this payout as its source.':item?.status==='debited'?'Verify the actual recipient receipt separately. A Collector receipt still requires borrower handover.':item?.source_kind==='renewal'?'Management must review the actual borrower receipt. The borrower must independently acknowledge it in their own account.':'Office must verify the named borrower’s actual receipt against the signed contract. An app account is not required for this first-loan handover.';lock();
  }
  async function refreshReadOnly(){if(!current()||pending())return false;const generation=++epoch;try{
-  await client.workspace();if(!current()||generation!==epoch)return false;
+  const freshWorkspace=await client.workspace();if(!current()||generation!==epoch)return false;onWorkspace(freshWorkspace);
   const funding=account();if(mode==='staff'&&(!funding||!['gcash','bank'].includes(funding.kind))){status('Choose the specific wallet or bank funding this payout.');return false;}
   const result=await client.loanPayoutWorkspace({mode,accountId:mode==='staff'?funding.id:undefined,offset});
   if(!current()||generation!==epoch)return false;page=result;

@@ -37,20 +37,27 @@ def workspace(service, actor, *, account_id=None, mode="own", limit=50, offset=0
             if account_id is None:
                 raise TreasuryDenied("Select the authorized funding account.")
             require_account(conn, actor, account_id, "treasury.disbursement.record")
-            query, params = "p.account_id=%s", (account_id,)
+            query, params = (
+                """select p.* from treasury.loan_payouts p
+                join lending.clients c on c.id=p.client_id where p.account_id=%s
+                order by p.created_at desc,p.id desc limit %s offset %s""",
+                (account_id,),
+            )
         else:
             if account_id is not None:
                 raise TreasuryDenied(
                     "Own payout history carries no whole-account access."
                 )
             query, params = (
-                "(c.user_id=%s or (p.destination='collector' and p.collector_user_id=%s and lending.collector_area_owner(c.area)=%s))",
+                """select p.* from treasury.loan_payouts p
+                join lending.clients c on c.id=p.client_id
+                where (c.user_id=%s or (p.destination='collector'
+                    and p.collector_user_id=%s and lending.collector_area_owner(c.area)=%s))
+                order by p.created_at desc,p.id desc limit %s offset %s""",
                 (actor.user_id, actor.user_id, actor.user_id),
             )
         rows = conn.execute(
-            "select p.* from treasury.loan_payouts p join lending.clients c on c.id=p.client_id where "
-            + query
-            + " order by p.created_at desc,p.id desc limit %s offset %s",
+            query,
             (*params, limit + 1, offset),
         ).fetchall()
         items = []
