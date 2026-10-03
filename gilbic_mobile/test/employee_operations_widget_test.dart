@@ -134,7 +134,8 @@ void main() {
         '10001.16',
       );
       await tester.scrollUntilVisible(
-        find.byKey(const Key('employee-field-reason')), 350,
+        find.byKey(const Key('employee-field-reason')),
+        350,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.enterText(
@@ -342,6 +343,11 @@ void main() {
             .enabled,
         isFalse,
       );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Retry unchanged request'), findsOneWidget);
+      expect(find.text('Open response'), findsNothing);
+      expect(commands, hasLength(1));
       await tester.tap(find.text('Retry unchanged request'));
       await tester.pumpAndSettle();
       expect(commands.length, 2);

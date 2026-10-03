@@ -145,19 +145,23 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
 
   bool get _sessionRecovery =>
       widget.onSignOut != null &&
-      ((_error as SpinaApiException).statusCode != 403 ||
+      (!_canLeaveRoute ||
+          (_error as SpinaApiException).statusCode != 403 ||
           !Navigator.of(context).canPop());
 
   bool get _canRecoverRead =>
       !_readBlocked ||
       widget.onSignOut != null ||
-      Navigator.of(context).canPop();
+      (_canLeaveRoute && Navigator.of(context).canPop());
 
   String get _recoveryLabel {
     if (!_readBlocked) return 'Retry';
     final status = (_error as SpinaApiException).statusCode;
     if (_sessionRecovery) {
       return status == 401 ? 'Sign in again' : 'Return to sign-in';
+    }
+    if (!_canLeaveRoute) {
+      return 'Access unavailable. The unconfirmed payment is retained. Contact Management before leaving this session.';
     }
     if (Navigator.of(context).canPop()) return 'Back';
     return status == 426
@@ -173,7 +177,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       _loadRoute();
     } else if (_sessionRecovery) {
       widget.onSignOut!();
-    } else if (Navigator.of(context).canPop()) {
+    } else if (_canLeaveRoute && Navigator.of(context).canPop()) {
       Navigator.of(context).maybePop();
     }
   }
@@ -727,20 +731,38 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Collection'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh route',
-            onPressed: _loading || _readBlocked ? null : _loadRoute,
-            icon: const Icon(Icons.refresh),
+    return PopScope<void>(
+      canPop: _canLeaveRoute,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'A payment is still in progress or not confirmed. Stay on this route and check the same payment before leaving.',
+            ),
           ),
-        ],
+        );
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Daily Collection'),
+          actions: [
+            IconButton(
+              tooltip: 'Refresh route',
+              onPressed: _loading || _readBlocked ? null : _loadRoute,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: SafeArea(child: _buildBody(context)),
       ),
-      body: SafeArea(child: _buildBody(context)),
     );
   }
+
+  bool get _canLeaveRoute =>
+      _payingLoanIds.isEmpty &&
+      _pendingDirectDrafts.isEmpty &&
+      _pendingCombinedDrafts.isEmpty;
 
   Widget _buildBody(BuildContext context) {
     final result = _result;

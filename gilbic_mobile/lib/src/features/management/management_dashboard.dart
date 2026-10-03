@@ -42,6 +42,7 @@ import 'package:gilbic_mobile/src/features/management/management_support_request
 import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
 class ManagementDashboard extends StatefulWidget {
@@ -337,6 +338,11 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ),
       _ManagementAction.offlinePolicy => MobileOfflinePolicyPage(
         session: session,
+      ),
+      _ManagementAction.notifications => NotificationCenterPage(
+        session: session,
+        onSignOut: onSignOut,
+        deviceIdentityProvider: deviceIdentityProvider,
       ),
       _ManagementAction.loans => ManagementLoanPortfolioPage(
         session: session,
@@ -1296,6 +1302,7 @@ enum _ManagementAction {
   alertsActivity('management-alerts-activity'),
   myAccountDevices('management-my-account-devices'),
   offlinePolicy('management-offline-policy'),
+  notifications('management-notifications'),
   loans('management-loans'),
   contractCollectionActivation('management-contract-collection-activation'),
   noCollection('management-no-collection'),
@@ -1581,6 +1588,12 @@ const _managementSections = <_ManagementSection>[
         'See which Management data and actions require the live server',
         Icons.cloud_off_outlined,
         action: _ManagementAction.offlinePolicy,
+      ),
+      _ManagementModule(
+        'Notifications',
+        'Account activity and assigned remittance requests',
+        Icons.notifications_outlined,
+        action: _ManagementAction.notifications,
       ),
     ],
   ),

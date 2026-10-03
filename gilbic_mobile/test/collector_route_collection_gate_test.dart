@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -14,8 +15,206 @@ import 'package:gilbic_mobile/src/core/payments/combined_payment_submission_repo
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.dart';
+import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dart';
 
 void main() {
+  testWidgets(
+    'root More and secondary Back preserve the exact pending payment',
+    (tester) async {
+      final repository = _RetryRepository();
+      final platformCalls = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          platformCalls.add(call.method);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectorFieldHomePage(
+            session: _session,
+            onSignOut: () async {},
+            collectorRouteLoader: _RouteLoader(isFromCache: false),
+            paymentSubmissionRepository: repository,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            collectionDeviceSequence: MemoryCollectionDeviceSequence(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final pay = find.byKey(const Key('record-collection-entry-1'));
+      await tester.ensureVisible(pay);
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(repository.drafts, hasLength(1));
+      await tester.tap(find.byKey(const Key('collector-more-tab')));
+      await tester.pumpAndSettle();
+      final offline = find.byKey(const Key('collector-more-offline'));
+      await tester.ensureVisible(offline);
+      await tester.pumpAndSettle();
+      await tester.tap(offline);
+      await tester.pumpAndSettle();
+      expect(find.text('Daily Collection'), findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Retry'), findsOneWidget);
+      expect(repository.drafts, hasLength(1));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(platformCalls, isNot(contains('SystemNavigator.pop')));
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(repository.drafts, hasLength(2));
+      expect(repository.drafts.last.toJson(), repository.drafts.first.toJson());
+      expect(repository.drafts.last.toJson()['amount'], '200.00');
+      expect(repository.drafts.last.deviceSequence, 1);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(platformCalls, contains('SystemNavigator.pop'));
+    },
+  );
+
+  testWidgets(
+    'mixed worker switch preserves the same pending payment identity',
+    (tester) async {
+      final repository = _RetryRepository();
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var session = const UserSession(
+        userId: 'worker',
+        username: 'worker',
+        displayName: 'Worker',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        roles: ['Collector', 'Employee'],
+        accessToken: 'synthetic-token',
+        permissions: [
+          'route.view',
+          'collection.create',
+          'employee.portal.view',
+        ],
+      );
+      late StateSetter refreshSession;
+      final provider = _deviceIdentityProvider();
+      final sequence = MemoryCollectionDeviceSequence();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (_, setState) {
+              refreshSession = setState;
+              return EnhancedRoleDashboard(
+                session: session,
+                onSignOut: () async {},
+                collectorRouteLoader: _RouteLoader(isFromCache: false),
+                paymentSubmissionRepository: repository,
+                deviceIdentityProvider: provider,
+                collectionDeviceSequence: sequence,
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final pay = find.byKey(const Key('record-collection-entry-1'));
+      await tester.ensureVisible(pay);
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(repository.drafts, hasLength(1));
+      await tester.tap(find.text('Office & staff'));
+      await tester.pumpAndSettle();
+      expect(find.text('Employee Dashboard'), findsOneWidget);
+      expect(repository.drafts, hasLength(1));
+      await tester.tap(find.text('Collector'));
+      await tester.pumpAndSettle();
+      refreshSession(
+        () => session = const UserSession(
+          userId: 'worker',
+          username: 'worker',
+          displayName: 'Worker',
+          role: AppRole.collector,
+          rawRole: 'Collector',
+          roles: ['Collector', 'Employee'],
+          accessToken: 'refreshed-token',
+          permissions: ['route.view', 'collection.create'],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(pay);
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(repository.drafts, hasLength(2));
+      expect(repository.drafts.last.toJson(), repository.drafts.first.toJson());
+      expect(repository.drafts.last.deviceSequence, 1);
+    },
+  );
+
+  testWidgets(
+    'pushed route Back cannot discard an uncertain combined attempt',
+    (tester) async {
+      final repository = _RetryCombinedRepository();
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CollectorRoutePage(
+                      session: _session,
+                      loader: _CombinedRouteLoader(),
+                      combinedPaymentRepository: repository,
+                      deviceIdentityProvider: _deviceIdentityProvider(),
+                      deviceSequence: MemoryCollectionDeviceSequence(),
+                    ),
+                  ),
+                ),
+                child: const Text('Open route'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open route'));
+      await tester.pumpAndSettle();
+      final pay = find.byKey(const Key('record-client-client-combined'));
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(repository.attempts, hasLength(1));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Daily Collection'), findsOneWidget);
+      expect(repository.attempts, hasLength(1));
+      await tester.tap(pay);
+      await tester.pumpAndSettle();
+      expect(repository.previews, hasLength(1));
+      expect(repository.attempts, hasLength(2));
+      expect(
+        repository.attempts.last.toJson(),
+        repository.attempts.first.toJson(),
+      );
+      expect(repository.attempts.last.reviewedAllocationHash, _allocationHash);
+      expect(
+        repository.attempts.last.toJson()['cash_received_amount'],
+        '150.00',
+      );
+      expect(repository.attempts.last.deviceSequence, 1);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Open route'), findsOneWidget);
+    },
+  );
   testWidgets('offline route keeps collection button disabled', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -966,6 +1165,24 @@ class _CombinedRecordingRepository
       ],
       message: 'Saved atomically.',
     );
+  }
+}
+
+class _RetryCombinedRepository extends _CombinedRecordingRepository {
+  final attempts = <CombinedPaymentSubmissionDraft>[];
+  @override
+  Future<CombinedPaymentSubmissionResult> submit(
+    UserSession session,
+    CombinedPaymentSubmissionDraft draft,
+  ) async {
+    attempts.add(draft);
+    if (attempts.length == 1) {
+      throw const SpinaApiException(
+        'Synthetic interrupted response',
+        code: 'network_unavailable',
+      );
+    }
+    return super.submit(session, draft);
   }
 }
 

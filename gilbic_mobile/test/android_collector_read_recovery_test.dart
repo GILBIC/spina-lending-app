@@ -17,6 +17,84 @@ import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'support/android_role_fixture.dart';
 
 void main() {
+  for (final status in [401, 403, 426]) {
+    for (final recovery in [false, true]) {
+      testWidgets(
+        'pending pushed route $status has truthful recovery callback=$recovery',
+        (tester) async {
+          final loader = _ControlledRoute();
+          final payments = _UncertainPayment();
+          var recovered = 0;
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => CollectorRoutePage(
+                          session: _session,
+                          loader: loader,
+                          paymentRepository: payments,
+                          deviceIdentityProvider: DeviceIdentityProvider(
+                            store: MemoryDeviceIdentityStore()
+                              ..value = 'synthetic-device',
+                            platformResolver: () => 'android',
+                            appVersionResolver: () async => 'test',
+                          ),
+                          deviceSequence: MemoryCollectionDeviceSequence(),
+                          onSignOut: recovery
+                              ? () async {
+                                  recovered++;
+                                }
+                              : null,
+                        ),
+                      ),
+                    ),
+                    child: const Text('Safe prior context'),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text('Safe prior context'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('record-collection-entry-a')));
+          await tester.pumpAndSettle();
+          expect(payments.drafts, hasLength(1));
+          final original = payments.drafts.single.toJson();
+          loader.error = SpinaApiException(
+            'private detail',
+            statusCode: status,
+          );
+          await tester.tap(_refreshButton(false));
+          await tester.pumpAndSettle();
+          expect(
+            find.textContaining('Private Synthetic Borrower'),
+            findsNothing,
+          );
+          expect(find.textContaining('private detail'), findsNothing);
+          final notice = tester.widget<WorkspaceReadNotice>(
+            find.byType(WorkspaceReadNotice),
+          );
+          expect(find.widgetWithText(OutlinedButton, 'Back'), findsNothing);
+          if (recovery) {
+            expect(notice.onAction, isNotNull);
+            await tester.tap(
+              find.widgetWithText(OutlinedButton, notice.actionLabel),
+            );
+            await tester.pumpAndSettle();
+            expect(recovered, 1);
+          } else {
+            expect(notice.onAction, isNull);
+          }
+          expect(payments.drafts, hasLength(1));
+          expect(payments.drafts.single.toJson(), original);
+          expect(loader.calls, 2);
+        },
+      );
+    }
+  }
   for (final master in [false, true]) {
     final surface = master ? 'Master Review' : 'Daily Route';
     for (final status in [401, 403, 426]) {
