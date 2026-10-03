@@ -57,13 +57,25 @@ void main() {
                 expect(find.byType(FittedBox), findsNothing);
                 await capture(tester, role, size, scale, 0);
                 final scrollable = find.byType(Scrollable).last;
-                for (var step = 0; step < 18; step++) {
+                for (var step = 0; step < 60; step++) {
                   final state = tester.state<ScrollableState>(scrollable);
                   if (state.position.pixels >= state.position.maxScrollExtent) {
                     break;
                   }
-                  await tester.drag(scrollable, const Offset(0, -450));
+                  final before = state.position.pixels;
+                  final viewport = state.position.viewportDimension;
+                  state.position.jumpTo(
+                    (before + viewport * .7).clamp(
+                      0,
+                      state.position.maxScrollExtent,
+                    ),
+                  );
                   await tester.pumpAndSettle();
+                  expect(
+                    state.position.pixels - before,
+                    lessThan(viewport),
+                    reason: 'Consecutive captures overlap actual viewport',
+                  );
                   expect(
                     tester.takeException(),
                     isNull,
@@ -78,6 +90,40 @@ void main() {
                       .extentAfter,
                   lessThan(1),
                 );
+                final requiredKeys = switch (role) {
+                  AppRole.management => ['management-my-account-devices'],
+                  AppRole.employee => ['employee-account'],
+                  AppRole.collector => ['record-client-client'],
+                  AppRole.client => ['client-home-support'],
+                };
+                for (final key in requiredKeys) {
+                  final action = find.byKey(Key(key));
+                  final position = tester
+                      .state<ScrollableState>(scrollable)
+                      .position;
+                  position.jumpTo(0);
+                  await tester.pumpAndSettle();
+                  await tester.scrollUntilVisible(
+                    action,
+                    180,
+                    scrollable: scrollable,
+                  );
+                  await tester.pumpAndSettle();
+                  expect(
+                    action.hitTestable(),
+                    findsOneWidget,
+                    reason: '${role.name} $key reachable',
+                  );
+                  expect(
+                    tester.getSize(action).width,
+                    greaterThanOrEqualTo(48),
+                  );
+                  expect(
+                    tester.getSize(action).height,
+                    greaterThanOrEqualTo(48),
+                  );
+                  expect(tester.takeException(), isNull);
+                }
               },
               () => MockClient((request) async {
                 requests.add('${request.method} ${request.url.path}');
@@ -103,6 +149,26 @@ Future<void> capture(
   double scale,
   int step,
 ) async {
+  for (final element in find.byType(Text).evaluate()) {
+    final widget = element.widget as Text;
+    final text = widget.data ?? widget.textSpan?.toPlainText() ?? '';
+    if (text.contains('₱')) {
+      final paragraph = find.descendant(
+        of: find.byWidget(widget),
+        matching: find.byType(RichText),
+      );
+      for (final rich in paragraph.evaluate()) {
+        final render = rich.renderObject;
+        if (render is RenderParagraph) {
+          expect(
+            render.didExceedMaxLines,
+            isFalse,
+            reason: 'Exact money must not truncate: $text',
+          );
+        }
+      }
+    }
+  }
   final output = Platform.environment['SPINA_ANDROID_EVIDENCE_DIR'];
   if (output == null) return;
   final boundary = tester.renderObject<RenderRepaintBoundary>(
@@ -116,6 +182,11 @@ Future<void> capture(
     await directory.create(recursive: true);
     final filename =
         '${role.name}-${size.width.toInt()}-${scale.toStringAsFixed(1)}-$step.png';
+    expect(
+      File('$output/$filename').existsSync(),
+      isFalse,
+      reason: 'Capture names must be unique: $filename',
+    );
     await File('$output/$filename').writeAsBytes(bytes!.buffer.asUint8List());
     await File('$output/matrix.jsonl').writeAsString(
       '${jsonEncode({
@@ -128,7 +199,13 @@ Future<void> capture(
         'disableAnimations': size.width >= 640,
         'state': 'synthetic authorized home',
         'scrollStep': step,
-        'sourceSHA': Platform.environment['SPINA_ANDROID_SOURCE_SHA'] ?? 'unrecorded',
+        'sourceBaseSHA': Platform.environment['SPINA_ANDROID_SOURCE_SHA'] ?? 'unrecorded',
+        'sourceState': 'base plus capture-time raw/canonical manifest; uncommitted Task8',
+        'sourceManifest': Platform.environment['SPINA_ANDROID_SOURCE_MANIFEST'],
+        'scrollPixels': tester.state<ScrollableState>(find.byType(Scrollable).last).position.pixels,
+        'viewportDimension': tester.state<ScrollableState>(find.byType(Scrollable).last).position.viewportDimension,
+        'scrollMaxExtent': tester.state<ScrollableState>(find.byType(Scrollable).last).position.maxScrollExtent,
+        'extentAfter': tester.state<ScrollableState>(find.byType(Scrollable).last).position.extentAfter,
         'flutterRevision': '84fc5cbb22',
         'screenshot': filename,
         'outcome': 'captured after clean layout check',

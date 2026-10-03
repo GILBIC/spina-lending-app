@@ -82,6 +82,17 @@ Future<void> pumpAndroidRoleFixture(
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: _androidFontFallback(production.elevatedButtonTheme.style),
       ),
+      chipTheme: production.chipTheme.copyWith(
+        labelStyle: _androidTextFontFallback(production.chipTheme.labelStyle),
+        secondaryLabelStyle: _androidTextFontFallback(
+          production.chipTheme.secondaryLabelStyle,
+        ),
+      ),
+      snackBarTheme: production.snackBarTheme.copyWith(
+        contentTextStyle: _androidTextFontFallback(
+          production.snackBarTheme.contentTextStyle,
+        ),
+      ),
     );
   } finally {
     debugDefaultTargetPlatformOverride = originalPlatform;
@@ -97,12 +108,12 @@ Future<void> pumpAndroidRoleFixture(
           disableAnimations: disableAnimations,
           viewInsets: viewInsets,
         ),
-        child: child!,
+        child: RepaintBoundary(
+          key: const Key('android-role-capture'),
+          child: child!,
+        ),
       ),
-      home: RepaintBoundary(
-        key: const Key('android-role-capture'),
-        child: home,
-      ),
+      home: home,
     ),
   );
 }
@@ -113,3 +124,6 @@ ButtonStyle? _androidFontFallback(ButtonStyle? style) => style?.copyWith(
         style.textStyle?.resolve(states)?.copyWith(fontFamily: 'Roboto'),
   ),
 );
+
+TextStyle? _androidTextFontFallback(TextStyle? style) =>
+    style?.copyWith(fontFamily: style.fontFamily ?? 'Roboto');

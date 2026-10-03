@@ -539,7 +539,14 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                                     key: Key(
                                       'past-due-reason-${reason.apiValue}',
                                     ),
-                                    label: Text(reason.label),
+                                    label: Builder(
+                                      builder: (context) => DefaultTextStyle(
+                                        style: DefaultTextStyle.of(
+                                          context,
+                                        ).style,
+                                        child: Text(reason.label),
+                                      ),
+                                    ),
                                     selected: _selectedReason == reason,
                                     onSelected: _submitting
                                         ? null

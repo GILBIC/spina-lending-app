@@ -1,3 +1,4 @@
+import 'support/android_workflow_capture.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,99 @@ import 'employee_operations_widget_test.dart'
 import 'support/android_role_fixture.dart';
 
 void main() {
+  for (final (section, collection, payload, expected) in [
+    (
+      EmployeeSection.requests,
+      'requests',
+      {
+        'request_kind': 'leave',
+        'work_date': '2026-10-02',
+        'reason': 'Synthetic reason with a long authorized explanation',
+      },
+      '2026-10-02',
+    ),
+    (
+      EmployeeSection.advances,
+      'advances',
+      {
+        'amount': '0.00',
+        'outstanding_amount': '1.2345',
+        'reason': 'Synthetic advance awaiting authoritative review',
+      },
+      '₱0.00',
+    ),
+  ]) {
+    testWidgets(
+      'A8 current $collection fields zero unknown and safe expanded details',
+      (tester) async {
+        final provider = identity();
+        final data = workspace();
+        data[collection] = [
+          {
+            'id': recordId,
+            'employee_id': user,
+            'version': 7,
+            'status': 'future_state',
+            'allowed_actions': [],
+            'payload': payload,
+          },
+        ];
+        final original = jsonEncode(data);
+        final service = EmployeeOperationsService(
+          deviceIdentityProvider: provider,
+          repository: EmployeeOperationsRepository(
+            StaffOperationsClient(
+              deviceIdentityProvider: provider,
+              client: MockClient((request) async {
+                expect(request.method, 'GET');
+                return http.Response(jsonEncode(data), 200);
+              }),
+            ),
+          ),
+          outbox: AttendanceOutbox(MemoryAttendanceVault()),
+        );
+        addTearDown(service.dispose);
+        service.foreground(false);
+        await pumpAndroidRoleFixture(
+          tester,
+          size: const Size(320, 640),
+          textScaler: TextScaler.linear(2),
+          home: EmployeeOperationsPage(
+            session: employeeSession,
+            deviceIdentityProvider: provider,
+            service: service,
+            initialSection: section,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await captureAndroidWorkflowScroll(
+          tester,
+          'E3-current-$collection-summary',
+        );
+        final card = find.byKey(ValueKey('$collection-$recordId'));
+        await tester.scrollUntilVisible(
+          card,
+          180,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining(expected), findsWidgets);
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Details'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Details'));
+        await tester.pumpAndSettle();
+        await captureAndroidWorkflowScroll(
+          tester,
+          'E3-current-$collection-details',
+        );
+        expect(jsonEncode(data), original);
+        service.attach(null);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
   // These regressions catch dropping current producer fields from summaries.
   for (final fixture in [
     (
@@ -276,6 +370,10 @@ void main() {
           tester.getTopLeft(permitted).dy,
           lessThan(tester.getTopLeft(find.text('Details')).dy),
         );
+        await captureAndroidWorkflowScroll(
+          tester,
+          'E3-${role.name}-expanded-summary',
+        );
         await tester.ensureVisible(find.text('Details'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Details'));
@@ -283,6 +381,10 @@ void main() {
         expect(find.textContaining('Authorized nested fact'), findsOneWidget);
         expect(find.textContaining('private-device'), findsNothing);
         expect(find.textContaining('private-nested-device'), findsNothing);
+        await captureAndroidWorkflowScroll(
+          tester,
+          'E3-${role.name}-safe-details',
+        );
         expect(find.textContaining('Version: 7'), findsOneWidget);
         expect(find.textContaining('Record id: $recordId'), findsOneWidget);
         await tester.ensureVisible(find.text('Details'));
@@ -298,6 +400,10 @@ void main() {
           lessThan(
             tester.getTopLeft(find.textContaining('Synthetic history 1')).dy,
           ),
+        );
+        await captureAndroidWorkflowScroll(
+          tester,
+          'E3-${role.name}-record-history',
         );
         expect(find.textContaining('Unrelated history'), findsNothing);
         expect(find.textContaining('private-history-request'), findsNothing);
@@ -336,6 +442,10 @@ void main() {
         expect(commands.single['action'], action);
         expect(jsonEncode(data), original);
         expect(tester.takeException(), isNull);
+        await captureAndroidWorkflowScroll(
+          tester,
+          'E3-${role.name}-permitted-command-result',
+        );
         service.attach(null);
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
@@ -419,8 +529,8 @@ void main() {
       addTearDown(service.dispose);
       await pumpAndroidRoleFixture(
         tester,
-        size: const Size(360, 640),
-        textScaler: TextScaler.linear(1.3),
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
         home: EmployeeOperationsPage(
           session: employeeSession,
           deviceIdentityProvider: provider,
@@ -448,7 +558,19 @@ void main() {
       expect(find.textContaining('Unknown authorized fact'), findsOneWidget);
       expect(find.textContaining('private-device'), findsNothing);
       expect(find.textContaining('Version: 7'), findsOneWidget);
+      final semantics = tester.ensureSemantics();
+      await Scrollable.ensureVisible(
+        tester.element(find.byType(SelectableText).first),
+        alignment: 0,
+      );
+      await tester.pumpAndSettle();
+      await checkAndroidWorkflowSemantics(tester);
+      semantics.dispose();
       expect(tester.takeException(), isNull);
+      await captureAndroidWorkflowScroll(
+        tester,
+        'E3-payroll-approved-safe-details',
+      );
       service.attach(null);
       await tester.pumpWidget(const SizedBox());
       await tester.pump();

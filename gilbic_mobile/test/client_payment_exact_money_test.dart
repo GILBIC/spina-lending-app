@@ -1,3 +1,5 @@
+import 'support/android_workflow_capture.dart';
+import 'support/android_role_fixture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -65,27 +67,47 @@ void main() {
     expect(timeline.validTotal, '90071992547409.93');
   });
 
-  testWidgets('Payments displays exact server receipt money without IEEE rounding',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1100, 2400));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      MaterialApp(
+  for (final (size, scale) in [
+    (const Size(320, 640), 2.0),
+    (const Size(412, 915), 1.0),
+  ]) {
+    testWidgets('Payments exact receipt money at ${size.width} scale $scale', (
+      tester,
+    ) async {
+      await pumpAndroidRoleFixture(
+        tester,
+        size: size,
+        textScaler: TextScaler.linear(scale),
         home: ClientPaymentsPage(
           session: _session,
           deviceIdentityProvider: _deviceIdentityProvider(),
           repository: _ExactPaymentRepository(),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('₱90,071,992,547,409.93'), findsWidgets);
-    expect(find.textContaining('₱90,071,992,547,409.91'), findsOneWidget);
-    expect(find.textContaining('₱90,071,992,547,409.89'), findsOneWidget);
-    expect(find.textContaining('90,071,992,547,409.94'), findsNothing);
-  });
+      expect(find.text('₱90,071,992,547,409.93'), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.textContaining('₱90,071,992,547,409.91'),
+        250,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('₱90,071,992,547,409.91'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.textContaining('₱90,071,992,547,409.89'),
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('₱90,071,992,547,409.89'), findsOneWidget);
+      expect(find.textContaining('90,071,992,547,409.94'), findsNothing);
+      await captureAndroidWorkflowScroll(
+        tester,
+        'L3-long-exact-receipt-${size.width}-$scale',
+      );
+    });
+  }
 }
 
 const UserSession _session = UserSession(

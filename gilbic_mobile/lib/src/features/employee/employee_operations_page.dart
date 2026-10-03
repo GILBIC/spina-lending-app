@@ -449,7 +449,10 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
     }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: SelectableText('${employeeLabel(key)}: ${_format(value)}'),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: SelectableText('${employeeLabel(key)}: ${_format(value)}'),
+      ),
     );
   }
 

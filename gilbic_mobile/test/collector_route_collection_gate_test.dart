@@ -1,3 +1,5 @@
+import 'support/android_workflow_capture.dart';
+import 'support/android_role_fixture.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -571,25 +573,29 @@ void main() {
     'combined Pay waits for preview and sends changed server state to details',
     (tester) async {
       final repository = _DelayedCombinedRepository();
-      await tester.binding.setSurfaceSize(const Size(430, 1100));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        MaterialApp(
-          home: CollectorRoutePage(
-            session: _session,
-            loader: _CombinedRouteLoader(),
-            combinedPaymentRepository: repository,
-            deviceIdentityProvider: _deviceIdentityProvider(),
-            deviceSequence: MemoryCollectionDeviceSequence(),
-          ),
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        home: CollectorRoutePage(
+          session: _session,
+          loader: _CombinedRouteLoader(),
+          combinedPaymentRepository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
         ),
       );
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(
+        find.byKey(const Key('record-client-client-combined')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
       await tester.pump();
       expect(repository.requests, hasLength(1));
       expect(find.byKey(const Key('combined-payment-total')), findsNothing);
+      await captureAndroidWorkflow(tester, 'C4-combined-preview-pending');
 
       repository.completers.first.complete(_shortCombinedPreview);
       await _pumpCombinedSheet(tester);
@@ -599,6 +605,7 @@ void main() {
         find.textContaining('Payment details / other amount'),
         findsOneWidget,
       );
+      await captureAndroidWorkflowScroll(tester, 'C4-combined-short');
     },
   );
 
@@ -606,18 +613,21 @@ void main() {
     tester,
   ) async {
     final repository = _CombinedCustodyReviewRepository();
-    await tester.binding.setSurfaceSize(const Size(430, 1100));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CollectorRoutePage(
-          session: _session,
-          loader: _CombinedRouteLoader(),
-          combinedPaymentRepository: repository,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          deviceSequence: MemoryCollectionDeviceSequence(),
-        ),
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(320, 640),
+      textScaler: TextScaler.linear(2),
+      home: CollectorRoutePage(
+        session: _session,
+        loader: _CombinedRouteLoader(),
+        combinedPaymentRepository: repository,
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        deviceSequence: MemoryCollectionDeviceSequence(),
       ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('record-client-client-combined')),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('record-client-client-combined')));
@@ -626,24 +636,28 @@ void main() {
     expect(find.textContaining('CASH CUSTODY REVIEW REQUIRED'), findsOneWidget);
     expect(find.textContaining('10.00 remains unallocated'), findsOneWidget);
     expect(find.textContaining('saved • Receipts'), findsNothing);
+    await captureAndroidWorkflowScroll(tester, 'C4-combined-custody-review');
   });
 
   testWidgets(
     'combined Pay leaves true-extra borrower choices to payment details',
     (tester) async {
       final repository = _RecoverableExtraChoiceRepository();
-      await tester.binding.setSurfaceSize(const Size(430, 1100));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        MaterialApp(
-          home: CollectorRoutePage(
-            session: _session,
-            loader: _CombinedRouteLoader(),
-            combinedPaymentRepository: repository,
-            deviceIdentityProvider: _deviceIdentityProvider(),
-            deviceSequence: MemoryCollectionDeviceSequence(),
-          ),
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        home: CollectorRoutePage(
+          session: _session,
+          loader: _CombinedRouteLoader(),
+          combinedPaymentRepository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
         ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('record-client-client-combined')),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
@@ -655,6 +669,7 @@ void main() {
         findsOneWidget,
       );
       expect(repository.submitCount, 0);
+      await captureAndroidWorkflowScroll(tester, 'C4-combined-extra');
     },
   );
 

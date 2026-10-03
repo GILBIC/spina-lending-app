@@ -16,6 +16,7 @@ import 'package:gilbic_mobile/src/features/notifications/activity_notifications_
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'support/android_role_fixture.dart';
+import 'support/android_workflow_capture.dart';
 
 const stale =
     'Showing the last successful information. It has not been refreshed.';
@@ -210,12 +211,16 @@ class Harness {
       },
     ),
   };
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    Size size = const Size(800, 1600),
+    double scale = 1,
+  }) async {
     addTearDown(currentSession.dispose);
     await pumpAndroidRoleFixture(
       tester,
-      size: const Size(800, 1600),
-      textScaler: TextScaler.linear(1),
+      size: size,
+      textScaler: TextScaler.linear(scale),
       home: ValueListenableBuilder(
         valueListenable: currentSession,
         builder: (_, value, _) => page(value),
@@ -230,6 +235,51 @@ class Harness {
 }
 
 void main() {
+  for (final surface in Surface.values) {
+    testWidgets('A8 $surface narrow error recovered empty and denied', (
+      tester,
+    ) async {
+      final h = Harness(surface);
+      h.control.read = (_) async => throw failure(503);
+      await h.pump(tester, size: const Size(320, 640), scale: 2);
+      await tester.pumpAndSettle();
+      final semantics = tester.ensureSemantics();
+      expect(find.text('Retry'), findsOneWidget);
+      await captureAndroidWorkflowScroll(tester, 'shared-$surface-unavailable');
+      await checkAndroidWorkflowSemantics(tester);
+      h.control.read = null;
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      if (surface == Surface.remittance) {
+        expect(
+          tester
+              .renderObject<RenderBox>(find.text(privateA))
+              .constraints
+              .maxWidth,
+          greaterThanOrEqualTo(208),
+          reason: 'Large-text notification identity has readable width',
+        );
+      }
+      await captureAndroidWorkflowScroll(tester, 'shared-$surface-recovered');
+      expect(h.control.reads, 2);
+      h.control.empty = true;
+      await h.refresh(tester)();
+      await tester.pumpAndSettle();
+      await captureAndroidWorkflowScroll(
+        tester,
+        'shared-$surface-authoritative-empty',
+      );
+      h.control.read = (_) async => throw failure(403);
+      await h.refresh(tester)();
+      await tester.pumpAndSettle();
+      expect(find.text(privateA), findsNothing);
+      expect(find.text('Access unavailable'), findsWidgets);
+      await captureAndroidWorkflowScroll(tester, 'shared-$surface-denied');
+      await checkAndroidWorkflowSemantics(tester);
+      expect(h.control.writes, 0);
+      semantics.dispose();
+    });
+  }
   for (final surface in Surface.values) {
     for (final status in [401, 403, 426]) {
       testWidgets(

@@ -1,3 +1,5 @@
+import 'support/android_workflow_capture.dart';
+import 'support/android_role_fixture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -9,24 +11,102 @@ import 'package:gilbic_mobile/src/core/payments/collection_correction.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_history_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
-import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
+  testWidgets(
+    'A8 saved correction receipt balance audit version remain reachable',
+    (tester) async {
+      final repository = _SuccessfulCorrectionRepository();
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        viewInsets: const EdgeInsets.only(bottom: 220),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CollectionCorrectionPage(
+                    session: _session,
+                    entry: _entry,
+                    collectionDate: DateTime(2026, 8, 2),
+                    repository: repository,
+                    historyRepository: _FakeHistoryRepository(),
+                    deviceIdentityProvider: _deviceIdentityProvider(),
+                  ),
+                ),
+              ),
+              child: const Text('Open synthetic correction'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open synthetic correction'));
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Open synthetic correction'), findsOneWidget);
+      expect(repository.calls, 0);
+      await tester.tap(find.text('Open synthetic correction'));
+      await tester.pumpAndSettle();
+      final reason = find.byKey(const Key('correction-reason'));
+      await tester.scrollUntilVisible(
+        reason,
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(reason, 'Correct amount');
+      final submit = find.byKey(const Key('submit-collection-correction'));
+      await tester.ensureVisible(submit);
+      await tester.pumpAndSettle();
+      expect(repository.calls, 0);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      await expectAndroidDialogConsequenceVisible(tester, 'audit history.');
+      expect(repository.calls, 0);
+      await tester.tap(find.byKey(const Key('confirm-collection-correction')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(repository.calls, 1);
+      expect(repository.deviceId, 'device-one');
+      expect(repository.draft!.transactionId, 'transaction-1');
+      expect(repository.draft!.expectedRouteRevision, _entry.routeRevision);
+      expect(find.text('Correction saved'), findsOneWidget);
+      expect(
+        find.textContaining('Receipt: CORRECTED-TEST-00000002'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Official balance: ₱4900.00'), findsOneWidget);
+      await expectAndroidDialogConsequenceVisible(tester, 'Audit version: 2');
+      await captureAndroidWorkflowScroll(tester, 'C5-saved-result-dialog');
+      final semantics = tester.ensureSemantics();
+      await checkAndroidWorkflowSemantics(tester);
+      semantics.dispose();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Open synthetic correction'), findsOneWidget);
+      expect(repository.calls, 1);
+    },
+  );
   testWidgets(
     'shows allocation first and keeps covered dates plus audit history under details',
     (tester) async {
       final history = _FakeHistoryRepository();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: SpinaTheme.light,
-          home: CollectionCorrectionPage(
-            session: _session,
-            entry: _entry,
-            collectionDate: DateTime(2026, 8, 2),
-            repository: _FakeCorrectionRepository(),
-            historyRepository: history,
-            deviceIdentityProvider: _deviceIdentityProvider(),
-          ),
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        viewInsets: const EdgeInsets.only(bottom: 220),
+        home: CollectionCorrectionPage(
+          session: _session,
+          entry: _entry,
+          collectionDate: DateTime(2026, 8, 2),
+          repository: _FakeCorrectionRepository(),
+          historyRepository: history,
+          deviceIdentityProvider: _deviceIdentityProvider(),
         ),
       );
       await tester.pumpAndSettle();
@@ -34,7 +114,19 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Edit Collection'), findsOneWidget);
       expect(find.text('Recorded by: Test Collector'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Allocation'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Allocation'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('correction-covered-obligations-details')),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Exact covered dates'), findsNothing);
       expect(
         find.byKey(const Key('correction-add-covered-date')),
@@ -47,20 +139,51 @@ void main() {
       expect(find.text('2026-08-04'), findsNothing);
       expect(find.text('Reason: Wrong amount'), findsNothing);
 
+      await tester.ensureVisible(
+        find.byKey(const Key('correction-covered-obligations-details')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const Key('correction-covered-obligations-details')),
       );
       await tester.pumpAndSettle();
 
       expect(find.text('• 2026-08-04'), findsOneWidget);
+      await tester.ensureVisible(find.text('• 2026-08-04'));
+      await tester.pumpAndSettle();
+      await captureAndroidWorkflow(tester, 'C5-expanded-covered-dates-visible');
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('correction-audit-history-title')),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('correction-audit-history-title')),
         findsOneWidget,
       );
       expect(find.text('Version 1 · Test Collector'), findsOneWidget);
       expect(find.text('Reason: Wrong amount'), findsOneWidget);
+      await tester.ensureVisible(find.text('Reason: Wrong amount'));
+      await tester.pumpAndSettle();
+      await captureAndroidWorkflow(
+        tester,
+        'C5-expanded-audit-version-reason-visible',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Before: Advance · ₱120.00'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Before: Advance · ₱120.00'), findsOneWidget);
       expect(find.text('After: Advance · ₱100.00'), findsOneWidget);
+      await tester.ensureVisible(find.text('After: Advance · ₱100.00'));
+      await tester.pumpAndSettle();
+      await captureAndroidWorkflow(
+        tester,
+        'C5-expanded-audit-exact-after-visible',
+      );
       expect(history.requestedTransactionId, 'transaction-1');
       expect(history.requestedDeviceId, 'device-one');
 
@@ -76,27 +199,35 @@ void main() {
         find.byKey(const Key('submit-collection-correction')),
         findsOneWidget,
       );
+      await captureAndroidWorkflowScroll(tester, 'C5-correction-form');
     },
   );
 
   testWidgets('correction history failure gives safe retry guidance', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: SpinaTheme.light,
-        home: CollectionCorrectionPage(
-          session: _session,
-          entry: _entry,
-          collectionDate: DateTime(2026, 8, 2),
-          repository: _FakeCorrectionRepository(),
-          historyRepository: const _FailingHistoryRepository(),
-          deviceIdentityProvider: _deviceIdentityProvider(),
-        ),
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(320, 640),
+      textScaler: TextScaler.linear(2),
+      viewInsets: const EdgeInsets.only(bottom: 220),
+      home: CollectionCorrectionPage(
+        session: _session,
+        entry: _entry,
+        collectionDate: DateTime(2026, 8, 2),
+        repository: _FakeCorrectionRepository(),
+        historyRepository: const _FailingHistoryRepository(),
+        deviceIdentityProvider: _deviceIdentityProvider(),
       ),
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('correction-covered-obligations-details')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const Key('correction-covered-obligations-details')),
     );
@@ -109,24 +240,23 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('10.0.2.2'), findsNothing);
+    await captureAndroidWorkflowScroll(tester, 'C5-history-error');
   });
 
   testWidgets('stale correction gives refresh and review guidance', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1400));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: SpinaTheme.light,
-        home: CollectionCorrectionPage(
-          session: _session,
-          entry: _entry,
-          collectionDate: DateTime(2026, 8, 2),
-          repository: const _FailingCorrectionRepository(),
-          deviceIdentityProvider: _deviceIdentityProvider(),
-        ),
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(320, 640),
+      textScaler: TextScaler.linear(2),
+      viewInsets: const EdgeInsets.only(bottom: 220),
+      home: CollectionCorrectionPage(
+        session: _session,
+        entry: _entry,
+        collectionDate: DateTime(2026, 8, 2),
+        repository: const _FailingCorrectionRepository(),
+        deviceIdentityProvider: _deviceIdentityProvider(),
       ),
     );
     await tester.pumpAndSettle();
@@ -138,8 +268,28 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(reason, 'Correct amount');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submit-collection-correction')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('submit-collection-correction')));
     await tester.pumpAndSettle();
+    await captureAndroidWorkflowScroll(
+      tester,
+      'C5-correction-confirmation-keyboard',
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(Scrollable),
+      ),
+      findsOneWidget,
+      reason: 'Full correction consequences must be scroll-reachable',
+    );
+    await expectAndroidDialogConsequenceVisible(tester, 'audit history.');
+    await captureAndroidWorkflow(tester, 'C5-confirmation-consequence-end');
     await tester.tap(find.byKey(const Key('confirm-collection-correction')));
     await tester.pumpAndSettle();
 
@@ -150,6 +300,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Internal route revision conflict.'), findsNothing);
+    await captureAndroidWorkflowScroll(tester, 'C5-stale-correction');
   });
 }
 
@@ -202,6 +353,35 @@ class _FakeCorrectionRepository implements CollectionCorrectionRepository {
     required CollectionCorrectionDraft draft,
   }) {
     throw UnimplementedError();
+  }
+}
+
+class _SuccessfulCorrectionRepository
+    implements CollectionCorrectionRepository {
+  int calls = 0;
+  String? deviceId;
+  CollectionCorrectionDraft? draft;
+  @override
+  Future<CollectionCorrectionResult> correct(
+    UserSession session, {
+    required String deviceId,
+    required CollectionCorrectionDraft draft,
+  }) async {
+    calls++;
+    this.deviceId = deviceId;
+    this.draft = draft;
+    return CollectionCorrectionResult(
+      transactionId: draft.transactionId,
+      entryType: 'advance',
+      amount: 100,
+      coveredDates: [DateTime(2026, 8, 2), DateTime(2026, 8, 4)],
+      note: 'Two selected dates',
+      officialBalance: 4900,
+      receiptNumber: 'CORRECTED-TEST-00000002',
+      editVersion: 2,
+      routeRevision: 'corrected-synthetic-revision',
+      editedAt: DateTime.utc(2026, 8, 25),
+    );
   }
 }
 

@@ -354,113 +354,141 @@ class _NotificationCard extends StatelessWidget {
         : Icons.info_outline;
 
     return Card(
-      child: ExpansionTile(
-        key: Key('notification-${notification.notificationId}'),
-        onExpansionChanged: (expanded) {
-          if (expanded) {
-            onOpened();
-          }
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackHeader =
+              constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 21;
+          return ExpansionTile(
+            key: Key('notification-${notification.notificationId}'),
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                onOpened();
+              }
+            },
+            leading: stackHeader ? null : Icon(stateIcon),
+            title: stackHeader
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Icon(stateIcon),
+                          if (notification.readAt == null)
+                            const Chip(label: Text('New')),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(notification.title),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: Text(notification.title)),
+                      if (notification.readAt == null)
+                        const Chip(label: Text('New')),
+                    ],
+                  ),
+            subtitle: Text(
+              '${notification.collectorName} • '
+              '${_money(notification.totalAmount)}\n$stateText',
+            ),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(notification.message),
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${notification.clientCount} clients • '
+                  '${notification.transactionCount} entries • '
+                  '${_date(notification.collectionDate)}',
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (notification.hasHandoverPhoto) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: Key(
+                      'view-handover-photo-${notification.notificationId}',
+                    ),
+                    onPressed: () => _openPhoto(context),
+                    icon: const Icon(Icons.photo_outlined),
+                    label: Text(
+                      'View Handover Photo (v${notification.handoverPhotoVersion})',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ] else ...[
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('No handover photo was attached.'),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (notification.isRejected &&
+                  notification.rejectionReason.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Reason: ${notification.rejectionReason}',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (notification.custodyMessage.trim().isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    notification.custodyMessage,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (notification.isPending && canReceiveRemittance)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    key: Key(
+                      'review-remittance-notification-${notification.notificationId}',
+                    ),
+                    onPressed: onReview,
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    label: const Text('Review full remittance'),
+                  ),
+                )
+              else if (notification.isPending)
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'View only — your current server permissions do not allow remittance acceptance.',
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: Key(
+                      'open-remittance-history-${notification.notificationId}',
+                    ),
+                    onPressed: onReview,
+                    icon: const Icon(Icons.history),
+                    label: const Text('Open saved handover'),
+                  ),
+                ),
+            ],
+          );
         },
-        leading: Icon(stateIcon),
-        title: Row(
-          children: [
-            Expanded(child: Text(notification.title)),
-            if (notification.readAt == null) const Chip(label: Text('New')),
-          ],
-        ),
-        subtitle: Text(
-          '${notification.collectorName} • '
-          '${_money(notification.totalAmount)}\n$stateText',
-        ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(notification.message),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${notification.clientCount} clients • '
-              '${notification.transactionCount} entries • '
-              '${_date(notification.collectionDate)}',
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (notification.hasHandoverPhoto) ...[
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                key: Key('view-handover-photo-${notification.notificationId}'),
-                onPressed: () => _openPhoto(context),
-                icon: const Icon(Icons.photo_outlined),
-                label: Text(
-                  'View Handover Photo (v${notification.handoverPhotoVersion})',
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ] else ...[
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('No handover photo was attached.'),
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (notification.isRejected &&
-              notification.rejectionReason.isNotEmpty) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Reason: ${notification.rejectionReason}',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (notification.custodyMessage.trim().isNotEmpty) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                notification.custodyMessage,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (notification.isPending && canReceiveRemittance)
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                key: Key(
-                  'review-remittance-notification-${notification.notificationId}',
-                ),
-                onPressed: onReview,
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('Review full remittance'),
-              ),
-            )
-          else if (notification.isPending)
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'View only — your current server permissions do not allow remittance acceptance.',
-              ),
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                key: Key(
-                  'open-remittance-history-${notification.notificationId}',
-                ),
-                onPressed: onReview,
-                icon: const Icon(Icons.history),
-                label: const Text('Open saved handover'),
-              ),
-            ),
-        ],
       ),
     );
   }

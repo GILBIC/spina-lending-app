@@ -1,3 +1,4 @@
+import 'support/android_workflow_capture.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -66,8 +67,8 @@ void main() {
         });
         await pumpAndroidRoleFixture(
           tester,
-          size: const Size(360, 640),
-          textScaler: TextScaler.linear(1.3),
+          size: const Size(320, 640),
+          textScaler: TextScaler.linear(2),
           home: EmployeeOperationsPage(
             session: employeeSession,
             deviceIdentityProvider: provider,
@@ -91,6 +92,7 @@ void main() {
         final retained = (await service.outbox.entries(bound)).single;
         expect(retained.state, state);
         expect(retained.command, original.command);
+        await captureAndroidWorkflowScroll(tester, 'E1-attendance-$state');
         service.attach(null);
         await tester.pumpWidget(const SizedBox());
       },
@@ -425,8 +427,8 @@ void main() {
     );
     await pumpAndroidRoleFixture(
       tester,
-      size: const Size(360, 640),
-      textScaler: TextScaler.linear(1.3),
+      size: const Size(320, 640),
+      textScaler: TextScaler.linear(2),
       home: EmployeeOperationsPage(
         session: employeeSession,
         deviceIdentityProvider: provider,
@@ -443,6 +445,7 @@ void main() {
       (await service.outbox.entries(service.binding!)).single.command,
       original.command,
     );
+    await captureAndroidWorkflowScroll(tester, 'E1-device-queued');
     service.attach(null);
     await tester.pumpWidget(const SizedBox());
     service.dispose();

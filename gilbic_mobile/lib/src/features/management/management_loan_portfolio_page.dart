@@ -187,10 +187,14 @@ class _ManagementLoanPortfolioPageState
                   },
           ),
           const SizedBox(height: 18),
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
             children: [
-              Text('Loan records', style: Theme.of(context).textTheme.titleMedium),
-              const Spacer(),
+              Text(
+                'Loan records',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               Text('${portfolio.loans.length} shown'),
             ],
           ),
@@ -225,8 +229,16 @@ class _SummaryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_MetricData>[
-      _MetricData('Active loans', '${summary.activeLoanCount}', Icons.receipt_long),
-      _MetricData('Active clients', '${summary.activeClientCount}', Icons.people),
+      _MetricData(
+        'Active loans',
+        '${summary.activeLoanCount}',
+        Icons.receipt_long,
+      ),
+      _MetricData(
+        'Active clients',
+        '${summary.activeClientCount}',
+        Icons.people,
+      ),
       _MetricData(
         'Outstanding',
         _money(summary.activeRemainingTotal),
@@ -237,7 +249,11 @@ class _SummaryGrid extends StatelessWidget {
         _money(summary.activePrincipalTotal),
         Icons.payments_outlined,
       ),
-      _MetricData('Overdue', '${summary.overdueActiveCount}', Icons.warning_amber),
+      _MetricData(
+        'Overdue',
+        '${summary.overdueActiveCount}',
+        Icons.warning_amber,
+      ),
       _MetricData(
         '7x7 active',
         '${summary.activeSevenBySevenCount}',
@@ -249,17 +265,23 @@ class _SummaryGrid extends StatelessWidget {
         Icons.autorenew,
       ),
     ];
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisExtent: 104,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemBuilder: (context, index) => _MetricCard(data: items[index]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columns = constraints.maxWidth >= 300 * scale ? 2 : 1;
+        final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: width,
+                child: _MetricCard(data: item),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -280,21 +302,20 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(data.icon, size: 22),
-            const Spacer(),
-            Text(
-              data.value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text(data.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 104),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(data.icon, size: 22),
+              const SizedBox(height: 8),
+              Text(data.value, style: Theme.of(context).textTheme.titleMedium),
+              Text(data.label),
+            ],
+          ),
         ),
       ),
     );
@@ -311,72 +332,108 @@ class _ManagementLoanCard extends StatelessWidget {
     return Card(
       key: Key('management-loan-${loan.loanId}'),
       clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        initiallyExpanded: loan.renewalRequestStatus == 'approved',
-        leading: Icon(
-          loan.isSevenBySeven ? Icons.grid_view_rounded : Icons.receipt_long,
-        ),
-        title: Text(loan.clientName),
-        subtitle: Text(
-          '${loan.clientCode} • ${loan.loanTypeName}\n${loan.loanNumber}',
-        ),
-        trailing: _StatusChip(loan: loan),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          if (loan.renewalRequestStatus != null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                loan.renewalRequestStatus == 'approved'
-                    ? 'Renewal approved and awaiting SPINA office processing.'
-                    : 'Renewal request is pending Management review.',
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackHeader =
+              constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 21;
+          final icon = Icon(
+            loan.isSevenBySeven ? Icons.grid_view_rounded : Icons.receipt_long,
+          );
+          return ExpansionTile(
+            initiallyExpanded: loan.renewalRequestStatus == 'approved',
+            leading: stackHeader ? null : icon,
+            title: stackHeader
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          icon,
+                          _StatusChip(loan: loan),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(loan.clientName),
+                    ],
+                  )
+                : Text(loan.clientName),
+            subtitle: Text(
+              '${loan.clientCode} • ${loan.loanTypeName}\n${loan.loanNumber}',
             ),
-            const SizedBox(height: 12),
-          ],
-          _ValueRow(
-            label: 'Official remaining balance',
-            value: _money(loan.remainingBalance),
-            emphasized: true,
-          ),
-          _ValueRow(label: 'Principal', value: _money(loan.principal)),
-          _ValueRow(label: 'Paid toward balance', value: _money(loan.paidAmount)),
-          _ValueRow(label: 'Daily amount', value: _money(loan.dailyAmount)),
-          if (loan.interestRate != null)
-            _ValueRow(
-              label: 'Interest rate',
-              value: '${_trimNumber(loan.interestRate!)}%',
-            ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: (loan.paidPercent / 100).clamp(0.0, 1.0),
-          ),
-          const SizedBox(height: 5),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('${loan.paidPercent.toStringAsFixed(1)}% paid'),
-          ),
-          const Divider(height: 24),
-          _DetailRow(label: 'Area', value: loan.clientArea ?? 'Not assigned'),
-          _DetailRow(label: 'Released', value: _date(loan.dateReleased)),
-          _DetailRow(label: 'Due date', value: _date(loan.dueDate)),
-          _DetailRow(
-            label: 'Last payment',
-            value: _date(loan.lastPaymentDate, empty: 'No payment recorded'),
-          ),
-          _DetailRow(
-            label: 'Advance until',
-            value: _date(loan.advanceUntil, empty: 'None'),
-          ),
-          _DetailRow(label: 'Payments', value: '${loan.paymentCount}'),
-          _DetailRow(label: 'PASS count', value: '${loan.passCount}'),
-          _DetailRow(label: 'Audit state', value: '${loan.stateVersion}'),
-        ],
+            trailing: stackHeader
+                ? const SizedBox.shrink()
+                : _StatusChip(loan: loan),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              if (loan.renewalRequestStatus != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    loan.renewalRequestStatus == 'approved'
+                        ? 'Renewal approved and awaiting SPINA office processing.'
+                        : 'Renewal request is pending Management review.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              _ValueRow(
+                label: 'Official remaining balance',
+                value: _money(loan.remainingBalance),
+                emphasized: true,
+              ),
+              _ValueRow(label: 'Principal', value: _money(loan.principal)),
+              _ValueRow(
+                label: 'Paid toward balance',
+                value: _money(loan.paidAmount),
+              ),
+              _ValueRow(label: 'Daily amount', value: _money(loan.dailyAmount)),
+              if (loan.interestRate != null)
+                _ValueRow(
+                  label: 'Interest rate',
+                  value: '${_trimNumber(loan.interestRate!)}%',
+                ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: (loan.paidPercent / 100).clamp(0.0, 1.0),
+              ),
+              const SizedBox(height: 5),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text('${loan.paidPercent.toStringAsFixed(1)}% paid'),
+              ),
+              const Divider(height: 24),
+              _DetailRow(
+                label: 'Area',
+                value: loan.clientArea ?? 'Not assigned',
+              ),
+              _DetailRow(label: 'Released', value: _date(loan.dateReleased)),
+              _DetailRow(label: 'Due date', value: _date(loan.dueDate)),
+              _DetailRow(
+                label: 'Last payment',
+                value: _date(
+                  loan.lastPaymentDate,
+                  empty: 'No payment recorded',
+                ),
+              ),
+              _DetailRow(
+                label: 'Advance until',
+                value: _date(loan.advanceUntil, empty: 'None'),
+              ),
+              _DetailRow(label: 'Payments', value: '${loan.paymentCount}'),
+              _DetailRow(label: 'PASS count', value: '${loan.passCount}'),
+              _DetailRow(label: 'Audit state', value: '${loan.stateVersion}'),
+            ],
+          );
+        },
       ),
     );
   }

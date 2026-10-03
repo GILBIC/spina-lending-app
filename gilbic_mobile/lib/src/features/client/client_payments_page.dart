@@ -326,13 +326,14 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
             children: [
               Text(
                 'Payment timeline',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              const Spacer(),
               Text('${timeline.payments.length} receipts'),
             ],
           ),
@@ -389,6 +390,24 @@ class _PaymentCard extends StatelessWidget {
       'voided' => scheme.errorContainer,
       _ => scheme.surfaceContainerHighest,
     };
+    final identity = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          payment.loanTypeName,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        Text(payment.loanNumber),
+      ],
+    );
+    final status = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: statusColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(payment.statusLabel),
+    );
     return Card(
       key: Key('client-payment-${payment.transactionId}'),
       child: Padding(
@@ -396,35 +415,37 @@ class _PaymentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.receipt_long_outlined),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 300 ||
+                    MediaQuery.textScalerOf(context).scale(14) > 21) {
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        payment.loanTypeName,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Icon(Icons.receipt_long_outlined),
+                          status,
+                        ],
                       ),
-                      Text(payment.loanNumber),
+                      const SizedBox(height: 8),
+                      identity,
                     ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(payment.statusLabel),
-                ),
-              ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.receipt_long_outlined),
+                    const SizedBox(width: 10),
+                    Expanded(child: identity),
+                    Flexible(child: status),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             Text(
@@ -499,11 +520,27 @@ class _SummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final valueText = Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          );
+          if (constraints.maxWidth < 350 ||
+              MediaQuery.textScalerOf(context).scale(14) > 16.8 ||
+              value.length > 14) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [Text(label), valueText],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: Text(label)),
+              valueText,
+            ],
+          );
+        },
       ),
     );
   }

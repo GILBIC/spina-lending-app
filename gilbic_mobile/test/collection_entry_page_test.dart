@@ -1,3 +1,4 @@
+import 'support/android_workflow_capture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,132 @@ import 'support/android_role_fixture.dart';
 import 'support/android_readability_capture.dart';
 
 void main() {
+  for (final (amount, intent) in [
+    ('100.01', PaymentAllocationIntent.scheduled),
+    ('300.01', PaymentAllocationIntent.extraAsAdvance),
+  ]) {
+    testWidgets(
+      'A8 single short extra ADV exact $amount with keyboard and Back',
+      (tester) async {
+        final repository = _CaptureRepository();
+        await pumpAndroidRoleFixture(
+          tester,
+          size: const Size(320, 640),
+          textScaler: TextScaler.linear(2),
+          viewInsets: const EdgeInsets.only(bottom: 220),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => FilledButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CollectionEntryPage(
+                      session: _session,
+                      entry: _regularEntry,
+                      repository: repository,
+                      deviceIdentityProvider: _deviceIdentityProvider(),
+                      deviceSequence: MemoryCollectionDeviceSequence(),
+                      collectionDate: DateTime(2026, 8, 1),
+                    ),
+                  ),
+                ),
+                child: const Text('Open synthetic collection'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open synthetic collection'));
+        await tester.pumpAndSettle();
+        final input = find.byKey(const Key('collection-amount'));
+        await tester.scrollUntilVisible(
+          input,
+          180,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(input, amount);
+        await tester.pumpAndSettle();
+        if (intent == PaymentAllocationIntent.scheduled) {
+          final reason = find.text('No cash');
+          await tester.scrollUntilVisible(
+            reason,
+            180,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          final rendered = find.descendant(
+            of: reason,
+            matching: find.byType(RichText),
+          );
+          expect(
+            tester.widget<RichText>(rendered).text.style?.fontFamily,
+            'Roboto',
+            reason: 'Actual Past Due choice must use Android glyphs',
+          );
+          final promised = find.text('Promised to pay later');
+          await tester.scrollUntilVisible(
+            promised,
+            180,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          final label = tester.renderObject<RenderParagraph>(
+            find.descendant(of: promised, matching: find.byType(RichText)),
+          );
+          final last = label
+              .getBoxesForSelection(
+                const TextSelection(baseOffset: 0, extentOffset: 20),
+              )
+              .last
+              .toRect();
+          expect(
+            last.right,
+            lessThanOrEqualTo(label.size.width + .5),
+            reason: 'Full promised-payment choice must fit its painted bounds',
+          );
+          expect(
+            last.bottom,
+            lessThanOrEqualTo(label.size.height + .5),
+            reason:
+                'Full promised-payment choice must wrap inside its painted bounds',
+          );
+          await captureAndroidWorkflow(tester, 'C1-promised-choice-readable');
+        }
+        if (intent == PaymentAllocationIntent.extraAsAdvance) {
+          final choice = find.byKey(
+            const Key('regular-extra-allocation-choice'),
+          );
+          await tester.scrollUntilVisible(
+            choice,
+            180,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(choice);
+          await tester.pumpAndSettle();
+          final semantics = tester.ensureSemantics();
+          await captureAndroidWorkflowScroll(
+            tester,
+            'C1-extra-allocation-menu',
+          );
+          await checkAndroidWorkflowSemantics(tester);
+          semantics.dispose();
+          await tester.ensureVisible(find.text('Advance').last);
+          await tester.tap(find.text('Advance').last);
+          await tester.pumpAndSettle();
+        }
+        await captureAndroidWorkflowScroll(
+          tester,
+          'C1-$amount-${intent.name}-keyboard',
+        );
+        expect(repository.drafts, isEmpty);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.text('Open synthetic collection'), findsOneWidget);
+        expect(repository.drafts, isEmpty);
+      },
+    );
+  }
   testWidgets(
     'keyboard allocation choice exposes full borrower instruction at 320 scale 2.0',
     (tester) async {
@@ -287,36 +414,51 @@ void main() {
   testWidgets('network retry reuses the same idempotency key and sequence', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1400));
-    addTearDown(() async {
-      await tester.binding.setSurfaceSize(null);
-    });
-
     final repository = _RetryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CollectionEntryPage(
-          session: _session,
-          entry: _regularEntry,
-          repository: repository,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          deviceSequence: MemoryCollectionDeviceSequence(),
-          collectionDate: DateTime(2026, 8, 1),
-        ),
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(320, 640),
+      textScaler: TextScaler.linear(2),
+      viewInsets: const EdgeInsets.only(bottom: 220),
+      home: CollectionEntryPage(
+        session: _session,
+        entry: _regularEntry,
+        repository: repository,
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        deviceSequence: MemoryCollectionDeviceSequence(),
+        collectionDate: DateTime(2026, 8, 1),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('200.00'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('protected-allocation-card')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('protected-allocation-card')), findsOneWidget);
     expect(find.text('Covered dates'), findsNothing);
     expect(find.byKey(const Key('add-covered-date')), findsNothing);
 
     final submitButton = find.byKey(const Key('submit-collection-entry'));
+    await tester.scrollUntilVisible(
+      submitButton,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(submitButton, findsOneWidget);
     await tester.tap(submitButton);
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Retry same entry'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Retry same entry'), findsOneWidget);
     expect(
       find.text(
@@ -324,8 +466,17 @@ void main() {
       ),
       findsOneWidget,
     );
+    await captureAndroidWorkflowScroll(tester, 'C2-single-uncertain-keyboard');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
     expect(repository.drafts, hasLength(1));
 
+    await tester.scrollUntilVisible(
+      submitButton,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(submitButton);
     await tester.pumpAndSettle();
 
@@ -333,6 +484,7 @@ void main() {
     expect(find.text('Receipt: R-1001'), findsOneWidget);
     expect(find.text('Official balance: ₱4,600.00'), findsOneWidget);
     expect(find.text('Done and refresh route'), findsOneWidget);
+    await captureAndroidWorkflowScroll(tester, 'C2-single-reconciled');
     expect(repository.drafts, hasLength(2));
     expect(
       repository.drafts.first.idempotencyKey,

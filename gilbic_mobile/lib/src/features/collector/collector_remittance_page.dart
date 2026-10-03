@@ -139,6 +139,8 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: const Text('Submit remittance?'),
         content: Text(
           'Prepare ${_money(summary.totalAmount)} for ${recipient.fullName}?\n\n'
@@ -243,6 +245,9 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           key: const Key('remittance-recipient'),
+          isExpanded: true,
+          isDense: false,
+          itemHeight: null,
           initialValue: _selectedRecipientId,
           decoration: const InputDecoration(
             labelText: 'Remit to',
@@ -388,20 +393,41 @@ class _RemittanceItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final unable = item.entryType == 'pass';
     return Card(
-      child: ListTile(
-        dense: true,
-        title: Text(item.clientName),
-        subtitle: Text(
-          '${item.loanType} • ${_entryLabel(item.entryType)}'
-          '${item.coveredDates.isEmpty ? '' : '\nDates: ${item.coveredDates.map(_date).join(', ')}'}'
-          '${item.note.isEmpty ? '' : '\nNote: ${item.note}'}',
-        ),
-        trailing: Text(
-          unable ? '₱0.00' : _money(item.amount),
-          style: Theme.of(
-            context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final subtitle =
+              '${item.loanType} • ${_entryLabel(item.entryType)}'
+              '${item.coveredDates.isEmpty ? '' : '\nDates: ${item.coveredDates.map(_date).join(', ')}'}'
+              '${item.note.isEmpty ? '' : '\nNote: ${item.note}'}';
+          final amount = Text(
+            unable ? '₱0.00' : _money(item.amount),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+          );
+          if (constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 21) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.clientName),
+                  const SizedBox(height: 4),
+                  Text(subtitle),
+                  const SizedBox(height: 8),
+                  amount,
+                ],
+              ),
+            );
+          }
+          return ListTile(
+            dense: true,
+            title: Text(item.clientName),
+            subtitle: Text(subtitle),
+            trailing: amount,
+          );
+        },
       ),
     );
   }

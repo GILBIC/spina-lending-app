@@ -1,3 +1,4 @@
+import 'support/android_workflow_capture.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,10 +79,12 @@ Future<void> open(
   ClientLoanRepository? loans,
   ClientScheduleRepository? schedules,
   Future<void> Function()? signOut,
+  Size size = const Size(412, 915),
+  double scale = 1,
 }) => pumpAndroidRoleFixture(
   tester,
-  size: const Size(412, 915),
-  textScaler: TextScaler.linear(1),
+  size: size,
+  textScaler: TextScaler.linear(scale),
   home: ClientDashboard(
     session: clientSession(),
     deviceIdentityProvider: clientIdentity(),
@@ -91,6 +94,82 @@ Future<void> open(
   ),
 );
 void main() {
+  testWidgets('A8 narrow schedule loading failure and explicit recovery', (
+    tester,
+  ) async {
+    final schedules = ControlledSchedules()..defer = true;
+    await open(
+      tester,
+      schedules: schedules,
+      size: const Size(320, 640),
+      scale: 2,
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Loading schedule/payoff information'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Loading schedule/payoff information'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await captureAndroidWorkflow(tester, 'L1-schedule-loading');
+    schedules.defer = false;
+    schedules.pending.completeError(
+      const SpinaApiException('synthetic unavailable', statusCode: 503),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Official remaining balance'), findsNWidgets(2));
+    expect(find.text('Exact payoff'), findsNothing);
+    await captureAndroidWorkflowScroll(tester, 'L1-schedule-unavailable');
+    schedules.fail = false;
+    await tester.ensureVisible(find.text('Retry schedule'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retry schedule'));
+    await tester.pumpAndSettle();
+    expect(schedules.calls, ['seven-by-seven-loan', 'seven-by-seven-loan']);
+    expect(find.text('Schedule/payoff information unavailable'), findsNothing);
+    await captureAndroidWorkflowScroll(
+      tester,
+      'L1-schedule-recovered-exact-loans',
+    );
+  });
+  for (final status in [401, 403]) {
+    testWidgets('A8 narrow Client denial $status and accessible recovery', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      var signedOut = 0;
+      await open(
+        tester,
+        size: const Size(320, 640),
+        scale: 2,
+        loans: FakeClientLoanRepository.failure(
+          SpinaApiException('private internal', statusCode: status),
+        ),
+        signOut: () async {
+          signedOut++;
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(status == 401 ? 'Sign in again' : 'Access unavailable'),
+        findsOneWidget,
+      );
+      expect(find.text('Official remaining balance'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+      await captureAndroidWorkflowScroll(tester, 'L2-client-$status');
+      await checkAndroidWorkflowSemantics(tester);
+      if (status == 401) {
+        await tester.ensureVisible(find.text('Sign in again'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sign in again'));
+        await tester.pumpAndSettle();
+        expect(signedOut, 1);
+      }
+      semantics.dispose();
+    });
+  }
   testWidgets('Client retained schedule retry is inert after disposal', (
     tester,
   ) async {

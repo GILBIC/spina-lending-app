@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'support/android_role_fixture.dart';
+import 'support/android_workflow_capture.dart';
 import 'support/role_homes.dart';
 import 'android_read_recovery_test.dart' show ControlledSchedules, open;
 
@@ -60,6 +61,10 @@ void main() {
     await tester.tap(find.byTooltip('Account & tools'));
     await tester.pumpAndSettle();
     expect(find.text('Profile & security'), findsOneWidget);
+    await captureAndroidWorkflow(
+      tester,
+      'shared-Client-account-menu-semantics',
+    );
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
@@ -72,6 +77,10 @@ void main() {
     await open(tester, schedules: ControlledSchedules()..failureStatus = 401);
     await tester.pumpAndSettle();
     expect(find.text('Sign in again'), findsOneWidget);
+    await captureAndroidWorkflow(
+      tester,
+      'shared-Client-expired-read-semantics',
+    );
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));

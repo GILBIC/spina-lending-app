@@ -1,3 +1,4 @@
+import 'support/android_workflow_capture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,72 +15,93 @@ import 'package:gilbic_mobile/src/features/shared/spina_status.dart';
 import 'support/android_role_fixture.dart';
 
 void main() {
-  for (final (rawStatus, overdue, label, tone) in [
-    ('future_state', false, 'Future_state', SpinaStatusTone.information),
-    ('active', false, 'Active', SpinaStatusTone.information),
-    ('active', true, 'Overdue', SpinaStatusTone.attention),
+  for (final (size, scale) in [
+    (const Size(320, 640), 2.0),
+    (const Size(412, 915), 1.0),
   ]) {
-    testWidgets(
-      'Management status $rawStatus overdue=$overdue is not inferred success',
-      (tester) async {
-        final repository = _StatusPortfolioRepository(rawStatus, overdue);
-        final handle = tester.ensureSemantics();
-        await pumpAndroidRoleFixture(
-          tester,
-          size: const Size(412, 915),
-          textScaler: TextScaler.linear(1),
-          home: ManagementLoanPortfolioPage(
-            session: const UserSession(
-              userId: 'management-1',
-              username: 'manager',
-              displayName: 'Management',
-              role: AppRole.management,
-              rawRole: 'Management',
-              accessToken: 'test-token',
-              permissions: [],
+    for (final (rawStatus, overdue, label, tone) in [
+      ('future_state', false, 'Future_state', SpinaStatusTone.information),
+      ('active', false, 'Active', SpinaStatusTone.information),
+      ('active', true, 'Overdue', SpinaStatusTone.attention),
+    ]) {
+      testWidgets(
+        'Management status $rawStatus overdue=$overdue at ${size.width}/$scale',
+        (tester) async {
+          final repository = _StatusPortfolioRepository(rawStatus, overdue);
+          final handle = tester.ensureSemantics();
+          await pumpAndroidRoleFixture(
+            tester,
+            size: size,
+            textScaler: TextScaler.linear(scale),
+            home: ManagementLoanPortfolioPage(
+              session: const UserSession(
+                userId: 'management-1',
+                username: 'manager',
+                displayName: 'Management',
+                role: AppRole.management,
+                rawRole: 'Management',
+                accessToken: 'test-token',
+                permissions: [],
+              ),
+              deviceIdentityProvider: DeviceIdentityProvider(
+                store: MemoryDeviceIdentityStore()
+                  ..value = 'status-test-device',
+                platformResolver: () => 'android',
+                appVersionResolver: () async => 'test',
+              ),
+              repository: repository,
             ),
-            deviceIdentityProvider: DeviceIdentityProvider(
-              store: MemoryDeviceIdentityStore()..value = 'status-test-device',
-              platformResolver: () => 'android',
-              appVersionResolver: () async => 'test',
-            ),
-            repository: repository,
-          ),
-        );
-        await tester.pumpAndSettle();
-        final card = find.byKey(const Key('management-loan-exact-loan'));
-        await tester.scrollUntilVisible(
-          card,
-          250,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.pumpAndSettle();
-        expect(
-          find.byIcon(Icons.check_circle),
-          findsNothing,
-          reason:
-              'A non-overdue or unknown loan status must not claim success.',
-        );
-        final status = find.descendant(
-          of: card,
-          matching: find.byType(SpinaStatusLabel),
-        );
-        expect(status, findsOneWidget);
-        expect(tester.widget<SpinaStatusLabel>(status).label, label);
-        expect(tester.widget<SpinaStatusLabel>(status).tone, tone);
-        expect(repository.calls, 1);
-        expect(repository.requestedStatus, 'active');
-        expect(repository.requestedDeviceId, 'status-test-device');
-        expect(repository.loan.loanStatus, rawStatus);
-        expect(repository.loan.loanId, 'exact-loan');
-        expect(repository.loan.stateVersion, 7);
-        await tester.tap(status);
-        await tester.pumpAndSettle();
-        expect(repository.calls, 1);
-        expect(tester.takeException(), isNull);
-        handle.dispose();
-      },
-    );
+          );
+          await tester.pumpAndSettle();
+          final card = find.byKey(const Key('management-loan-exact-loan'));
+          await tester.scrollUntilVisible(
+            card,
+            250,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.byIcon(Icons.check_circle),
+            findsNothing,
+            reason:
+                'A non-overdue or unknown loan status must not claim success.',
+          );
+          final status = find.descendant(
+            of: card,
+            matching: find.byType(SpinaStatusLabel),
+          );
+          expect(status, findsOneWidget);
+          if (scale == 2) {
+            final name = find.descendant(
+              of: card,
+              matching: find.text(repository.loan.clientName),
+            );
+            expect(
+              tester.getSize(name).width,
+              greaterThanOrEqualTo(size.width * .65),
+              reason: 'Large-text loan identity uses a readable header width',
+            );
+          }
+          expect(tester.widget<SpinaStatusLabel>(status).label, label);
+          expect(tester.widget<SpinaStatusLabel>(status).tone, tone);
+          expect(repository.calls, 1);
+          expect(repository.requestedStatus, 'active');
+          expect(repository.requestedDeviceId, 'status-test-device');
+          expect(repository.loan.loanStatus, rawStatus);
+          expect(repository.loan.loanId, 'exact-loan');
+          expect(repository.loan.stateVersion, 7);
+          await tester.tap(status);
+          await tester.pumpAndSettle();
+          expect(repository.calls, 1);
+          expect(tester.takeException(), isNull);
+          await captureAndroidWorkflowScroll(
+            tester,
+            'M3-$rawStatus-overdue-$overdue-${size.width}-$scale',
+          );
+          handle.dispose();
+        },
+      );
+    }
   }
   for (final note in [
     'Not paid through GCash',

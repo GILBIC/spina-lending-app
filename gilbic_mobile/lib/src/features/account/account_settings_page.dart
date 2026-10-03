@@ -402,13 +402,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Expanded(
-                        child: Text(
-                          device.platform.toUpperCase(),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                      Text(
+                        device.platform.toUpperCase(),
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                       if (device.isCurrent)
                         const Chip(label: Text('This device')),
@@ -642,20 +642,29 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 132,
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final labelWidget = Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          );
+          if (constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 21) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [labelWidget, const SizedBox(height: 4), Text(value)],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 132, child: labelWidget),
+              Expanded(child: Text(value)),
+            ],
+          );
+        },
       ),
     );
   }
