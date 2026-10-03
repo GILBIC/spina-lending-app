@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/notifications/remittance_notification_rep
 import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
 import 'package:gilbic_mobile/src/features/remittance/remittance_history_page.dart';
 import 'package:gilbic_mobile/src/features/remittance/remittance_photo_viewer_page.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 
 class RemittanceNotificationsPage extends StatefulWidget {
   const RemittanceNotificationsPage({
@@ -16,6 +17,7 @@ class RemittanceNotificationsPage extends StatefulWidget {
     this.repository,
     this.remittanceRepository,
     this.surplusRepository,
+    this.onSignOut,
     super.key,
   });
 
@@ -24,6 +26,7 @@ class RemittanceNotificationsPage extends StatefulWidget {
   final RemittanceNotificationRepository? repository;
   final RemittanceRepository? remittanceRepository;
   final CollectorSurplusRepository? surplusRepository;
+  final Future<void> Function()? onSignOut;
 
   @override
   State<RemittanceNotificationsPage> createState() =>
@@ -32,12 +35,19 @@ class RemittanceNotificationsPage extends StatefulWidget {
 
 class _RemittanceNotificationsPageState
     extends State<RemittanceNotificationsPage> {
-  late final RemittanceNotificationRepository _repository;
+  late RemittanceNotificationRepository _repository;
   List<RemittanceNotification> _notifications =
       const <RemittanceNotification>[];
   String? _deviceId;
   String? _errorMessage;
-  bool _loading = true;
+  bool _loading = false;
+  bool _hasLoaded = false;
+  int _generation = 0;
+  int? _failureStatus;
+  final Set<String> _updating = {};
+  bool get _denied =>
+      _failureStatus == 401 || _failureStatus == 403 || _failureStatus == 426;
+  bool _current(int generation) => mounted && generation == _generation;
 
   @override
   void initState() {
@@ -46,62 +56,144 @@ class _RemittanceNotificationsPageState
     _load();
   }
 
+  @override
+  void didUpdateWidget(RemittanceNotificationsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _generation++;
+      _notifications = const [];
+      _deviceId = null;
+      _updating.clear();
+      _hasLoaded = false;
+      _loading = false;
+      _failureStatus = null;
+      _repository =
+          widget.repository ?? SpinaRemittanceNotificationRepository();
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  void _failedRead(Object error, int generation) {
+    if (!_current(generation)) return;
+    setState(() {
+      _failureStatus = error is SpinaApiException ? error.statusCode : null;
+      _errorMessage = _failureStatus == 401
+          ? 'Your session has expired. Sign in again to view remittance requests.'
+          : _failureStatus == 403
+          ? 'Remittance request access is unavailable. Return to Account or contact SPINA for help.'
+          : _failureStatus == 426
+          ? 'SPINA must be updated before these records can be used. Return to sign-in to check app access.'
+          : 'Remittance requests could not be loaded. Check your connection and retry.';
+      if (_denied) {
+        _generation++;
+        _notifications = const [];
+        _deviceId = null;
+        _updating.clear();
+        _hasLoaded = false;
+        _loading = false;
+      }
+    });
+  }
+
+  Widget _readNotice() => WorkspaceReadNotice(
+    message: _errorMessage!,
+    stale: _hasLoaded,
+    actionLabel: _failureStatus == 401
+        ? 'Sign in again'
+        : _failureStatus == 403
+        ? 'Access unavailable'
+        : _failureStatus == 426
+        ? 'Return to sign-in'
+        : 'Retry',
+    onAction: _failureStatus == 401 || _failureStatus == 426
+        ? widget.onSignOut
+        : _denied || _loading
+        ? null
+        : _load,
+  );
+
   Future<void> _load() async {
+    if (!mounted || _loading || _denied) return;
+    final generation = _generation;
+    final session = widget.session;
+    final repository = _repository;
+    final provider = widget.deviceIdentityProvider;
     setState(() {
       _loading = true;
       _errorMessage = null;
+      _failureStatus = null;
     });
     try {
-      final identity = await widget.deviceIdentityProvider.load();
-      final notifications = await _repository.loadNotifications(
-        widget.session,
+      final identity = await provider.load();
+      if (!_current(generation)) return;
+      final notifications = await repository.loadNotifications(
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) {
+      if (!_current(generation)) {
         return;
       }
       setState(() {
         _deviceId = identity.installationId;
         _notifications = notifications;
+        _hasLoaded = true;
       });
-    } on SpinaApiException catch (error) {
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
-      }
-    } on Object {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Remittance notifications could not be loaded.';
-        });
-      }
+    } on Object catch (error) {
+      _failedRead(error, generation);
     } finally {
-      if (mounted) {
+      if (_current(generation)) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _markRead(RemittanceNotification notification) async {
+    if (!mounted ||
+        _denied ||
+        !_notifications.contains(notification) ||
+        _updating.contains(notification.notificationId)) {
+      return;
+    }
+    final generation = _generation;
     final deviceId = _deviceId;
     if (deviceId == null || notification.readAt != null) {
       return;
     }
+    _updating.add(notification.notificationId);
     try {
       final updated = await _repository.markRead(
         widget.session,
         deviceId: deviceId,
         notificationId: notification.notificationId,
       );
-      if (mounted) {
+      if (_current(generation) && _notifications.contains(notification)) {
         _replace(updated);
+      }
+    } on SpinaApiException catch (error) {
+      if (error.statusCode == 401 ||
+          error.statusCode == 403 ||
+          error.statusCode == 426) {
+        _failedRead(error, generation);
       }
     } on Object {
       // Reading is best-effort. Full remittance review still performs fresh
       // server-side recipient and custody checks before any financial action.
+    } finally {
+      if (_current(generation)) _updating.remove(notification.notificationId);
     }
   }
 
   Future<void> _openReview(RemittanceNotification notification) async {
+    if (!mounted || _denied || !_notifications.contains(notification)) return;
+    final generation = _generation;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => RemittanceHistoryPage(
@@ -113,7 +205,7 @@ class _RemittanceNotificationsPageState
         ),
       ),
     );
-    if (mounted) {
+    if (_current(generation) && !_denied) {
       await _load();
     }
   }
@@ -159,7 +251,7 @@ class _RemittanceNotificationsPageState
         actions: [
           IconButton(
             tooltip: 'Refresh remittance requests',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -167,19 +259,20 @@ class _RemittanceNotificationsPageState
       body: SafeArea(
         child: _loading && _notifications.isEmpty
             ? const Center(child: CircularProgressIndicator())
+            : !_hasLoaded && _errorMessage != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _readNotice(),
+                ),
+              )
             : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(14),
                   children: [
-                    if (_errorMessage != null)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Text(_errorMessage!),
-                        ),
-                      ),
+                    if (_errorMessage != null) _readNotice(),
                     if (_notifications.isEmpty)
                       const Padding(
                         padding: EdgeInsets.all(28),
@@ -195,6 +288,10 @@ class _RemittanceNotificationsPageState
                           session: widget.session,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                           canReceiveRemittance: canReceiveRemittance,
+                          isCurrent: () =>
+                              mounted &&
+                              !_denied &&
+                              _notifications.contains(notification),
                           onOpened: () => _markRead(notification),
                           onReview: () => _openReview(notification),
                         ),
@@ -212,6 +309,7 @@ class _NotificationCard extends StatelessWidget {
     required this.session,
     required this.deviceIdentityProvider,
     required this.canReceiveRemittance,
+    required this.isCurrent,
     required this.onOpened,
     required this.onReview,
   });
@@ -220,10 +318,12 @@ class _NotificationCard extends StatelessWidget {
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final bool canReceiveRemittance;
+  final bool Function() isCurrent;
   final VoidCallback onOpened;
   final VoidCallback onReview;
 
   Future<void> _openPhoto(BuildContext context) async {
+    if (!isCurrent()) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => RemittancePhotoViewerPage(
@@ -242,12 +342,16 @@ class _NotificationCard extends StatelessWidget {
         ? 'Action required — review full handover'
         : notification.isRejected
         ? 'Rejected — cash stayed with sender'
-        : 'Accepted — money under your custody';
+        : notification.normalizedStatus == 'accepted'
+        ? 'Accepted — money under your custody'
+        : 'Status unavailable — ${notification.status}';
     final stateIcon = notification.isPending
         ? Icons.notifications_active
         : notification.isRejected
         ? Icons.cancel_outlined
-        : Icons.verified;
+        : notification.normalizedStatus == 'accepted'
+        ? Icons.verified
+        : Icons.info_outline;
 
     return Card(
       child: ExpansionTile(

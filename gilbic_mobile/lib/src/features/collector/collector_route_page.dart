@@ -23,11 +23,13 @@ import 'package:gilbic_mobile/src/features/collector/collector_client_tools_shee
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_tree.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 
 class CollectorRoutePage extends StatefulWidget {
   const CollectorRoutePage({
     required this.session,
     required this.loader,
+    this.onSignOut,
     this.paymentRepository,
     this.combinedPaymentRepository,
     this.correctionRepository,
@@ -39,6 +41,7 @@ class CollectorRoutePage extends StatefulWidget {
 
   final UserSession session;
   final CollectorRouteLoader loader;
+  final Future<void> Function()? onSignOut;
   final PaymentSubmissionRepository? paymentRepository;
   final CombinedPaymentSubmissionRepository? combinedPaymentRepository;
   final CollectionCorrectionRepository? correctionRepository;
@@ -68,7 +71,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       <String, CombinedPaymentSubmissionDraft>{};
   CollectorRouteLoadResult? _result;
   Object? _error;
-  bool _loading = true;
+  bool _loading = false;
+  int _readGeneration = 0;
+  ModalRoute<dynamic>? _clientToolsRoute;
 
   @override
   void initState() {
@@ -89,33 +94,87 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     _loadRoute();
   }
 
-  Future<void> _loadRoute() async {
+  Future<void> _loadRoute({bool supersede = false}) async {
+    if (!mounted || (_loading && !supersede) || _readBlocked) return;
+    final generation = ++_readGeneration;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final result = await widget.loader.loadToday(widget.session);
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() => _result = result);
       }
     } on Object catch (error) {
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() {
           _error = error;
           if (isCollectorRouteAccessRejected(error)) {
             _result = null;
-            _pendingDirectDrafts.clear();
-            _pendingCombinedDrafts.clear();
+            // Denial hides private route data, but does not decide the outcome
+            // or identity of an already submitted financial attempt.
             _expandedClients.clear();
             _expandedAreaUids.clear();
           }
         });
+        if (_readBlocked) {
+          final toolsRoute = _clientToolsRoute;
+          if (toolsRoute != null && toolsRoute.isActive) {
+            toolsRoute.navigator?.removeRoute(toolsRoute);
+          }
+        }
       }
     } finally {
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  bool get _readBlocked =>
+      _error != null && isCollectorRouteAccessRejected(_error!);
+
+  bool _currentRead(int generation) => mounted && generation == _readGeneration;
+
+  @override
+  void dispose() {
+    _readGeneration++;
+    super.dispose();
+  }
+
+  bool get _sessionRecovery =>
+      widget.onSignOut != null &&
+      ((_error as SpinaApiException).statusCode != 403 ||
+          !Navigator.of(context).canPop());
+
+  bool get _canRecoverRead =>
+      !_readBlocked ||
+      widget.onSignOut != null ||
+      Navigator.of(context).canPop();
+
+  String get _recoveryLabel {
+    if (!_readBlocked) return 'Retry';
+    final status = (_error as SpinaApiException).statusCode;
+    if (_sessionRecovery) {
+      return status == 401 ? 'Sign in again' : 'Return to sign-in';
+    }
+    if (Navigator.of(context).canPop()) return 'Back';
+    return status == 426
+        ? 'Update required'
+        : status == 401
+        ? 'Sign in again'
+        : 'Access unavailable';
+  }
+
+  void _recoverRead() {
+    if (!mounted) return;
+    if (!_readBlocked) {
+      _loadRoute();
+    } else if (_sessionRecovery) {
+      widget.onSignOut!();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).maybePop();
     }
   }
 
@@ -283,9 +342,10 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       final draft =
           _pendingDirectDrafts[entry.loanId] ??
           await _buildDirectPaymentDraft(loaded, entry);
+      if (!mounted || _readBlocked) return;
       _pendingDirectDrafts[entry.loanId] = draft;
       final result = await _paymentRepository.submit(widget.session, draft);
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
 
@@ -301,7 +361,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             ),
           ),
         );
-        await _loadRoute();
+        await _loadRoute(supersede: true);
         return;
       }
 
@@ -309,9 +369,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(result.message)));
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     } on SpinaApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       final status = error.statusCode;
@@ -332,7 +392,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         ),
       );
     } on Object {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -379,14 +439,14 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       var draft = _pendingCombinedDrafts[client.clientId];
       if (draft == null) {
         final baseDraft = await _buildCombinedPaymentDraft(loaded, client);
-        if (!mounted) {
+        if (!mounted || _readBlocked) {
           return;
         }
         final preview = await _combinedPaymentRepository.preview(
           widget.session,
           baseDraft,
         );
-        if (!mounted) {
+        if (!mounted || _readBlocked) {
           return;
         }
         final cash = baseDraft.cashReceivedAmount;
@@ -420,7 +480,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         widget.session,
         draft,
       );
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       if (result.requiresCashCustodyReview) {
@@ -431,7 +491,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             duration: const Duration(seconds: 10),
           ),
         );
-        await _loadRoute();
+        await _loadRoute(supersede: true);
         return;
       }
       if (result.isFinalSuccess) {
@@ -446,16 +506,16 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             ),
           ),
         );
-        await _loadRoute();
+        await _loadRoute(supersede: true);
         return;
       }
       _pendingCombinedDrafts.remove(client.clientId);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(result.message)));
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     } on SpinaApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       final status = error.statusCode;
@@ -476,7 +536,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         ),
       );
     } on Object {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -528,7 +588,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       ),
     );
     if (saved == true && mounted) {
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     }
   }
 
@@ -556,7 +616,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       ),
     );
     if (saved == true && mounted) {
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     }
   }
 
@@ -564,6 +624,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
   ) {
+    if (_readBlocked) return collectorReadFailureMessage(_error!);
     if (loaded.isFromCache) {
       return 'Offline route copies are read-only. Reconnect and refresh before editing.';
     }
@@ -620,17 +681,21 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (context) => CollectorClientToolsSheet(
-        client: selectedClient,
-        directPayBlockedReasonFor: (entry) =>
-            _directPayBlockedReason(loaded, entry),
-        detailsBlockedReasonFor: (entry) =>
-            _detailsBlockedReason(loaded, entry),
-        correctionBlockedReasonFor: (entry) =>
-            _correctionBlockedReason(loaded, entry),
-      ),
+      builder: (context) {
+        _clientToolsRoute = ModalRoute.of(context);
+        return CollectorClientToolsSheet(
+          client: selectedClient,
+          directPayBlockedReasonFor: (entry) =>
+              _directPayBlockedReason(loaded, entry),
+          detailsBlockedReasonFor: (entry) =>
+              _detailsBlockedReason(loaded, entry),
+          correctionBlockedReasonFor: (entry) =>
+              _correctionBlockedReason(loaded, entry),
+        );
+      },
     );
-    if (!mounted || selection == null) return;
+    _clientToolsRoute = null;
+    if (!mounted || _readBlocked || selection == null) return;
 
     final entry = selection.entry;
     switch (selection.kind) {
@@ -668,7 +733,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         actions: [
           IconButton(
             tooltip: 'Refresh route',
-            onPressed: _loading ? null : _loadRoute,
+            onPressed: _loading || _readBlocked ? null : _loadRoute,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -686,29 +751,10 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     final error = _error;
     if (error != null && result == null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cloud_off, size: 48),
-              const SizedBox(height: 12),
-              Text(
-                collectorFailureMessage(
-                  error,
-                  task: CollectorFailureTask.loadRoute,
-                ),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _loadRoute,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ),
+        child: WorkspaceReadNotice(
+          message: collectorReadFailureMessage(error),
+          actionLabel: _recoveryLabel,
+          onAction: _canRecoverRead ? _recoverRead : null,
         ),
       );
     }
@@ -758,17 +804,11 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           ],
           if (error != null) ...[
             const SizedBox(height: 8),
-            MaterialBanner(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              content: Text(
-                collectorFailureMessage(
-                  error,
-                  task: CollectorFailureTask.loadRoute,
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: _loadRoute, child: const Text('Retry')),
-              ],
+            WorkspaceReadNotice(
+              message: collectorReadFailureMessage(error),
+              actionLabel: _recoveryLabel,
+              onAction: _canRecoverRead ? _recoverRead : null,
+              stale: true,
             ),
           ],
           const SizedBox(height: 8),

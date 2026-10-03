@@ -11,6 +11,23 @@ enum CollectorFailureTask {
   submitRemittance,
 }
 
+/// Read-only guidance keeps known Collector recovery instructions while never
+/// displaying unclassified backend text as a user-facing read failure.
+String collectorReadFailureMessage(Object error) {
+  if (error is SpinaApiException && error.statusCode == 426) {
+    return 'This SPINA version needs an update before route information can be opened. Return to sign-in and follow the update guidance.';
+  }
+  final message = collectorFailureMessage(
+    error,
+    task: CollectorFailureTask.loadRoute,
+  );
+  if (message == _fallbackFor(CollectorFailureTask.loadRoute) ||
+      (error is SpinaApiException && message == error.message.trim())) {
+    return "SPINA could not load today's route. Check your connection, then tap Retry.";
+  }
+  return message;
+}
+
 String collectorFailureMessage(
   Object error, {
   required CollectorFailureTask task,

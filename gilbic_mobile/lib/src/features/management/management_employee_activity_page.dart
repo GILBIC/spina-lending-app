@@ -20,6 +20,7 @@ class ManagementEmployeeActivityPage extends StatefulWidget {
     this.repository,
     this.initialDateFrom,
     this.initialDateTo,
+    this.onSignOut,
     super.key,
   });
 
@@ -28,6 +29,7 @@ class ManagementEmployeeActivityPage extends StatefulWidget {
   final ManagementEmployeeActivityRepository? repository;
   final DateTime? initialDateFrom;
   final DateTime? initialDateTo;
+  final Future<void> Function()? onSignOut;
 
   @override
   State<ManagementEmployeeActivityPage> createState() =>
@@ -149,6 +151,7 @@ class _ManagementEmployeeActivityPageState
       MaterialPageRoute<void>(
         builder: (context) => ManagementEmployeeActivityDetailPage(
           session: widget.session,
+          onSignOut: widget.onSignOut,
           deviceId: deviceId,
           repository: _repository,
           employeeUserId: row.employeeUserId,

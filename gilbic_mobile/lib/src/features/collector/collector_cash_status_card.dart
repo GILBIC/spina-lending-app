@@ -55,8 +55,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       SpinaCollectorRenewalWorkflowRepository();
 
   CollectorCashAccountability? _accountability;
-  bool _loading = true;
+  bool _loading = false;
   bool _renewalAlertLoading = false;
+  bool _stale = false;
   int? _failureStatus;
   int _generation = 0;
   int _privacyGeneration = 0;
@@ -73,12 +74,17 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (oldWidget.session != widget.session ||
         oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider) {
       _privacyGeneration++;
+      _generation++;
+      _loading = false;
+      _failureStatus = null;
+      _accountability = null;
+      _stale = false;
       unawaited(_load());
     }
   }
 
   Future<void> _load() async {
-    if (!mounted) return;
+    if (!mounted || _loading || _readBlocked) return;
     final generation = ++_generation;
     final session = widget.session;
     _failureStatus = null;
@@ -102,7 +108,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
     setState(() {
       _loading = true;
-      _accountability = null;
     });
 
     CollectorCashAccountability? accountability;
@@ -110,6 +115,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      if (!mounted || generation != _generation) return;
       deviceId = identity.installationId;
 
       if (canLoadCash) {
@@ -121,7 +127,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
         } on SpinaApiException catch (error) {
           if (generation != _generation || !mounted) return;
           _failureStatus = error.statusCode;
-          if (_failureStatus == 401 || _failureStatus == 403) {
+          if (_readBlocked) {
             _privacyGeneration++;
           }
         } on Object {
@@ -134,16 +140,19 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
     if (!mounted || generation != _generation) return;
     setState(() {
-      _accountability = accountability;
+      _stale =
+          accountability == null && !_readBlocked && _accountability != null;
+      if (accountability != null || _readBlocked) {
+        _accountability = accountability;
+      }
       _loading = false;
     });
-    if (canLoadRenewals &&
-        deviceId != null &&
-        _failureStatus != 401 &&
-        _failureStatus != 403) {
+    if (canLoadRenewals && deviceId != null && !_readBlocked) {
       unawaited(_loadCashReleaseAlert(deviceId));
     }
   }
+
+  bool get _readBlocked => const {401, 403, 426}.contains(_failureStatus);
 
   Future<void> _loadCashReleaseAlert(String deviceId) async {
     // Cash can refresh while this optional check is pending. Keep one pending
@@ -204,13 +213,17 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               ),
               IconButton(
                 key: const Key('collector-cash-status-refresh'),
-                tooltip: _failureStatus == 401
+                tooltip: _failureStatus == 426
+                    ? widget.onSignOut == null
+                          ? 'Update required'
+                          : 'Return to sign-in'
+                    : _failureStatus == 401
                     ? 'Sign in again'
                     : 'Refresh cash status',
                 visualDensity: VisualDensity.compact,
                 onPressed: _loading || _failureStatus == 403
                     ? null
-                    : _failureStatus == 401
+                    : _failureStatus == 401 || _failureStatus == 426
                     ? widget.onSignOut == null
                           ? null
                           : () => unawaited(widget.onSignOut!())
@@ -227,18 +240,24 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
           ),
           if (_loading)
             const Text('Loading cash status…')
-          else if (accountability != null)
+          else if (_stale)
+            const Text(
+              'Last successful cash status. It has not been refreshed. Connect and refresh.',
+            ),
+          if (accountability != null)
             _PrimaryCashHeldTile(
               amount: accountability.totalCashHeld,
               assignedAreaAmount: accountability.assignedAreaCashHeld,
               otherAreaAmount: accountability.otherAreaCashHeld,
               otherAreaByCollector: accountability.otherAreaByCollector,
             )
-          else
+          else if (!_loading)
             Text(switch (_failureStatus) {
               401 => 'Cash status unavailable. Sign in again to continue.',
               403 =>
                 'Access unavailable. This account or device cannot view cash status.',
+              426 =>
+                'Update required. Return to sign-in and follow the SPINA update guidance before refreshing cash status.',
               _ => 'Cash status unavailable. Connect and refresh.',
             }),
         ],

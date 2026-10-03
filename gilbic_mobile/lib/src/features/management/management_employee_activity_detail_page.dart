@@ -24,6 +24,7 @@ class ManagementEmployeeActivityDetailPage extends StatefulWidget {
     this.onOpenGeneralJournal,
     this.onOpenSupportRequests,
     this.onOpenRemittanceReview,
+    this.onSignOut,
     super.key,
   });
 
@@ -38,6 +39,7 @@ class ManagementEmployeeActivityDetailPage extends StatefulWidget {
   final ValueChanged<String>? onOpenGeneralJournal;
   final ValueChanged<String>? onOpenSupportRequests;
   final ValueChanged<String>? onOpenRemittanceReview;
+  final Future<void> Function()? onSignOut;
 
   @override
   State<ManagementEmployeeActivityDetailPage> createState() =>
@@ -140,6 +142,7 @@ class _ManagementEmployeeActivityDetailPageState
         return _push(
           RemittanceNotificationsPage(
             session: widget.session,
+            onSignOut: widget.onSignOut,
             deviceIdentityProvider: identity,
           ),
         );

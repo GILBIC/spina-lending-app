@@ -94,6 +94,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
     await _open(
       CollectorMasterReviewPage(
         session: widget.session,
+        onSignOut: widget.onSignOut,
         loader: widget.collectorRouteLoader,
       ),
     );
@@ -318,6 +319,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                         _open(
                           EmployeeOperationsPage(
                             session: widget.session,
+                            onSignOut: widget.onSignOut,
                             deviceIdentityProvider:
                                 widget.deviceIdentityProvider,
                           ),
@@ -358,6 +360,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _open(
                         ActivityNotificationsPage(
                           session: widget.session,
+                          onSignOut: widget.onSignOut,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                         ),
                       );
@@ -374,6 +377,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                         _open(
                           RemittanceNotificationsPage(
                             session: widget.session,
+                            onSignOut: widget.onSignOut,
                             deviceIdentityProvider:
                                 widget.deviceIdentityProvider,
                           ),
@@ -409,6 +413,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _open(
                         NotificationCenterPage(
                           session: widget.session,
+                          onSignOut: widget.onSignOut,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                         ),
                       );
@@ -482,6 +487,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
           Expanded(
             child: CollectorRoutePage(
               session: widget.session,
+              onSignOut: widget.onSignOut,
               loader: widget.collectorRouteLoader,
               paymentRepository: widget.paymentSubmissionRepository,
               deviceIdentityProvider: widget.deviceIdentityProvider,

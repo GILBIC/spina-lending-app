@@ -12,6 +12,7 @@ class NotificationCenterPage extends StatelessWidget {
     required this.deviceIdentityProvider,
     this.activityRepository,
     this.remittanceRepository,
+    this.onSignOut,
     super.key,
   });
 
@@ -19,11 +20,12 @@ class NotificationCenterPage extends StatelessWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final ActivityNotificationRepository? activityRepository;
   final RemittanceNotificationRepository? remittanceRepository;
+  final Future<void> Function()? onSignOut;
 
   void _push(BuildContext context, Widget page) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (context) => page),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (context) => page));
   }
 
   @override
@@ -60,6 +62,7 @@ class NotificationCenterPage extends StatelessWidget {
                   context,
                   ActivityNotificationsPage(
                     session: session,
+                    onSignOut: onSignOut,
                     deviceIdentityProvider: deviceIdentityProvider,
                     repository: activityRepository,
                   ),
@@ -83,6 +86,7 @@ class NotificationCenterPage extends StatelessWidget {
                     context,
                     RemittanceNotificationsPage(
                       session: session,
+                      onSignOut: onSignOut,
                       deviceIdentityProvider: deviceIdentityProvider,
                       repository: remittanceRepository,
                     ),

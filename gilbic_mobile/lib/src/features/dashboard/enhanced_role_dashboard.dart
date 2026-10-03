@@ -219,6 +219,7 @@ class _DashboardPermissionDenied extends StatelessWidget {
       MaterialPageRoute<void>(
         builder: (context) => NotificationCenterPage(
           session: session,
+          onSignOut: onSignOut,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
       ),

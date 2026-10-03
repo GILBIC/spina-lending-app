@@ -509,7 +509,23 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('This device has been revoked.'), findsNothing);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Try again'), findsNothing);
+      expect(find.text('Access unavailable'), findsOneWidget);
+      expect(
+        find.widgetWithText(OutlinedButton, 'Access unavailable'),
+        findsNothing,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton && widget.tooltip == 'Refresh route',
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
     },
   );
 

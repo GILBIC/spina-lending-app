@@ -91,6 +91,24 @@ Future<void> open(
   ),
 );
 void main() {
+  testWidgets('Client retained schedule retry is inert after disposal', (
+    tester,
+  ) async {
+    final schedules = ControlledSchedules();
+    await open(tester, schedules: schedules);
+    await tester.pumpAndSettle();
+    final retry = tester
+        .widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Retry schedule'),
+        )
+        .onPressed!;
+    await tester.pumpWidget(const SizedBox());
+    retry();
+    await tester.pump();
+    expect(schedules.calls, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Management changed session discards late private overview', (
     tester,
   ) async {

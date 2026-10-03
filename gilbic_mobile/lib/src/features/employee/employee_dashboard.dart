@@ -79,6 +79,7 @@ class EmployeeDashboard extends StatelessWidget {
       ),
       _EmployeeAction.notifications => NotificationCenterPage(
         session: session,
+        onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
       ),
       _EmployeeAction.account => AccountSettingsPage(
@@ -91,6 +92,7 @@ class EmployeeDashboard extends StatelessWidget {
       ),
       _EmployeeAction.remittance => RemittanceNotificationsPage(
         session: session,
+        onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
         repository: remittanceNotificationRepository,
       ),
@@ -100,6 +102,7 @@ class EmployeeDashboard extends StatelessWidget {
       _EmployeeAction.leaveRequests ||
       _EmployeeAction.accounting => EmployeeOperationsPage(
         session: session,
+        onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
         initialSection: switch (module.action) {
           _EmployeeAction.payroll => EmployeeSection.payroll,
