@@ -216,11 +216,13 @@ void main() {
     },
   );
   testWidgets('offline route keeps collection button disabled', (tester) async {
+    final repository = _RetryRepository();
     await tester.pumpWidget(
       MaterialApp(
         home: CollectorRoutePage(
           session: _session,
           loader: _RouteLoader(isFromCache: true),
+          paymentRepository: repository,
         ),
       ),
     );
@@ -230,6 +232,7 @@ void main() {
       find.byKey(const Key('record-collection-entry-1')),
     );
     expect(button.onPressed, isNull);
+    expect(repository.drafts, isEmpty);
     expect(
       find.byKey(const Key('collector-offline-read-only')),
       findsOneWidget,
@@ -246,6 +249,7 @@ void main() {
       find.textContaining('Offline route copies are read-only'),
       findsOneWidget,
     );
+    expect(repository.drafts, isEmpty);
   });
 
   testWidgets('one tap Pay posts the scheduled amount without opening a form', (
