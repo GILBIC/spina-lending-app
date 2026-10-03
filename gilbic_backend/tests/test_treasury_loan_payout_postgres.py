@@ -997,7 +997,7 @@ def test_completion_outcome_failure_rolls_back_loan_schedule_credentials_and_pay
     monkeypatch.setattr(f["service"], "save_result", fail_outcome)
     with pytest.raises(RuntimeError, match="Synthetic final audit"):
         test_protected_first_loan_completion_uses_actual_borrower_receipt_and_one_debit(
-            f, "borrower", "gcash"
+            f, "borrower", "gcash", False
         )
     with connect() as conn:
         assert (
@@ -1134,7 +1134,7 @@ def test_completed_first_loan_funding_cannot_be_voided_through_legacy_source(
 
     f = payout_case
     test_protected_first_loan_completion_uses_actual_borrower_receipt_and_one_debit(
-        f, "borrower", "gcash"
+        f, "borrower", "gcash", False
     )
     with connect() as conn:
         event = conn.execute(
