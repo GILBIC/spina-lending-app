@@ -18,6 +18,7 @@ const collectorSurplusAmounts = {
   'counted_amount',
   'difference',
   'physical_amount',
+  'retained_cash_amount',
   'authorized_credit_amount',
   'received_excess_amount',
   'unidentified_amount',
@@ -121,6 +122,9 @@ const collectorOwnRowFields = {
   'reversed_amount',
   'count_id',
   'physical_amount',
+  'retained_cash_amount',
+  'retained_exception_id',
+  'retained_exception_version',
   'authorized_credit_amount',
   'accepted_at',
   'remittance_number',
@@ -698,6 +702,8 @@ class CollectorSettlementPreview {
     required String deviceId,
     required String remittanceId,
     required CollectorSurplusAccount account,
+    String? retainedExceptionId,
+    int? retainedExceptionVersion,
   }) : raw = treasuryObject(immutableTreasury(json)) {
     if (raw['collector_surplus_contract_version'] != 1 ||
         raw['actor_user_id'] != userId ||
@@ -719,6 +725,15 @@ class CollectorSettlementPreview {
       );
     }
     validateCollectorProjection(raw);
+    if (raw['retained_exception_id'] != retainedExceptionId ||
+        raw['retained_exception_version'] != retainedExceptionVersion ||
+        (retainedExceptionId == null) != (retainedExceptionVersion == null)) {
+      throw const FormatException('The retained cash selection changed.');
+    }
+    final retained = TreasuryMoney(raw['retained_cash_amount'] ?? '0.00');
+    if ((retainedExceptionId == null) != (retained.text == '0.00')) {
+      throw const FormatException('The retained cash amount is incomplete.');
+    }
     for (final key in [
       'gross_obligation',
       'refund_due_total',
@@ -984,6 +999,27 @@ TreasuryResult validateCollectorOutcome(
           principal['remittance_id'] != body['remittance_id'] ||
           principal['source_digest'] != body['source_digest'])) {
     throw const FormatException('The count result changed.');
+  }
+  if (principalKey == 'count' || principalKey == 'settlement') {
+    final reference = principalKey == 'count' ? body : snapshots['count'];
+    for (final key in ['retained_exception_id', 'retained_exception_version']) {
+      if (reference is! Map || principal[key] != reference[key]) {
+        throw const FormatException(
+          'The retained cash identity or version changed.',
+        );
+      }
+    }
+    if (principalKey == 'settlement' &&
+        (principal['retained_cash_amount'] ?? '0.00') !=
+            (reference['retained_cash_amount'] ?? '0.00')) {
+      throw const FormatException('The accepted retained cash amount changed.');
+    }
+    if (principalKey == 'count' &&
+        (principal['retained_cash_amount'] ?? '0.00') !=
+            ((snapshots['remittance'] as Map?)?['retained_cash_amount'] ??
+                '0.00')) {
+      throw const FormatException('The counted retained cash amount changed.');
+    }
   }
   if (principalKey == 'settlement') {
     for (final key in [

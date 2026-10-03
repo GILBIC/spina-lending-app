@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v27-client-plan-followthrough';
+const CACHE_NAME = 'spina-company-shell-v28-retained-cash-acceptance';
 const SHELL_ASSETS = [
   '/',
   '/index.html',

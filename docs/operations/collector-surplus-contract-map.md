@@ -132,10 +132,17 @@ dated, protected funding adapter proves the result.
 
 Likewise, legacy custody and GL readers assume the received remittance gross
 amount. A100 credit plus900 actual cash against a1000 obligation cannot be
-reported as1000 physical cash. Future credit application, retained-cash inclusion
+reported as1000 physical cash. Future credit application
 and unmapped GL execution must return precise blockers until their canonical
 adapters exist. Requests may record intent; blocked execution must not reserve,
 apply, post today, invent an opening amount or claim successful settlement.
+
+The retained-cash inclusion adapter now links an existing physical dispute event
+and a separately counted additional receipt to the same original remittance.
+It requires explicit current exception selection and no return reservation.
+Only the additional count creates an inflow; the held amount becomes included
+in settlement within the same transaction. This does not implement Collector
+credit application or change borrower collections/GL authority.
 
 ## Evidence ownership
 

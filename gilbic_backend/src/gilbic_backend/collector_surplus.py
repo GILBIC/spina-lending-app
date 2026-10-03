@@ -603,7 +603,9 @@ def exception_change(conn, row, **deltas):
     if changes["available_amount"] < 0:
         raise TreasuryConflict("Retained cash capacity is already reserved or settled.")
     changes["status"] = (
-        "returned"
+        "included_in_settlement"
+        if changes["remaining_held_amount"] == 0 and changes["included_amount"] > 0
+        else "returned"
         if changes["remaining_held_amount"] == 0
         else "partly_returned"
         if changes["returned_amount"]

@@ -1,6 +1,6 @@
 # Collector excess and surplus
 
-This is the operating guide for the unreleased PR491 contract. It does not
+This is the operating guide for the Collector surplus contract. It does not
 authorize production setup or claim installed-device acceptance. Current
 implementation and verification receipts are tracked separately in the PR and
 completion handoff. Entry starts disabled, with no real balances, counts or
@@ -30,9 +30,19 @@ remain separate. Older accepted remittances do not gain invented count evidence.
 If disputed short cash is physically retained, record its actual holder and
 amount through the custody exception. The obligation remains unresolved. A
 normal rejection is not proof that retained cash was returned. The exception
-requires an actual evidenced return before its held capacity is released.
-Including retained cash in a later acceptance remains blocked until the protected
-multi-event custody adapter exists; never receive that same cash a second time.
+can be resolved by an actual evidenced return or explicit inclusion in full
+acceptance of its original remittance. Inclusion requires the same recipient,
+physical account, Collector and unchanged source, with no reserved return.
+
+For inclusion, open the current disputed-cash record. On Web/Windows, return to
+Count a remittance and select that record in Previously retained cash. On Android,
+choose Review inclusion of retained cash. Review the held amount separately from
+the new physical cash required. Count only the additional cash handed over now.
+For a PHP10,000 obligation with PHP9,900 already held, count PHP100 new cash.
+Acceptance links both original receipts and records only PHP100 additional inflow.
+PHP99 is still short; PHP200 creates PHP100 pending identification. A short
+additional handover cannot create another retained exception through this action.
+Changed, reserved, corrected or unavailable source evidence blocks acceptance.
 
 ## Identify excess before granting credit
 

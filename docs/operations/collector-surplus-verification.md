@@ -82,10 +82,18 @@ checks use the installed browser's app mode, the runtime used by `spina_pc`.
 ## Explicit unavailable execution paths
 
 Future credit application can retain own intent but cannot apply credit until
-the protected custody split exists. Historical borrower correction, inclusion
-of disputed cash in a later acceptance, and automatic liability GL posting are
+the protected custody split exists. Historical borrower correction and automatic liability GL posting are
 also unavailable. These paths return explicit blockers or recovery states;
 neither a saved request nor a balanced cash reconciliation makes them complete.
+
+The 3 October retained-cash follow-up adds explicit inclusion in full acceptance
+of the same original remittance. Fresh PostgreSQL18 validation passed128 checks,
+including nine new real-database cases for exact/excess/short counts, stale or
+reserved sources, atomic rollback, simultaneous acceptance, effective time and
+original private-evidence recovery. Web selected-amount omission was reproduced
+by independent review and covered by a failing-then-passing regression. Current
+client/CI receipts are retained in the follow-up PR; this does not establish
+physical device or production readiness.
 
 Actual operational opening figures, permissions, rollout and owner acceptance
 are separate release inputs. The implementation seeds none of them.

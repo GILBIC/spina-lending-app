@@ -125,8 +125,10 @@ abstract interface class CollectorSurplusRepository
   );
   Future<CollectorSettlementPreview> collectorSettlementPreview(
     String remittanceId,
-    String accountId,
-  );
+    String accountId, {
+    String? retainedExceptionId,
+    int? retainedExceptionVersion,
+  });
   Future<ClientDocumentFile> exportCollectorSurplus({
     CollectorSurplusKind kind = CollectorSurplusKind.credits,
     String? accountId,
@@ -611,10 +613,21 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
   @override
   Future<CollectorSettlementPreview> collectorSettlementPreview(
     String remittanceId,
-    String accountId,
-  ) async {
+    String accountId, {
+    String? retainedExceptionId,
+    int? retainedExceptionVersion,
+  }) async {
     _online();
     requireTreasuryId(remittanceId);
+    if ((retainedExceptionId == null) != (retainedExceptionVersion == null)) {
+      throw const FormatException('Select the exact retained cash version.');
+    }
+    if (retainedExceptionId != null) {
+      requireTreasuryId(retainedExceptionId);
+      if (retainedExceptionVersion! < 1) {
+        throw const FormatException('Invalid retained cash version.');
+      }
+    }
     final w = await loadCollectorSurplus(
       kind: CollectorSurplusKind.remittances,
       accountId: accountId,
@@ -631,6 +644,10 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
             'expected_version': account.version,
             'credit_application_id': null,
             'credit_application_version': null,
+            if (retainedExceptionId != null) ...{
+              'retained_exception_id': retainedExceptionId,
+              'retained_exception_version': retainedExceptionVersion,
+            },
           },
         ),
       ),
@@ -638,6 +655,8 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
       deviceId: w.actor.deviceId,
       remittanceId: remittanceId,
       account: account,
+      retainedExceptionId: retainedExceptionId,
+      retainedExceptionVersion: retainedExceptionVersion,
     );
     _settlementPreview = value;
     return value;
@@ -779,6 +798,10 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
         if (command.action == TreasuryAction.collectorCountRecord &&
             (reviewed == null ||
                 reviewed.raw['remittance_id'] != remittance ||
+                reviewed.raw['retained_exception_id'] !=
+                    body['retained_exception_id'] ||
+                reviewed.raw['retained_exception_version'] !=
+                    body['retained_exception_version'] ||
                 reviewed.digest != body['source_digest'])) {
           throw StateError(
             'Review the current receiving snapshot before counting.',
@@ -787,6 +810,10 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
         final fresh = await collectorSettlementPreview(
           remittance as String,
           accountId,
+          retainedExceptionId:
+              (count ?? body)['retained_exception_id'] as String?,
+          retainedExceptionVersion:
+              (count ?? body)['retained_exception_version'] as int?,
         );
         if (!fresh.canCount ||
             fresh.digest != body['source_digest'] ||
@@ -798,6 +825,7 @@ class SpinaTreasuryRepository implements CollectorSurplusRepository {
         records['remittance'] = {
           'id': remittance,
           'collector_user_id': fresh.raw['collector_user_id'],
+          'retained_cash_amount': fresh.raw['retained_cash_amount'] ?? '0.00',
         };
         if (count != null && count['disposition'] != 'counted_ready') {
           throw StateError('A short count cannot accept the full remittance.');
