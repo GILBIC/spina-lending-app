@@ -257,7 +257,7 @@ class SpinaRemittanceRepository
     final record = RemittanceRecord.fromPayload(data);
     if (record == null) {
       throw SpinaApiException(
-        'The Gilbic server returned an incomplete $label.',
+        'The SPINA server returned an incomplete $label.',
         code: 'invalid_remittance_response',
       );
     }
@@ -290,7 +290,7 @@ class SpinaRemittanceRepository
       };
     } on Exception {
       throw const SpinaApiException(
-        'The remittance request could not reach the Gilbic server.',
+        'The remittance request could not reach the SPINA server.',
         code: 'network_unavailable',
       );
     }
@@ -323,7 +323,7 @@ class SpinaRemittanceRepository
       return decodeJsonObject(response.body);
     } on Object {
       throw SpinaApiException(
-        'The Gilbic server returned unreadable remittance data.',
+        'The SPINA server returned unreadable remittance data.',
         statusCode: response.statusCode,
         code: 'invalid_server_response',
       );

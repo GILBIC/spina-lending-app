@@ -35,6 +35,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('2026-08-01'), findsOneWidget);
+      expect(find.text('Not recorded'), findsWidgets);
       expect(find.text('₱4,950.00'), findsWidgets);
       expect(tester.takeException(), isNull);
     },

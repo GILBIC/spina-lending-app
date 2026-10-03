@@ -16,9 +16,9 @@ class SpinaCollectorScheduleRepository implements CollectorScheduleRepository {
   SpinaCollectorScheduleRepository({
     http.Client? client,
     DeviceIdentityProvider? deviceIdentityProvider,
-  })  : _client = client ?? http.Client(),
-        _deviceIdentityProvider =
-            deviceIdentityProvider ?? DeviceIdentityProvider();
+  }) : _client = client ?? http.Client(),
+       _deviceIdentityProvider =
+           deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
   final DeviceIdentityProvider _deviceIdentityProvider;
@@ -33,7 +33,7 @@ class SpinaCollectorScheduleRepository implements CollectorScheduleRepository {
       deviceIdentity = await _deviceIdentityProvider.load();
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not access this installation identity. Restart the app and try again.',
+        'SPINA could not access this installation identity. Restart the app and try again.',
       );
     }
 

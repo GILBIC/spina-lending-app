@@ -78,7 +78,7 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
           syncedAt: cached.syncedAt,
           isFromCache: true,
           warning:
-              'Offline copy shown because the Gilbic server could not be reached.',
+              'Offline copy shown because the SPINA server could not be reached.',
         );
       }
       Error.throwWithStackTrace(remoteError, remoteStackTrace);

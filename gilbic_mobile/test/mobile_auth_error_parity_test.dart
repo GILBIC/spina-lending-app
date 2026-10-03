@@ -12,6 +12,23 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'support/app_platform_dependencies.dart';
 
 void main() {
+  test('API errors preserve server text and protocol metadata', () {
+    const message = 'SPINA reference SPINA-0042 belongs to Gilbic Trading.';
+    try {
+      unwrapSpinaData({
+        'success': false,
+        'message': message,
+        'error': {'code': 'reference_conflict'},
+      }, statusCode: 409);
+      fail('The unsuccessful response must throw.');
+    } on SpinaApiException catch (error) {
+      expect(error.message, message);
+      expect(error.toString(), message);
+      expect(error.code, 'reference_conflict');
+      expect(error.statusCode, 409);
+    }
+  });
+
   const platforms = <TargetPlatform>[
     TargetPlatform.android,
     TargetPlatform.iOS,
@@ -20,8 +37,9 @@ void main() {
   for (final platform in platforms) {
     final platformName = platform == TargetPlatform.android ? 'Android' : 'iOS';
 
-    testWidgets('$platformName authenticates into the server-authorized role',
-        (tester) async {
+    testWidgets('$platformName authenticates into the server-authorized role', (
+      tester,
+    ) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
         final session = _employeeSession('$platformName-auth');
@@ -46,8 +64,9 @@ void main() {
       });
     });
 
-    testWidgets('$platformName revoked device clears session with notice',
-        (tester) async {
+    testWidgets('$platformName revoked device clears session with notice', (
+      tester,
+    ) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
         final session = _employeeSession('$platformName-revoked');
@@ -75,14 +94,17 @@ void main() {
       });
     });
 
-    testWidgets('$platformName stale session fails closed with expiry notice',
-        (tester) async {
+    testWidgets('$platformName stale session fails closed with expiry notice', (
+      tester,
+    ) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
         final expired = _employeeSession(
           '$platformName-expired',
           refreshToken: 'refresh-token',
-          expiresAt: DateTime.now().toUtc().subtract(const Duration(minutes: 5)),
+          expiresAt: DateTime.now().toUtc().subtract(
+            const Duration(minutes: 5),
+          ),
         );
         await store.write(expired);
         final repository = _ParityAuthRepository(
@@ -107,63 +129,68 @@ void main() {
       });
     });
 
-    testWidgets('$platformName route-view permission removal fails closed before navigation',
-        (tester) async {
-      await _runForPlatform(platform, () async {
-        final store = MemorySessionStore();
-        final restricted = UserSession(
-          userId: '$platformName-collector-restricted',
-          username: 'collector.one',
-          displayName: 'Restricted Collector',
-          role: AppRole.collector,
-          rawRole: 'Collector',
-          accessToken: 'restricted-token',
-          permissions: const <String>['collection.create'],
-        );
-        await store.write(restricted);
-        final repository = _ParityAuthRepository(
-          onValidate: (_) async => restricted,
-        );
+    testWidgets(
+      '$platformName route-view permission removal fails closed before navigation',
+      (tester) async {
+        await _runForPlatform(platform, () async {
+          final store = MemorySessionStore();
+          final restricted = UserSession(
+            userId: '$platformName-collector-restricted',
+            username: 'collector.one',
+            displayName: 'Restricted Collector',
+            role: AppRole.collector,
+            rawRole: 'Collector',
+            accessToken: 'restricted-token',
+            permissions: const <String>['collection.create'],
+          );
+          await store.write(restricted);
+          final repository = _ParityAuthRepository(
+            onValidate: (_) async => restricted,
+          );
 
-        await _pumpApp(tester, store: store, repository: repository);
+          await _pumpApp(tester, store: store, repository: repository);
 
-        expect(
-          find.byKey(const Key('dashboard-permission-denied')),
-          findsOneWidget,
-        );
-        expect(find.text('Collector Dashboard'), findsNothing);
-        expect(find.byKey(const Key('daily-route')), findsNothing);
-      });
-    });
+          expect(
+            find.byKey(const Key('dashboard-permission-denied')),
+            findsOneWidget,
+          );
+          expect(find.text('Collector Dashboard'), findsNothing);
+          expect(find.byKey(const Key('daily-route')), findsNothing);
+        });
+      },
+    );
 
-    testWidgets('$platformName keeps a valid session during network validation failure',
-        (tester) async {
-      await _runForPlatform(platform, () async {
-        final store = MemorySessionStore();
-        final session = _employeeSession('$platformName-network-session');
-        await store.write(session);
-        final repository = _ParityAuthRepository(
-          onValidate: (_) async => throw const SpinaApiException(
-            'Gilbic could not verify the login session. Check the connection and try again.',
-            code: 'network_unavailable',
-          ),
-        );
+    testWidgets(
+      '$platformName keeps a valid session during network validation failure',
+      (tester) async {
+        await _runForPlatform(platform, () async {
+          final store = MemorySessionStore();
+          final session = _employeeSession('$platformName-network-session');
+          await store.write(session);
+          final repository = _ParityAuthRepository(
+            onValidate: (_) async => throw const SpinaApiException(
+              'SPINA could not verify the login session. Check the connection and try again.',
+              code: 'network_unavailable',
+            ),
+          );
 
-        await _pumpApp(tester, store: store, repository: repository);
+          await _pumpApp(tester, store: store, repository: repository);
 
-        expect(find.text('Employee Dashboard'), findsOneWidget);
-        expect(await store.read(), isNotNull);
-        expect(find.byKey(const Key('session-notice')), findsNothing);
-      });
-    });
+          expect(find.text('Employee Dashboard'), findsOneWidget);
+          expect(await store.read(), isNotNull);
+          expect(find.byKey(const Key('session-notice')), findsNothing);
+        });
+      },
+    );
 
-    testWidgets('$platformName login network failure stays on sign-in with error',
-        (tester) async {
+    testWidgets('$platformName login network failure stays on sign-in with error', (
+      tester,
+    ) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
         final repository = _ParityAuthRepository(
           onSignIn: (_, __) async => throw const SpinaApiException(
-            'Gilbic could not reach the Gilbic server. Check the connection and try again.',
+            'SPINA could not reach the SPINA server. Check the connection and try again.',
             code: 'network_unavailable',
           ),
         );
@@ -183,7 +210,7 @@ void main() {
         expect(find.byKey(const Key('login-error')), findsOneWidget);
         expect(
           find.text(
-            'Gilbic could not reach the Gilbic server. Check the connection and try again.',
+            'SPINA could not reach the SPINA server. Check the connection and try again.',
           ),
           findsOneWidget,
         );
@@ -192,42 +219,43 @@ void main() {
     });
 
     testWidgets(
-        '$platformName pending Collector device stays signed out with approval message',
-        (tester) async {
-      await _runForPlatform(platform, () async {
-        final store = MemorySessionStore();
-        final repository = _ParityAuthRepository(
-          onSignIn: (_, __) async => throw const SpinaApiException(
-            'This Collector device is awaiting Management approval.',
-            statusCode: 403,
-            code: 'device_approval_required',
-          ),
-        );
+      '$platformName pending Collector device stays signed out with approval message',
+      (tester) async {
+        await _runForPlatform(platform, () async {
+          final store = MemorySessionStore();
+          final repository = _ParityAuthRepository(
+            onSignIn: (_, __) async => throw const SpinaApiException(
+              'This Collector device is awaiting Management approval.',
+              statusCode: 403,
+              code: 'device_approval_required',
+            ),
+          );
 
-        await _pumpApp(tester, store: store, repository: repository);
-        await tester.enterText(
-          find.byKey(const Key('username-field')),
-          'collector.one',
-        );
-        await tester.enterText(
-          find.byKey(const Key('password-field')),
-          'secret',
-        );
-        await tester.tap(find.byKey(const Key('sign-in-button')));
-        await tester.pumpAndSettle();
+          await _pumpApp(tester, store: store, repository: repository);
+          await tester.enterText(
+            find.byKey(const Key('username-field')),
+            'collector.one',
+          );
+          await tester.enterText(
+            find.byKey(const Key('password-field')),
+            'secret',
+          );
+          await tester.tap(find.byKey(const Key('sign-in-button')));
+          await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('login-error')), findsOneWidget);
-        expect(
-          find.text(
-            'This Collector device is awaiting Management approval.',
-          ),
-          findsOneWidget,
-        );
-        expect(await store.read(), isNull);
-      });
-    });
+          expect(find.byKey(const Key('login-error')), findsOneWidget);
+          expect(
+            find.text('This Collector device is awaiting Management approval.'),
+            findsOneWidget,
+          );
+          expect(await store.read(), isNull);
+        });
+      },
+    );
 
-    testWidgets('$platformName enforces server-required app update', (tester) async {
+    testWidgets('$platformName enforces server-required app update', (
+      tester,
+    ) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
         final repository = _ParityAuthRepository(
@@ -256,24 +284,27 @@ void main() {
       });
     });
 
-    test('$platformName device identity reports the canonical platform code', () async {
-      await _runForPlatform(platform, () async {
-        final provider = DeviceIdentityProvider(
-          store: MemoryDeviceIdentityStore(),
-          appVersionResolver: () async => '1.2.0+10',
-          randomByteGenerator: (length) => List<int>.filled(length, 7),
-        );
+    test(
+      '$platformName device identity reports the canonical platform code',
+      () async {
+        await _runForPlatform(platform, () async {
+          final provider = DeviceIdentityProvider(
+            store: MemoryDeviceIdentityStore(),
+            appVersionResolver: () async => '1.2.0+10',
+            randomByteGenerator: (length) => List<int>.filled(length, 7),
+          );
 
-        final identity = await provider.load();
+          final identity = await provider.load();
 
-        expect(
-          identity.platform,
-          platform == TargetPlatform.android ? 'android' : 'ios',
-        );
-        expect(identity.appVersion, '1.2.0+10');
-        expect(identity.installationId, startsWith('gilbic-'));
-      });
-    });
+          expect(
+            identity.platform,
+            platform == TargetPlatform.android ? 'android' : 'ios',
+          );
+          expect(identity.appVersion, '1.2.0+10');
+          expect(identity.installationId, startsWith('gilbic-'));
+        });
+      },
+    );
   }
 }
 
@@ -326,14 +357,14 @@ UserSession _employeeSession(
 }
 
 class _ParityAuthRepository
-    implements AuthRepository, SessionValidationRepository, SessionRefreshRepository {
-  _ParityAuthRepository({
-    this.onSignIn,
-    this.onValidate,
-    this.onRefresh,
-  });
+    implements
+        AuthRepository,
+        SessionValidationRepository,
+        SessionRefreshRepository {
+  _ParityAuthRepository({this.onSignIn, this.onValidate, this.onRefresh});
 
-  final Future<UserSession> Function(String username, String password)? onSignIn;
+  final Future<UserSession> Function(String username, String password)?
+  onSignIn;
   final Future<UserSession> Function(UserSession session)? onValidate;
   final Future<UserSession> Function(UserSession session)? onRefresh;
 
@@ -352,7 +383,9 @@ class _ParityAuthRepository
   @override
   Future<UserSession> validate(UserSession session) {
     final callback = onValidate;
-    return callback == null ? Future<UserSession>.value(session) : callback(session);
+    return callback == null
+        ? Future<UserSession>.value(session)
+        : callback(session);
   }
 
   @override
