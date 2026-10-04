@@ -41,6 +41,12 @@ PERMISSIONS = {
     "receipt_verify": "treasury.receipt.verify",
     "receipt_apply": "treasury.payment.apply",
     "disbursement_record": "treasury.disbursement.record",
+    "loan_payout_first_loan_complete": "treasury.disbursement.record",
+    "loan_payout_acknowledge": "loan_payout_own",
+    "loan_payout_renewal_complete": "treasury.disbursement.record",
+    "loan_payout_cancel": "treasury.disbursement.record",
+    "loan_payout_prepare": "treasury.disbursement.record",
+    "loan_payout_recipient_confirm": "treasury.disbursement.record",
     "transfer_record": "treasury.transfer.record",
     "movement_classify": "treasury.adjust",
     "movement_correct": "treasury.adjust",
@@ -157,6 +163,21 @@ class TreasuryService:
         conn.row_factory = dict_row
         return conn
 
+    def loan_payout_preview(self, actor, command):
+        from .loan_payouts import preview
+
+        return preview(self, actor, command)
+
+    def loan_payout_workspace(self, actor, **filters):
+        from .loan_payout_reads import workspace
+
+        return workspace(self, actor, **filters)
+
+    def loan_payout_sources(self, actor, account_id):
+        from .loan_payout_reads import catalogue
+
+        return catalogue(self, actor, account_id)
+
     def evidence(self, conn, account_id, evidence_id, purposes):
         row = conn.execute(
             "select * from treasury.evidence where id=%s and account_id=%s",
@@ -195,6 +216,10 @@ class TreasuryService:
             from .collector_surplus import replay_scope
 
             return replay_scope(self, conn, actor, row)
+        if row["action"] == "loan_payout_acknowledge":
+            from .loan_payout_acknowledgments import replay
+
+            return replay(self, conn, actor, row)
         detail = row["result"]["result"]
         source_link = detail.get("source_link", {})
         collector_return = source_link.get("action_record")
@@ -238,6 +263,15 @@ class TreasuryService:
                 or row["result"]["result"].get("evidence", {}).get("purpose")
                 == "statement",
             )
+        payout_id = (
+            row["result"]["target_id"]
+            if row["action"].startswith("loan_payout_")
+            else source_link.get("payout_id")
+        )
+        if payout_id:
+            from .loan_payouts import load, replay_authority
+
+            replay_authority(self, conn, actor, load(conn, UUID(payout_id)))
         self.require_source_authority(
             conn, actor, row["action"], row["result"]["result"].get("application_id")
         )
@@ -411,7 +445,16 @@ class TreasuryService:
                 permission = (surplus_permissions if surplus else PERMISSIONS)[
                     command.action
                 ]
+                loan_own = command.action == "loan_payout_acknowledge"
                 account_id = getattr(command, "account_id", None)
+                from .loan_payout_acknowledgments import (
+                    own_account as payout_own_account,
+                )
+
+                if loan_own:
+                    account_id = payout_own_account(
+                        conn, actor, command.payout_id, command.stage, lock=False
+                    )["id"]
                 involved_accounts = [account_id]
                 if surplus or (
                     command.action == "disbursement_record"
@@ -452,6 +495,10 @@ class TreasuryService:
                 account = (
                     None
                     if command.action == "account_configure"
+                    else payout_own_account(
+                        conn, actor, command.payout_id, command.stage
+                    )
+                    if loan_own
                     else own_account(conn, actor, account_id)
                     if command.action in OWN
                     else require_account(
@@ -473,6 +520,7 @@ class TreasuryService:
                     and command.action
                     not in {"receipt_apply", "receipt_application_reverse"}
                     and command.action not in OWN
+                    and not loan_own
                     and account["version"] != command.expected_version
                 ):
                     raise TreasuryConflict(
@@ -523,6 +571,12 @@ class TreasuryService:
                     from .treasury_disbursements import outgoing_action
 
                     target, version, detail, status = outgoing_action(
+                        self, conn, actor, account, command
+                    )
+                elif command.action.startswith("loan_payout_"):
+                    from .loan_payouts import action as payout_action
+
+                    target, version, detail, status = payout_action(
                         self, conn, actor, account, command
                     )
                 else:
@@ -1004,6 +1058,15 @@ class TreasuryService:
                 actions = [
                     action
                     for action in actions
+                    if action != "loan_payout_acknowledge"
+                    and (
+                        not action.startswith("loan_payout_")
+                        or account["kind"] in {"gcash", "bank"}
+                    )
+                ]
+                actions = [
+                    action
+                    for action in actions
                     if action != "receipt_application_reverse"
                     or "collection.void.unremitted" in live_permissions
                 ]
@@ -1039,6 +1102,7 @@ class TreasuryService:
                     in account.get("account_permissions", [])
                     for suffix in ["receive", "resolve", "settle"]
                 )
+                disbursement_upload = "disbursement_record" in actions
                 evidence_purposes = []
                 for purpose, upload_permission in {
                     "recipient": "treasury.receipt.verify",
@@ -1057,7 +1121,9 @@ class TreasuryService:
                         and purpose != "opening"
                     ):
                         evidence_purposes.append(purpose)
-                if surplus_upload and "recipient" not in evidence_purposes:
+                if (
+                    surplus_upload or disbursement_upload
+                ) and "recipient" not in evidence_purposes:
                     evidence_purposes.append("recipient")
                 projection.update(
                     evidence_purposes=evidence_purposes,
@@ -1068,15 +1134,19 @@ class TreasuryService:
                     if account["designated_receiving"]
                     else "",
                 )
-                if surplus_upload or any(
-                    PERMISSIONS[action]
-                    in {
-                        "treasury.receipt.verify",
-                        "treasury.account.manage",
-                        "treasury.reconcile",
-                        "treasury.adjust",
-                    }
-                    for action in actions
+                if (
+                    surplus_upload
+                    or disbursement_upload
+                    or any(
+                        PERMISSIONS[action]
+                        in {
+                            "treasury.receipt.verify",
+                            "treasury.account.manage",
+                            "treasury.reconcile",
+                            "treasury.adjust",
+                        }
+                        for action in actions
+                    )
                 ):
                     projection["actions"].append("evidence_upload")
                     capabilities["evidence_upload"] = True
@@ -1352,13 +1422,19 @@ class TreasuryService:
                 if row["purpose"] != "recipient":
                     raise
                 permitted = False
-                for suffix in ["receive", "resolve", "settle"]:
+                for upload_permission in [
+                    "treasury.disbursement.record",
+                    *[
+                        "treasury.collector_surplus." + suffix
+                        for suffix in ["receive", "resolve", "settle"]
+                    ],
+                ]:
                     try:
                         require_account(
                             conn,
                             actor,
                             row["account_id"],
-                            "treasury.collector_surplus." + suffix,
+                            upload_permission,
                         )
                         permitted = True
                         break

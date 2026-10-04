@@ -19,6 +19,50 @@ def source_choices(conn, actor):
     from .collector_surplus import load, observed_debit
 
     result = []
+    from .loan_payouts import revalidate
+    from .office_review_evidence_storage import EvidenceFileError
+
+    for payout in conn.execute(
+        "select * from treasury.loan_payouts where status='prepared' order by created_at,id"
+    ).fetchall():
+        try:
+            account = require_account(
+                conn,
+                actor,
+                payout["account_id"],
+                "treasury.disbursement.record",
+                lock=False,
+            )
+            with conn.transaction():
+                revalidate(conn, actor, payout)
+            result.append(
+                json_value(
+                    {
+                        "id": payout["id"],
+                        "kind": "loan_release"
+                        if payout["source_kind"] == "first_loan"
+                        else "renewal",
+                        "version": payout["version"],
+                        "payee_id": payout["collector_user_id"]
+                        if payout["destination"] == "collector"
+                        else payout["client_id"],
+                        "account_id": payout["account_id"],
+                        "provider": account["kind"],
+                        "amount": payout["amount"],
+                        "currency": "PHP",
+                        "status": "prepared",
+                        "supported": True,
+                        "partial_supported": False,
+                        "payee_name": payout["source_snapshot"]["source"].get(
+                            "payee_name"
+                        ),
+                        "destination": payout["destination"],
+                        "label": payout["source_snapshot"]["source"]["label"],
+                    }
+                )
+            )
+        except (TreasuryDenied, TreasuryConflict, EvidenceFileError):
+            continue
     for item in conn.execute(
         "select id,account_id from treasury.collector_actions where payload->>'status'='reserved' order by created_at,id"
     ).fetchall():
@@ -360,6 +404,10 @@ def outgoing_action(service, conn, actor, account, command):
                     link = link_employee_source(
                         service, conn, actor, account, event, command
                     )
+                elif command.purpose in {"loan_release", "renewal"}:
+                    from .loan_payouts import link_debit
+
+                    link = link_debit(service, conn, actor, account, event, command)
                 elif command.purpose == "refund" and command.receipt_id:
                     receipt = conn.execute(
                         "select * from treasury.receipts where id=%s and account_id=%s for update",
@@ -412,6 +460,12 @@ def outgoing_action(service, conn, actor, account, command):
             if not isinstance(error, (EmployeeConflict, EmployeeAccessDenied)):
                 raise
             link = {"status": "blocked", "blocker": str(error)}
+    if (
+        command.purpose in {"loan_release", "renewal"}
+        and link.get("status") == "blocked"
+        and command.source_id
+    ):
+        link["requested_payout_id"] = str(command.source_id)
     event_result = json_value(event)
     event_result.update(
         status="verified_unresolved_reference"
@@ -419,7 +473,8 @@ def outgoing_action(service, conn, actor, account, command):
         else "verified_credit"
         if command.direction == "credit"
         else "debited_destination_unconfirmed"
-        if not command.destination_confirmed or link.get("status") == "blocked"
+        if not command.destination_confirmed
+        or link.get("status") in {"blocked", "funded_pending_recipient"}
         else "verified_debit",
         requested_purpose=command.purpose,
         source_link=link,

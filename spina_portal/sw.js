@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v27-client-plan-followthrough';
+const CACHE_NAME = 'spina-company-shell-v28-loan-payout-destinations';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -6,6 +6,9 @@ const SHELL_ASSETS = [
   '/assets/app.css',
   '/assets/app.js',
   '/assets/treasury-api.js',
+  '/assets/loan-payouts.js',
+  '/assets/loan-payout-contract.js',
+  '/assets/loan-payout-schemas.js',
   '/assets/collector-surplus.js',
   '/assets/collector-surplus-contract.js',
   '/assets/treasury-workspace.js',

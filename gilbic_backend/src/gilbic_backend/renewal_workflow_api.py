@@ -21,9 +21,7 @@ from .request_auth import authenticated_device_context
 MAX_PROOF_BYTES = 8 * 1024 * 1024
 ALLOWED_PROOF_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ZERO = Decimal("0.00")
-CIF_NEW_CREDIT_MESSAGE = (
-    "Refresh the client record and complete any required CIF re-verification before approving or releasing new credit."
-)
+CIF_NEW_CREDIT_MESSAGE = "Refresh the client record and complete any required CIF re-verification before approving or releasing new credit."
 
 
 def _is_cif_new_credit_conflict(error: CheckViolation) -> bool:
@@ -296,7 +294,7 @@ def _payload(cursor, row) -> dict[str, object]:
     paid_percent = (
         None
         if contractual_total is None or contractual_total <= 0
-        else min(Decimal("100.0"), paid_cash / contractual_total * Decimal("100"))
+        else min(Decimal("100.0"), paid_cash / contractual_total * Decimal(100))
     )
     is_7x7 = str(row["calculation_mode"] or "").lower() == "seven_by_seven"
     regular_eligible = (
@@ -428,21 +426,24 @@ def _authoritative_execution(cursor, *, row):
             execution.old_loan_id,
             execution.new_loan_id,
             execution.old_loan_settlement_amount,
-            execution.cash_disbursed_amount,
-            execution.other_deduction_amount,
-            execution.new_loan_principal,
-            execution.release_date,
+            disbursement.cash_disbursed_amount,
+            disbursement.other_deduction_amount,
+            execution.new_loan_principal_snapshot as new_loan_principal,
+            execution.new_loan_date_released_snapshot as release_date,
             new_loan.client_id as new_loan_client_id,
             new_loan.principal as actual_new_loan_principal,
             new_type.calculation_mode as new_calculation_mode
         from lending.loan_renewal_execution_events execution
+        join lending.loan_disbursement_events disbursement
+          on disbursement.id = execution.disbursement_event_id
+         and disbursement.is_voided = false
         join lending.loans new_loan on new_loan.id = execution.new_loan_id
         join lending.loan_types new_type on new_type.id = new_loan.loan_type_id
         where execution.renewal_request_id = %s
           and execution.is_voided = false
         order by execution.recorded_at desc, execution.id desc
         limit 1
-        for update of execution, new_loan
+        for update of execution, new_loan, disbursement
         """,
         (row["request_id"],),
     )
@@ -493,7 +494,10 @@ def _authoritative_execution(cursor, *, row):
                 "message": "The authoritative new-loan principal does not match Management approval.",
             },
         )
-    if Decimal(execution["actual_new_loan_principal"]).quantize(Decimal("0.01")) != approved:
+    if (
+        Decimal(execution["actual_new_loan_principal"]).quantize(Decimal("0.01"))
+        != approved
+    ):
         raise HTTPException(
             status_code=409,
             detail={
@@ -501,9 +505,7 @@ def _authoritative_execution(cursor, *, row):
                 "message": "The created new loan principal does not match Management approval.",
             },
         )
-    other = Decimal(execution["other_deduction_amount"] or 0).quantize(
-        Decimal("0.01")
-    )
+    other = Decimal(execution["other_deduction_amount"] or 0).quantize(Decimal("0.01"))
     if other != ZERO:
         raise HTTPException(
             status_code=409,
@@ -515,9 +517,7 @@ def _authoritative_execution(cursor, *, row):
                 ),
             },
         )
-    offset = Decimal(execution["old_loan_settlement_amount"]).quantize(
-        Decimal("0.01")
-    )
+    offset = Decimal(execution["old_loan_settlement_amount"]).quantize(Decimal("0.01"))
     cash = Decimal(execution["cash_disbursed_amount"]).quantize(Decimal("0.01"))
     if offset + cash != approved:
         raise HTTPException(
@@ -542,9 +542,10 @@ def _try_activate(cursor, *, row, actor_user_id: UUID) -> tuple[bool, str]:
         return False, "The client must independently confirm cash received first."
     if row["new_loan_id"] is None:
         return False, "Authoritative renewal execution has not linked the new loan yet."
-    if str(row["old_loan_status"]).lower() != "paid" or Decimal(
-        row["remaining_balance"] or 0
-    ) != ZERO:
+    if (
+        str(row["old_loan_status"]).lower() != "paid"
+        or Decimal(row["remaining_balance"] or 0) != ZERO
+    ):
         return False, (
             "The old loan is not fully settled yet. Complete the controlled Renewal "
             "Offset before activating the new loan."
@@ -589,8 +590,7 @@ def _save_handover_photo(
                 detail={
                     "code": "renewal_cash_not_given",
                     "message": (
-                        "Confirm Cash Given to Client before uploading "
-                        "handover proof."
+                        "Confirm Cash Given to Client before uploading handover proof."
                     ),
                 },
             )
@@ -854,7 +854,8 @@ def create_renewal_workflow_router() -> APIRouter:
                         )
                     if not body.office_processing_required:
                         borrowers = [
-                            signer for signer in body.signers
+                            signer
+                            for signer in body.signers
                             if signer.party_role == "borrower"
                         ]
                         if len(borrowers) != 1:
@@ -1435,7 +1436,9 @@ def create_renewal_workflow_router() -> APIRouter:
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 row = _renewal_row(cursor, request_id=request_id)
-                is_client = "client" in actor.roles and row["borrower_user_id"] == actor.user_id
+                is_client = (
+                    "client" in actor.roles and row["borrower_user_id"] == actor.user_id
+                )
                 is_assigned = row["assigned_collector_user_id"] == actor.user_id
                 is_management = "renewal.manage" in actor.permissions
                 if not (is_client or is_assigned or is_management):

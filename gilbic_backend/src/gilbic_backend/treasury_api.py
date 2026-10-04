@@ -28,6 +28,7 @@ from .treasury_claims import submit_claim, upload_evidence
 from .treasury_models import (
     AllocationPreview,
     ClaimMetadata,
+    LoanPayoutPreview,
     SettlementPreview,
     TreasuryCommand,
 )
@@ -290,6 +291,35 @@ def create_treasury_router():
                     return detail(repository, conn, actor, kind, target_id, mode=mode)
 
             return call(operation)
+
+        @router.get(prefix + "/loan-payouts", include_in_schema=not mobile)
+        def loan_payout_workspace(
+            mode: Literal["own", "staff"] = "own",
+            account_id: UUID | None = None,
+            limit: int = Query(50, ge=1, le=100),
+            offset: int = Query(0, ge=0, le=100000),
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            return call(
+                lambda: repository.loan_payout_workspace(
+                    actor, account_id=account_id, mode=mode, limit=limit, offset=offset
+                )
+            )
+
+        @router.get(prefix + "/loan-payout-sources", include_in_schema=not mobile)
+        def loan_payout_sources(
+            account_id: UUID, actor=_ACTOR_DEPENDENCY, repository=_REPOSITORY_DEPENDENCY
+        ):
+            return call(lambda: repository.loan_payout_sources(actor, account_id))
+
+        @router.post(prefix + "/loan-payout-preview", include_in_schema=not mobile)
+        def loan_payout_preview(
+            command: LoanPayoutPreview,
+            actor=_ACTOR_DEPENDENCY,
+            repository=_REPOSITORY_DEPENDENCY,
+        ):
+            return call(lambda: repository.loan_payout_preview(actor, command))
 
         @router.get(prefix + "/workspace", include_in_schema=not mobile)
         def workspace(actor=_ACTOR_DEPENDENCY, repository=_REPOSITORY_DEPENDENCY):

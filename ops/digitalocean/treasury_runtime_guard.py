@@ -7,6 +7,10 @@ import sys
 from pathlib import Path
 
 REQUIRED_FILES = (
+    "gilbic_backend/sql/0139_add_loan_payout_destinations.sql",
+    "gilbic_backend/src/gilbic_backend/loan_payouts.py",
+    "gilbic_backend/src/gilbic_backend/loan_payout_first_loan.py",
+    "gilbic_backend/src/gilbic_backend/loan_payout_renewal.py",
     "gilbic_backend/src/gilbic_backend/treasury_collection_posting.py",
     "gilbic_backend/sql/0137_add_collection_funding_source.sql",
     "gilbic_backend/sql/0138_add_collector_surplus.sql",
@@ -26,6 +30,8 @@ def compatible(candidate: Path) -> bool:
             and version >= 1
             and type(manifest.get("collector_surplus_schema")) is int
             and manifest["collector_surplus_schema"] >= 1
+            and type(manifest.get("loan_payout_schema")) is int
+            and manifest["loan_payout_schema"] >= 1
             and all((candidate / relative).is_file() for relative in REQUIRED_FILES)
         )
     except (OSError, ValueError, TypeError, AttributeError):
