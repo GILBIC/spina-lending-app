@@ -421,7 +421,6 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
       statusRoot.textContent = 'Your application draft is already open below. Continue it, or use its Cancel or Reload action before starting another.';
       return;
     }
-    invalidate();
     const token = currentRequest;
     const caseGeneration = officeCaseContext?.getGeneration();
     const intakeReference = intakeInput.value.trim();
@@ -440,10 +439,15 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
         || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()) {
         throw new Error('The office intake response is invalid or does not match the entered reference.');
       }
-      if (officeCaseContext && caseGeneration !== officeCaseContext.getGeneration()) return;
-      if (!applicationInput.value.trim()) applicationInput.value = `LOAN-${crypto.randomUUID()}`;
+      if (officeCaseContext && caseGeneration !== officeCaseContext.getGeneration()) {
+        throw new Error('The selected case changed while this intake was loading. No application draft was opened. Check the selected case and try New application again.');
+      }
+      const draftReference = applicationInput.value.trim() || `LOAN-${crypto.randomUUID()}`;
       if (onContextChange?.({mode:'saved-case',intakeReference:selection.application_reference,clientId:selection.client_id,
-        applicationReference:applicationInput.value.trim(),applicationId:null,applicationVersionId:null,applicationSaved:false}) === false) return;
+        applicationReference:draftReference,applicationId:null,applicationVersionId:null,applicationSaved:false}) === false) {
+        throw new Error('This intake does not match the selected case. Your selected case has been kept. Return to the selected intake or close the current case before starting another application.');
+      }
+      applicationInput.value = draftReference;
       openEntry(selection.client_id);
     } catch (error) {
       if (disposed || currentRequest !== token) return;

@@ -1,7 +1,7 @@
 // One mounted Office workspace owns identities. Forms and Files stay in stages.
 const identityFields = ['applicantId', 'intakeReference', 'clientId', 'applicationReference', 'applicationId', 'applicationVersionId'];
 const empty = () => ({mode:'none', ...Object.fromEntries(identityFields.map(key=>[key,null])), applicationSaved:false, stageFacts:{}});
-const same = (left,right) => String(left).toLowerCase() === String(right).toLowerCase();
+const same = (field,left,right) => field === 'applicationReference' ? left === right : String(left).toLowerCase() === String(right).toLowerCase();
 const owner = session => session?.user ? `${session.user.id ?? ''}:${session.user.role ?? ''}:${(session.user.roles ?? []).join(',')}` : null;
 function project(value) {
   const result = empty();
@@ -13,7 +13,7 @@ function project(value) {
   if (!result.intakeReference) return null;
   for (const [stage,fact] of Object.entries(value.stageFacts ?? {})) {
     if (!fact || typeof fact !== 'object') return null;
-    for (const key of identityFields) if (fact[key] != null && (!result[key] || !same(fact[key],result[key]))) return null;
+    for (const key of identityFields) if (fact[key] != null && (!result[key] || !same(key,fact[key],result[key]))) return null;
     result.stageFacts[stage] = {...fact};
   }
   return result;
@@ -40,7 +40,7 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
     const next = project({...context,...value,stageFacts:{...context.stageFacts,...value?.stageFacts}});
     if (!next) return false;
     for (const key of ['intakeReference','applicantId','clientId']) {
-      if (context[key] && next[key] && !same(context[key],next[key])) return false;
+      if (context[key] && next[key] && !same(key,context[key],next[key])) return false;
     }
     context = {...context,...next}; onChange(snapshot()); return true;
   }
@@ -57,8 +57,8 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
       if (!alive() || request !== generation || locked()) return false;
       next = project(value);
       if (!next || next.mode !== 'saved-case') return false;
-      if (dirty() && context.intakeReference && same(next.intakeReference,context.intakeReference)
-        && same(next.applicationReference,context.applicationReference)) return false;
+      if (dirty() && context.intakeReference && same('intakeReference',next.intakeReference,context.intakeReference)
+        && same('applicationReference',next.applicationReference,context.applicationReference)) return false;
     }
     if (dirty()) {
       const before = revisions();

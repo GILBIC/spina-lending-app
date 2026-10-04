@@ -61,3 +61,17 @@ test('failed intake lookup allocates nothing; context retry retains the generate
   const reference=root.querySelector('[name="applicationReference"]').value;assert.match(reference,/^LOAN-/);
   fire(button,'click');await setImmediate();assert.equal(root.querySelector('[name="applicationReference"]').value,reference);
 });
+
+for(const failure of ['rejected','stale'])test(`${failure} generated draft publication preserves selected identity and offers local recovery`,async t=>{
+ const root=new Element();root.innerHTML='<section id="employee-application-review"><div data-review></div></section>';
+ const review=root.querySelector('[data-review]'),session={user:{id:'staff',role:'employee'},permissions:['client_onboarding.requirement.review']},calls=[];let resolve;
+ const office=bindEmployeeOfficeCase({root,navigate(){},getSession:()=>session});t.after(()=>office.dispose());
+ const dispose=mountOfficeApplicationReview({root:review,session,officeCaseContext:office.coordinator,onContextChange:value=>office.coordinator.acceptVerifiedContext(value,office.coordinator.getGeneration()),api:{async request(path,options){calls.push({path,options});if(path.endsWith('/cif-client'))return new Promise(done=>resolve=done);return {client_id:client,cif_version_id:cif,cif_version_number:1,loan_types:[]};}}});t.after(dispose);
+ await office.activate('application');office.coordinator.acceptVerifiedContext({mode:'saved-case',intakeReference:'CASE-A',clientId:client,applicationReference:'APP-A',applicationSaved:true},office.coordinator.getGeneration());
+ const intake=review.querySelector('[name="intakeReference"]'),application=review.querySelector('[name="applicationReference"]'),button=review.querySelector('[data-new-application]');
+ intake.value=failure==='rejected'?'CASE-B':'CASE-A';fire(button,'click');
+ if(failure==='stale')office.coordinator.invalidateCandidate();resolve({application_reference:intake.value,client_id:client});await setImmediate();
+ assert.equal(office.coordinator.getContext().intakeReference,'CASE-A');assert.equal(office.coordinator.getContext().applicationReference,'APP-A');assert.equal(application.value,'');assert.equal(review.querySelector('[name="purpose"]'),null);
+ const status=review.querySelector('[data-application-review-status]');assert.doesNotMatch(status.textContent,/Loading application entry/);assert.match(status.textContent,/selected case|selected intake/i);assert.match(status.textContent,/try|return|close/i);assert.equal(button.disabled,false);assert.equal(calls.length,1);assert.ok(calls.every(call=>!call.options?.method));
+ intake.value='CASE-A';fire(button,'click');resolve({application_reference:'CASE-A',client_id:client});await setImmediate();assert.ok(review.querySelector('[name="purpose"]'));assert.match(application.value,/^LOAN-/);assert.equal(office.coordinator.getContext().applicationSaved,false);assert.ok(calls.every(call=>!call.options?.method));
+});
