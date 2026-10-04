@@ -60,3 +60,18 @@ test('verified intake save with a failed follow-up read retains its reference an
  h.read=async()=>record('INTAKE-SAVED');fire(h.root.querySelector('[data-reload-case]'),'click');await setImmediate();
  assert.equal(field(h,'applicationReference').value,'INTAKE-SAVED');assert.equal(h.calls.filter(call=>call.options.method==='POST').length,1);h.dispose();h.binding.dispose();
 });
+test('empty Clear search preserves unsaved intake text and checkboxes without reads',async()=>{
+ const h=harness();fire(h.root.querySelector('[data-new-intake]'),'click');await setImmediate();const name=field(h,'full_name'),consent=field(h,'privacy_consent');name.value='Unsaved';consent.checked=true;
+ const clear=h.root.querySelector('[data-clear-intake-search]');assert.ok(clear,'A distinct Clear search action is available');fire(clear,'click');fire(clear,'click');
+ assert.equal(field(h,'full_name'),name);assert.equal(name.value,'Unsaved');assert.equal(consent.checked,true);assert.equal(h.calls.length,0);h.dispose();h.binding.dispose();
+});
+for(const action of ['data-new-intake','data-clear-case'])test(`cancelled ${action} preserves intake values and initiating focus`,async()=>{
+ const h=harness();fire(h.root.querySelector('[data-new-intake]'),'click');await setImmediate();const name=field(h,'full_name');name.value='Unsaved';fire(name,'input');const button=h.root.querySelector(`[${action}]`);fire(button,'click');await setImmediate();
+ assert.equal(field(h,'full_name'),name);assert.equal(name.value,'Unsaved');assert.equal(h.binding.coordinator.getContext().mode,'new-intake');assert.equal(button.focused,true);h.dispose();h.binding.dispose();
+});
+for(const status of [404,'network'])test(`intake candidate ${status} preserves old authorized requirement edits`,async()=>{
+ const h=harness();await open(h);const decision=field(h,'tin_id_status');decision.value='failed';fire(decision,'change');h.read=async()=>{throw Object.assign(Error('Unavailable'),{status});};await open(h,'INTAKE-B');assert.equal(field(h,'tin_id_status'),decision);assert.equal(decision.value,'failed');assert.equal(h.binding.coordinator.getContext().intakeReference,'INTAKE-A');assert.equal(h.calls.filter(c=>c.options.method&&c.options.method!=='GET').length,0);h.dispose();h.binding.dispose();
+});
+test('further intake edits revoke an awaited discard decision',async()=>{
+ let consent;const h=harness(()=>new Promise(resolve=>consent=resolve));await open(h);const decision=field(h,'tin_id_status');decision.value='failed';fire(decision,'change');await open(h,'INTAKE-B');decision.value='passed';fire(decision,'change');consent(true);await setImmediate();assert.equal(field(h,'tin_id_status'),decision);assert.equal(decision.value,'passed');assert.equal(h.binding.coordinator.getContext().intakeReference,'INTAKE-A');h.dispose();h.binding.dispose();
+});

@@ -143,10 +143,11 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
       if (eligibility) eligibility.disabled = !REQUIREMENTS.every(([name]) => record.requirements[name].status === 'passed');
     }
   }
-  function clear() {
+  function clear(event) {
     if (disposed) return;
     if (collector) { invalidate(); referenceInput.value = ''; referenceInput.focus(); return; }
-    void coordinator.requestTransition({kind:'close',targetStage:'intake'}).then(accepted=>{if(accepted){referenceInput.value='';publish();}referenceInput.focus();});
+    const initiatingControl = event?.currentTarget;
+    void coordinator.requestTransition({kind:'close',targetStage:'intake'}).then(accepted=>{if(accepted){referenceInput.value='';publish();referenceInput.focus();}else initiatingControl?.focus();});
   }
 
   async function loadCase(reference, {refresh=false, confirmedSave=false} = {}) {
@@ -341,7 +342,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   }
   root.innerHTML = `<form class="entry-form" data-case-lookup><label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>
     <div class="action-row"><button class="button button-primary" type="submit">${collector ? 'Open residence visit' : 'Open intake case'}</button><button class="button button-outline" type="button" data-clear-case>${collector ? 'Clear' : 'Close case'}</button>
-    ${collector ? '' : '<button class="button button-outline" type="button" data-new-intake>New office intake</button>'}</div></form>
+    ${collector ? '' : '<button class="button button-outline" type="button" data-new-intake>New office intake</button><button class="button button-outline" type="button" data-clear-intake-search>Clear search</button>'}</div></form>
     <div data-onboarding-status role="status" aria-live="polite"></div><div data-onboarding-case></div>`;
   caseRoot = root.querySelector('[data-onboarding-case]');
   statusRoot = root.querySelector('[data-onboarding-status]');
@@ -354,6 +355,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   listen(referenceInput, 'change', editLookup, false);
   listen(root.querySelector('[data-clear-case]'), 'click', clear, false);
   if (!collector) {
+    listen(root.querySelector('[data-clear-intake-search]'),'click',()=>{referenceInput.value='';editLookup();referenceInput.focus();},false);
     const handle = {getContext:()=>coordinator.getContext(),isDirty,isWritePending:()=>state==='saving',isUncertain:()=>intakeUncertain||writeUncertain,getRevision:()=>revision,
       openCase:selection=>loadCase(selection.intakeReference),resetCase:()=>{if(state==='saving'||intakeUncertain||writeUncertain)return false;invalidate();referenceInput.value='';return true;},refreshReadOnly:()=>record&&!isDirty()&&!intakeUncertain&&state!=='saving'?loadCase(record.application_reference,{refresh:true}):false,dispose};
     registerHandle?.(handle); if(ownsCoordinator) coordinator.registerStage('intake',handle);

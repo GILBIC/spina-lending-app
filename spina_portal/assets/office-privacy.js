@@ -25,13 +25,19 @@ function validAcknowledgment(value, clientId, cifVersionId) {
     && ['notice', 'consent'].every(kind => validDocument({ version: value[`${kind}_version`], sha256: value[`${kind}_sha256`] }));
 }
 
-export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, signal}) {
+export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, signal, onDraftChange, onAccessDenied}) {
   mounts.get(root)?.();
   let disposed = false;
   let generation = 0;
   let busy = false;
   let context;
   let uncertain = false;
+  let writing = false, revision = 0;
+  let savedOptional = false;
+  const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId || '') && UUID.test(cifVersionId || '');
+  const isDirty = () => !disposed && [...root.querySelectorAll('input')].some(input => input.getAttribute('type') === 'file' ? Boolean(input.files?.length) : input.getAttribute('name') === 'optionalServiceCommunications' ? Boolean(input.checked) !== savedOptional : Boolean(input.checked));
+  function edited() { revision++; onDraftChange?.(); }
+  function deny(error) { dispose(); onAccessDenied?.(error); }
   const listeners = [];
   let documentListeners = [];
   const token = session?.access_token;
@@ -51,6 +57,11 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     if (mounts.get(root) === dispose) { mounts.delete(root); root.innerHTML = ''; }
   }
   mounts.set(root, dispose);
+  Object.assign(dispose, {getContext:()=>context ? {clientId,cifVersionId} : null,isDirty,getRevision:()=>revision,
+    isWritePending:()=>!disposed && writing,isUncertain:()=>!disposed && uncertain,
+    openCase:()=>disposed || !authorized || isDirty() || busy || uncertain ? false : load(),
+    resetCase:()=>{if(disposed || !authorized || writing || uncertain)return false;invalidate();optional.checked=false;savedOptional=false;return true;},
+    refreshReadOnly:()=>disposed || !authorized || isDirty() || busy ? false : load(),dispose});
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, {once:true});
   if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session,'client_onboarding.requirement.review') || !UUID.test(clientId || '') || !UUID.test(cifVersionId || '')) {
@@ -120,7 +131,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a'); anchor.href = url; anchor.download = `privacy-${kind}.pdf`; anchor.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-          } catch(error) { if(alive() && context === result) { if ([401,403].includes(error?.status)) { dispose(); return; } invalidate(); status.innerHTML = errorCard(error); } }
+          } catch(error) { if(alive() && context === result) { if ([401,403].includes(error?.status)) { deny(error); return; } invalidate(); status.innerHTML = errorCard(error); } }
           finally { if(alive()) button.disabled = false; }
           };
           button.addEventListener('click', download);
@@ -128,17 +139,18 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
         }
         form.hidden = false;
       }
-    } catch(error) { if(alive() && generation === current) { if ([401,403].includes(error?.status)) { dispose(); return; } context = null; form.hidden = true; documents.innerHTML = ''; status.innerHTML = errorCard(error); } }
+    } catch(error) { if(alive() && generation === current) { if ([401,403].includes(error?.status)) { deny(error); return; } context = null; form.hidden = true; documents.innerHTML = ''; status.innerHTML = errorCard(error); } }
     finally { if(alive()) { busy = false; controls(); } }
   }
   listen(optional,'change',invalidate);
+  for (const input of root.querySelectorAll('input')) { listen(input,'input',edited); listen(input,'change',edited); }
   listen(refresh,'click',load);
   listen(form,'submit',async event => {
     event.preventDefault();
     if (!alive() || busy || uncertain || !context?.issuable || !witness.checked) return;
     const file = fileInput.files?.[0];
     if (!file || !['application/pdf','image/png','image/jpeg'].includes(file.type) || file.size <= 0 || file.size > 10485760) { status.textContent = 'Choose a signed PDF, PNG or JPEG of at most 10 MiB.'; return; }
-    const selected = context; const current = generation; busy = true; controls();
+    const selected = context; const current = generation; busy = true; writing = true; controls();
     try {
       const query = new URLSearchParams({purpose:'privacy_acknowledgment', cif_version_id:cifVersionId, optional_service_communications:String(optional.checked), request_id:crypto.randomUUID(), expected_snapshot_sha256:selected.snapshot_sha256, witnessed_wet_signature:'true'});
       const capture = await api.request(`${prefix}/review-evidence?${query}`, {method:'POST',rawBody:file,headers:{'Content-Type':file.type},signal});
@@ -151,9 +163,10 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
         || !sameId(saved.evidence_id, capture.evidence_id)
         || !['notice','consent'].every(kind => saved[`${kind}_version`] === selected.review_snapshot[kind].version && saved[`${kind}_sha256`] === selected.review_snapshot[kind].sha256)) throw new Error('Reload to reconcile the privacy acknowledgment.');
       status.textContent = 'Privacy acknowledgment recorded. Application confirmation and loan signing remain separate.';
+      savedOptional = optional.checked;
       invalidate(); status.textContent = 'Privacy acknowledgment recorded. Load the current record to review it.';
-    } catch(error) { if(alive() && current === generation) { if ([401,403].includes(error?.status)) { dispose(); return; } uncertain = true; status.innerHTML = errorCard(error) + '<p>Load the current privacy record before another attempt.</p>'; } }
-    finally { if(alive()) { busy = false; controls(); } }
+    } catch(error) { if(alive() && current === generation) { if ([401,403].includes(error?.status)) { deny(error); return; } uncertain = true; status.innerHTML = errorCard(error) + '<p>Load the current privacy record before another attempt.</p>'; } }
+    finally { writing = false; if(alive()) { busy = false; controls(); } }
   });
   void load();
   return dispose;

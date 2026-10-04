@@ -112,8 +112,8 @@ test('Cancel clears the editor and reloads the current authoritative summary', a
   assert.equal(editor.querySelector('form'), null);
 });
 
-for (const action of ['Clear', 'abort']) {
-  test(`${action} makes a pending correction response unable to restore applicant data`, async (t) => {
+for (const action of ['Close case', 'abort']) {
+  test(`${action} ${action === 'abort' ? 'suppresses' : 'retains'} a pending correction response`, async (t) => {
     const h = harness();
     t.after(h.dispose);
     h.pendingSave = deferred();
@@ -122,10 +122,16 @@ for (const action of ['Clear', 'abort']) {
     save(editor);
     await setImmediate();
     assert.equal(h.requests.filter((r) => r.path === PATCH).length, 1);
-    if (action === 'Clear') fire(button(h.root, 'Clear'), 'click');
+    if (action === 'Close case') fire(button(h.root, 'Close case'), 'click');
     else h.controller.abort();
     h.pendingSave.resolve({ ...h.record, full_name: 'Late response applicant' });
     await setImmediate();
+    if(action === 'Close case') {
+      assert.equal(h.root.querySelector('[name="applicationReference"]').value,REFERENCE);
+      assert.equal(h.requests.filter(r=>r.path === PATCH).length,1);
+      assert.equal(h.requests.filter(r=>r.path === SUMMARY).length,2);
+      return;
+    }
     assert.doesNotMatch(h.root.textContent, /Original Applicant|Original private address|Late response applicant/);
     assert.equal(h.requests.filter((r) => r.path === SUMMARY).length, 1);
     assert.equal(editor.innerHTML, '');
@@ -139,9 +145,10 @@ test('correction access denial clears the selection and all applicant informatio
   h.editError = new ApiError('Permission revoked', { status: 403 });
   fire(button(h.root, 'Correct information'), 'click');
   await setImmediate();
-  assert.equal(h.root.querySelector('[name="applicationReference"]').value, '');
-  assert.equal(h.root.querySelector('[data-office-cif-review]').innerHTML, '');
-  assert.equal(h.root.querySelector('[data-office-cif-correction]').innerHTML, '');
+  assert.equal(h.root.querySelector('[name="applicationReference"]'), null);
+  assert.equal(h.root.querySelector('[data-office-cif-review]'), null);
+  assert.equal(h.root.querySelector('[data-office-cif-correction]'), null);
+  assert.doesNotMatch(h.root.textContent,/Original Applicant|Original private address/);
   assert.match(h.root.textContent, /Office access is no longer available/);
   assert.equal(h.requests.some((r) => r.path === PATCH), false);
 });
@@ -152,5 +159,5 @@ test('an invalid initial review never exposes correction controls', async (t) =>
   h.record.client_id = CIF;
   await open(h);
   assert.equal(h.root.querySelector('[data-office-cif-correction]').innerHTML, '');
-  assert.match(h.root.querySelector('[data-office-cif-review]').textContent, /invalid or does not match/);
+  assert.match(h.root.querySelector('[data-office-cif-status]').textContent, /invalid or does not match/);
 });

@@ -359,6 +359,19 @@ for (const stage of ['GET', 'PATCH']) {
       else if (action === 'dispose') dispose();
       else if (action === 'abort') h.controller.abort();
       else mount(h.options);
+      if (action === 'Cancel' && stage === 'PATCH') {
+        assert.equal(dispose.isWritePending(),true);
+        assert.ok(oldFields.some(element=>element.value !== ''));
+        fire(oldForm,'submit');
+        assert.equal(h.calls.filter(call=>call.options.method === 'PATCH').length,1);
+        pending.resolve(h.current);
+        await setImmediate();
+        assert.equal(dispose.isWritePending(),false);
+        assert.equal(h.callbacks.includes('saved'),true);
+        assert.equal(h.callbacks.includes('closed'),false);
+        assert.ok(oldFields.every(element=>element.value === ''));
+        return;
+      }
       const cleared = h.root.innerHTML;
       const callbacks = [...h.callbacks];
       const count = h.calls.length;

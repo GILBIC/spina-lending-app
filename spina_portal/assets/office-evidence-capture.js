@@ -8,11 +8,15 @@ const TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 /** Capture an actual witnessed paper signature scan against a server-owned snapshot. */
 export function mountOfficeEvidenceCapture({
   root, api, session, clientId, cifVersionId, purpose, applicationId, applicationVersionId,
-  signal, onCaptured, onAccessDenied,
+  signal, onCaptured, onAccessDenied, onDraftChange,
 }) {
   mounts.get(root)?.();
   let disposed = false; let context; let requestId; let selectedFile; let busy = false;
   let removers = [];
+  let revision = 0, uncertain = false;
+  const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId) && UUID.test(cifVersionId) && ['cif_review','application_review'].includes(purpose) && (purpose !== 'application_review' || (UUID.test(applicationId) && UUID.test(applicationVersionId)));
+  const isDirty = () => !disposed && Boolean(root.querySelector('[name="signedScan"]')?.files?.length || root.querySelector('[name="witnessed"]')?.checked);
+  function edited() { revision++; onDraftChange?.(); }
   const controller = new AbortController();
   const base = `/api/v1/management/clients/${encodeURIComponent(clientId)}/review-evidence`;
   const source = new URLSearchParams({ purpose, cif_version_id: cifVersionId });
@@ -23,7 +27,7 @@ export function mountOfficeEvidenceCapture({
   };
   function clear() {
     for (const remove of removers) remove(); removers = [];
-    for (const input of root.querySelectorAll('input')) input.value = '';
+    for (const input of root.querySelectorAll('input')) { input.value = ''; input.checked = false; }
     root.innerHTML = '';
   }
   function dispose() {
@@ -82,15 +86,17 @@ export function mountOfficeEvidenceCapture({
         throw new Error('The signed evidence response could not be verified. Retry this same file before confirming.');
       }
       context = null; selectedFile = null; clear();
+      uncertain = false;
       root.innerHTML = '<p>Signed review evidence saved for this exact version.</p><button type="button" data-download-signed>Download saved signed copy</button><div data-capture-status role="status"></div>';
       listen(root.querySelector('[data-download-signed]'), 'click', () => download(record));
       onCaptured?.(record);
     } catch (error) {
       if (disposed) return;
       if (error?.status === 409) {
+        uncertain = false;
         context = null; selectedFile = null; clear();
         root.innerHTML = `${errorCard(error)}<p>Reload this review before capturing another signed copy.</p>`;
-      } else fail(error);
+      } else { uncertain = ![400,404,422].includes(error?.status); fail(error); }
     } finally {
       busy = false;
       const submit = root.querySelector('button[type="submit"]'); if (submit && context) submit.disabled = false;
@@ -110,9 +116,15 @@ export function mountOfficeEvidenceCapture({
         <button class="button button-primary" type="submit">Save signed review evidence</button>
       </form><div data-capture-status role="status" aria-live="polite"></div>`;
       listen(root.querySelector('form'), 'submit', capture);
+      for (const input of root.querySelectorAll('input')) { listen(input,'input',edited); listen(input,'change',edited); }
     } catch (error) { fail(error); }
   }
   mounts.set(root, dispose);
+  Object.assign(dispose, {getContext:()=>context ? {clientId,cifVersionId,purpose,applicationId,applicationVersionId} : null,
+    isDirty,getRevision:()=>revision,isWritePending:()=>!disposed && busy,isUncertain:()=>!disposed && uncertain,
+    openCase:()=>disposed || !authorized || isDirty() || busy || uncertain ? false : load(),
+    resetCase:()=>{if(disposed || !authorized || busy || uncertain)return false;context=null;selectedFile=null;clear();return true;},
+    refreshReadOnly:()=>disposed || !authorized || isDirty() || busy || uncertain ? false : load(),dispose});
   signal?.addEventListener('abort', dispose, { once: true });
   if (signal?.aborted) { dispose(); return dispose; }
   if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session, 'client_onboarding.requirement.review')) {

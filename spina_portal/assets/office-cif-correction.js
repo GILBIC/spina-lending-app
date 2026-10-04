@@ -46,6 +46,7 @@ function editedInformation(fields) {
 export function mountOfficeCifCorrection({
   root, api, session, clientId, signal, onEditing, onClosed, onSaved, onAccessDenied,
   allowSuccessor = false, includeIdentity = false,
+  beforeEditing, onDraftChange,
 }) {
   mounts.get(root)?.();
   root.innerHTML = '';
@@ -57,6 +58,10 @@ export function mountOfficeCifCorrection({
   let fields = {};
   let listeners = [];
   let successor = false;
+  let revision = 0, baseline = new Map(), uncertain = false;
+  const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && typeof clientId === 'string' && UUID.test(clientId);
+  const isDirty = () => !disposed && Object.entries(fields).some(([name,field])=>field.value !== baseline.get(name));
+  function edited() { revision++; onDraftChange?.(); }
   const identityFields = ['birth_date', 'birth_place', 'civil_status', 'citizenship'];
 
   function listen(element, event, handler) {
@@ -100,7 +105,7 @@ export function mountOfficeCifCorrection({
   }
 
   function cancel() {
-    if (disposed) return;
+    if (disposed || state === 'saving' || uncertain) return;
     clearSnapshot();
     start();
     onClosed?.();
@@ -160,10 +165,15 @@ export function mountOfficeCifCorrection({
     }
     listen(root.querySelector('form'), 'submit', save);
     bindCancel();
+    baseline = new Map(Object.entries(fields).map(([name,field])=>[name,field.value]));
+    for (const field of Object.values(fields)) { listen(field,'input',edited); listen(field,'change',edited); }
   }
 
   async function loadCurrent() {
     if (disposed || state === 'denied' || state === 'saving') return;
+    const initiatingControl = root.querySelector('[data-correct-cif]');
+    if (beforeEditing && !await beforeEditing()) { initiatingControl?.focus(); return; }
+    if (disposed || state === 'saving') return;
     clearSnapshot();
     const token = request;
     state = 'loading';
@@ -189,6 +199,7 @@ export function mountOfficeCifCorrection({
         return;
       }
       renderForm(review);
+      uncertain = false;
     } catch (error) {
       if (!current(token)) return;
       if ([401, 403].includes(error?.status)) {
@@ -249,6 +260,7 @@ export function mountOfficeCifCorrection({
         return;
       }
       const canRetry = [400, 422].includes(error?.status);
+      uncertain = !canRetry;
       state = canRetry ? 'editing' : 'blocked';
       setFieldsDisabled(!canRetry);
       showError(error, !canRetry);
@@ -256,10 +268,15 @@ export function mountOfficeCifCorrection({
     }
     clearSnapshot();
     start();
+    uncertain = false;
     onSaved?.(saved);
   }
 
   mounts.set(root, dispose);
+  Object.assign(dispose, {getContext:()=>!disposed && original ? {clientId,...original} : null, isDirty, getRevision:()=>revision,
+    isWritePending:()=>!disposed && state === 'saving', isUncertain:()=>!disposed && uncertain,
+    openCase:()=>disposed || !authorized || isDirty() ? false : loadCurrent(), resetCase:()=>{if(disposed || !authorized || state === 'saving' || uncertain)return false; clearSnapshot(); start();return true;},
+    refreshReadOnly:()=>disposed || !authorized || isDirty() || state === 'saving' ? false : loadCurrent(), dispose});
   if (signal?.aborted) {
     dispose();
     return dispose;
