@@ -6,6 +6,8 @@ Planning-only design, 3 October 2026, Asia/Manila. The owner requested: “Plan 
 
 Goal: let authorized Management and Employee/Office Staff start or resume office-controlled applications without losing unfinished work, confusing applicants, inventing reference numbers, or treating navigation as approval. Include the review's protected search/queue enhancement as a separately testable backend-backed phase, not a pretend frontend-only search.
 
+Owner clarification, 4 October 2026: “Also have a list so its easier to remember.” Staff must be able to recognize and reopen saved cases from a visible list without recalling or first entering a reference. This clarifies the existing finder requirement; implementation and deployment remain pending.
+
 Reviewed baseline: `0a576036c9a4b3cfca59ce8120abc86f351ee778` on `GILBIC/spina-lending-app/main`; tree `1484df47171406a359a373a61bba173c6f4a1b94`. [Source review](https://github.com/GILBIC/spina-lending-app/pull/492#issuecomment-5963411048). Management #492 and the shared Employee #494 handoff are already merged. Notion records website #492–495 deployed; this planning session did not independently test signed-in production. Android follow-through #496 is a separate active draft and must not be modified or absorbed. Frozen Master #296 remains unchanged.
 
 ## Existing behavior and evidence
@@ -42,6 +44,10 @@ Keep Clients & loans as the parent destination. Office applications opens a task
 `Clear search` only empties search text/results. `Close case` changes the active case and invokes replacement protection. Do not use one generic Clear button for both. Hide or disable irrelevant empty actions with a readable explanation where needed. Creating a form is not saving an intake; reference allocation remains the existing server operation.
 
 After the backend search phase, include a compact paginated `Find an intake or application` list in the entry view. Search uses the server; exact-reference continuation remains available when the queue has a recoverable failure. Opening a case collapses the finder to a `Change case` action rather than placing a long list above the editor. Returning to the finder retains its in-memory query/page and focus, but does not silently close a dirty case.
+
+Show `Recent office intakes` automatically when an authorized user opens the Office entry view, using the first server page with an empty query. Staff must not need to type, remember a reference, or press Search to see saved cases. Each row shows applicant name, phone, intake reference, actual intake status, last updated time and a clearly labeled `Continue` action. Keep names and references visible and distinguish applicants with the same name. Label the order `Newest intakes first`, consistent with S4's creation-time pagination; the displayed last-updated time does not change that ordering. Search by name, phone, intake or saved application reference, an intake-status filter and explicit pagination refine this list. Loading, no saved intakes, no search matches and read failure are distinct states.
+
+After opening an intake with a verified client, show its S4 `Applications for this client` list with saved application reference, latest saved version when available and an explicit open action. Do not require staff to recall an application reference, silently select an application or present an intake status as loan approval. Keep the recent-list query/page in memory when returning through `Change case`; replacement and unfinished-work protections still apply.
 
 Do not show all four forms at once. Keep the four recognizable stages: `Intake & requirements`, `Client information (CIF)`, `Loan application`, `Approval & release`. Use a compact secondary task navigation for Clients & loans; do not shrink text until labels fit. Prefer scoped CSS changes. Only adjust shared shell/sidebar breakpoints when measured overflow cannot be fixed in Office content, and then smoke-test all roles.
 
@@ -125,6 +131,8 @@ Verify actual built production modules using synthetic accounts and records. Cor
 At intermediate desktop widths the top task navigation and four stages must not push the small entry form far below the heading. Use restrained card borders/pink accents, compact heading spacing and a deliberate 2×2 stage arrangement when four columns cease to fit. Phone lists become labeled cards; do not allow page-wide horizontal overflow or hide application IDs behind clipping. Long names, long references, validation messages and returned blockers must wrap without overlapping actions. Use visible focus, properly associated labels, polite read feedback and focus-safe errors. Do not mislabel button groups as ARIA tabs without implementing tab keyboard behavior.
 
 Validate Management and Employee Office flows, plus smoke tests for Collector/Client shells and Collector residence visits when shared code/CSS changes. Do not change Android #496 or claim phone/emulator/physical cash acceptance from browser screenshots.
+
+List acceptance: in both authorized Office roles, open the entry view and resume a synthetic saved case from the visible first page without typing any reference. Repeat with duplicate names, a name search, a later page and a client with multiple saved applications. Verify the exact selected case/application, distinct loading/empty/error states, retained finder position and draft protection. At narrow widths use labeled cards with a visible Continue action.
 
 ## S6. Completion and exclusions
 
