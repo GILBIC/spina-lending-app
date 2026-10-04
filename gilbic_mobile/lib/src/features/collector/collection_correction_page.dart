@@ -198,6 +198,8 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: const Text('Confirm correction'),
         content: Text(
           'Correct the entry recorded by ${widget.entry.todayCollectorName}?\n\n'
@@ -241,6 +243,11 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Correction saved'),
+          scrollable: true,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           content: Text(
             'Receipt: ${result.receiptNumber}\n'
             'Official balance: ${_money(result.officialBalance)}\n'

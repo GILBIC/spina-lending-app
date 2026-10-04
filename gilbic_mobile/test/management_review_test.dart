@@ -1,8 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/android_role_fixture.dart';
+import 'support/android_workflow_capture.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 void main() {
+  for (final blocked in [false, true]) {
+    testWidgets('A8 Management scaled confirmation blocked=$blocked', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final review = _review(
+        actionEnabled: !blocked,
+        warnings: blocked
+            ? const [
+                ManagementReviewWarning(
+                  severity: ManagementReviewWarningSeverity.blocker,
+                  message: 'The collection is already part of a remittance.',
+                ),
+              ]
+            : const [],
+      );
+      await pumpAndroidRoleFixture(
+        tester,
+        home: _ConfirmationHarness(review: review),
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open review'));
+      await tester.pumpAndSettle();
+      expect(
+        MediaQuery.textScalerOf(
+          tester.element(find.byType(AlertDialog)),
+        ).scale(10),
+        20,
+      );
+      await captureAndroidWorkflowScroll(
+        tester,
+        'M2-confirmation-blocked-$blocked',
+      );
+      await checkAndroidWorkflowSemantics(tester);
+      final confirm = find.byKey(const Key('confirm-collection-void'));
+      expect(tester.widget<FilledButton>(confirm).onPressed == null, blocked);
+      await tester.tap(find.byKey(const Key('cancel-collection-void')));
+      await tester.pumpAndSettle();
+      expect(find.text('Result: cancelled'), findsOneWidget);
+      if (!blocked) {
+        await tester.tap(find.text('Open review'));
+        await tester.pumpAndSettle();
+        await tester.tap(confirm);
+        await tester.pumpAndSettle();
+        expect(find.text('Result: confirmed'), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    });
+  }
   group('plainManagementStatus', () {
     const known = <String, String>{'pending': 'Waiting for Management review'};
 

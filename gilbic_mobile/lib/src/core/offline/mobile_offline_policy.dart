@@ -17,6 +17,9 @@ class MobileOfflinePolicy {
   final String summary;
   final List<String> availableOffline;
   final List<String> blockedOffline;
+
+  /// This role can have protected offline data when its existing server
+  /// capabilities and device setup allow it. This policy grants no access.
   final bool hasPersistentOfflineData;
   final bool financialWritesOfflineAllowed;
   final bool financialWritesSilentlyQueued;
@@ -35,19 +38,21 @@ class MobileOfflinePolicy {
   static const _management = MobileOfflinePolicy(
     role: AppRole.management,
     summary:
-        'Management mobile workflows require a live SPINA server connection. '
-        'No protected approval, accounting, tax, ECL, close, device, or custody action is an offline write.',
+        'Management approvals and financial workflows require a live SPINA server connection. '
+        'When your own active staff profile and protected device setup are configured, attendance and breaks can be saved in the protected account-and-device-bound outbox. '
+        'Device capture awaits server receipt and review; it is not payroll payment.',
     availableOffline: <String>[
       'A still-valid secure session may remain open during a temporary network outage.',
       'Already-rendered screens may remain visible, but their values must be treated as stale until refreshed.',
       'The Offline & sync policy remains available from the app shell.',
+      'Configured own attendance and break captures keep their original time and sync under the existing secure attendance service when the app reconnects or resumes.',
     ],
     blockedOffline: <String>[
       'Client, loan, collection, remittance, staff, device, report, and alert refreshes.',
       'Approvals, reviews, protected accounting/tax/ECL/close actions, reversals, and custody decisions.',
-      'Any operation that would create, change, approve, post, reverse, or revoke authoritative server state.',
+      'Authoritative server changes require a connection. Only configured own attendance capture is saved offline; server receipt and review remain separate.',
     ],
-    hasPersistentOfflineData: false,
+    hasPersistentOfflineData: true,
     financialWritesOfflineAllowed: false,
     financialWritesSilentlyQueued: false,
     financialWritesAutomaticallyRetried: false,

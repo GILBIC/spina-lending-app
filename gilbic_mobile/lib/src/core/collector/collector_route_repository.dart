@@ -14,10 +14,10 @@ class SpinaCollectorRouteRepository implements CollectorRouteRepository {
     http.Client? client,
     Uri? routeUri,
     DeviceIdentityProvider? deviceIdentityProvider,
-  })  : _client = client ?? http.Client(),
-        _routeUri = routeUri ?? ApiConfig.collectorRouteEndpoint,
-        _deviceIdentityProvider =
-            deviceIdentityProvider ?? DeviceIdentityProvider();
+  }) : _client = client ?? http.Client(),
+       _routeUri = routeUri ?? ApiConfig.collectorRouteEndpoint,
+       _deviceIdentityProvider =
+           deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
   final Uri _routeUri;
@@ -30,7 +30,7 @@ class SpinaCollectorRouteRepository implements CollectorRouteRepository {
       deviceIdentity = await _deviceIdentityProvider.load();
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not access this installation identity. Restart the app and try again.',
+        'SPINA could not access this installation identity. Restart the app and try again.',
       );
     }
 

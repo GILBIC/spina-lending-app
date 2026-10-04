@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
@@ -324,13 +325,10 @@ class _LoanCard extends StatelessWidget {
             value: _date(loan.firstPaymentDate),
           ),
           _DetailRow(label: 'Due date', value: _date(loan.dueDate)),
-          _DetailRow(
-            label: 'Last payment',
-            value: _date(loan.lastPaymentDate, empty: 'No payment recorded'),
-          ),
+          _DetailRow(label: 'Last payment', value: _date(loan.lastPaymentDate)),
           _DetailRow(
             label: 'Paid in advance until',
-            value: _date(loan.advanceUntil, empty: 'None'),
+            value: _date(loan.advanceUntil),
           ),
           _DetailRow(label: 'Recorded payments', value: '${loan.paymentCount}'),
           _DetailRow(label: 'PASS count', value: '${loan.passCount}'),
@@ -478,14 +476,11 @@ String _money(String value) => formatClientLoanMoney(value);
 
 String _trimNumber(String value) => formatClientLoanRate(value);
 
-String _date(DateTime? value, {String empty = 'Not available'}) {
-  if (value == null) {
-    return empty;
-  }
-  return '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')}';
-}
+String _date(DateTime? value) => formatSpinaCalendarDate(
+  value == null
+      ? null
+      : '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}',
+);
 
 String _titleCase(String value) {
   return value

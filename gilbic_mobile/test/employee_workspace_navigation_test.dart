@@ -11,8 +11,163 @@ import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dar
 import 'package:gilbic_mobile/src/features/employee/employee_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/management_dashboard.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/core/mirror/mirror_controller.dart';
+import 'package:gilbic_mobile/src/features/mirror/safe_mirror_surface.dart';
+import 'mirror_controller_test.dart' show FakeMirrorRepository, holder;
 
 void main() {
+  testWidgets('worker switching registers only the visible mirror boundary', (
+    tester,
+  ) async {
+    final controller = _RecordingMirrorController()..attach(holder);
+    const session = UserSession(
+      userId: 'holder',
+      username: 'holder',
+      displayName: 'Synthetic holder',
+      role: AppRole.collector,
+      rawRole: 'Collector',
+      roles: ['Collector', 'Employee'],
+      accessToken: 'synthetic',
+      permissions: ['route.view', 'employee.portal.view'],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [MirrorNavigationObserver(controller)],
+        builder: (_, child) =>
+            MirrorScope(controller: controller, child: child!),
+        home: EnhancedRoleDashboard(
+          session: session,
+          onSignOut: () async {},
+          collectorRouteLoader: _RouteLoader(),
+          paymentSubmissionRepository: SpinaPaymentSubmissionRepository(),
+          deviceIdentityProvider: DeviceIdentityProvider(
+            store: MemoryDeviceIdentityStore(),
+            platformResolver: () => 'android',
+            appVersionResolver: () async => 'test',
+          ),
+          collectionDeviceSequence: MemoryCollectionDeviceSequence(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SafeMirrorSurface, skipOffstage: false), findsOneWidget);
+    await tester.tap(find.text('Office & staff'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SafeMirrorSurface, skipOffstage: false), findsOneWidget);
+    final visible = find.byType(SafeMirrorSurface);
+    final boundary = tester.state(visible);
+    final registration = controller.lastCapture;
+    expect(registration, isNotNull);
+    await tester.tap(find.text('Collector'));
+    await tester.pumpAndSettle();
+    expect(tester.state(visible), same(boundary));
+    expect(controller.lastCapture, registration);
+    expect(controller.sharing, isNull);
+    await tester.tap(find.byKey(const Key('collector-more-tab')));
+    await tester.pumpAndSettle();
+    expect(controller.canReady, isFalse);
+    expect(controller.lastCapture, isNull);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(controller.canReady, isTrue);
+    expect(controller.sharing, isNull);
+    await tester.pumpWidget(const SizedBox());
+    controller.dispose();
+  });
+  testWidgets(
+    'retained workspaces adopt current grants and discard old bindings',
+    (tester) async {
+      final loader = _RouteLoader();
+      var provider = DeviceIdentityProvider(
+        store: MemoryDeviceIdentityStore(),
+        platformResolver: () => 'android',
+        appVersionResolver: () async => 'test',
+      );
+      final sequence = MemoryCollectionDeviceSequence();
+      UserSession session(
+        String user,
+        List<String> permissions, {
+        String token = 'token',
+      }) => UserSession(
+        userId: user,
+        username: user,
+        displayName: user,
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        roles: const ['Collector', 'Employee'],
+        accessToken: token,
+        permissions: permissions,
+      );
+      const grants = [
+        'route.view',
+        'collection.create',
+        'employee.portal.view',
+      ];
+      Future<void> show(UserSession current) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: EnhancedRoleDashboard(
+              session: current,
+              onSignOut: () async {},
+              collectorRouteLoader: loader,
+              paymentSubmissionRepository: SpinaPaymentSubmissionRepository(),
+              deviceIdentityProvider: provider,
+              collectionDeviceSequence: sequence,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      final route = find.byType(CollectorRoutePage, skipOffstage: false);
+      await show(session('worker', grants));
+      final retained = tester.state(route);
+      await tester.tap(find.text('Office & staff'));
+      await tester.pumpAndSettle();
+      expect(find.text('Daily Collection'), findsNothing);
+      expect(tester.state(route), same(retained));
+      final refreshed = session('worker', [
+        'route.view',
+        'employee.portal.view',
+      ], token: 'new-token');
+      await show(refreshed);
+      expect(tester.state(route), same(retained));
+      expect(tester.widget<CollectorRoutePage>(route).session, same(refreshed));
+      await tester.tap(find.text('Collector'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('record-collection-entry-readonly')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await show(session('worker', ['employee.portal.view']));
+      expect(route, findsNothing);
+      expect(retained.mounted, isFalse);
+      await show(session('worker', grants));
+      await tester.tap(find.text('Collector'));
+      await tester.pumpAndSettle();
+      final beforeDeviceChange = tester.state(route);
+      provider = DeviceIdentityProvider(
+        store: MemoryDeviceIdentityStore(),
+        platformResolver: () => 'android',
+        appVersionResolver: () async => 'test',
+      );
+      await show(session('worker', grants));
+      expect(beforeDeviceChange.mounted, isFalse);
+      final beforeActorChange = tester.state(route);
+      await show(session('other-worker', grants));
+      expect(beforeActorChange.mounted, isFalse);
+      expect(
+        tester.widget<CollectorRoutePage>(route).session.userId,
+        'other-worker',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final roles in [
     ['Collector'],
     ['Collector', 'Employee'],
@@ -243,6 +398,23 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+}
+
+class _RecordingMirrorController extends MirrorController {
+  _RecordingMirrorController()
+    : super(FakeMirrorRepository(), automatic: false);
+  MirrorCapture? lastCapture;
+  @override
+  void surfaceChanged(MirrorCapture? capture) {
+    lastCapture = capture;
+    super.surfaceChanged(capture);
+  }
+
+  @override
+  void navigating({required bool eligible}) {
+    lastCapture = null;
+    super.navigating(eligible: eligible);
+  }
 }
 
 class _RouteLoader implements CollectorRouteLoader {

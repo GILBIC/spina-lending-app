@@ -79,7 +79,39 @@ void main() {
           find.byKey(const Key('collector-offline-read-only')),
           findsNothing,
         );
-        expect(find.text('Try again'), findsOneWidget);
+        expect(find.text('Try again'), findsNothing);
+        expect(find.text('Retry'), findsNothing);
+        expect(
+          find.byType(FilledButton),
+          findsNothing,
+          reason:
+              'A root read without a recovery callback has no truthful same-token action',
+        );
+        expect(
+          find.text(switch (status) {
+            401 => 'Sign in again',
+            403 => 'Access unavailable',
+            _ => 'Update required',
+          }),
+          findsOneWidget,
+        );
+        expect(find.byType(OutlinedButton), findsNothing);
+        final refresh = tester.widget<IconButton>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is IconButton && widget.tooltip == 'Refresh route',
+          ),
+        );
+        expect(refresh.onPressed, isNull);
+        expect(repository.calls, 2);
+        await tester.tap(find.byTooltip('Refresh route'));
+        await tester.pumpAndSettle();
+        expect(
+          repository.calls,
+          2,
+          reason:
+              'Terminal rejection must not read again with the rejected session',
+        );
       },
     );
   }
@@ -212,8 +244,10 @@ final _route = CollectorRoute(
 
 class _RouteRepository implements CollectorRouteRepository {
   int? failureStatus;
+  int calls = 0;
   @override
   Future<CollectorRoute> fetchToday(UserSession session) async {
+    calls++;
     if (failureStatus != null) {
       throw SpinaApiException('Access rejected.', statusCode: failureStatus);
     }

@@ -13,6 +13,8 @@ import 'package:gilbic_mobile/src/features/employee/employee_operations_page.dar
 import 'package:gilbic_mobile/src/features/employee/employee_command_form.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'support/android_role_fixture.dart';
+import 'support/android_workflow_capture.dart';
 
 const user = '00000000-0000-4000-8000-000000000001';
 const device = '00000000-0000-4000-8000-000000000002';
@@ -59,6 +61,89 @@ Map<String, dynamic> workspace({bool owner = false}) => {
 };
 
 void main() {
+  for (final (section, action) in [
+    (EmployeeSection.requests, 'leave_request'),
+    (EmployeeSection.advances, 'advance_request'),
+  ]) {
+    testWidgets('A8 $action draft stays reachable with keyboard and Back', (
+      tester,
+    ) async {
+      final provider = identity();
+      var writes = 0;
+      final service = EmployeeOperationsService(
+        deviceIdentityProvider: provider,
+        repository: EmployeeOperationsRepository(
+          StaffOperationsClient(
+            deviceIdentityProvider: provider,
+            client: MockClient((request) async {
+              if (request.method != 'GET') {
+                writes++;
+                throw StateError('No draft mutation authorized');
+              }
+              return http.Response(jsonEncode(workspace()), 200);
+            }),
+          ),
+        ),
+        outbox: AttendanceOutbox(MemoryAttendanceVault()),
+      );
+      addTearDown(service.dispose);
+      service.foreground(false);
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        viewInsets: const EdgeInsets.only(bottom: 220),
+        home: EmployeeOperationsPage(
+          session: employeeSession,
+          deviceIdentityProvider: provider,
+          service: service,
+          initialSection: section,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final create = find.byKey(Key('employee-create-$action'));
+      await tester.ensureVisible(create);
+      await tester.pumpAndSettle();
+      await tester.tap(create);
+      await tester.pumpAndSettle();
+      expect(find.byType(EmployeeCommandForm), findsOneWidget);
+      final reason = find.byKey(const Key('employee-field-reason'));
+      await tester.scrollUntilVisible(
+        reason,
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        reason,
+        'Synthetic draft awaiting deliberate submission',
+      );
+      expect(MediaQuery.textScalerOf(tester.element(reason)).scale(10), 20);
+      expect(
+        MediaQuery.viewInsetsOf(
+          tester.element(find.byType(Scaffold).last),
+        ).bottom,
+        220,
+      );
+      await captureAndroidWorkflowScroll(tester, 'E2-$action-draft-keyboard');
+      final submit = find.byKey(const Key('employee-submit'));
+      await tester.scrollUntilVisible(
+        submit,
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(submit.hitTestable(), findsOneWidget);
+      expect(tester.getRect(submit).bottom, lessThanOrEqualTo(420));
+      expect(tester.getSize(submit).height, greaterThanOrEqualTo(52));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(EmployeeCommandForm), findsNothing);
+      expect(writes, 0);
+      service.attach(null);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   testWidgets(
     'history correction prefills facts and locks original provenance',
     (tester) async {
@@ -134,7 +219,8 @@ void main() {
         '10001.16',
       );
       await tester.scrollUntilVisible(
-        find.byKey(const Key('employee-field-reason')), 350,
+        find.byKey(const Key('employee-field-reason')),
+        350,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.enterText(
@@ -294,33 +380,35 @@ void main() {
           }),
         ),
       );
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: TextButton(
-                onPressed: () => Navigator.push<void>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EmployeeCommandForm(
-                      session: employeeSession,
-                      workspace: EmployeeWorkspace.parse(
-                        workspace(),
-                        employeeSession,
-                      ),
-                      repository: repository,
-                      action: 'shortage_respond',
-                      record: {
-                        'id': recordId,
-                        'employee_id': user,
-                        'version': 1,
-                        'payload': {},
-                      },
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        viewInsets: const EdgeInsets.only(bottom: 220),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EmployeeCommandForm(
+                    session: employeeSession,
+                    workspace: EmployeeWorkspace.parse(
+                      workspace(),
+                      employeeSession,
                     ),
+                    repository: repository,
+                    action: 'shortage_respond',
+                    record: {
+                      'id': recordId,
+                      'employee_id': user,
+                      'version': 1,
+                      'payload': {},
+                    },
                   ),
                 ),
-                child: const Text('Open response'),
               ),
+              child: const Text('Open response'),
             ),
           ),
         ),
@@ -331,9 +419,23 @@ void main() {
         find.byKey(const Key('employee-field-explanation')),
         'My counted cash and witness record.',
       );
+      await tester.ensureVisible(find.byKey(const Key('employee-submit')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('employee-submit')));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Check server confirmation'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Check server confirmation'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('employee-field-explanation')),
+        -180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(
         tester
             .widget<TextFormField>(
@@ -342,6 +444,25 @@ void main() {
             .enabled,
         isFalse,
       );
+      await captureAndroidWorkflowScroll(tester, 'E4-uncertain-form-frozen');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Retry unchanged request'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Retry unchanged request'), findsOneWidget);
+      expect(find.text('Open response'), findsNothing);
+      expect(commands, hasLength(1));
+      await tester.scrollUntilVisible(
+        find.text('Retry unchanged request'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await captureAndroidWorkflow(tester, 'E4-uncertain-retry-after-Back');
       await tester.tap(find.text('Retry unchanged request'));
       await tester.pumpAndSettle();
       expect(commands.length, 2);

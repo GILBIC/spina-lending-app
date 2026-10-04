@@ -7,6 +7,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/account/client_password_reset_page.dart';
 import 'package:gilbic_mobile/src/features/renewals/renewal_signature_tasks_page.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({
@@ -27,11 +28,16 @@ class AccountSettingsPage extends StatefulWidget {
 }
 
 class _AccountSettingsPageState extends State<AccountSettingsPage> {
-  late final AccountRepository _repository;
+  late AccountRepository _repository;
   AccountOverview? _overview;
   String? _error;
   String? _revokingDeviceId;
-  bool _loading = true;
+  bool _loading = false;
+  int _generation = 0;
+  int? _failureStatus;
+  bool get _denied =>
+      _failureStatus == 401 || _failureStatus == 403 || _failureStatus == 426;
+  bool _current(int generation) => mounted && generation == _generation;
 
   bool get _canResetClientPassword {
     final role = widget.session.role;
@@ -50,45 +56,101 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     _load();
   }
 
-  Future<void> _load() async {
-    if (mounted) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
+  @override
+  void didUpdateWidget(AccountSettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _generation++;
+      _overview = null;
+      _revokingDeviceId = null;
+      _loading = false;
+      _failureStatus = null;
+      _repository =
+          widget.repository ??
+          SpinaAccountRepository(
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+          );
+      _load();
     }
-    try {
-      final overview = await _repository.fetch(widget.session);
-      if (!mounted) {
-        return;
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  void _failedRead(Object error, int generation) {
+    if (!_current(generation)) return;
+    setState(() {
+      _failureStatus = error is SpinaApiException ? error.statusCode : null;
+      _error = _failureStatus == 401
+          ? 'Your session has expired. Sign in again to view your account.'
+          : _failureStatus == 403
+          ? 'Your account access is unavailable. Return to Account or contact SPINA for help.'
+          : _failureStatus == 426
+          ? 'SPINA must be updated before these records can be used. Return to sign-in to check app access.'
+          : 'SPINA could not load your account settings. Check your connection and retry.';
+      _loading = false;
+      if (_denied) {
+        _generation++;
+        _overview = null;
+        _revokingDeviceId = null;
       }
+    });
+  }
+
+  Widget _readNotice() => WorkspaceReadNotice(
+    key: const Key('account-retry'),
+    message: _error!,
+    stale: _overview != null,
+    actionLabel: _failureStatus == 401
+        ? 'Sign in again'
+        : _failureStatus == 403
+        ? 'Access unavailable'
+        : _failureStatus == 426
+        ? 'Return to sign-in'
+        : 'Retry',
+    onAction: _failureStatus == 401 || _failureStatus == 426
+        ? widget.onSignOut
+        : _denied || _loading
+        ? null
+        : _load,
+  );
+
+  Future<void> _load() async {
+    if (!mounted || _loading || _denied) return;
+    final generation = _generation;
+    final session = widget.session;
+    final repository = _repository;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _failureStatus = null;
+    });
+    try {
+      final overview = await repository.fetch(session);
+      if (!_current(generation)) return;
       setState(() {
         _overview = overview;
         _loading = false;
       });
-    } on SpinaApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = error.message;
-        _loading = false;
-      });
-    } on Exception {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = 'Gilbic could not load your account settings.';
-        _loading = false;
-      });
+    } on Object catch (error) {
+      _failedRead(error, generation);
     }
   }
 
   Future<void> _revoke(AccountDevice device) async {
-    if (device.isCurrent || device.status != 'active') {
+    if (!mounted ||
+        _denied ||
+        _overview == null ||
+        device.isCurrent ||
+        device.status != 'active') {
       return;
     }
+    final generation = _generation;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -109,14 +171,14 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (confirmed != true || !_current(generation) || _denied) {
       return;
     }
 
     setState(() => _revokingDeviceId = device.id);
     try {
       final updated = await _repository.revokeDevice(widget.session, device.id);
-      if (!mounted) {
+      if (!mounted || !_current(generation)) {
         return;
       }
       setState(() {
@@ -130,7 +192,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Device access revoked.')));
     } on SpinaApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || !_current(generation)) {
+        return;
+      }
+      if (error.statusCode == 401 ||
+          error.statusCode == 403 ||
+          error.statusCode == 426) {
+        _failedRead(error, generation);
         return;
       }
       setState(() => _revokingDeviceId = null);
@@ -138,7 +206,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
     } on Exception {
-      if (!mounted) {
+      if (!mounted || !_current(generation)) {
         return;
       }
       setState(() => _revokingDeviceId = null);
@@ -149,9 +217,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   }
 
   Future<void> _changePassword() async {
-    if (widget.session.role == AppRole.client) {
+    if (!mounted ||
+        _denied ||
+        _overview == null ||
+        widget.session.role == AppRole.client) {
       return;
     }
+    final generation = _generation;
     final changed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -160,7 +232,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         repository: _repository,
       ),
     );
-    if (changed == true && mounted) {
+    if (changed == true && mounted && _current(generation) && !_denied) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Password changed.')));
@@ -168,7 +240,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   }
 
   void _openClientPasswordReset() {
-    if (!_canResetClientPassword) {
+    if (!mounted || _denied || _overview == null || !_canResetClientPassword) {
       return;
     }
     Navigator.of(context).push(
@@ -182,6 +254,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   }
 
   void _openRenewalSignatures() {
+    if (!mounted || _denied || _overview == null) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => RenewalSignatureTasksPage(
@@ -329,13 +402,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Expanded(
-                        child: Text(
-                          device.platform.toUpperCase(),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                      Text(
+                        device.platform.toUpperCase(),
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                       if (device.isCurrent)
                         const Chip(label: Text('This device')),
@@ -375,26 +448,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       key: const Key('account-settings-page'),
       appBar: AppBar(title: const Text('Profile & security')),
       body: SafeArea(
-        child: _loading
+        child: _loading && _overview == null
             ? const Center(child: CircularProgressIndicator())
-            : _error != null
+            : _overview == null && _error != null
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.cloud_off_outlined, size: 42),
-                      const SizedBox(height: 12),
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        key: const Key('account-retry'),
-                        onPressed: _load,
-                        child: const Text('Try again'),
-                      ),
-                    ],
-                  ),
+                  child: _readNotice(),
                 ),
               )
             : RefreshIndicator(
@@ -402,6 +462,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (_loading) const LinearProgressIndicator(),
+                    if (_error != null) _readNotice(),
                     _profileCard(_overview!.profile),
                     _sessionCard(),
                     if (widget.session.role != AppRole.client) _passwordCard(),
@@ -580,20 +642,29 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 132,
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final labelWidget = Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          );
+          if (constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 21) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [labelWidget, const SizedBox(height: 4), Text(value)],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 132, child: labelWidget),
+              Expanded(child: Text(value)),
+            ],
+          );
+        },
       ),
     );
   }

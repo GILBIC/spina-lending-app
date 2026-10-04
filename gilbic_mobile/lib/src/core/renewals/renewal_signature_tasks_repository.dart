@@ -49,7 +49,7 @@ class RenewalSignatureTask {
       final value = firstNonEmptyString(<Object?>[payload[key]]);
       if (value == null) {
         throw SpinaApiException(
-          'The Gilbic server omitted $key from a renewal signature task.',
+          'The SPINA server omitted $key from a renewal signature task.',
           code: 'invalid_renewal_signature_payload',
         );
       }
@@ -64,7 +64,9 @@ class RenewalSignatureTask {
       governmentIdVerified: payload['government_id_verified'] == true,
       selfieVerified: payload['selfie_verified'] == true,
       signed: payload['signed'] == true,
-      clientDecision: firstNonEmptyString(<Object?>[payload['client_decision']]),
+      clientDecision: firstNonEmptyString(<Object?>[
+        payload['client_decision'],
+      ]),
       status: requiredString('status').toLowerCase(),
       borrowerName: requiredString('borrower_name'),
       loanNumber: requiredString('loan_number'),
@@ -90,7 +92,7 @@ abstract interface class RenewalSignatureTasksRepository {
 class SpinaRenewalSignatureTasksRepository
     implements RenewalSignatureTasksRepository {
   SpinaRenewalSignatureTasksRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -109,7 +111,7 @@ class SpinaRenewalSignatureTasksRepository
     final raw = data['signatures'];
     if (raw is! List) {
       throw const SpinaApiException(
-        'The Gilbic server returned incomplete renewal signature data.',
+        'The SPINA server returned incomplete renewal signature data.',
         code: 'invalid_renewal_signature_payload',
       );
     }
@@ -163,7 +165,7 @@ class SpinaRenewalSignatureTasksRepository
       }
     } on Exception {
       throw const SpinaApiException(
-        'Renewal signatures could not reach the Gilbic server.',
+        'Renewal signatures could not reach the SPINA server.',
         code: 'network_unavailable',
       );
     }
@@ -172,16 +174,10 @@ class SpinaRenewalSignatureTasksRepository
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final detail = stringMap(payload['detail']);
       throw SpinaApiException(
-        firstNonEmptyString(<Object?>[
-              detail['message'],
-              payload['message'],
-            ]) ??
+        firstNonEmptyString(<Object?>[detail['message'], payload['message']]) ??
             apiErrorMessage(payload, statusCode: response.statusCode),
         statusCode: response.statusCode,
-        code: firstNonEmptyString(<Object?>[
-          detail['code'],
-          payload['code'],
-        ]),
+        code: firstNonEmptyString(<Object?>[detail['code'], payload['code']]),
       );
     }
     return payload;
@@ -192,7 +188,7 @@ class SpinaRenewalSignatureTasksRepository
       return decodeJsonObject(response.body);
     } on Object {
       throw SpinaApiException(
-        'The Gilbic server returned unreadable renewal signature data.',
+        'The SPINA server returned unreadable renewal signature data.',
         statusCode: response.statusCode,
         code: 'invalid_server_response',
       );

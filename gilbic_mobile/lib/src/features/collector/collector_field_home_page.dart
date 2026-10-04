@@ -94,6 +94,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
     await _open(
       CollectorMasterReviewPage(
         session: widget.session,
+        onSignOut: widget.onSignOut,
         loader: widget.collectorRouteLoader,
       ),
     );
@@ -157,6 +158,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   }
 
   Future<void> _openCashRelease(CollectorRenewalRequest request) async {
+    if (!mounted || !_canReadRenewals) return;
     ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
     await _open(
       CollectorRenewalCashReleasePage(
@@ -170,6 +172,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
 
   void _showCashReleaseAlert(CollectorRenewalRequest request) {
     if (!mounted ||
+        !_canReadRenewals ||
         _lastCashReleaseAlertRequestId == request.requestId ||
         !request.canConfirmCashReceived) {
       return;
@@ -277,6 +280,12 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                           'Assigned borrower proof and recipient recording status',
                       onTap: () {
                         Navigator.pop(sheetContext);
+                        if (!widget.session.hasAnyPermission(
+                          treasuryPermissionCodes,
+                        )) {
+                          _permissionMessage('Cash and GCash payment proof');
+                          return;
+                        }
                         _open(
                           TreasuryWorkspacePage(
                             session: widget.session,
@@ -297,6 +306,12 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                           'Record the observed visit for an office intake case',
                       onTap: () {
                         Navigator.pop(sheetContext);
+                        if (!widget.session.hasPermission(
+                          'client_onboarding.visit.record',
+                        )) {
+                          _permissionMessage('residence visits');
+                          return;
+                        }
                         _open(
                           CollectorResidenceVisitPage(
                             session: widget.session,
@@ -315,9 +330,16 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                           'Private employee records, breaks, tasks and salary advances',
                       onTap: () {
                         Navigator.pop(sheetContext);
+                        if (!widget.session.hasPermission(
+                          'employee.portal.view',
+                        )) {
+                          _permissionMessage('private employee records');
+                          return;
+                        }
                         _open(
                           EmployeeOperationsPage(
                             session: widget.session,
+                            onSignOut: widget.onSignOut,
                             deviceIdentityProvider:
                                 widget.deviceIdentityProvider,
                           ),
@@ -358,6 +380,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _open(
                         ActivityNotificationsPage(
                           session: widget.session,
+                          onSignOut: widget.onSignOut,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                         ),
                       );
@@ -371,9 +394,14 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       subtitle: 'Review remittances sent to your route',
                       onTap: () {
                         Navigator.pop(sheetContext);
+                        if (!widget.session.hasPermission('remittance.view')) {
+                          _permissionMessage('remittance requests');
+                          return;
+                        }
                         _open(
                           RemittanceNotificationsPage(
                             session: widget.session,
+                            onSignOut: widget.onSignOut,
                             deviceIdentityProvider:
                                 widget.deviceIdentityProvider,
                           ),
@@ -389,6 +417,12 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                           'Send other-area cash to the route owner or Management',
                       onTap: () {
                         Navigator.pop(sheetContext);
+                        if (!widget.session.hasPermission(
+                          'remittance.create',
+                        )) {
+                          _permissionMessage('other-area remittance');
+                          return;
+                        }
                         _open(
                           CrossCollectorRemittancePage(
                             session: widget.session,
@@ -409,6 +443,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _open(
                         NotificationCenterPage(
                           session: widget.session,
+                          onSignOut: widget.onSignOut,
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                         ),
                       );
@@ -482,6 +517,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
           Expanded(
             child: CollectorRoutePage(
               session: widget.session,
+              onSignOut: widget.onSignOut,
               loader: widget.collectorRouteLoader,
               paymentRepository: widget.paymentSubmissionRepository,
               deviceIdentityProvider: widget.deviceIdentityProvider,
@@ -493,7 +529,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!widget.session.hasPermission('remittance.view'))
+          if (!widget.session.hasPermission('remittance.create'))
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Text(
@@ -527,8 +563,8 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                 label: 'Master review',
               ),
               NavigationDestination(
-                enabled: widget.session.hasPermission('remittance.view'),
-                tooltip: widget.session.hasPermission('remittance.view')
+                enabled: widget.session.hasPermission('remittance.create'),
+                tooltip: widget.session.hasPermission('remittance.create')
                     ? 'Remit'
                     : 'Remit unavailable: remittance access is not assigned',
                 icon: const Icon(Icons.account_balance_outlined),

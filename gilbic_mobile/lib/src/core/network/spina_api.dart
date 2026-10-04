@@ -1,19 +1,14 @@
 import 'dart:convert';
 
 class SpinaApiException implements Exception {
-  const SpinaApiException(
-    this._message, {
-    this.statusCode,
-    this.code,
-  });
+  const SpinaApiException(this._message, {this.statusCode, this.code});
 
   final String _message;
   final int? statusCode;
   final String? code;
 
-  /// Keep legacy/internal SPINA identifiers out of user-facing mobile errors.
-  /// Internal class and protocol names remain unchanged to avoid risky churn.
-  String get message => _message.replaceAll('SPINA', 'Gilbic');
+  /// Preserve server references, company names and app-authored error text.
+  String get message => _message;
 
   @override
   String toString() => message;
@@ -38,10 +33,7 @@ Map<String, dynamic> stringMap(Object? value) {
   return value.map((key, item) => MapEntry(key.toString(), item));
 }
 
-Object? unwrapSpinaData(
-  Map<String, dynamic> payload, {
-  int? statusCode,
-}) {
+Object? unwrapSpinaData(Map<String, dynamic> payload, {int? statusCode}) {
   if (payload['success'] == false) {
     final error = stringMap(payload['error']);
     throw SpinaApiException(
@@ -73,7 +65,9 @@ num? firstNumber(Iterable<Object?> values) {
     if (value is num) {
       return value;
     }
-    final parsed = num.tryParse(value?.toString().replaceAll(',', '').trim() ?? '');
+    final parsed = num.tryParse(
+      value?.toString().replaceAll(',', '').trim() ?? '',
+    );
     if (parsed != null) {
       return parsed;
     }

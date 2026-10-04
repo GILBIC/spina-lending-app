@@ -7,10 +7,7 @@ import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:http/http.dart' as http;
 
 abstract interface class OtherAreaClientRepository {
-  Future<List<OtherAreaClient>> search(
-    UserSession session,
-    String query,
-  );
+  Future<List<OtherAreaClient>> search(UserSession session, String query);
 
   Future<List<OtherAreaClient>> listWork(
     UserSession session,
@@ -25,11 +22,11 @@ class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
     Uri? endpoint,
     Uri? workEndpoint,
     DeviceIdentityProvider? deviceIdentityProvider,
-  })  : _client = client ?? http.Client(),
-        _endpoint = endpoint ?? ApiConfig.otherAreaSearchEndpoint,
-        _workEndpoint = workEndpoint ?? ApiConfig.delegatedAreaWorkEndpoint,
-        _deviceIdentityProvider =
-            deviceIdentityProvider ?? DeviceIdentityProvider();
+  }) : _client = client ?? http.Client(),
+       _endpoint = endpoint ?? ApiConfig.otherAreaSearchEndpoint,
+       _workEndpoint = workEndpoint ?? ApiConfig.delegatedAreaWorkEndpoint,
+       _deviceIdentityProvider =
+           deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
   final Uri _endpoint;
@@ -94,7 +91,7 @@ class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
       identity = await _deviceIdentityProvider.load();
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not access this installation identity. Restart the app and try again.',
+        'SPINA could not access this installation identity. Restart the app and try again.',
       );
     }
 

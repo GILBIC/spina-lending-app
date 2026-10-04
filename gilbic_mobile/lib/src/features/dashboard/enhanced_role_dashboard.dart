@@ -64,19 +64,26 @@ class EnhancedRoleDashboard extends StatelessWidget {
     if (roles.contains(AppRole.management)) {
       return _workspace(AppRole.management);
     }
-    if (roles.length == 1) return _workspace(roles.single);
+    if (roles.length == 1 && roles.single == AppRole.client) {
+      return _workspace(roles.single);
+    }
     return _CombinedWorkerWorkspace(
-      key: ValueKey(session.userId),
+      key: ValueKey((session.userId, deviceIdentityProvider)),
       roles: roles,
       preferredRole: session.role,
-      workspace: _workspace,
+      workspace: _workspaceContent,
     );
   }
 
   // Workspace selection is presentation only: every destination receives the
   // original authenticated session and its unchanged server permissions.
   Widget _workspace(AppRole role) => SafeMirrorSurface(
-    key: ValueKey(role),
+    key: ValueKey((role, session.userId, deviceIdentityProvider)),
+    child: _workspaceContent(role),
+  );
+
+  Widget _workspaceContent(AppRole role) => KeyedSubtree(
+    key: ValueKey((role, session.userId, deviceIdentityProvider)),
     child: switch (role) {
       AppRole.collector => CollectorFieldHomePage(
         session: session,
@@ -128,6 +135,7 @@ class _CombinedWorkerWorkspace extends StatefulWidget {
 
 class _CombinedWorkerWorkspaceState extends State<_CombinedWorkerWorkspace> {
   late AppRole _selected = _initialRole;
+  late final Set<AppRole> _visited = {_selected};
   AppRole get _initialRole => widget.roles.contains(widget.preferredRole)
       ? widget.preferredRole
       : widget.roles.first;
@@ -136,48 +144,67 @@ class _CombinedWorkerWorkspaceState extends State<_CombinedWorkerWorkspace> {
   void didUpdateWidget(covariant _CombinedWorkerWorkspace oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!widget.roles.contains(_selected)) _selected = _initialRole;
+    _visited.removeWhere((role) => !widget.roles.contains(role));
+    _visited.add(_selected);
   }
 
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Material(
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<AppRole>(
-                key: const Key('employee-collector-workspace-switch'),
-                segments: [
-                  for (final role in widget.roles)
-                    ButtonSegment(
-                      value: role,
-                      label: Text(
-                        role == AppRole.employee
-                            ? 'Office & staff'
-                            : role.label,
+      if (widget.roles.length > 1)
+        Material(
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<AppRole>(
+                  key: const Key('employee-collector-workspace-switch'),
+                  segments: [
+                    for (final role in widget.roles)
+                      ButtonSegment(
+                        value: role,
+                        label: Text(
+                          role == AppRole.employee
+                              ? 'Office & staff'
+                              : role.label,
+                        ),
+                        icon: Icon(switch (role) {
+                          AppRole.collector => Icons.route_outlined,
+                          AppRole.employee => Icons.badge_outlined,
+                          AppRole.management => Icons.dashboard_outlined,
+                          AppRole.client => Icons.person_outline,
+                        }),
                       ),
-                      icon: Icon(switch (role) {
-                        AppRole.collector => Icons.route_outlined,
-                        AppRole.employee => Icons.badge_outlined,
-                        AppRole.management => Icons.dashboard_outlined,
-                        AppRole.client => Icons.person_outline,
-                      }),
-                    ),
-                ],
-                selected: {_selected},
-                onSelectionChanged: (selection) {
-                  MirrorScope.maybeOf(context)?.navigating(eligible: true);
-                  setState(() => _selected = selection.single);
-                },
+                  ],
+                  selected: {_selected},
+                  onSelectionChanged: (selection) {
+                    MirrorScope.maybeOf(context)?.navigating(eligible: true);
+                    setState(() {
+                      _selected = selection.single;
+                      _visited.add(_selected);
+                    });
+                  },
+                ),
               ),
             ),
           ),
         ),
+      Expanded(
+        child: SafeMirrorSurface(
+          child: IndexedStack(
+            index: widget.roles.indexOf(_selected),
+            children: [
+              for (final role in widget.roles)
+                if (_visited.contains(role))
+                  widget.workspace(role)
+                else
+                  const SizedBox.shrink(),
+            ],
+          ),
+        ),
       ),
-      Expanded(child: widget.workspace(_selected)),
     ],
   );
 }
@@ -219,6 +246,7 @@ class _DashboardPermissionDenied extends StatelessWidget {
       MaterialPageRoute<void>(
         builder: (context) => NotificationCenterPage(
           session: session,
+          onSignOut: onSignOut,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
       ),

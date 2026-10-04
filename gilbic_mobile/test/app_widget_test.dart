@@ -11,10 +11,67 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_dashboard.dart';
 
 import 'support/app_platform_dependencies.dart';
 
 void main() {
+  for (final roles in [
+    ['Management'],
+    ['Collector', 'Employee', 'Management'],
+  ]) {
+    testWidgets('validated restored $roles opens one Management workspace', (
+      tester,
+    ) async {
+      final store = MemorySessionStore();
+      final restored = UserSession(
+        userId: 'restored-manager',
+        username: 'manager',
+        displayName: 'Manager',
+        role: AppRole.fromValue(roles.first)!,
+        rawRole: roles.first,
+        roles: roles,
+        accessToken: 'synthetic-token',
+        permissions: const [
+          'management.dashboard.view',
+          'employee.portal.view',
+          'route.view',
+        ],
+      );
+      await store.write(restored);
+      await tester.pumpWidget(
+        GilbicApp(
+          deviceIdentityProvider: testAppDeviceIdentity(),
+          imageRecoveryController: testAppImageRecovery(),
+          sessionStore: store,
+          authRepository: _ValidatingAuthRepository(
+            onValidate: (_) async => restored,
+          ),
+          collectorRouteCache: MemoryCollectorRouteCache(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ManagementDashboard), findsOneWidget);
+      expect(
+        find.byKey(const Key('employee-collector-workspace-switch')),
+        findsNothing,
+      );
+      expect(find.text('Daily Collection'), findsNothing);
+      expect(find.byTooltip('Sign out'), findsOneWidget);
+      expect((await store.read())?.roles, roles);
+      final group = find.byKey(
+        const Key('management-section-account-connectivity'),
+      );
+      await tester.scrollUntilVisible(
+        group,
+        400,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(group, findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
+  }
   testWidgets('opens Daily Collection client ledger and expands audit details', (
     tester,
   ) async {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
+import 'package:gilbic_mobile/src/core/payments/combined_payment_submission.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
 
@@ -10,6 +12,8 @@ class CollectorRouteTree extends StatelessWidget {
     required this.directPayBlockedReasonFor,
     required this.payingLoanIds,
     required this.pendingDirectLoanIds,
+    this.pendingDirectDrafts = const {},
+    this.pendingCombinedDrafts = const {},
     required this.onToggleArea,
     required this.onToggleClient,
     required this.onRecord,
@@ -24,6 +28,8 @@ class CollectorRouteTree extends StatelessWidget {
   final CollectorEntryReason directPayBlockedReasonFor;
   final Set<String> payingLoanIds;
   final Set<String> pendingDirectLoanIds;
+  final Map<String, PaymentSubmissionDraft> pendingDirectDrafts;
+  final Map<String, CombinedPaymentSubmissionDraft> pendingCombinedDrafts;
   final void Function(String areaUid) onToggleArea;
   final void Function(String clientId) onToggleClient;
   final CollectorEntryAction onRecord;
@@ -43,6 +49,8 @@ class CollectorRouteTree extends StatelessWidget {
             directPayBlockedReasonFor: directPayBlockedReasonFor,
             payingLoanIds: payingLoanIds,
             pendingDirectLoanIds: pendingDirectLoanIds,
+            pendingDirectDrafts: pendingDirectDrafts,
+            pendingCombinedDrafts: pendingCombinedDrafts,
             onToggleArea: onToggleArea,
             onToggleClient: onToggleClient,
             onRecord: onRecord,
@@ -62,6 +70,8 @@ class _CollectorAreaBranch extends StatelessWidget {
     required this.directPayBlockedReasonFor,
     required this.payingLoanIds,
     required this.pendingDirectLoanIds,
+    this.pendingDirectDrafts = const {},
+    this.pendingCombinedDrafts = const {},
     required this.onToggleArea,
     required this.onToggleClient,
     required this.onRecord,
@@ -75,6 +85,8 @@ class _CollectorAreaBranch extends StatelessWidget {
   final CollectorEntryReason directPayBlockedReasonFor;
   final Set<String> payingLoanIds;
   final Set<String> pendingDirectLoanIds;
+  final Map<String, PaymentSubmissionDraft> pendingDirectDrafts;
+  final Map<String, CombinedPaymentSubmissionDraft> pendingCombinedDrafts;
   final void Function(String areaUid) onToggleArea;
   final void Function(String clientId) onToggleClient;
   final CollectorEntryAction onRecord;
@@ -106,7 +118,10 @@ class _CollectorAreaBranch extends StatelessWidget {
                   ? () => onToggleArea(areaUid)
                   : null,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Icon(
@@ -122,8 +137,8 @@ class _CollectorAreaBranch extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                     if (node.subtreeClientCount > 0)
@@ -154,6 +169,8 @@ class _CollectorAreaBranch extends StatelessWidget {
               directPayBlockedReasonFor: directPayBlockedReasonFor,
               payingLoanIds: payingLoanIds,
               pendingDirectLoanIds: pendingDirectLoanIds,
+              pendingDirectDrafts: pendingDirectDrafts,
+              pendingCombinedDrafts: pendingCombinedDrafts,
               onToggleClient: onToggleClient,
               onRecord: onRecord,
               onRecordCombined: onRecordCombined,
@@ -169,6 +186,8 @@ class _CollectorAreaBranch extends StatelessWidget {
                 directPayBlockedReasonFor: directPayBlockedReasonFor,
                 payingLoanIds: payingLoanIds,
                 pendingDirectLoanIds: pendingDirectLoanIds,
+                pendingDirectDrafts: pendingDirectDrafts,
+                pendingCombinedDrafts: pendingCombinedDrafts,
                 onToggleArea: onToggleArea,
                 onToggleClient: onToggleClient,
                 onRecord: onRecord,

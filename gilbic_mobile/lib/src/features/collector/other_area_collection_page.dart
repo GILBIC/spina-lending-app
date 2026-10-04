@@ -526,7 +526,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                   if (!_isManagement) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'GILBIC business date: ${formatSpinaBusinessDate(DateTime.now())}',
+                      'SPINA business date: ${formatSpinaBusinessDate(DateTime.now())}',
                       key: const Key('other-area-business-date'),
                       style: Theme.of(context).textTheme.labelMedium,
                     ),

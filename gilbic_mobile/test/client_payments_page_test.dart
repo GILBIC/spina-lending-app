@@ -1,3 +1,5 @@
+import 'support/android_workflow_capture.dart';
+import 'support/android_role_fixture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -9,20 +11,19 @@ import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart
 import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
 
 void main() {
-  testWidgets('linked client can view valid and voided payment receipts',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1100, 2400));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-
+  testWidgets('linked client can view valid and voided payment receipts', (
+    tester,
+  ) async {
     final repository = _FakeClientPaymentRepository();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ClientPaymentsPage(
-          session: _session,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          repository: repository,
-        ),
+    await pumpAndroidRoleFixture(
+      tester,
+      size: const Size(320, 640),
+      textScaler: TextScaler.linear(2),
+      home: ClientPaymentsPage(
+        session: _session,
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        repository: repository,
       ),
     );
     await tester.pumpAndSettle();
@@ -32,6 +33,12 @@ void main() {
     expect(find.text('TEST-REG-001'), findsOneWidget);
     expect(find.text('Valid payments'), findsOneWidget);
     expect(find.text('₱50.00'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Direct GCash payment'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Direct GCash payment'), findsOneWidget);
     expect(find.text('Pay with GCash'), findsOneWidget);
     expect(find.text('Coming soon through Xendit'), findsNothing);
@@ -41,6 +48,12 @@ void main() {
       ),
       findsNothing,
     );
+    await tester.scrollUntilVisible(
+      find.textContaining('Sending or uploading an image'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     expect(
       find.text(
         'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
@@ -49,9 +62,27 @@ void main() {
     );
     expect(find.byKey(const Key('client-payment-proof-upload')), findsNothing);
 
+    await tester.scrollUntilVisible(
+      find.text('Payment timeline'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Payment timeline'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Receipt: GBC-20260806-00000010'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Receipt: GBC-20260806-00000010'), findsOneWidget);
     expect(find.text('Payment posted'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Receipt: GBC-20260805-00000008'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Receipt: GBC-20260805-00000008'), findsOneWidget);
     expect(find.text('Voided'), findsOneWidget);
     expect(
@@ -60,10 +91,22 @@ void main() {
     );
     expect(repository.deviceId, 'client-device');
     expect(repository.userId, 'client-1');
+    for (final title in find.text('Regular').evaluate()) {
+      expect(
+        tester
+            .renderObject<RenderBox>(find.byWidget(title.widget))
+            .constraints
+            .maxWidth,
+        greaterThanOrEqualTo(320 * .65),
+        reason: 'Large-text receipt identity uses a readable header width',
+      );
+    }
+    await captureAndroidWorkflowScroll(tester, 'L3-valid-voided-receipts');
   });
 
-  testWidgets('payments opens the existing protected GCash payment page',
-      (tester) async {
+  testWidgets('payments opens the existing protected GCash payment page', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ClientPaymentsPage(
@@ -125,8 +168,7 @@ class _FakeClientPaymentRepository implements ClientPaymentRepository {
       clientCode: 'TEST-REG-001',
       clientName: 'TEST CLIENT REGULAR',
       proofUploadAvailable: false,
-      proofMessage:
-          'Collector-recorded payments use official SPINA receipts.',
+      proofMessage: 'Collector-recorded payments use official SPINA receipts.',
       payments: <ClientPayment>[
         ClientPayment(
           transactionId: 'payment-1',
