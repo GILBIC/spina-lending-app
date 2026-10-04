@@ -13,9 +13,39 @@ LOGGER = logging.getLogger("gilbic.request")
 METHODS = frozenset({"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
 
 
+class _OfficeFinderAccessFilter(logging.Filter):
+    """Redact Uvicorn's raw request-target before handlers can format it."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) == 5 and isinstance(args[2], str):
+            target = args[2].split("?", 1)[0]
+            base = "/api/v1/management/onboarding/applicants"
+            if (
+                target == base
+                or target == base + "/"
+                or target.startswith(base + "/by-reference/")
+            ):
+                if target.startswith(base + "/by-reference/"):
+                    suffix = target.rsplit("/", 1)[-1]
+                    suffix = (
+                        suffix
+                        if suffix in ("applications", "case", "cif-client")
+                        else "read"
+                    )
+                    target = base + "/by-reference/{application_reference}/" + suffix
+                record.args = (*args[:2], target, *args[3:])
+        return True
+
+
 class RequestObservabilityMiddleware:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
+        logger = logging.getLogger("uvicorn.access")
+        if not any(
+            isinstance(item, _OfficeFinderAccessFilter) for item in logger.filters
+        ):
+            logger.addFilter(_OfficeFinderAccessFilter())
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":

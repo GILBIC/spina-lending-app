@@ -1,9 +1,18 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import PostgresAccountRepository
@@ -11,10 +20,11 @@ from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .client_onboarding_repository import (
     ClientOnboardingAccessDenied,
+    ClientOnboardingStatus,
     PostgresClientOnboardingRepository,
 )
+from .office_review_evidence_route import PrivateOfficeRoute
 from .request_auth import authenticated_device_context
-
 
 BypassRequirement = Literal[
     "national_id",
@@ -142,8 +152,161 @@ def client_onboarding_repository_dependency() -> PostgresClientOnboardingReposit
     return PostgresClientOnboardingRepository()
 
 
+class OfficePageQuery(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    limit: int = Field(default=25, ge=1, le=100)
+    cursor: str | None = Field(default=None, min_length=1, max_length=2048)
+
+
+class OfficeSearchQuery(OfficePageQuery):
+    q: str = ""
+    status: ClientOnboardingStatus | None = None
+
+    @field_validator("q")
+    @classmethod
+    def normalized_query(cls, value: str) -> str:
+        value = value.strip()
+        if value and not 3 <= len(value) <= 200:
+            raise ValueError("Finder query must be empty or 3 to 200 characters.")
+        return value
+
+
 def create_client_onboarding_router() -> APIRouter:
     router = APIRouter(tags=["client-onboarding"])
+    finder = APIRouter(route_class=PrivateOfficeRoute)
+
+    def office_finder_actor(request, authorization, x_device_id, auth, accounts):
+        if any(
+            len(request.query_params.getlist(key)) != 1 for key in request.query_params
+        ):
+            raise HTTPException(
+                status_code=422, detail="Repeated finder parameters are invalid."
+            )
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="client_onboarding.requirement.review",
+            permission_error="Onboarding case permission is required.",
+        )
+        if not any(role in actor.roles for role in ("employee", "management")):
+            raise HTTPException(
+                status_code=403, detail="This role cannot read this onboarding case."
+            )
+        return actor
+
+    def finder_payload(record, *, applications=False):
+        keys = (
+            (
+                "application_id",
+                "application_reference",
+                "client_id",
+                "created_at",
+                "application_version_id",
+                "version_number",
+                "recorded_at",
+            )
+            if applications
+            else (
+                "applicant_id",
+                "intake_reference",
+                "client_id",
+                "full_name",
+                "phone_number",
+                "intake_status",
+                "created_at",
+                "updated_at",
+            )
+        )
+        payload = {key: record[key] for key in ("next_cursor", "has_more", "as_of")}
+        payload["items"] = [
+            {key: item[key] for key in keys} for item in record["items"]
+        ]
+        if applications:
+            payload["intake"] = {
+                key: record["intake"][key]
+                for key in (
+                    "applicant_id",
+                    "intake_reference",
+                    "client_id",
+                    "intake_status",
+                )
+            }
+        return payload
+
+    @finder.get("/api/v1/management/onboarding/applicants")
+    def search_office_cases(
+        request: Request,
+        query: Annotated[OfficeSearchQuery, Query()],
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        onboarding: Annotated[
+            PostgresClientOnboardingRepository,
+            Depends(client_onboarding_repository_dependency),
+        ],
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+    ) -> dict[str, object]:
+        actor = office_finder_actor(request, authorization, x_device_id, auth, accounts)
+        try:
+            record = onboarding.search_office_cases(
+                actor_user_id=actor.user_id, **query.model_dump()
+            )
+        except ClientOnboardingAccessDenied as error:
+            raise HTTPException(
+                status_code=403, detail="Onboarding case access is unavailable."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=422,
+                detail="Finder parameters are invalid for this selection.",
+            ) from error
+        return finder_payload(record)
+
+    @finder.get(
+        "/api/v1/management/onboarding/applicants/by-reference/{application_reference:path}/applications"
+    )
+    def list_office_applications(
+        application_reference: str,
+        request: Request,
+        query: Annotated[OfficePageQuery, Query()],
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        onboarding: Annotated[
+            PostgresClientOnboardingRepository,
+            Depends(client_onboarding_repository_dependency),
+        ],
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+    ) -> dict[str, object]:
+        actor = office_finder_actor(request, authorization, x_device_id, auth, accounts)
+        try:
+            record = onboarding.list_office_applications(
+                actor_user_id=actor.user_id,
+                application_reference=application_reference.strip(),
+                **query.model_dump(),
+            )
+        except ClientOnboardingAccessDenied as error:
+            raise HTTPException(
+                status_code=403, detail="Onboarding case access is unavailable."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=422,
+                detail="Finder parameters are invalid for this selection.",
+            ) from error
+        if record is None:
+            raise HTTPException(
+                status_code=404, detail="Office intake record is unavailable."
+            )
+        return finder_payload(record, applications=True)
+
+    router.include_router(finder)
 
     def read_case(
         *, scope: Literal["office", "collector"], application_reference: str,
