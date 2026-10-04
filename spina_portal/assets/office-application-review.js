@@ -1,3 +1,4 @@
+import { createOfficeCaseContext } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { mountOfficeApplicationEntry } from './office-application-entry.js';
 import { mountOfficeEvidenceCapture } from './office-evidence-capture.js';
@@ -179,7 +180,7 @@ function reviewMarkup(review) {
   </article>`;
 }
 
-export function mountOfficeApplicationReview({ root, api, session, signal, onContextChange, officeCaseContext }) {
+export function mountOfficeApplicationReview({ root, api, session, signal, onContextChange, officeCaseContext, registerHandle, getSession = () => session, confirmDiscard }) {
   mounts.get(root)?.();
   root.innerHTML = '';
   let disposed = false;
@@ -197,6 +198,21 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   let confirmationCleanup;
   let printCleanup;
   let creating = false;
+  let selectedContext = null, lookupRequest = {}, revision = 0, confirmationHandle = null;
+  const coordinator = officeCaseContext ?? createOfficeCaseContext({getSession,confirmDiscard});
+  const ownsCoordinator = !officeCaseContext;
+  const children = () => [entryCleanup,confirmationHandle].filter(Boolean);
+  const isDirty = () => children().some(child=>child.isDirty?.());
+  const isWritePending = () => children().some(child=>child.isWritePending?.());
+  const isUncertain = () => children().some(child=>child.isUncertain?.());
+  function edited() {revision++;coordinator.invalidateCandidate();}
+  function searchEdited() {lookupRequest={};coordinator.invalidateCandidate(); if(statusRoot)statusRoot.innerHTML='';}
+  function contextFor(selection,review) {return {mode:'saved-case',intakeReference:selection.application_reference,clientId:selection.client_id,
+    applicationReference:review.application_reference,applicationId:review.application_id,applicationVersionId:review.application_version_id,applicationSaved:true,
+    stageFacts:{application:{intakeReference:selection.application_reference,clientId:review.client_id,applicationReference:review.application_reference,
+      applicationId:review.application_id,applicationVersionId:review.application_version_id,versionNumber:review.version_number,status:'Saved application version'}}};}
+  function denyAccess(error) {if(disposed || mounts.get(root)!==dispose)return;coordinator.dispose();dispose();root.innerHTML=errorCard(error);}
+
 
   function invalidate() {
     currentRequest = {};
@@ -207,6 +223,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     printCleanup?.();
     printCleanup = null;
     selectedReview = null;
+    selectedContext = null; confirmationHandle = null;
     if (reviewRoot) reviewRoot.innerHTML = '';
     if (statusRoot) statusRoot.innerHTML = '';
   }
@@ -217,13 +234,14 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     invalidate();
     form?.removeEventListener('submit', openReview);
     for (const input of [intakeInput, applicationInput]) {
-      input?.removeEventListener('input', invalidate);
-      input?.removeEventListener('change', invalidate);
+      input?.removeEventListener('input', searchEdited);
+      input?.removeEventListener('change', searchEdited);
       if (input) input.value = '';
     }
     clearButton?.removeEventListener('click', clear);
     newButton?.removeEventListener('click', createApplication);
     signal?.removeEventListener('abort', dispose);
+    if(ownsCoordinator)coordinator.dispose();
     if (mounts.get(root) === dispose) {
       mounts.delete(root);
       root.innerHTML = '';
@@ -232,17 +250,17 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
 
   function clear() {
     if (disposed) return;
-    invalidate();
+    searchEdited();
     intakeInput.value = '';
     applicationInput.value = '';
     intakeInput.focus();
   }
 
-  async function openReview(event) {
+  async function openReview(event, expected = null) {
     event?.preventDefault();
     if (disposed) return;
-    invalidate();
-    const token = currentRequest;
+    if(isWritePending() || isUncertain()){statusRoot.textContent='Keep the current operation and reconcile it before changing case.';return false;}
+    const token = {}; lookupRequest = token;
     const intakeReference = intakeInput.value.trim();
     const applicationReference = applicationInput.value.trim();
     if (!intakeReference || !applicationReference) {
@@ -251,22 +269,25 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     }
     statusRoot.innerHTML = loadingPanel('Loading saved application information…');
     try {
-      const selection = await api.request(
-        `/api/v1/management/onboarding/applicants/by-reference/${encodeURIComponent(intakeReference)}/cif-client`,
-      );
-      if (disposed || currentRequest !== token) return;
-      if (!isObject(selection) || !isUuid(selection.client_id)
-        || typeof selection.application_reference !== 'string'
-        || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()) {
-        throw new Error('The office intake response is invalid or does not match the entered reference.');
-      }
-      const review = await api.request(
-        `/api/v1/management/clients/${encodeURIComponent(selection.client_id)}/loan-applications/by-reference/${encodeURIComponent(applicationReference)}/review-summary`,
-      );
-      if (disposed || currentRequest !== token) return;
-      if (!validReview(review, selection.client_id, applicationReference)) {
-        throw new Error('The application review response is invalid or does not match the selected Client and application.');
-      }
+      let selection, review;
+      const accepted = await coordinator.requestTransition({kind:'open',targetStage:'application',candidate:async()=>{
+        try {selection = await api.request(`/api/v1/management/onboarding/applicants/by-reference/${encodeURIComponent(intakeReference)}/cif-client`,{signal});}catch(error){if([401,403].includes(error?.status))denyAccess(error);throw error;}
+        if(disposed || lookupRequest !== token)return null;
+        if (!isObject(selection) || !isUuid(selection.client_id) || typeof selection.application_reference !== 'string'
+          || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()
+          || (expected?.clientId && selection.client_id.toLowerCase() !== expected.clientId.toLowerCase())) throw new Error('The office intake response is invalid or does not match the selected Client.');
+        try {review = await api.request(`/api/v1/management/clients/${encodeURIComponent(selection.client_id)}/loan-applications/by-reference/${encodeURIComponent(applicationReference)}/review-summary`,{signal});}catch(error){if([401,403].includes(error?.status))denyAccess(error);throw error;}
+        if(disposed || lookupRequest !== token)return null;
+        if (!validReview(review, selection.client_id, applicationReference)
+          || (expected && Object.hasOwn(expected,'applicationId') && (typeof expected.applicationId!=='string' || review.application_id.toLowerCase() !== expected.applicationId.toLowerCase()))
+          || (expected && Object.hasOwn(expected,'applicationVersionId') && (typeof expected.applicationVersionId!=='string' || review.application_version_id.toLowerCase() !== expected.applicationVersionId.toLowerCase()))
+          || (expected && Object.hasOwn(expected,'versionNumber') && review.version_number !== expected.versionNumber)) throw new Error('The application response is invalid or the selected application or saved version changed. Refresh the applications list and select it again.');
+        return contextFor(selection,review);
+      }});
+      if(!accepted || disposed){if(!disposed && lookupRequest===token){statusRoot.textContent='Your existing work has been kept.';form.querySelector('button[type="submit"]').focus();}return false;}
+      currentRequest=token; selectedContext=contextFor(selection,review);
+      intakeInput.value=selection.application_reference; applicationInput.value=review.application_reference;
+      onContextChange?.(coordinator.getContext());
       statusRoot.innerHTML = '';
       selectedReview = review;
       reviewRoot.innerHTML = `${reviewMarkup(review)}<button class="button button-outline" type="button" data-edit-application>Edit application information</button>
@@ -283,9 +304,12 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
       reviewRoot.querySelector('[data-print-application]').addEventListener('click', () => {
         if (selectedReview === review) printReview(review);
       });
+      return true;
     } catch (error) {
-      if (disposed || currentRequest !== token) return;
+      if([401,403].includes(error?.status)){denyAccess(error);return false;}
+      if (disposed || lookupRequest !== token) return false;
       statusRoot.innerHTML = `<div role="alert">${errorCard(error, 'Application review is unavailable.')}</div>`;
+      return false;
     }
   }
 
@@ -324,7 +348,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
       document.body.appendChild(frame);
     } catch (error) {
       if (active()) {
-        if ([401,403].includes(error?.status)) { dispose(); return; }
+        if ([401,403].includes(error?.status)) { coordinator.dispose();dispose(); return; }
         statusRoot.innerHTML = errorCard(error);
       }
       cleanup();
@@ -332,7 +356,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   }
 
   function prepareConfirmation(review) {
-    if (disposed || selectedReview !== review) return;
+    if (disposed || selectedReview !== review || isWritePending() || isUncertain() || confirmationHandle?.isDirty?.()) return;
     confirmationCleanup?.();
     const token = currentRequest;
     const container = reviewRoot.querySelector('[data-application-confirmation]');
@@ -342,27 +366,29 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     const status = container.querySelector('[data-application-confirmation-status]');
     const confirm = container.querySelector('[data-confirm-application]');
     let evidence;
-    let pending = false;
+    let pending = false, uncertain = false;
     let closed = false;
     const active = () => !disposed && !closed && currentRequest === token && selectedReview === review;
     const captureCleanup = mountOfficeEvidenceCapture({
       root: container.querySelector('[data-application-signed-evidence]'), api, session,
       clientId: review.client_id, cifVersionId: review.cif_version_id, purpose: 'application_review',
       applicationId: review.application_id, applicationVersionId: review.application_version_id, signal,
-      onCaptured(record) { if (active()) { evidence = record; confirm.disabled = false; } },
-      onAccessDenied() { if (active()) dispose(); },
+      onDraftChange:edited,
+      onCaptured(record) { if (active()) { evidence = record; edited();confirm.disabled = false; } },
+      onAccessDenied() { if (active()) {coordinator.dispose();dispose();} },
     });
     function cleanup() {
       if (closed) return;
       closed = true;
       evidence = null;
       captureCleanup();
+      confirmationHandle=null;
       confirm.removeEventListener('click', saveConfirmation);
       container.innerHTML = '';
     }
     async function saveConfirmation() {
       if (!active() || pending || !evidence) return;
-      pending = true;
+      pending = true; uncertain = true;
       confirm.disabled = true;
       status.innerHTML = loadingPanel('Recording applicant confirmation…');
       try {
@@ -376,13 +402,14 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
           || typeof saved.confirmed_at !== 'string' || Number.isNaN(Date.parse(saved.confirmed_at))) {
           throw new Error('The application confirmation response could not be verified.');
         }
+        uncertain=false;captureCleanup();
         evidence = null;
         status.textContent = 'Applicant application review confirmed. Approval, final loan signing, and release remain separate.';
       } catch (error) {
         if (!active()) return;
-        if ([401, 403].includes(error?.status)) { dispose(); return; }
+        if ([401, 403].includes(error?.status)) { coordinator.dispose();dispose(); return; }
         const retry = [400, 422].includes(error?.status);
-        if (retry) confirm.disabled = false;
+        if (retry) {uncertain=false;confirm.disabled = false;}
         else {
           evidence = null;
           captureCleanup();
@@ -392,19 +419,31 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     }
     confirm.addEventListener('click', saveConfirmation);
     confirmationCleanup = cleanup;
+    confirmationHandle={isDirty:()=>Boolean(evidence)||captureCleanup.isDirty?.(),isWritePending:()=>pending||captureCleanup.isWritePending?.(),isUncertain:()=>uncertain||captureCleanup.isUncertain?.()};
   }
 
   function openEntry(clientId, review = null) {
-    if (disposed) return;
-    invalidate();
+    if (disposed || isWritePending() || isUncertain() || confirmationHandle?.isDirty?.()) return;
+    const retainedContext=selectedContext;
+    invalidate(); selectedContext=retainedContext;
+    applicationInput.value=review?.application_reference ?? retainedContext?.applicationReference ?? applicationInput.value;
+    if(retainedContext?.intakeReference)intakeInput.value=retainedContext.intakeReference;
     const token = currentRequest;
     entryCleanup = mountOfficeApplicationEntry({
       root: entryRoot, api, session, signal, clientId,
-      applicationReference: applicationInput.value.trim(), review,
+      applicationReference: applicationInput.value.trim(), review, onDraftChange:edited, onAccessDenied:denyAccess,
       onSaved(saved) {
         if (!disposed && currentRequest === token) {
           applicationInput.value = saved.application_reference;
-          openReview();
+          const selection={application_reference:coordinator.getContext().intakeReference,client_id:saved.client_id};
+          selectedContext=contextFor(selection,saved); entryCleanup=null;
+          const savedContext=selectedContext;
+          const offerSavedRead=message=>{if(disposed)return;statusRoot.innerHTML=`<p>Application version ${escapeHtml(saved.version_number)} saved. ${message}</p><button type="button" class="button button-outline" data-reload-saved-application>Open saved application</button>`;
+            statusRoot.querySelector('[data-reload-saved-application]').addEventListener('click',async()=>{const loaded=await handle.openCase(savedContext);if(!loaded && !disposed)offerSavedRead('Current details are unavailable or protected work has been kept. Opening reads the saved application before any replacement.');});};
+          if(!coordinator.acceptVerifiedContext(savedContext,coordinator.getGeneration())){
+            offerSavedRead('Approval & release work remains attached to the previously selected version. Open this saved application to verify and deliberately change that selection.');return;
+          }
+          void openReview(null,savedContext).then(loaded=>{if(!loaded && !disposed && currentRequest===token)offerSavedRead('Current details are unavailable. Opening reads the saved application; it does not repeat the save.');});
         }
       },
       onCancel({ reload = false } = {}) {
@@ -416,13 +455,13 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   }
 
   async function createApplication() {
-    if (disposed || creating) return;
+    if (disposed || creating || isWritePending() || isUncertain()) return;
     if (entryCleanup) {
       statusRoot.textContent = 'Your application draft is already open below. Continue it, or use its Cancel or Reload action before starting another.';
       return;
     }
     const token = currentRequest;
-    const caseGeneration = officeCaseContext?.getGeneration();
+    const caseGeneration = coordinator.getGeneration();
     const intakeReference = intakeInput.value.trim();
     if (!intakeReference) {
       statusRoot.innerHTML = `<div role="alert">${errorCard(new Error('Enter the office intake reference. A new application reference will be generated.'))}</div>`;
@@ -439,14 +478,22 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
         || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()) {
         throw new Error('The office intake response is invalid or does not match the entered reference.');
       }
-      if (officeCaseContext && caseGeneration !== officeCaseContext.getGeneration()) {
+      if (caseGeneration !== coordinator.getGeneration()) {
         throw new Error('The selected case changed while this intake was loading. No application draft was opened. Check the selected case and try New application again.');
       }
       const draftReference = applicationInput.value.trim() || `LOAN-${crypto.randomUUID()}`;
-      if (onContextChange?.({mode:'saved-case',intakeReference:selection.application_reference,clientId:selection.client_id,
-        applicationReference:draftReference,applicationId:null,applicationVersionId:null,applicationSaved:false}) === false) {
+      const draftContext={mode:'saved-case',intakeReference:selection.application_reference,clientId:selection.client_id,
+        applicationReference:draftReference,applicationId:null,applicationVersionId:null,applicationSaved:false};
+      const selected=coordinator.getContext();
+      const matchesSelected=(!selected.intakeReference || selected.intakeReference.toLowerCase()===selection.application_reference.toLowerCase())
+        && (!selected.clientId || selected.clientId.toLowerCase()===selection.client_id.toLowerCase());
+      const accepted=matchesSelected && (selected.applicationId || selected.applicationVersionId || selected.stageFacts.application
+        ? await coordinator.requestTransition({kind:'open',targetStage:'application',candidate:draftContext})
+        : coordinator.acceptVerifiedContext(draftContext,caseGeneration));
+      if (!accepted || onContextChange?.(draftContext) === false) {
         throw new Error('This intake does not match the selected case. Your selected case has been kept. Return to the selected intake or close the current case before starting another application.');
       }
+      selectedContext=draftContext;
       applicationInput.value = draftReference;
       openEntry(selection.client_id);
     } catch (error) {
@@ -484,10 +531,15 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   newButton = form.querySelector('[data-new-application]');
   form.addEventListener('submit', openReview);
   for (const input of [intakeInput, applicationInput]) {
-    input.addEventListener('input', invalidate);
-    input.addEventListener('change', invalidate);
+    input.addEventListener('input', searchEdited);
+    input.addEventListener('change', searchEdited);
   }
   clearButton.addEventListener('click', clear);
   newButton.addEventListener('click', createApplication);
+  const handle={getContext:()=>!disposed?selectedContext:null,isDirty,isWritePending,isUncertain,getRevision:()=>revision,
+    openCase:selection=>{if(disposed || !selection || typeof selection!=='object')return false; intakeInput.value=selection.intakeReference ?? '';applicationInput.value=selection.applicationReference ?? '';return openReview(null,selection);},
+    resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false;invalidate();intakeInput.value='';applicationInput.value='';return true;},
+    refreshReadOnly:()=>{if(!selectedContext || isDirty() || isWritePending() || isUncertain())return false;return handle.openCase(selectedContext);},dispose};
+  Object.assign(dispose,handle);registerHandle?.(handle);if(ownsCoordinator)coordinator.registerStage('application',handle);
   return dispose;
 }

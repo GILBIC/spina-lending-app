@@ -15,6 +15,7 @@ import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import { mountOfficeApplicationReview } from '../office-application-review.js';
 import { mountOfficeFirstLoan } from '../office-first-loan.js';
 import { mountOfficeOnboarding } from '../office-onboarding.js';
+import { officeCaseBanner } from '../employee-office-case.js';
 import { createOfficeCaseContext } from '../office-case-context.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
@@ -154,6 +155,7 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
   let navigationVersion = 0;
   function show(step) {
     if (disposed) return;
+    const banner=workflow.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=officeCaseBanner(coordinator.getContext(),step);
     navigationVersion += 1;
     beforeTaskChange();
     feedback.innerHTML = '';
@@ -186,7 +188,7 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
       return;
     }
     if (!await coordinator.requestTransition({kind:'navigate',targetStage:step}) || disposed) return;
-    if (step !== 'intake' && intakeControl && !intakeControl.value.trim() && context.intakeReference) intakeControl.value = context.intakeReference;
+    if (intakeControl && !intakeControl.value.trim() && context.intakeReference) intakeControl.value = context.intakeReference;
     if (applicationControl && !applicationControl.value.trim() && context.applicationReference) applicationControl.value = context.applicationReference;
     show(step);
   }
@@ -443,12 +445,13 @@ export async function mountManagementWorkspace(context) {
     <header class="workspace-header workspace-group-header"><div><p class="eyebrow">Management</p><h1>Clients & loans</h1><p>Review borrowers, applications, loans, renewals, and payment evidence.</p></div></header><div data-management-task-navigation class="management-task-navigation" role="group" aria-label="Management tasks"></div>
   ${canReviewCif ? `<section class="section-card office-workflow-card" id="management-office" data-office-workflow>
     <div class="office-workflow-nav" role="group" aria-label="Office workflow">
-      <button class="office-workflow-step" type="button" data-office-step-target="intake" aria-current="step">1. Office intake</button>
-      <button class="office-workflow-step" type="button" data-office-step-target="cif">2. CIF review</button>
-      <button class="office-workflow-step" type="button" data-office-step-target="application">3. Application review</button>
-      <button class="office-workflow-step" type="button" data-office-step-target="first-loan">4. First loan</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="intake" aria-current="step">1. Intake &amp; requirements</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="cif">2. Client information (CIF)</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="application">3. Loan application</button>
+      <button class="office-workflow-step" type="button" data-office-step-target="first-loan">4. Approval &amp; release</button>
     </div>
     <p class="meta">Enter the intake reference once, then continue through these steps. New applications receive an automatic reference.</p>
+    <aside class="notice-card" data-office-context-banner></aside>
     <div data-office-case-feedback role="status" aria-live="polite"></div>
     <div data-office-step="intake">
       <section id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>
@@ -518,7 +521,7 @@ export async function mountManagementWorkspace(context) {
   add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
   add('management-loans','management-clients-loans','Portfolio',async()=>{const h=mountManagementPortfolio({...options('[data-management-portfolio]')});await h.refresh();return h;});
   add('management-office','management-clients-loans','Office applications',()=>{
-    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard});
+    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard,onChange:value=>{const banner=root.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=officeCaseBanner(value,value.activeStage);}});
     const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,registerHandle:handle=>coordinator.registerStage(stage,handle),onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
     const handlers=[mountOfficeFirstLoan(stageOptions('[data-office-first-loan]','first-loan')),mountOfficeOnboarding(stageOptions('[data-office-onboarding]','intake')),mountOfficeCifSelection(stageOptions('[data-office-cif-selection]','cif')),mountOfficeApplicationReview(stageOptions('[data-office-application-review]','application')),bindManagementOfficeWorkflow(root,context,coordinator)];
     return ()=>{coordinator.dispose();handlers.forEach(dispose=>dispose?.());};

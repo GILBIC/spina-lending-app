@@ -390,7 +390,7 @@ for (const [label, change] of [
   });
 }
 
-test('pending Save sends only once and Cancel clears detached inputs and suppresses late success', async () => {
+test('pending Save sends only once and Cancel retains original controls and acknowledged success', async () => {
   const mount = await loadMount();
   const h = harness({ append: true });
   const pending = deferred();
@@ -405,13 +405,13 @@ test('pending Save sends only once and Cancel clears detached inputs and suppres
   assert.equal(h.calls.length, 2);
   assert.equal(button(h, 'Save application').disabled, true);
   fire(button(h, 'Cancel'), 'click');
-  assert.deepEqual(h.cancelled, [{ reload: true }]);
-  assert.equal(purpose.value, '');
+  assert.deepEqual(h.cancelled, []);
+  assert.equal(field(h,'purpose'),purpose);
   fire(form, 'submit');
   pending.resolve(response({ ...review(), version_number: 10, application_version_id: NEXT_VERSION }));
   await setImmediate();
   assert.equal(h.root.innerHTML, '');
-  assert.equal(h.saved.length, 0);
+  assert.equal(h.saved.length, 1);
   assert.equal(h.calls.length, 2);
 });
 
@@ -424,7 +424,7 @@ for (const attempted of [false, true]) {
     enter(h, 'purpose', 'Private draft');
     if (attempted) { submit(h); await setImmediate(); }
     fire(button(h, 'Cancel'), 'click');
-    assert.deepEqual(h.cancelled, [{ reload: attempted }]);
+    if(attempted){assert.deepEqual(h.cancelled,[]);assert.equal(field(h,'purpose').value,'Private draft');fire(button(h,'Reload application'),'click');assert.deepEqual(h.cancelled,[{reload:true}]);}else assert.deepEqual(h.cancelled,[{reload:false}]);
     assert.equal(h.root.innerHTML, '');
     assert.equal(h.calls.length, attempted ? 2 : 1);
   });

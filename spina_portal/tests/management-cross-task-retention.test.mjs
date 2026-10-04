@@ -150,6 +150,9 @@ async function retainDrafts(h) {
   application.querySelector('[name="applicationReference"]').value = APPLICATION_REFERENCE;
   fire(application.querySelector('form'), 'submit'); await setImmediate();
   assert.ok(application.querySelector('[data-prepare-application-confirmation]'), 'Open the actual authorized application review');
+  // Return to intake through actual navigation; only the verified case can refill its cleared candidate lookup.
+  fire(workflow.querySelector('[data-office-step-target="intake"]'),'click');await setImmediate();assert.equal(intake.value,INTAKE);
+  fire(workflow.querySelector('[data-office-step-target="application"]'),'click');await setImmediate();assert.equal(application.querySelector('[name="applicationReference"]').value,APPLICATION_REFERENCE);
   fire(application.querySelector('[data-prepare-application-confirmation]'), 'click'); await setImmediate();
   const scan = application.querySelector('[name="signedScan"]');
   assert.ok(scan, 'Use the actual Office evidence input, not an injected stand-in file field');

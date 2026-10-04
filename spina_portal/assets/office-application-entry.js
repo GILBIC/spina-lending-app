@@ -115,7 +115,7 @@ function validContext(value, clientId) {
 function blank(fields) { return Object.fromEntries(fields.map(([name]) => [name, null])); }
 
 export function mountOfficeApplicationEntry({
-  root, api, session, clientId, applicationReference, review = null, signal, onSaved, onCancel,
+  root, api, session, clientId, applicationReference, review = null, signal, onSaved, onCancel, onDraftChange, registerHandle, onAccessDenied,
 }) {
   mounts.get(root)?.();
   root.innerHTML = '';
@@ -130,6 +130,10 @@ export function mountOfficeApplicationEntry({
   let rowCount = 0;
   let referenceCount = 0;
   let listeners = [];
+  let baseline = null, revision = 0;
+  const values = () => JSON.stringify([...root.querySelectorAll('input'), ...root.querySelectorAll('textarea'), ...root.querySelectorAll('select')].map(control => [control.getAttribute('name'), control.value, control.checked === true]));
+  const isDirty = () => !disposed && baseline !== null && values() !== baseline;
+  function edited() { revision++; onDraftChange?.(); }
 
   function listen(element, event, handler) {
     element.addEventListener(event, handler);
@@ -164,7 +168,7 @@ export function mountOfficeApplicationEntry({
 
   function current(token) { return !disposed && request === token; }
   function close(reload) {
-    if (disposed) return;
+    if (disposed || state === 'saving' || (needsReconciliation && !reload)) return;
     const callback = onCancel;
     const reconcile = reload || needsReconciliation;
     dispose();
@@ -181,6 +185,7 @@ export function mountOfficeApplicationEntry({
   function denyAccess(error) {
     request = {};
     state = 'denied';
+    onAccessDenied?.(error);
     original = null;
     context = null;
     replaceContent(`<div role="alert">${errorCard(error, 'Office access is required for application entry.')}</div>${cancelMarkup()}`);
@@ -242,6 +247,7 @@ export function mountOfficeApplicationEntry({
 
   function changeRows(index, references = false) {
     if (disposed || state !== 'editing') return;
+    edited();
     const values = readInformation();
     const selectedSource = sourceChosen();
     if (references && !values.details) values.details = { schema_version: 1, employment: blank(EMPLOYMENT), references: [] };
@@ -303,6 +309,10 @@ export function mountOfficeApplicationEntry({
     information.details?.references.forEach((_, index) => {
       listen(root.querySelector(`[data-reference-action="remove-${index}"]`), 'click', () => changeRows(index, true));
     });
+    for (const control of [...root.querySelectorAll('input'), ...root.querySelectorAll('textarea'), ...root.querySelectorAll('select')]) {
+      listen(control, 'input', edited); listen(control, 'change', edited);
+    }
+    if (baseline === null) baseline = values();
     bindCancel();
     updateSave();
   }
@@ -388,6 +398,11 @@ export function mountOfficeApplicationEntry({
     callback?.(saved);
   }
 
+  const handle = {getContext:()=>!disposed && original ? {clientId,applicationReference:reference,applicationId:original.application_id,applicationVersionId:original.application_version_id,applicationSaved:true} : null,
+    isDirty, getRevision:()=>revision, isWritePending:()=>!disposed && state==='saving', isUncertain:()=>!disposed && needsReconciliation,
+    resetCase:()=>{if(state==='saving' || needsReconciliation)return false;dispose();return true;},
+    refreshReadOnly:()=>false, dispose};
+  Object.assign(dispose, handle); registerHandle?.(handle);
   mounts.set(root, dispose);
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, { once: true });

@@ -99,7 +99,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   }
   const values = () => JSON.stringify(['input','textarea','select'].flatMap(selector=>[...(caseRoot?.querySelectorAll(selector) ?? [])].map(control=>[control.value,Boolean(control.checked)])));
   const isDirty = () => Boolean(caseRoot?.querySelector('form')) && values() !== baseline;
-  function contextFor(result) { return {mode:'saved-case',applicantId:result.applicant_id ?? null,intakeReference:result.application_reference,clientId:result.client_id ?? null,
+  function contextFor(result) { return {mode:'saved-case',...(typeof result.full_name==='string'?{applicantName:result.full_name}:{}),applicantId:result.applicant_id ?? null,intakeReference:result.application_reference,clientId:result.client_id ?? null,
     stageFacts:{intake:{applicantId:result.applicant_id ?? null,intakeReference:result.application_reference,clientId:result.client_id ?? null,status:result.status}}}; }
   function publish() { if (coordinator) onContextChange?.(coordinator.getContext()); }
   function edited() { revision++; coordinator?.invalidateCandidate(); }
