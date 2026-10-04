@@ -2,11 +2,11 @@
 
 ## Status and owner intent
 
-Planning-only design, 3 October 2026, Asia/Manila. The owner requested: “Plan everything and make a PR for this and codex will do it,” following the Office applications screenshot review. This document and its companion execution plan are the requested Codex handoff; publishing them does not implement or deploy a feature. Codex is the selected executor. All implementation acceptance remains pending.
+Design approved for implementation on 4 October 2026, Asia/Manila, when the owner said “Go do it.” The original 3 October request was: “Plan everything and make a PR for this and codex will do it,” following the Office applications screenshot review. Codex is implementing this design on the same draft PR497. The companion plan and acceptance record distinguish completed, reviewed work from remaining implementation and validation. This does not authorize a merge or deployment.
 
 Goal: let authorized Management and Employee/Office Staff start or resume office-controlled applications without losing unfinished work, confusing applicants, inventing reference numbers, or treating navigation as approval. Include the review's protected search/queue enhancement as a separately testable backend-backed phase, not a pretend frontend-only search.
 
-Owner clarification, 4 October 2026: “Also have a list so its easier to remember.” Staff must be able to recognize and reopen saved cases from a visible list without recalling or first entering a reference. This clarifies the existing finder requirement; implementation and deployment remain pending.
+Owner clarification, 4 October 2026: “Also have a list so its easier to remember.” Staff must be able to recognize and reopen saved cases from a visible list without recalling or first entering a reference. This clarifies the existing finder requirement; its implementation is included in the approved work.
 
 Reviewed baseline: `0a576036c9a4b3cfca59ce8120abc86f351ee778` on `GILBIC/spina-lending-app/main`; tree `1484df47171406a359a373a61bba173c6f4a1b94`. [Source review](https://github.com/GILBIC/spina-lending-app/pull/492#issuecomment-5963411048). Management #492 and the shared Employee #494 handoff are already merged. Notion records website #492–495 deployed; this planning session did not independently test signed-in production. Android follow-through #496 is a separate active draft and must not be modified or absorbed. Frozen Master #296 remains unchanged.
 
@@ -138,4 +138,4 @@ List acceptance: in both authorized Office roles, open the entry view and resume
 
 Complete means both safety regressions reproduced and repaired; preserved #492/#494 behavior; truthful new/continue entry and case context; protected finder/picker with real database tests; responsive/browser/privacy acceptance; and exact-implementation-head CI evidence. Every task needs evidence rather than checked boxes based on planning.
 
-No implementation, browser reproduction, new schema execution, money movement, production setup, merge or deployment is performed by this planning PR. The complete implementation belongs on this same branch/PR when the owner directs Codex to execute it. Preserve this design and the companion task ledger, and synchronize meaningful progress to GitHub, Notion and Create State without overwriting concurrent work.
+The implementation belongs on this same branch/PR. Its acceptance record must distinguish synthetic browser and disposable-database checks from production or physical acceptance. No money movement, production setup, merge or deployment is included. Preserve this design and the companion task ledger, and synchronize meaningful progress to GitHub, Notion and the local continuation pointer without overwriting concurrent work. The owner's prior refusal of Create State remains in effect.

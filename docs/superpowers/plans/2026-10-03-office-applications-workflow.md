@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-03-office-applications-workflow-design.md` (read in full first).
 
-**Status:** Planning only. Codex is the selected executor. No implementation task or acceptance box below is complete. Owner requested the full plan and PR after the screenshot review; executing the plan is separate from publishing it, and never authorizes merge/deploy/production operations.
+**Status:** Implementation authorized on 4 October 2026 by “Go do it.” Codex is executing this plan on the same draft PR497; checked tasks have scoped evidence in the acceptance record. Remaining work is kept unchecked. Implementation does not authorize merge, deployment or production operations.
 
 **Owner clarification, 4 October 2026:** “Also have a list so its easier to remember.” Tasks 6–8 must deliver a visible recent-intake list on entry and an explicit saved-application list, so staff can recognize and resume a case without remembering references. This is a requirement update, not completed implementation.
 
@@ -68,12 +68,12 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 
 ## Task 0 — Reconcile authority and establish a reproducible baseline
 
-**Files:** Read the spec/map above, current PR/main, #492, #494, active #496, frozen #296 and latest Notion/Create State. Create the acceptance ledger only after execution begins.
+**Files:** Read the spec/map above, current PR/main, #492, #494, active #496, frozen #296, latest Notion and the local continuation pointer. Preserve the owner's prior Create State refusal. Create the acceptance ledger only after execution begins.
 
-- [ ] In an isolated worktree on this PR branch, inspect existing changes and instructions. Do not reset/stash/remove another worker's changes. Record exact branch/head/main and overlap; preserve #496 and the Android → Cash/GCash → surplus workstream.
-- [ ] Resolve the actual Employee/Management handle and PWA seams; record source locations. Inspect the existing private route and request logging configuration before finalizing new search routes. Confirm that current table ownership and visibility match S4, without assuming absent creator/area scopes.
-- [ ] Run `npm test` once for the baseline, then `node tools/build_portal.mjs`. Capture existing failures as baseline failures, not feature regressions or silent skips. Read the current disposable Office verification runbook for real-database setup; use synthetic data only.
-- [ ] Add the two original source-review scenarios to the evidence ledger as NOT YET REPRODUCED. Map S1–S6 and Review Focus items to Tasks 1–9. Commit the baseline ledger with exact command outcomes, not successful-implementation claims.
+- [x] In an isolated worktree on this PR branch, inspect existing changes and instructions. Do not reset/stash/remove another worker's changes. Record exact branch/head/main and overlap; preserve #496 and the Android → Cash/GCash → surplus workstream.
+- [x] Resolve the actual Employee/Management handle and PWA seams; record source locations. Inspect the existing private route and request logging configuration before finalizing new search routes. Confirm that current table ownership and visibility match S4, without assuming absent creator/area scopes.
+- [x] Run `npm test` once for the baseline, then `node tools/build_portal.mjs`. Capture existing failures as baseline failures, not feature regressions or silent skips. Read the current disposable Office verification runbook for real-database setup; use synthetic data only.
+- [x] Add the two original source-review scenarios to the evidence ledger as NOT YET REPRODUCED. Map S1–S6 and Review Focus items to Tasks 1–9. Commit the baseline ledger with exact command outcomes, not successful-implementation claims.
 
 ## Task 1 — Reproduce replacement defects and add the small context boundary
 
@@ -81,10 +81,10 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 **Consumes:** Existing mounted forms, session getter and pending/uncertain state.
 **Produces:** Coordinator contract above with two verified regression reproductions.
 
-- [ ] Write failing tests `lookup_edit_keeps_unsaved_intake_and_file`, `new_intake_never_carries_previous_case_to_cif`, `cancel_discard_keeps_exact_dom_and_selection`, and `stale_lookup_cannot_commit_replacement`. Assert both unchanged form values/File identity and absence of unintended API writes; test actual module bindings, not a lookalike implementation.
-- [ ] Run `node --test spina_portal/tests/office-case-context.test.mjs spina_portal/tests/office-workflow-case-safety.test.mjs`. Record each expected product failure; an import/harness failure is not proof of the reported bug.
-- [ ] Implement only mount-owned context, generation/owner checks and the explicit transition contract. Preserve callable cleanups and reference matching from #492. Do not copy private form payloads into the coordinator.
-- [ ] Rerun the focused tests and existing Office tests. Demonstrate failure against the preceding source and pass against the fix. Commit `fix: isolate Office case context from lookup text` with evidence.
+- [x] Write failing tests `lookup_edit_keeps_unsaved_intake_and_file`, `new_intake_never_carries_previous_case_to_cif`, `cancel_discard_keeps_exact_dom_and_selection`, and `stale_lookup_cannot_commit_replacement`. Assert both unchanged form values/File identity and absence of unintended API writes; test actual module bindings, not a lookalike implementation.
+- [x] Run `node --test spina_portal/tests/office-case-context.test.mjs spina_portal/tests/office-workflow-case-safety.test.mjs`. Record each expected product failure; an import/harness failure is not proof of the reported bug.
+- [x] Implement only mount-owned context, generation/owner checks and the explicit transition contract. Preserve callable cleanups and reference matching from #492. Do not copy private form payloads into the coordinator.
+- [x] Rerun the focused tests and existing Office tests. Demonstrate failure against the preceding source and pass against the fix. Commit `fix: isolate Office case context from lookup text` with evidence.
 
 ## Task 2 — Protect intake/CIF drafts and isolate New intake
 
@@ -92,10 +92,10 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 **Consumes:** Coordinator and stage registration.
 **Produces:** Verified intake/CIF contexts and deliberate replacement without lost drafts.
 
-- [ ] Add RED tests for typing then blurring lookup, Open/New/Close with unsaved text/checkboxes/files, cancelling discard, empty Clear search, candidate 404/network failure, and further edits during an outstanding lookup. Assert failed target reads do not destroy the old authorized draft.
-- [ ] Add RED tests for `new_intake_detaches_all_old_stage_handoffs`, same-case Back/Next retaining children, and a successful save followed by failed reload preserving its known reference. Add a late-response case after logout/denial.
-- [ ] Separate search editing from invalidation. Add New/Continue/Close semantics and dirty tracking at form owners; commit case replacement only after successful identity validation and a current discard decision. Starting New clears old handoff identity, not just the visible field. Privacy disposal stays unconditional.
-- [ ] Run Task 1/2 tests plus `node --test spina_portal/tests/office-onboarding-workspace.test.mjs`. Run relevant existing CIF/Employee cases discovered in Task 0; record exact files/counts. Commit `fix: preserve Office drafts during deliberate case changes`.
+- [x] Add RED tests for typing then blurring lookup, Open/New/Close with unsaved text/checkboxes/files, cancelling discard, empty Clear search, candidate 404/network failure, and further edits during an outstanding lookup. Assert failed target reads do not destroy the old authorized draft.
+- [x] Add RED tests for `new_intake_detaches_all_old_stage_handoffs`, same-case Back/Next retaining children, and a successful save followed by failed reload preserving its known reference. Add a late-response case after logout/denial.
+- [x] Separate search editing from invalidation. Add New/Continue/Close semantics and dirty tracking at form owners; commit case replacement only after successful identity validation and a current discard decision. Starting New clears old handoff identity, not just the visible field. Privacy disposal stays unconditional.
+- [x] Run Task 1/2 tests plus `node --test spina_portal/tests/office-onboarding-workspace.test.mjs`. Run relevant existing CIF/Employee cases discovered in Task 0; record exact files/counts. Commit `fix: preserve Office drafts during deliberate case changes`.
 
 ## Task 3 — Carry verified application context and render truthful guidance
 
@@ -103,10 +103,10 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 **Consumes:** Verified intake/client identity, explicit application selection, current saved-version responses.
 **Produces:** Persistent private case banner, consistent four-stage navigation, preserved draft reference behavior.
 
-- [ ] Add RED tests for mismatched intake/client/application pairs, different destination work, two applications for one client, generated-but-unsaved references, manual later-stage resume, and stage selection not marking earlier requirements complete.
-- [ ] Add RED tests for banner status belonging to the correct source/version, missing stage status displaying Not loaded, unknown status not appearing successful, and source identity changing during a delayed read. Retain #492/#494 generated-reference and conflict tests.
-- [ ] Publish context only from verified module responses. Render S3 banner and S1 stage labels with existing private-panel protections. Back/Next remain reads/navigation; no auto-create/save/confirm/approve/release. Preserve protected details when the user returns to the same case.
-- [ ] Run both role integration tests and synthetic browser checks for new → saved intake → CIF → selected application → first-loan read. Assert zero implicit writes, correct selected identities and retained actual File objects. Commit `feat: guide Office work with verified case context`.
+- [x] Add RED tests for mismatched intake/client/application pairs, different destination work, two applications for one client, generated-but-unsaved references, manual later-stage resume, and stage selection not marking earlier requirements complete.
+- [x] Add RED tests for banner status belonging to the correct source/version, missing stage status displaying Not loaded, unknown status not appearing successful, and source identity changing during a delayed read. Retain #492/#494 generated-reference and conflict tests.
+- [x] Publish context only from verified module responses. Render S3 banner and S1 stage labels with existing private-panel protections. Back/Next remain reads/navigation; no auto-create/save/confirm/approve/release. Preserve protected details when the user returns to the same case.
+- [x] Run both role integration tests and synthetic browser checks for new → saved intake → CIF → selected application → first-loan read. Assert zero implicit writes, correct selected identities and retained actual File objects. Commit `feat: guide Office work with verified case context`.
 
 ## Task 4 — Lock uncertain writes and complete privacy/refresh integration
 
@@ -136,13 +136,13 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 **Consumes:** Existing intake/application headers, versions, promoted-client relationship, current office permission.
 **Produces:** The two S4 read contracts, not a workflow/approval API.
 
-- [ ] Write RED API tests for both routes, valid Employee/Management, missing permission, wrong role, inactive actor, revoked device, denied repository read, unpromoted intake, 404, encoded slash references and private/no-store validation errors. Assert no new write capability or data mutation.
-- [ ] Write RED repository/database tests for name/phone/intake/application reference search; 0/1/25/26/60 records; identical timestamps; escaped `%`/`_`/quotes and injection-shaped input; invalid/oversized/mismatched cursors; status/limit boundaries; duplicate names; multiple applications and versions; and current authorization on every page. Assert exact allowed projection and no duplicate intake/application headers.
-- [ ] Prove an empty-query first page returns recent authorized intakes in creation-time order, including name, phone, reference, actual intake status and updated time. Verify later edits do not silently change the documented ordering and no saved application is selected by default.
-- [ ] Implement `search_office_cases` and `list_office_applications` using fixed parameterized SQL, active-role/permission checks and bounded tuple pagination. Add GET routes without changing current POST or greedy exact-reference behavior. Reject invalid shapes rather than silently broadening the search.
-- [ ] Apply the existing private-route no-store behavior to success, denial, not found and validation errors. Verify access-log/query redaction. Do not release a search route that logs names/phones unredacted or exposes evidence/financial payloads.
-- [ ] Run `python -m pytest -q gilbic_backend/tests/test_office_application_search_api.py gilbic_backend/tests/test_office_application_search_repository.py` under the existing backend PYTHONPATH/environment. Run real PostgreSQL cases against the explicitly disposable Office database using the current verification runbook. Conditional skips are not database proof.
-- [ ] Inspect synthetic query plans for each search class, including many applications per client; no per-row API/SQL fanout. Add an index only with recorded need and next-free migration number; prove no source-row changes and preserve private grants. Commit `feat: add protected Office intake and application search`.
+- [x] Write RED API tests for both routes, valid Employee/Management, missing permission, wrong role, inactive actor, revoked device, denied repository read, unpromoted intake, 404, encoded slash references and private/no-store validation errors. Assert no new write capability or data mutation.
+- [x] Write RED repository/database tests for name/phone/intake/application reference search; 0/1/25/26/60 records; identical timestamps; escaped `%`/`_`/quotes and injection-shaped input; invalid/oversized/mismatched cursors; status/limit boundaries; duplicate names; multiple applications and versions; and current authorization on every page. Assert exact allowed projection and no duplicate intake/application headers.
+- [x] Prove an empty-query first page returns recent authorized intakes in creation-time order, including name, phone, reference, actual intake status and updated time. Verify later edits do not silently change the documented ordering and no saved application is selected by default.
+- [x] Implement `search_office_cases` and `list_office_applications` using fixed parameterized SQL, active-role/permission checks and bounded tuple pagination. Add GET routes without changing current POST or greedy exact-reference behavior. Reject invalid shapes rather than silently broadening the search.
+- [x] Apply the existing private-route no-store behavior to success, denial, not found and validation errors. Verify access-log/query redaction. Do not release a search route that logs names/phones unredacted or exposes evidence/financial payloads.
+- [x] Run `python -m pytest -q gilbic_backend/tests/test_office_application_search_api.py gilbic_backend/tests/test_office_application_search_repository.py` under the existing backend PYTHONPATH/environment. Run real PostgreSQL cases against the explicitly disposable Office database using the current verification runbook. Conditional skips are not database proof.
+- [x] Inspect synthetic query plans for each search class, including many applications per client; no per-row API/SQL fanout. Add an index only with recorded need and next-free migration number; prove no source-row changes and preserve private grants. Commit `feat: add protected Office intake and application search`.
 
 ## Task 7 — Connect the finder and explicit saved-application picker
 
@@ -176,7 +176,7 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 
 - [ ] Conduct a fresh whole-change review for spec coverage, identity/permission boundaries, transition races, pending writes, paging and minimality. Resolve findings with RED→GREEN evidence; retain failed attempts as dated evidence.
 - [ ] Push to this same branch/PR. Let existing CI run; verify the exact implementation head and required `Backend, quality, and security`, `Portal, Flutter, and Android`, and `Financial and disposable PostgreSQL` gates. Reuse the same qualifying run; no weakened gate, duplicate suite or planning-head Green as implementation acceptance.
-- [ ] Update every task with actual commit/test/browser/database evidence. Update GitHub, append a targeted Notion checkpoint and capture Create State context with exact head, remaining tasks and any blockers. Preserve other chats' newer records; report a failed sync honestly.
+- [ ] Update every task with actual commit/test/browser/database evidence. Update GitHub, append a targeted Notion checkpoint and update the local continuation pointer with exact head, remaining tasks and any blockers. Preserve the owner's Create State refusal and other chats' newer records; report a failed sync honestly.
 - [ ] Keep draft/open/unmerged. Report implemented versus unimplemented scope, exact CI state and remaining manual acceptance. No merge, deploy, migration on a live database, provider/financial operation, feature activation or owner-device installation without separate authorization.
 
 ## Requirement coverage and stop conditions
@@ -187,4 +187,4 @@ Stop and record the narrow issue when live code changes the approved case/permis
 
 ## Copyable Codex task
 
-Implement this Office applications planning PR on its existing branch, not a new duplicate PR. Read the design and plan, current main/active PRs, frozen Master #296, latest Notion and Create State first. Complete Tasks 0–9 with test-first small commits. Preserve #492/#494 reference behavior, add verified case/draft safety, new-or-continue entry, truthful context/stages, responsive layouts and the two protected finder reads with explicit saved-application selection. Keep existing private data and uncertain-write controls; do not add a framework or new financial path. Do not touch Android #496 or reinterpret this as authority to merge/deploy/enable production. Record exact-head evidence and keep GitHub/Notion/Create State synchronized. Leave the PR draft/open/unmerged and report any unimplemented requirement plainly.
+Implement this Office applications PR on its existing branch. Read the design and plan, current main/active PRs, frozen Master #296, latest Notion and the local continuation pointer first. Complete Tasks 0–9 with test-first small commits. Preserve #492/#494 reference behavior, add verified case/draft safety, new-or-continue entry, truthful context/stages, responsive layouts and the two protected finder reads with explicit saved-application selection. Keep existing private data and uncertain-write controls; do not add a framework or new financial path. Do not touch Android #496 or reinterpret this as authority to merge/deploy/enable production. Record exact-head evidence and keep GitHub/Notion/local continuation synchronized, preserving the owner's prior Create State refusal. Leave the PR draft/open/unmerged and report any unimplemented requirement plainly.
