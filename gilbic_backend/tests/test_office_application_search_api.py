@@ -4,6 +4,10 @@ from urllib.parse import quote
 import pytest
 from test_client_onboarding_case_api import APPLICANT, REFERENCE, _case_client
 from test_client_onboarding_cif_selection_api import ACTOR_ID, HEADERS, _client
+from test_office_application_search_repository import (
+    MALFORMED_CURSOR_FIELDS,
+    _malformed_cursor,
+)
 
 BASE = "/api/v1/management/onboarding/applicants"
 ITEM_KEYS = {
@@ -33,6 +37,41 @@ def _url(applications):
         if applications
         else BASE
     )
+
+
+@pytest.mark.parametrize("applications", [False, True])
+@pytest.mark.parametrize("field,value", MALFORMED_CURSOR_FIELDS)
+def test_real_finder_rejects_malformed_cursor_types_with_private_422(
+    monkeypatch, applications, field, value
+):
+    from fastapi.testclient import TestClient
+    from gilbic_backend.client_onboarding_api import (
+        client_onboarding_repository_dependency,
+    )
+
+    from gilbic_backend import client_onboarding_repository as module
+
+    acquired = []
+
+    def forbidden():
+        acquired.append(True)
+        pytest.fail("Malformed cursor fields must not acquire a database connection")
+
+    monkeypatch.setattr(module, "open_connection", forbidden)
+    client, _ = _client()
+    repository = module.PostgresClientOnboardingRepository()
+    client.app.dependency_overrides[client_onboarding_repository_dependency] = lambda: (
+        repository
+    )
+    token = _malformed_cursor(field, value)
+    response = TestClient(client.app, raise_server_exceptions=False).get(
+        _url(applications), params={"cursor": token}, headers=HEADERS
+    )
+    assert acquired == []
+    assert response.status_code == 422
+    assert response.headers["cache-control"] == "no-store"
+    assert token not in response.text
+    assert "2026-01-01" not in response.text
 
 
 def _finder(*, denied=False, missing=False, unpromoted=False, failed=False, **options):

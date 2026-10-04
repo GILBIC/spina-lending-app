@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -35,6 +36,67 @@ APP_KEYS = {
     "version_number",
     "recorded_at",
 }
+
+MALFORMED_CURSOR_FIELDS = [
+    ("id", 17),
+    ("id", 17.5),
+    ("id", None),
+    ("id", True),
+    ("id", []),
+    ("id", {}),
+    ("created_at", 17),
+    ("created_at", None),
+    ("created_at", {}),
+    ("scope", 17),
+    ("scope", None),
+    ("scope", []),
+    ("v", True),
+    ("v", 1.0),
+    ("v", None),
+]
+
+
+def _malformed_cursor(field, value):
+    # Construct the documented token independently from production helpers.
+    scope = hashlib.sha256(
+        json.dumps(["intakes", "", None], separators=(",", ":")).encode()
+    ).hexdigest()
+    payload = {
+        "v": 1,
+        "scope": scope,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "id": "00000000-0000-0000-0000-000000000001",
+    }
+    payload[field] = value
+    return (
+        base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode())
+        .decode()
+        .rstrip("=")
+    )
+
+
+@pytest.mark.parametrize("applications", [False, True])
+@pytest.mark.parametrize("field,value", MALFORMED_CURSOR_FIELDS)
+def test_malformed_cursor_field_types_are_rejected_before_database_access(
+    monkeypatch, applications, field, value
+):
+    from gilbic_backend import client_onboarding_repository as module
+
+    def forbidden():
+        pytest.fail("Malformed cursor fields must not acquire a database connection")
+
+    monkeypatch.setattr(module, "open_connection", forbidden)
+    repository = module.PostgresClientOnboardingRepository()
+    cursor = _malformed_cursor(field, value)
+    with pytest.raises(ValueError):
+        if applications:
+            repository.list_office_applications(
+                actor_user_id=uuid4(),
+                application_reference="Synthetic / Intake",
+                cursor=cursor,
+            )
+        else:
+            repository.search_office_cases(actor_user_id=uuid4(), cursor=cursor)
 
 
 def _search(repository, case, **options):

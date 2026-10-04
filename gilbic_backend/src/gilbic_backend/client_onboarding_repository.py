@@ -32,7 +32,7 @@ class ClientOnboardingAccessDenied(PermissionError):
     pass
 
 
-_OFFICE_AUTH_SQL = """
+_ONBOARDING_READ_AUTH_SQL = """
     select 1 from core.users actor
     where actor.id = %s and actor.status = 'active'
       and exists (
@@ -130,6 +130,10 @@ def _decode_finder_cursor(
             or set(payload) != {"v", "scope", "created_at", "id"}
             or type(payload["v"]) is not int
             or payload["v"] != 1
+            or any(
+                not isinstance(payload[key], str)
+                for key in ("scope", "created_at", "id")
+            )
             or payload["scope"] != scope
         ):
             raise ValueError
@@ -180,15 +184,19 @@ def _finder_page(
     }
 
 
-def _require_office_reader(cursor, actor_user_id: UUID) -> None:
+def _require_onboarding_reader(
+    cursor, actor_user_id: UUID, *, scope: Literal["office", "collector"]
+) -> None:
+    roles = ["employee", "management"] if scope == "office" else ["collector"]
+    permission = (
+        "client_onboarding.requirement.review"
+        if scope == "office"
+        else "client_onboarding.visit.record"
+    )
     if (
         cursor.execute(
-            _OFFICE_AUTH_SQL,
-            (
-                actor_user_id,
-                ["employee", "management"],
-                "client_onboarding.requirement.review",
-            ),
+            _ONBOARDING_READ_AUTH_SQL,
+            (actor_user_id, roles, permission),
         ).fetchone()
         is None
     ):
@@ -225,7 +233,7 @@ class PostgresClientOnboardingRepository:
             open_connection() as connection,
             connection.cursor(row_factory=dict_row) as reader,
         ):
-            _require_office_reader(reader, actor_user_id)
+            _require_onboarding_reader(reader, actor_user_id, scope='office')
             rows = reader.execute(
                 _SEARCH_OFFICE_CASES_SQL,
                 {
@@ -272,7 +280,7 @@ class PostgresClientOnboardingRepository:
             open_connection() as connection,
             connection.cursor(row_factory=dict_row) as reader,
         ):
-            _require_office_reader(reader, actor_user_id)
+            _require_onboarding_reader(reader, actor_user_id, scope='office')
             intake = reader.execute(
                 """
                     select id as applicant_id, application_reference as intake_reference,
@@ -319,11 +327,6 @@ class PostgresClientOnboardingRepository:
         if scope not in ("office", "collector"):
             raise ValueError("Onboarding case scope is invalid.")
         reference = application_reference.strip()
-        roles = ["employee", "management"] if scope == "office" else ["collector"]
-        permission = (
-            "client_onboarding.requirement.review" if scope == "office"
-            else "client_onboarding.visit.record"
-        )
         common = """
             id as applicant_id, application_reference, status, full_name,
             phone_number, present_address, collector_visit_status,
@@ -338,24 +341,7 @@ class PostgresClientOnboardingRepository:
         """ if scope == "office" else ""
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
-                allowed = cursor.execute(
-                    """
-                    select 1 from core.users actor
-                    where actor.id = %s and actor.status = 'active'
-                      and exists (
-                        select 1 from core.user_roles user_role
-                        join core.roles role on role.id = user_role.role_id
-                        join core.role_permissions permission on permission.role_id = role.id
-                        where user_role.user_id = actor.id and role.code = any(%s)
-                          and permission.permission_code = %s
-                      )
-                    """,
-                    (actor_user_id, roles, permission),
-                ).fetchone()
-                if allowed is None:
-                    raise ClientOnboardingAccessDenied(
-                        "An active authorized onboarding account is required."
-                    )
+                _require_onboarding_reader(cursor, actor_user_id, scope=scope)
                 row = cursor.execute(
                     f"""
                     select {common}{office}
