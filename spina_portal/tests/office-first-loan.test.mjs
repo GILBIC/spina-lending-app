@@ -164,3 +164,34 @@ test('7x7 compliance uses existing endpoint and immutable packet terms',async()=
  fire(h.root.querySelector('[data-compliance]'),'submit');await setImmediate();
  const post=h.calls.find(x=>x.options.method==='POST');assert.ok(post.path.endsWith('/contract-schedules/7x7-pricing-compliance/review'));assert.equal(post.options.body.contract_reference,VERSION);assert.equal(post.options.body.first_due_date,'2026-09-25');assert.equal(post.options.body.agreed_daily_payment,'100.00');assert.equal(post.options.body.penalty_rate_ceiling,'0.050000');assert.equal(button(h,'Generate locked PDF packet').disabled,false);
 });
+test('authoritative refresh retains older cancelled history after current packet document issuance', async () => {
+  const h = harness();
+  const historical = approved('cancelled');
+  historical.loan_id = CLIENT;
+  historical.packet.loan_id = CLIENT;
+  historical.packet.application = { application_id: APP, id: CLIENT, version_number: 1 };
+  const current = approved();
+  current.packet.application = { application_id: APP, id: VERSION, version_number: 2 };
+  h.review.version_number = 2;
+  h.loans = [historical, current];
+  h.request = (path, options) => {
+    if (options.method === 'POST') {
+      current.document = { id: VERSION, content_sha256: 'b'.repeat(64) };
+      return { ...current.document, byte_count: 50 };
+    }
+    return h.defaultRequest(path);
+  };
+  const handle = (await mount())(h);
+  await open(h);
+  assert.equal(handle.getContext().stageFacts['first-loan'].status, 'approved_pending_release');
+  assert.equal(handle.isDirty(), false);
+  fire(button(h, 'Generate locked PDF packet'), 'click');
+  await setImmediate();
+  assert.equal(h.calls.filter(call => call.options.method === 'POST').length, 1);
+  assert.equal(handle.isWritePending(), false);
+  assert.equal(handle.isUncertain(), false);
+  assert.equal(handle.getContext().stageFacts['first-loan'].status, 'approved_pending_release');
+  assert.ok(button(h, 'Download locked PDF packet'));
+  assert.match(h.root.textContent, /Recorded packet application version: 2/);
+  handle();
+});

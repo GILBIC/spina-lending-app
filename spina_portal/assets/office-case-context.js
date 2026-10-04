@@ -71,7 +71,7 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
           && same('applicationId',context.applicationId,next.applicationId) && same('applicationVersionId',context.applicationVersionId,next.applicationVersionId);
         const affected = applicationSelection && !sameApplication ? ['application','first-loan'] : [targetStage];
         replacing = affected.map(stage=>stages.get(stage)).filter(Boolean);
-        if (dirty(replacing) && (!applicationSelection || same('applicationReference',next.applicationReference,context.applicationReference))) return false;
+        if (dirty(replacing) && (!applicationSelection || sameApplication)) return false;
         const retainedFacts = Object.fromEntries(Object.entries(context.stageFacts).filter(([stage])=>!affected.includes(stage)));
         next = project({...context,...value,stageFacts:{...retainedFacts,...value.stageFacts}});
         if (!next) return false;

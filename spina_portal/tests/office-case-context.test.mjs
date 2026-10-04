@@ -24,3 +24,31 @@ test('case-distinct application references require dirty replacement consent rat
 test('first selected application retains dirty CIF owner and compatible verified intake facts',async()=>{const {c}=setup(()=>assert.fail('retained CIF is not discardable'));c.acceptVerifiedContext({...saved,stageFacts:{intake:{intakeReference:'INTAKE-A',clientId:'client-a',status:'eligible_for_cif'},cif:{clientId:'client-a',status:'draft'}}},c.getGeneration());let cifReset=0,applicationReset=0;c.registerStage('cif',{isDirty:()=>true,resetCase:()=>cifReset++});c.registerStage('application',{resetCase:()=>applicationReset++});assert.equal(await c.requestTransition({kind:'open',targetStage:'application',candidate:{...saved,applicationReference:'APP-A',applicationId:'application-a',applicationVersionId:'version-a',applicationSaved:true}}),true);assert.equal(cifReset,0);assert.equal(applicationReset,1);assert.equal(c.getContext().stageFacts.intake.status,'eligible_for_cif');assert.equal(c.getContext().stageFacts.cif.status,'draft');});
 test('changing saved application resets only application and release after current consent',async()=>{let consent=0;const {c}=setup(()=>{consent++;return true;});c.acceptVerifiedContext({...saved,applicationReference:'APP-A',applicationId:'application-a',applicationVersionId:'version-a',stageFacts:{cif:{clientId:'client-a',status:'active'},application:{applicationReference:'APP-A',applicationVersionId:'version-a',status:'Saved'},'first-loan':{applicationReference:'APP-A',applicationVersionId:'version-a',status:'released'}}},c.getGeneration());const resets=[];for(const stage of ['intake','cif','application','first-loan'])c.registerStage(stage,{isDirty:()=>true,resetCase:()=>resets.push(stage)});assert.equal(await c.requestTransition({kind:'open',targetStage:'application',candidate:{...saved,applicationReference:'APP-B',applicationId:'application-b',applicationVersionId:'version-b',stageFacts:{application:{applicationReference:'APP-B',applicationVersionId:'version-b',status:'Saved'}}}}),true);assert.deepEqual(resets,['application','first-loan']);assert.equal(consent,1);assert.equal(c.getContext().stageFacts.cif.status,'active');assert.equal(c.getContext().stageFacts['first-loan'],undefined);});
 test('different intake or conflicting client fully guards and resets all stage owners',async()=>{for(const candidate of [{...saved,intakeReference:'INTAKE-B'},{...saved,clientId:'client-b'}]){let consent=0;const {c}=setup(()=>{consent++;return true;});c.acceptVerifiedContext(saved,c.getGeneration());const resets=[];for(const stage of ['intake','cif','application','first-loan'])c.registerStage(stage,{isDirty:()=>stage==='cif',resetCase:()=>resets.push(stage)});assert.equal(await c.requestTransition({kind:'open',targetStage:'application',candidate:{...candidate,applicationReference:'APP-A'}}),true);assert.equal(consent,1);assert.deepEqual(resets,['intake','cif','application','first-loan']);}});
+for (const accept of [true, false]) test(`same reference new version reaches discard consent (${accept})`, async () => {
+  let confirmations = 0;
+  const { c } = setup(() => { confirmations++; return accept; });
+  c.acceptVerifiedContext({ ...saved, applicationReference: 'APP-A', applicationId: 'application-a', applicationVersionId: 'version-1' }, c.getGeneration());
+  const resets = [];
+  c.registerStage('cif', { isDirty: () => true, resetCase: () => resets.push('cif') });
+  c.registerStage('application', { resetCase: () => resets.push('application') });
+  c.registerStage('first-loan', { isDirty: () => true, resetCase: () => resets.push('first-loan') });
+  assert.equal(await c.requestTransition({ kind: 'open', targetStage: 'application', candidate: {
+    ...saved, applicationReference: 'APP-A', applicationId: 'application-a', applicationVersionId: 'version-2',
+  } }), accept);
+  assert.equal(confirmations, 1);
+  assert.deepEqual(resets, accept ? ['application', 'first-loan'] : []);
+  assert.equal(c.getContext().applicationVersionId, accept ? 'version-2' : 'version-1');
+});
+test('version-only replacement retains global pending and uncertain locks', async () => {
+  for (const lock of ['isWritePending', 'isUncertain']) {
+    const { c } = setup(() => assert.fail('A locked operation is not discardable'));
+    c.acceptVerifiedContext({ ...saved, applicationReference: 'APP-A', applicationId: 'application-a', applicationVersionId: 'version-1' }, c.getGeneration());
+    c.registerStage('cif', { [lock]: () => true });
+    let reads = 0;
+    assert.equal(await c.requestTransition({ kind: 'open', targetStage: 'application', candidate: () => {
+      reads++; return { ...saved, applicationReference: 'APP-A', applicationId: 'application-a', applicationVersionId: 'version-2' };
+    } }), false);
+    assert.equal(reads, 0);
+    assert.equal(c.getContext().applicationVersionId, 'version-1');
+  }
+});

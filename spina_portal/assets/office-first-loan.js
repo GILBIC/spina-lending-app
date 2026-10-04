@@ -58,15 +58,21 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   const isUncertain=()=>!disposed && state==='blocked';
   function edited(){revision++;coordinator.invalidateCandidate();}
   function searchEdited(){lookupRequest={};coordinator.invalidateCandidate();if(status && state==='editing'){wipe(status);status.innerHTML='';}}
-  function contextFor(selection,saved,result){const selectedLoan=result.loans.find(item=>item.status!=='cancelled') ?? result.loans[0];
-    const loanVersionId=selectedLoan?.packet.application.id ?? selectedLoan?.packet.application.application_version_id;
+  const packetVersion = record => record?.packet.application.id ?? record?.packet.application.application_version_id;
+  const sameVersion = (record, saved) => uid(packetVersion(record))
+    && packetVersion(record).toLowerCase() === saved.application_version_id.toLowerCase();
+  function contextFor(selection,saved,result){
+    // The protected endpoint returns history for every version of this header.
+    // Only a matching packet proves a status for the selected saved version.
+    const matching = result.loans.filter(record => sameVersion(record,saved));
+    const selectedLoan = matching.find(record=>record.status!=='cancelled') ?? matching[0];
     return {mode:'saved-case',intakeReference:selection.application_reference,clientId:saved.client_id,
     applicationReference:saved.application_reference,applicationId:saved.application_id,applicationVersionId:saved.application_version_id,applicationSaved:true,
     stageFacts:{application:{intakeReference:selection.application_reference,clientId:saved.client_id,applicationReference:saved.application_reference,applicationId:saved.application_id,applicationVersionId:saved.application_version_id,versionNumber:saved.version_number,status:'Saved application version'},
       'first-loan':{intakeReference:selection.application_reference,clientId:saved.client_id,applicationReference:saved.application_reference,applicationId:saved.application_id,applicationVersionId:saved.application_version_id,
-        status:selectedLoan ? (loanVersionId===saved.application_version_id ? selectedLoan.status : 'Unavailable') : 'No recorded first loan'}}};}
+        status:selectedLoan ? selectedLoan.status : result.loans.length ? 'Unavailable' : 'No recorded first loan'}}};}
   function validRecords(result,saved){return object(result) && Array.isArray(result.loans) && result.loans.every(item=>validLoan(item,saved)
-    && (!(item.packet.application.id ?? item.packet.application.application_version_id) || (item.packet.application.id ?? item.packet.application.application_version_id)===saved.application_version_id))
+    && (packetVersion(item)==null || uid(packetVersion(item))))
     && (result.decisions===undefined || (Array.isArray(result.decisions) && result.decisions.every(item=>uid(item.id)&&uid(item.application_version_id)&&['rejected','approval_cancelled'].includes(item.decision)&&typeof item.reason==='string')))
     && result.loans.every(item=>item.evidence===undefined || (object(item.evidence) && Object.entries(item.evidence).every(([purpose,value])=>['borrower_contract_signed','borrower_cash_received'].includes(purpose)&&object(value)&&/^office-evidence:[0-9a-f-]{36}$/i.test(value.evidence_reference))));}
 
@@ -335,7 +341,9 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
     disclosure = null; disclosureTerms = null;
     clearActions(); wipe(workspace);
     workspace.innerHTML = `<h3>First loan · ${esc(review.application_reference)}</h3><p>Saved application version ${esc(review.version_number)}. CIF/application confirmation, loan signing and cash acknowledgment remain separate.</p>${button('reload', 'Reload saved record')}
-      ${loan ? loanMarkup() : emptyState('No first-loan approval has been recorded for this application.')}
+      ${loan ? `<p>Recorded packet application version: ${esc(loan.packet.application.version_number ?? 'Not loaded')}. ${packetVersion(loan)
+        ? sameVersion(loan,review) ? 'This packet belongs to the selected saved version.' : 'This packet belongs to a different saved version from the selected application.'
+        : 'This packet source version is unavailable.'}</p>${loanMarkup()}` : emptyState('No first-loan approval has been recorded for this application.')}
       ${decisions.length ? `<details><summary>Recorded Management decisions</summary>${decisions.map((decision) => `<p>${esc(decision.decision.replaceAll('_', ' '))}: ${esc(decision.reason)} · ${esc(decision.recorded_at || '')}</p>`).join('')}</details>` : ''}
       ${manager && (!loan || loan.status === 'cancelled') ? approvalMarkup() : ''}`;
     baseline=values();
