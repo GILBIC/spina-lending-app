@@ -15,6 +15,7 @@ import { mountOfficeCifSelection } from '../office-cif-selection.js';
 import { mountOfficeApplicationReview } from '../office-application-review.js';
 import { mountOfficeFirstLoan } from '../office-first-loan.js';
 import { mountOfficeOnboarding } from '../office-onboarding.js';
+import { createOfficeCaseContext } from '../office-case-context.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
 import { mountRemittanceReview } from '../remittance-review.js';
@@ -138,7 +139,7 @@ function overviewMetrics(metrics) {
   }).join('');
 }
 
-function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskChange=()=>{}} = {}) {
+function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskChange=()=>{}} = {}, coordinator) {
   const workflow = root.querySelector('[data-office-workflow]');
   if (!workflow) return () => {};
 
@@ -148,24 +149,13 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
     panels.map((panel) => [panel.getAttribute('data-office-step'), panel]),
   );
 
-  const read = (step, name) => {
-    const control = panelByStep.get(step)?.querySelector(`[name="${name}"]`);
-    return String(control?.value || '').trim();
-  };
-  let selectedStep = 'intake';
   let disposed = false;
   const feedback = workflow.querySelector('[data-office-case-feedback]');
   let navigationVersion = 0;
-  const referencesFor = step => ({
-    intake: read(step, ['intake','cif'].includes(step) ? 'applicationReference' : 'intakeReference'),
-    application: ['application','first-loan'].includes(step) ? read(step,'applicationReference') : '',
-  });
-  const sameIntake = (a,b) => a.toLowerCase() === b.toLowerCase();
   function show(step) {
     if (disposed) return;
     navigationVersion += 1;
     beforeTaskChange();
-    selectedStep = step;
     feedback.innerHTML = '';
     for (const panel of panels) {
       if (panel.getAttribute('data-office-step') === step) panel.removeAttribute('hidden');
@@ -181,24 +171,23 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
     afterTaskChange();
   }
 
-  function activate(step) {
+  async function activate(step) {
     if (disposed || !panelByStep.has(step)) return;
-    const source = referencesFor(selectedStep), destination = referencesFor(step);
-    if (step !== 'intake' && source.intake) {
-      const application = source.application || (sameIntake(read('application','intakeReference'),source.intake) ? read('application','applicationReference') : '');
-      const hasApplication = ['application','first-loan'].includes(step);
-      const conflict = destination.intake && !sameIntake(destination.intake,source.intake)
-        || hasApplication && destination.application && (!destination.intake || application && application !== destination.application);
-      if (conflict) {
-        const version = ++navigationVersion;
-        feedback.innerHTML = '<p>This stage already contains a different case or application. Your existing work has been kept. Open it to review or clear it before changing cases.</p><button type="button" class="button button-outline" data-office-show-existing>Show existing case</button>';
-        feedback.querySelector('[data-office-show-existing]').addEventListener('click',()=>{if(version===navigationVersion)show(step);},{once:true});
-        return;
-      }
-      const intakeControl = panelByStep.get(step).querySelector(`[name="${step==='cif'?'applicationReference':'intakeReference'}"]`);
-      if (intakeControl && !destination.intake) intakeControl.value = source.intake;
-      if (step==='first-loan' && !destination.application && application) panelByStep.get(step).querySelector('[name="applicationReference"]').value = application;
+    const context = coordinator.getContext();
+    const intakeControl = panelByStep.get(step).querySelector(`[name="${['intake','cif'].includes(step)?'applicationReference':'intakeReference'}"]`);
+    const applicationControl = ['application','first-loan'].includes(step) ? panelByStep.get(step).querySelector('[name="applicationReference"]') : null;
+    // Editable destination text can prevent overwrite; it never establishes identity.
+    const conflict = step !== 'intake' && (context.intakeReference && intakeControl?.value.trim() && intakeControl.value.trim().toLowerCase() !== context.intakeReference.toLowerCase()
+      || context.applicationReference && applicationControl?.value.trim() && applicationControl.value.trim() !== context.applicationReference);
+    if (conflict) {
+      const version = ++navigationVersion;
+      feedback.innerHTML = '<p>This stage already contains a different case or application. Your existing work has been kept. Open it to review before changing cases.</p><button type="button" class="button button-outline" data-office-show-existing>Show existing case</button>';
+      feedback.querySelector('[data-office-show-existing]').addEventListener('click',()=>{if(version===navigationVersion)show(step);},{once:true});
+      return;
     }
+    if (!await coordinator.requestTransition({kind:'navigate',targetStage:step}) || disposed) return;
+    if (step !== 'intake' && intakeControl && !intakeControl.value.trim() && context.intakeReference) intakeControl.value = context.intakeReference;
+    if (applicationControl && !applicationControl.value.trim() && context.applicationReference) applicationControl.value = context.applicationReference;
     show(step);
   }
 
@@ -208,7 +197,7 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
     return () => button.removeEventListener('click', handler);
   });
 
-  activate('intake');
+  show('intake');
   return () => {disposed = true; removers.forEach((remove) => remove());};
 }
 
@@ -529,8 +518,10 @@ export async function mountManagementWorkspace(context) {
   add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
   add('management-loans','management-clients-loans','Portfolio',async()=>{const h=mountManagementPortfolio({...options('[data-management-portfolio]')});await h.refresh();return h;});
   add('management-office','management-clients-loans','Office applications',()=>{
-    const handlers=[mountOfficeFirstLoan(options('[data-office-first-loan]')),mountOfficeOnboarding(options('[data-office-onboarding]')),mountOfficeCifSelection(options('[data-office-cif-selection]')),mountOfficeApplicationReview(options('[data-office-application-review]')),bindManagementOfficeWorkflow(root,context)];
-    return ()=>handlers.forEach(dispose=>dispose?.());
+    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard});
+    const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,registerHandle:handle=>coordinator.registerStage(stage,handle),onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
+    const handlers=[mountOfficeFirstLoan(stageOptions('[data-office-first-loan]','first-loan')),mountOfficeOnboarding(stageOptions('[data-office-onboarding]','intake')),mountOfficeCifSelection(stageOptions('[data-office-cif-selection]','cif')),mountOfficeApplicationReview(stageOptions('[data-office-application-review]','application')),bindManagementOfficeWorkflow(root,context,coordinator)];
+    return ()=>{coordinator.dispose();handlers.forEach(dispose=>dispose?.());};
   },'client_onboarding.requirement.review');
   add('management-renewals','management-clients-loans','Renewals',async()=>{
     const h=mountManagementRenewals({...options('[data-management-renewal-workflow]'),onSaved:refreshOverview});await h.refresh();return h;

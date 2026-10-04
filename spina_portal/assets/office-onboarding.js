@@ -1,5 +1,6 @@
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
+import { createOfficeCaseContext } from './office-case-context.js';
 
 const mounts = new WeakMap();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -54,7 +55,7 @@ export function mountOfficeOnboarding(options) {
 
 // The two role surfaces share selection and request disposal; their forms,
 // response projections and mutation permissions remain specific to onboarding.
-export function mountOnboardingCase({ root, api, session, signal, collector }) {
+export function mountOnboardingCase({ root, api, session, getSession = () => session, signal, collector, registerHandle, onContextChange, officeCaseContext, confirmDiscard }) {
   mounts.get(root)?.();
   root.innerHTML = '';
   let disposed = false;
@@ -62,6 +63,9 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
   let state = 'idle';
   let record = null;
   let intakeUncertain = false;
+  let writeUncertain = false, baseline = '', revision = 0;
+  const coordinator = collector ? null : officeCaseContext ?? createOfficeCaseContext({getSession,confirmDiscard});
+  const ownsCoordinator = !collector && !officeCaseContext;
   let caseListeners = [];
   const listeners = [];
   let caseRoot;
@@ -91,6 +95,19 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
     state = 'idle';
     replaceCase();
     if (statusRoot) statusRoot.innerHTML = '';
+    baseline = '';
+  }
+  const values = () => JSON.stringify(['input','textarea','select'].flatMap(selector=>[...(caseRoot?.querySelectorAll(selector) ?? [])].map(control=>[control.value,Boolean(control.checked)])));
+  const isDirty = () => Boolean(caseRoot?.querySelector('form')) && values() !== baseline;
+  function contextFor(result) { return {mode:'saved-case',applicantId:result.applicant_id ?? null,intakeReference:result.application_reference,clientId:result.client_id ?? null,
+    stageFacts:{intake:{applicantId:result.applicant_id ?? null,intakeReference:result.application_reference,clientId:result.client_id ?? null,status:result.status}}}; }
+  function publish() { if (coordinator) onContextChange?.(coordinator.getContext()); }
+  function edited() { revision++; coordinator?.invalidateCandidate(); }
+  function trackBaseline() {
+    baseline = values();
+    if (!collector) for (const selector of ['input','textarea','select']) for (const control of caseRoot.querySelectorAll(selector)) {
+      listen(control,'input',edited); listen(control,'change',edited);
+    }
   }
   function dispose() {
     if (disposed) return;
@@ -100,18 +117,21 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
     signal?.removeEventListener('abort', dispose);
     if (referenceInput) referenceInput.value = '';
     root.innerHTML = '';
+    if (ownsCoordinator) coordinator.dispose();
+    else if (!collector) onContextChange?.({mode:'none',intakeReference:null});
     if (mounts.get(root) === dispose) mounts.delete(root);
   }
   function current(request) { return !disposed && token === request; }
   function fail(error, reloadReference = null) {
     if ([401, 403].includes(error?.status)) {
+      coordinator?.dispose();
       dispose();
       root.innerHTML = `<div role="alert">${errorCard(error, 'Onboarding access is unavailable.')}</div>`;
       return;
     }
     statusRoot.innerHTML = `<div role="alert">${errorCard(error)}</div>${reloadReference
       ? '<p>Reload the intake case before changing it again.</p><button type="button" class="button button-outline" data-reload-case>Reload intake case</button>' : ''}`;
-    if (reloadReference) listen(statusRoot.querySelector('[data-reload-case]'), 'click', () => loadCase(reloadReference));
+    if (reloadReference) listen(statusRoot.querySelector('[data-reload-case]'), 'click', () => loadCase(reloadReference,{refresh:true}));
   }
   function field(name) { return caseRoot.querySelector(`[name="${name}"]`); }
   function setDisabled(disabled) {
@@ -125,29 +145,50 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
   }
   function clear() {
     if (disposed) return;
-    invalidate();
-    referenceInput.value = '';
-    referenceInput.focus();
+    if (collector) { invalidate(); referenceInput.value = ''; referenceInput.focus(); return; }
+    void coordinator.requestTransition({kind:'close',targetStage:'intake'}).then(accepted=>{if(accepted){referenceInput.value='';publish();}referenceInput.focus();});
   }
 
-  async function loadCase(reference) {
+  async function loadCase(reference, {refresh=false, confirmedSave=false} = {}) {
     if (disposed) return;
-    invalidate();
+    if (!collector && !refresh && (state === 'saving' || intakeUncertain || writeUncertain)) return;
+    if (collector) invalidate(); else token = {};
     const request = token;
     const selected = reference.trim();
     if (!selected) { fail(new Error('Enter the office intake reference.')); return; }
-    state = 'loading';
+    if (collector) state = 'loading';
     statusRoot.innerHTML = loadingPanel('Loading office intake record…');
     try {
-      const result = await api.request(`${base}/by-reference/${encodeURIComponent(selected)}/${collector ? 'visit-case' : 'case'}`, { signal });
-      if (!current(request)) return;
-      if (!validCase(result, selected, collector)) throw new Error('The intake case response is invalid or does not match this reference.');
+      let result;
+      const read = async () => {
+        result = await api.request(`${base}/by-reference/${encodeURIComponent(selected)}/${collector ? 'visit-case' : 'case'}`, { signal });
+        if (!current(request)) return null;
+        if (!validCase(result, selected, collector)) throw new Error('The intake case response is invalid or does not match this reference.');
+        return contextFor(result);
+      };
+      if (!collector && !refresh) {
+        const accepted = await coordinator.requestTransition({kind:'open',targetStage:'intake',candidate:read});
+        if (!accepted || disposed) { if (current(request)) statusRoot.textContent = 'Your existing work has been kept.'; return; }
+        token = request;
+      } else { await read(); if (!current(request)) return; }
       record = result;
       referenceInput.value = result.application_reference;
       statusRoot.innerHTML = '';
       state = 'case';
+      writeUncertain = false;
       renderCase();
-    } catch (error) { if (current(request)) { state = 'blocked'; fail(error); } }
+      if (!collector && refresh) coordinator.acceptVerifiedContext(contextFor(result),coordinator.getGeneration());
+      publish();
+    } catch (error) {
+      if (current(request) || [401,403].includes(error?.status)) {
+        if (collector) state = 'blocked';
+        fail(error,!collector&&refresh ? selected : null);
+        if (!disposed && confirmedSave) {
+          replaceCase('<p>The office intake was saved. Current intake details are unavailable. Use Reload intake case to read the saved record.</p>');
+          referenceInput.value=selected;
+        }
+      }
+    }
   }
 
   async function mutate(path, body, { method = 'POST', intake = false, eligibility = false } = {}) {
@@ -175,12 +216,16 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
         throw new Error('The saved result could not be verified.');
       }
       if (intake) { intakeUncertain = false; newButton.disabled = false; }
-      await loadCase(intake ? result.application_reference : selected);
+      state = 'blocked';
+      if (!collector) coordinator.acceptVerifiedContext(contextFor({...result,application_reference:intake ? result.application_reference : selected,applicant_id:record?.applicant_id,client_id:result.client_id ?? record?.client_id}),coordinator.getGeneration());
+      baseline = values();
+      await loadCase(intake ? result.application_reference : selected,{refresh:true,confirmedSave:true});
     } catch (error) {
       if (!current(request)) return;
       const retry = [400, 422].includes(error?.status);
       state = retry ? (intake ? 'intake' : 'case') : 'blocked';
       if (intake && retry) { intakeUncertain = false; newButton.disabled = false; }
+      if (!collector && !intake) writeUncertain = !retry;
       setDisabled(!retry);
       fail(error, !retry && !intake ? selected : null);
       if (intake && !retry && !disposed) statusRoot.innerHTML += '<p>The intake outcome is uncertain. Do not submit another intake; verify the office record before continuing.</p>';
@@ -197,8 +242,9 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
   function renderIntake() {
     if (disposed || intakeUncertain) return;
     invalidate();
+    referenceInput.value = '';
     state = 'intake';
-    replaceCase(`<form class="entry-form" data-intake-form><h3>New office intake</h3>
+    replaceCase(`<form class="entry-form" data-intake-form><h3>New intake — not yet saved</h3>
       <p>Record evidence references from the approved external verification process. Entering a reference does not verify a document or pass a requirement.</p>
       ${INTAKE_FIELDS.map(([name, title, minimum, maximum]) => `<label>${escapeHtml(title)}${name === 'present_address'
         ? `<textarea name="${name}" minlength="${minimum}" maxlength="${maximum}" required></textarea>`
@@ -221,6 +267,7 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
       }
       mutate(OFFICE, { ...values, privacy_consent: true, accuracy_declaration: true }, { intake: true });
     });
+    trackBaseline(); publish();
   }
 
   function renderCase() {
@@ -282,6 +329,7 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
         mutate(`${OFFICE}/${encodeURIComponent(currentCase.applicant_id)}/eligibility/bypass`, { bypassed_requirements: selected, reason }, { eligibility: true });
       });
     }
+    trackBaseline();
   }
 
   mounts.set(root, dispose);
@@ -292,7 +340,7 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
     root.innerHTML = emptyState('The required role and onboarding permission are needed.'); return dispose;
   }
   root.innerHTML = `<form class="entry-form" data-case-lookup><label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>
-    <div class="action-row"><button class="button button-primary" type="submit">${collector ? 'Open residence visit' : 'Open intake case'}</button><button class="button button-outline" type="button" data-clear-case>Clear</button>
+    <div class="action-row"><button class="button button-primary" type="submit">${collector ? 'Open residence visit' : 'Open intake case'}</button><button class="button button-outline" type="button" data-clear-case>${collector ? 'Clear' : 'Close case'}</button>
     ${collector ? '' : '<button class="button button-outline" type="button" data-new-intake>New office intake</button>'}</div></form>
     <div data-onboarding-status role="status" aria-live="polite"></div><div data-onboarding-case></div>`;
   caseRoot = root.querySelector('[data-onboarding-case]');
@@ -301,9 +349,20 @@ export function mountOnboardingCase({ root, api, session, signal, collector }) {
   statusRoot.setAttribute('tabindex', '-1');
   referenceInput = root.querySelector('[name="applicationReference"]');
   listen(root.querySelector('[data-case-lookup]'), 'submit', (event) => { event.preventDefault(); loadCase(referenceInput.value); }, false);
-  listen(referenceInput, 'input', invalidate, false);
-  listen(referenceInput, 'change', invalidate, false);
+  const editLookup = collector ? invalidate : () => { if(state !== 'saving') token = {}; edited(); };
+  listen(referenceInput, 'input', editLookup, false);
+  listen(referenceInput, 'change', editLookup, false);
   listen(root.querySelector('[data-clear-case]'), 'click', clear, false);
-  if (!collector) { newButton = root.querySelector('[data-new-intake]'); listen(newButton, 'click', renderIntake, false); }
+  if (!collector) {
+    const handle = {getContext:()=>coordinator.getContext(),isDirty,isWritePending:()=>state==='saving',isUncertain:()=>intakeUncertain||writeUncertain,getRevision:()=>revision,
+      openCase:selection=>loadCase(selection.intakeReference),resetCase:()=>{if(state==='saving'||intakeUncertain||writeUncertain)return false;invalidate();referenceInput.value='';return true;},refreshReadOnly:()=>record&&!isDirty()&&!intakeUncertain&&state!=='saving'?loadCase(record.application_reference,{refresh:true}):false,dispose};
+    registerHandle?.(handle); if(ownsCoordinator) coordinator.registerStage('intake',handle);
+    newButton = root.querySelector('[data-new-intake]');
+    listen(newButton, 'click', () => {
+      const result = coordinator.requestTransition({kind:'new-intake',targetStage:'intake'});
+      if(state==='idle' && coordinator.getContext().mode==='new-intake') renderIntake();
+      else void result.then(accepted=>{if(accepted&&!disposed)renderIntake();else newButton.focus();});
+    }, false);
+  }
   return dispose;
 }

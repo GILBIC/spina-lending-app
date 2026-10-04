@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {setImmediate} from 'node:timers/promises';
 
 import { mountManagementWorkspace } from '../assets/roles/management.js';
 import { Element, fire } from './helpers/dom.mjs';
@@ -12,6 +13,7 @@ class ManagementElement extends Element {
 }
 
 function response(path) {
+  if(path.includes('/onboarding/applicants/by-reference/'))return {applicant_id:'11111111-1111-4111-8111-111111111111',application_reference:'INTAKE-123',status:'under_verification',client_id:null,full_name:'Saved office applicant',phone_number:'00000000000',email:null,present_address:'Saved address',privacy_consent:true,accuracy_declaration:true,bypassed_requirements:[],bypass_reason:null,requirements:Object.fromEntries(['national_id','tin_id','meralco_bill','collector_visit'].map(name=>[name,{status:'pending',evidence_reference:null,note:null}]))};
   if (path === '/api/v1/account') return { profile: { full_name: 'Management User' }, devices: [] };
   if (path === '/api/v1/management/dashboard-overview') return { metrics: [] };
   if (path.startsWith('/api/v1/management/loans')) return { summary: {}, loans: [] };
@@ -20,7 +22,7 @@ function response(path) {
   return {};
 }
 
-test('Management office workflow shows one stage at a time and carries references forward safely', async () => {
+test('Management office workflow carries verified identity while lookup and application text stay candidates', async () => {
   const root = new ManagementElement();
   root.dataset = {};
   const calls = [];
@@ -53,6 +55,7 @@ test('Management office workflow shows one stage at a time and carries reference
       ['intake', 'cif', 'application', 'first-loan'],
     );
 
+    const step=async index=>{fire(buttons[index],'click');await setImmediate();};
     const panels = workflow.querySelectorAll('[data-office-step]');
     assert.equal(panels.length, 4);
     assert.equal(panels[0].getAttribute('hidden'), null);
@@ -62,43 +65,49 @@ test('Management office workflow shows one stage at a time and carries reference
     intakeInput.value = 'INTAKE-123';
 
     const baselineCalls = calls.length;
-    fire(buttons[1], 'click');
+    await step(1);
     assert.equal(calls.length, baselineCalls, 'step navigation does not invent API authority');
     assert.equal(panels[0].getAttribute('hidden'), '');
     assert.equal(panels[1].getAttribute('hidden'), null);
-    assert.equal(panels[1].querySelector('[name="applicationReference"]').value, 'INTAKE-123');
+    assert.equal(panels[1].querySelector('[name="applicationReference"]').value, '', 'typed text has no case authority');
+    await step(0);
+    fire(panels[0].querySelector('[data-case-lookup]'),'submit');await setImmediate();
+    await step(1);
+    assert.equal(panels[1].querySelector('[name="applicationReference"]').value,'INTAKE-123');
+    const verifiedCalls=calls.length;
 
-    fire(buttons[2], 'click');
+    await step(2);
     assert.equal(panels[2].querySelector('[name="intakeReference"]').value, 'INTAKE-123');
     panels[2].querySelector('[name="applicationReference"]').value = 'APP-456';
 
-    fire(buttons[3], 'click');
+    await step(3);
     assert.equal(panels[3].querySelector('[name="intakeReference"]').value, 'INTAKE-123');
-    assert.equal(panels[3].querySelector('[name="applicationReference"]').value, 'APP-456');
+    assert.equal(panels[3].querySelector('[name="applicationReference"]').value, '', 'typed application reference has no saved or draft authority');
     assert.equal(buttons[3].getAttribute('aria-current'), 'step');
     assert.equal(buttons[0].getAttribute('aria-current'), null);
 
-    fire(buttons[0], 'click');
+    await step(0);
     intakeInput.value = 'INTAKE-OTHER';
     const firstLoanIntake=panels[3].querySelector('[name="intakeReference"]');
-    fire(buttons[1], 'click');
-    assert.equal(buttons[0].getAttribute('aria-current'), 'step', 'A conflicting case must not silently open the old CIF');
-    assert.match(workflow.querySelector('[data-office-case-feedback]').textContent,/different case/i);
+    await step(1);
+    assert.equal(buttons[1].getAttribute('aria-current'), 'step', 'editing a candidate does not replace the verified case');
     assert.equal(firstLoanIntake.value,'INTAKE-123');
-    assert.equal(calls.length,baselineCalls);
-    fire(workflow.querySelector('[data-office-show-existing]'),'click');
+    assert.equal(calls.length,verifiedCalls);
     assert.equal(buttons[1].getAttribute('aria-current'),'step');
     assert.equal(panels[1].querySelector('[name="applicationReference"]').value,'INTAKE-123');
 
-    fire(buttons[2],'click');
+    await step(2);
     firstLoanIntake.value='';
     panels[3].querySelector('[name="applicationReference"]').value='OTHER-APPLICATION';
-    fire(buttons[3],'click');
-    assert.equal(firstLoanIntake.value,'','A conflicting pair must be checked before either reference is filled');
-    assert.equal(buttons[2].getAttribute('aria-current'),'step');
+    await step(3);
+    assert.equal(firstLoanIntake.value,'INTAKE-123');
+    assert.equal(buttons[3].getAttribute('aria-current'),'step');
     assert.equal(panels[3].querySelector('[name="applicationReference"]').value,'OTHER-APPLICATION');
+    firstLoanIntake.value='OTHER-INTAKE';await step(0);await step(3);
+    assert.equal(buttons[0].getAttribute('aria-current'),'step');
+    assert.match(workflow.querySelector('[data-office-case-feedback]').textContent,/different case/i);
     const staleConflict=workflow.querySelector('[data-office-show-existing]');
-    fire(buttons[0],'click');
+    await step(0);
     fire(staleConflict,'click');
     assert.equal(buttons[0].getAttribute('aria-current'),'step','A superseded conflict control cannot change the current stage');
   } finally {

@@ -179,7 +179,7 @@ function reviewMarkup(review) {
   </article>`;
 }
 
-export function mountOfficeApplicationReview({ root, api, session, signal }) {
+export function mountOfficeApplicationReview({ root, api, session, signal, onContextChange, officeCaseContext }) {
   mounts.get(root)?.();
   root.innerHTML = '';
   let disposed = false;
@@ -423,6 +423,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
     }
     invalidate();
     const token = currentRequest;
+    const caseGeneration = officeCaseContext?.getGeneration();
     const intakeReference = intakeInput.value.trim();
     if (!intakeReference) {
       statusRoot.innerHTML = `<div role="alert">${errorCard(new Error('Enter the office intake reference. A new application reference will be generated.'))}</div>`;
@@ -439,7 +440,10 @@ export function mountOfficeApplicationReview({ root, api, session, signal }) {
         || selection.application_reference.trim().toLowerCase() !== intakeReference.toLowerCase()) {
         throw new Error('The office intake response is invalid or does not match the entered reference.');
       }
+      if (officeCaseContext && caseGeneration !== officeCaseContext.getGeneration()) return;
       if (!applicationInput.value.trim()) applicationInput.value = `LOAN-${crypto.randomUUID()}`;
+      if (onContextChange?.({mode:'saved-case',intakeReference:selection.application_reference,clientId:selection.client_id,
+        applicationReference:applicationInput.value.trim(),applicationId:null,applicationVersionId:null,applicationSaved:false}) === false) return;
       openEntry(selection.client_id);
     } catch (error) {
       if (disposed || currentRequest !== token) return;

@@ -143,8 +143,10 @@ async function retainDrafts(h) {
   const workflow = h.root.querySelector('[data-office-workflow]');
   const intake = h.root.querySelector('[data-office-onboarding]').querySelector('[name="applicationReference"]');
   intake.value = INTAKE; fire(intake, 'input');
-  fire(workflow.querySelector('[data-office-step-target="application"]'), 'click');
+  fire(workflow.querySelector('[data-office-step-target="application"]'), 'click');await setImmediate();
   const application = h.root.querySelector('[data-office-application-review]');
+  // Each stage verifies its candidate; editable intake text is not a case handoff.
+  application.querySelector('[name="intakeReference"]').value = INTAKE;
   application.querySelector('[name="applicationReference"]').value = APPLICATION_REFERENCE;
   fire(application.querySelector('form'), 'submit'); await setImmediate();
   assert.ok(application.querySelector('[data-prepare-application-confirmation]'), 'Open the actual authorized application review');
