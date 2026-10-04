@@ -46,7 +46,7 @@ function editedInformation(fields) {
 export function mountOfficeCifCorrection({
   root, api, session, clientId, signal, onEditing, onClosed, onSaved, onAccessDenied,
   allowSuccessor = false, includeIdentity = false,
-  beforeEditing, onDraftChange,
+  beforeEditing, getGeneration, onDraftChange,
 }) {
   mounts.get(root)?.();
   root.innerHTML = '';
@@ -100,7 +100,7 @@ export function mountOfficeCifCorrection({
 
   function start() {
     state = 'idle';
-    replaceContent('<button class="button button-outline" type="button" data-correct-cif>Correct information</button>');
+    replaceContent('<button class="button button-outline" type="button" data-correct-cif>Correct information</button><div data-correction-status role="status" aria-live="polite"></div>');
     listen(root.querySelector('[data-correct-cif]'), 'click', loadCurrent);
   }
 
@@ -130,11 +130,12 @@ export function mountOfficeCifCorrection({
     return '<button class="button button-outline" type="button" data-reload-cif>Reload current CIF</button>';
   }
 
-  function showError(error, reload = false) {
+  function showError(error, reload = false, includeCancel = false) {
     const status = root.querySelector('[data-correction-status]');
     status.innerHTML = `<div role="alert">${errorCard(error)}</div>${reload
-      ? `<p>Reload the current CIF before saving again.</p>${reloadMarkup()}` : ''}`;
+      ? `<p>Reload the current CIF before saving again.</p>${reloadMarkup()}` : ''}${includeCancel ? cancelMarkup() : ''}`;
     if (reload) listen(status.querySelector('[data-reload-cif]'), 'click', loadCurrent);
+    if (includeCancel) bindCancel();
   }
 
   function setFieldsDisabled(disabled) {
@@ -172,23 +173,37 @@ export function mountOfficeCifCorrection({
   async function loadCurrent() {
     if (disposed || state === 'denied' || state === 'saving') return;
     const initiatingControl = root.querySelector('[data-correct-cif]');
-    if (beforeEditing && !await beforeEditing()) { initiatingControl?.focus(); return; }
-    if (disposed || state === 'saving') return;
-    clearSnapshot();
-    const token = request;
+    const previousState = state;
+    const generation = getGeneration?.() ?? revision;
+    const token = {}; request = token;
     state = 'loading';
-    replaceContent(`${loadingPanel('Loading current CIF for correction…')}${cancelMarkup()}`);
-    bindCancel();
-    onEditing?.();
-    if (!current(token)) return;
+    // Keep the existing authorized editor/workflow live until the target read
+    // validates and the current discard decision is accepted.
+    let status = root.querySelector('[data-correction-status]');
+    if (!status) {
+      status = root.ownerDocument.createElement('div');
+      status.setAttribute('data-correction-status',''); status.setAttribute('role','status');
+      root.appendChild(status);
+    }
+    const needsCancel = !root.querySelector('[data-cancel-cif]');
+    status.innerHTML = loadingPanel('Loading current CIF for correction…') + (needsCancel ? cancelMarkup() : '');
+    if (needsCancel) bindCancel();
+    const retain = () => { if(current(token)){state=previousState;status.textContent='Your existing work has been kept.';initiatingControl?.focus();} };
     try {
       const review = await api.request(
         `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary?include_correction_availability=true${includeIdentity ? '&include_identity_information=true' : ''}`,
       );
       if (!current(token)) return;
+      if ((getGeneration?.() ?? revision) !== generation) { retain(); return; }
       if (!validReview(review, clientId) || typeof review.can_correct_information !== 'boolean') {
         throw new Error('The current CIF response is invalid or does not match this Client.');
       }
+      if (beforeEditing && !await beforeEditing()) { retain(); return; }
+      if (!current(token)) return;
+      if ((getGeneration?.() ?? revision) !== generation) { retain(); return; }
+      original = null; expectedInformation = null;
+      onEditing?.();
+      if (!current(token)) return;
       successor = !review.can_correct_information && allowSuccessor;
       if (!review.can_correct_information && !allowSuccessor) {
         state = 'unavailable';
@@ -201,15 +216,16 @@ export function mountOfficeCifCorrection({
       renderForm(review);
       uncertain = false;
     } catch (error) {
-      if (!current(token)) return;
+      if (disposed) return;
       if ([401, 403].includes(error?.status)) {
         denyAccess(error);
         return;
       }
-      state = 'blocked';
-      replaceContent(`<div data-correction-status role="status" aria-live="polite"></div>${cancelMarkup()}`);
-      showError(error, true);
-      bindCancel();
+      if (!current(token)) return;
+      if ((getGeneration?.() ?? revision) !== generation) { retain(); return; }
+      state = previousState;
+      const cancelButton = root.querySelector('[data-cancel-cif]');
+      showError(error, true, !cancelButton || cancelButton.parentElement === status);
     }
   }
 

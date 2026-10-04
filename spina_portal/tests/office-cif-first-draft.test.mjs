@@ -30,3 +30,21 @@ for(const status of [404,409])test(`${status}: eligible selection requires expli
 for(const status of [401,403,500])test(`${status}: access or server errors never offer first-draft mutation`,async()=>{
  const h=await harness(status);assert.equal(h.root.querySelector('[data-begin-cif]'),null);assert.equal(h.calls.length,2);h.controller.abort();
 });
+for(const status of [404,409])test(`${status}: acknowledged first draft recovery never offers a second POST`,async()=>{
+ const root=new Element(),calls=[];let readable=false;const controller=new AbortController();let handle;
+ mountOfficeCifSelection({root,signal:controller.signal,registerHandle:value=>handle=value,session:{user:{role:'employee'},permissions:['client_onboarding.requirement.review']},api:{async request(path,options={}){
+  calls.push({path,options});
+  if(path.endsWith('/cif-client'))return {application_reference:'INTAKE-SAVED',client_id:CLIENT};
+  if(options.method==='POST')return {client_id:CLIENT,version_number:1,status:'draft'};
+  if(!readable)throw new ApiError('Summary unavailable',{status});
+  return {client_id:CLIENT,cif_version_id:CIF,version_number:1,status:'draft',review_scope:'cif_information_only',full_name:'Synthetic saved CIF',phone_number:'09170000000',email:null,present_address:'Synthetic address'};
+ }}});
+ root.querySelector('input').value='INTAKE-SAVED';fire(root.querySelector('form'),'submit');await setImmediate();
+ const begin=root.querySelector('[data-begin-cif]');fire(begin,'click');await setImmediate();
+ assert.match(root.textContent,/CIF draft saved.*details.*unavailable/i);assert.ok(root.querySelector('[data-reload-saved-cif]'));
+ const accidental=root.querySelector('[data-begin-cif]');if(accidental)fire(accidental,'click');fire(begin,'click');await setImmediate();
+ assert.equal(calls.filter(call=>call.options.method==='POST').length,1,'Acknowledged creation cannot be replayed');
+ assert.equal(root.querySelector('[data-begin-cif]'),null);assert.equal(handle.getContext().intakeReference,'INTAKE-SAVED');assert.equal(handle.getContext().clientId,CLIENT);
+ fire(root.querySelector('[data-reload-saved-cif]'),'click');await setImmediate();assert.equal(root.querySelector('[data-begin-cif]'),null);
+ readable=true;fire(root.querySelector('[data-reload-saved-cif]'),'click');await setImmediate();assert.ok(root.querySelector('[data-open-cif-workflow]'));assert.equal(calls.filter(call=>call.options.method==='POST').length,1);controller.abort();
+});

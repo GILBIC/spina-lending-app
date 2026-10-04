@@ -329,7 +329,7 @@ for (const stage of ['GET', 'PATCH']) {
       assert.ok(oldFields.every((element) => element.value === ''));
       assert.equal(h.root.querySelector('button'), null);
       assert.equal(h.root.querySelector('form'), null);
-      assert.deepEqual(h.callbacks, ['editing', 'denied']);
+      assert.deepEqual(h.callbacks, stage === 'GET' ? ['denied'] : ['editing', 'denied']);
       const count = h.calls.length;
       if (oldForm) fire(oldForm, 'submit');
       await setImmediate();

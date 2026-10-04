@@ -51,7 +51,8 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   function contextFor(selection, review) {
     return {mode:'saved-case', intakeReference:selection.application_reference, clientId:selection.client_id,
       stageFacts:{cif:{intakeReference:selection.application_reference, clientId:selection.client_id,
-        ...(review ? {cifVersionId:review.cif_version_id,versionNumber:review.version_number,status:review.status} : {})}}};
+        ...(review ? {...(review.cif_version_id ? {cifVersionId:review.cif_version_id} : {}),versionNumber:review.version_number,
+          ...(typeof review.status === 'string' ? {status:review.status} : {})} : {})}}};
   }
   function denyAccess(error) {
     if (disposed || mountedSelections.get(root) !== dispose) return;
@@ -167,6 +168,8 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
       }
       currentRequest = request; selected = selection;
       selectedReview = initialReview ?? null;
+      let establishedCif = Boolean(initialReview);
+      let correctionActive = false;
       input.value = selection.application_reference;
       onContextChange?.(coordinator.getContext());
       statusRoot.innerHTML = '';
@@ -186,11 +189,11 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
         recoveryCleanup=()=>button.removeEventListener('click',read);
       };
       const offerFirstDraft = (error) => {
-        if (disposed || currentRequest !== request || ![404, 409].includes(error?.status)) return;
+        if (disposed || currentRequest !== request || establishedCif || ![404, 409].includes(error?.status)) return;
         workflowRoot.innerHTML = '<p>No eligible current CIF is available. Start the first draft from this promoted Client when intake is eligible.</p><button type="button" data-begin-cif>Begin CIF draft</button><div data-begin-cif-status role="status"></div>';
         const button = workflowRoot.querySelector('[data-begin-cif]');
         const begin = async () => {
-          if (isWritePending() || beginUncertain || disposed || currentRequest !== request) return;
+          if (isWritePending() || beginUncertain || establishedCif || disposed || currentRequest !== request) return;
           beginning = true; button.disabled = true;
           try {
             const result = await api.request(`/api/v1/management/clients/${encodeURIComponent(selection.client_id)}/cif/draft`, { method: 'POST', signal });
@@ -198,6 +201,12 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
             if (result?.client_id !== selection.client_id || !Number.isSafeInteger(result.version_number) || result.version_number < 1) {
               throw new Error('The draft response could not be verified. Reload this intake before continuing.');
             }
+            // The acknowledged creation survives an unavailable subsequent read.
+            // Only reads may reconcile it; a missing summary is not permission
+            // to start a second creation operation.
+            establishedCif = true;
+            selectedReview = {version_number:result.version_number};
+            coordinator.acceptVerifiedContext(contextFor(selection,selectedReview),coordinator.getGeneration());
             const review = await openSelected();
             if (!review && !disposed && currentRequest === request) savedRecovery('CIF draft',openSelected);
           } catch (failure) {
@@ -219,6 +228,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
         const value = await mountOfficeCifReview({ root: reviewRoot, api, session, clientId: selection.client_id, onUnavailable: offerFirstDraft,
           ...(first === true ? {initialReview,initialError} : {}), onAccessDenied:denyAccess });
         if (value && !disposed && currentRequest === request) {
+          establishedCif = true;
           selectedReview = value;
           coordinator.acceptVerifiedContext(contextFor(selection,value),generation);
           workflowCleanup = mountOfficeCifWorkflow({ root: workflowRoot, api, session, clientId: selection.client_id, signal,
@@ -233,12 +243,14 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
         correctionCleanup = mountOfficeCifCorrection({
         root: correctionRoot, api, session, clientId: selection.client_id, signal,
         allowSuccessor: true, includeIdentity: true,
-        beforeEditing:beforeCorrection, onDraftChange:edited,
-        onEditing: clearReview,
-        onClosed: refreshReview,
+        beforeEditing:beforeCorrection, getGeneration:()=>coordinator.getGeneration(), onDraftChange:edited,
+        onEditing: () => { correctionActive=true; clearReview(); },
+        onClosed: () => { if(correctionActive){correctionActive=false;return refreshReview();} },
         onSaved: async saved => {
           if (disposed || currentRequest !== request) return;
+          correctionActive = false;
           selectedReview = saved;
+          establishedCif = true;
           coordinator.acceptVerifiedContext(contextFor(selection,saved),coordinator.getGeneration());
           statusRoot.textContent='CIF correction saved.';
           const value=await refreshReview();
