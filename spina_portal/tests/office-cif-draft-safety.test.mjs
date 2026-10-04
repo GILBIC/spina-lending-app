@@ -13,9 +13,9 @@ const summary={client_id:client,cif_version_id:version,version_number:1,status:'
 const pending=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};};
 function harness(confirmDiscard=()=>false){
  const root=new Element(), calls=[]; let currentSession=session;
- const h={root,calls,read:async path=>path.includes('/cif-client')?{application_reference:decodeURIComponent(path.split('/').at(-2)),client_id:client}:path.includes('review-summary')?summary:path.includes('/privacy/context')?{client_id:client,cif_version_id:version,subject_id:version,application_id:null,application_version_id:null,purpose:'privacy_acknowledgment',issuable:true,detail:'Synthetic privacy',snapshot_sha256:'a'.repeat(64),review_snapshot:{schema_version:1,scope:'privacy_acknowledgment',client_id:client,cif_version_id:version,optional_service_communications:false,notice:{version:'v1',sha256:'b'.repeat(64)},consent:{version:'v1',sha256:'c'.repeat(64)}}}:{client_id:client,cif_version_id:version,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)}};
+ const h={root,calls,storedSession:session,device:'synthetic-device',read:async path=>path.includes('/cif-client')?{application_reference:decodeURIComponent(path.split('/').at(-2)),client_id:client}:path.includes('review-summary')?summary:path.includes('/privacy/context')?{client_id:client,cif_version_id:version,subject_id:version,application_id:null,application_version_id:null,purpose:'privacy_acknowledgment',issuable:true,detail:'Synthetic privacy',snapshot_sha256:'a'.repeat(64),review_snapshot:{schema_version:1,scope:'privacy_acknowledgment',client_id:client,cif_version_id:version,optional_service_communications:false,notice:{version:'v1',sha256:'b'.repeat(64)},consent:{version:'v1',sha256:'c'.repeat(64)}}}:{client_id:client,cif_version_id:version,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)}};
  h.coordinator=createOfficeCaseContext({getSession:()=>currentSession,confirmDiscard});
- h.dispose=mountOfficeCifSelection({root,session,getSession:()=>currentSession,confirmDiscard,api:{request(path,options={}){calls.push({path,options});return h.read(path,options);}},officeCaseContext:h.coordinator,registerHandle:handle=>{h.handle=handle;h.coordinator.registerStage('cif',handle);}});
+ h.dispose=mountOfficeCifSelection({root,session,getSession:()=>currentSession,confirmDiscard,api:{sessionStore:{load:()=>h.storedSession,deviceId:()=>h.device},request(path,options={}){calls.push({path,options});return h.read(path,options);}},officeCaseContext:h.coordinator,registerHandle:handle=>{h.handle=handle;h.coordinator.registerStage('cif',handle);}});
  h.logout=()=>{currentSession=null;h.coordinator.getContext();};return h;
 }
 const input=h=>h.root.querySelector('[name="applicationReference"]');
@@ -47,3 +47,46 @@ test('cancel provisional correction read retains the authorized File workflow wi
 test('saved correction resets editing mode before another provisional correction read is cancelled',async()=>{const h=harness(()=>true);await open(h);fire(h.root.querySelector('[data-correct-cif]'),'click');await setImmediate();h.root.querySelector('[name="reason"]').value='Synthetic correction';const read=h.read;h.read=(path,options)=>options.method==='PATCH'?Promise.resolve(summary):read(path);fire(h.root.querySelector('[data-office-cif-correction]').querySelector('form'),'submit');await setImmediate();fire(h.root.querySelector('[data-open-cif-workflow]'),'click');await setImmediate();const signed=h.root.querySelector('[name="signedScan"]'),file=new File(['retained'],'signed.pdf',{type:'application/pdf'});signed.files=[file];fire(signed,'change');const hold=pending();h.read=path=>path.includes('include_correction')?hold.promise:read(path);fire(h.root.querySelector('[data-correct-cif]'),'click');await setImmediate();fire(h.root.querySelector('[data-cancel-cif]'),'click');hold.resolve(summary);await setImmediate();assert.equal(h.root.querySelector('[name="signedScan"]'),signed);assert.equal(signed.files[0],file);assert.equal(h.calls.filter(call=>call.options.method==='PATCH').length,1);h.dispose();});
 test('failed provisional correction read offers a working read-only retry before discard',async()=>{let consent=0;const h=harness(()=>{consent++;return true;}),f=await files(h),read=h.read;h.read=path=>path.includes('include_correction')?Promise.reject(Error('Synthetic target unavailable')):read(path);fire(h.root.querySelector('[data-correct-cif]'),'click');await setImmediate();retained(h,f);assert.equal(consent,0);h.read=read;const reload=h.root.querySelector('[data-reload-cif]');fire(reload,'click');await setImmediate();assert.ok(h.root.querySelector('[name="reason"]'));assert.equal(consent,1);assert.equal(h.calls.filter(call=>call.options.method).length,0);h.dispose();});
 test('correction target success rechecks pending child writes before discard consent',async()=>{let consent=0;const h=harness(()=>{consent++;return true;}),f=await files(h),target=pending(),save=pending(),read=h.read;h.read=(path,options)=>path.includes('include_correction')?target.promise:options.method==='POST'?save.promise:read(path);fire(h.root.querySelector('[data-correct-cif]'),'click');await setImmediate();fire(h.root.querySelector('[data-privacy-confirm]'),'submit');await setImmediate();target.resolve(summary);await setImmediate();assert.equal(consent,0);assert.equal(h.root.querySelector('[name="signedScan"]'),f.signed);assert.equal(h.root.querySelector('[name="reason"]'),null);assert.equal(h.handle.isWritePending(),true);save.reject(Error('Synthetic lost response'));await setImmediate();h.dispose();});
+
+test('a pending signed upload excludes sibling privacy and baseline writes without losing either File', async () => {
+  const h=harness(()=>true), f=await files(h), hold=pending(), read=h.read;
+  h.read=(path,options)=>options.method ? hold.promise : read(path);
+  h.root.querySelector('[name="witnessed"]').checked=true;
+  fire(h.root.querySelector('[data-signed-cif]').querySelector('form'),'submit');
+  await setImmediate();
+  fire(h.root.querySelector('[data-privacy-confirm]'),'submit');
+  h.root.querySelector('[name="providerReference"]').value='synthetic-provider';
+  h.root.querySelector('[name="providerPassed"]').checked=true;
+  fire(h.root.querySelector('[data-baseline-cif]'),'submit');
+  await setImmediate();
+  assert.equal(h.calls.filter(c=>c.options.method).length,1);
+  assert.equal(f.signed.files[0],f.a); assert.equal(f.privacy.files[0],f.b);
+  hold.reject(Error('Synthetic lost upload')); await setImmediate();
+  assert.equal(await h.coordinator.requestTransition({kind:'navigate',targetStage:'application'}),true);
+  assert.equal(await h.coordinator.requestTransition({kind:'new-intake'}),false);
+  h.dispose();
+});
+
+for(const loss of ['actor','permission','device','logout'])test(`stored ${loss} change disposes all CIF private owners before delayed upload continuation`,async()=>{
+ const h=harness(),f=await files(h),hold=pending(),read=h.read;
+ h.read=(path,options)=>options.method==='POST'?hold.promise:read(path);
+ fire(h.root.querySelector('[data-privacy-confirm]'),'submit');await setImmediate();
+ if(loss==='actor')h.storedSession={...session,user:{...session.user,id:'another-operator'}};
+ if(loss==='permission')h.storedSession={...session,permissions:[]};
+ if(loss==='device')h.device='changed-device';
+ if(loss==='logout')h.storedSession=null;
+ hold.resolve({evidence_id:version,evidence_reference:`office-evidence:${version}`,client_id:client,cif_version_id:version,application_id:null,application_version_id:null,purpose:'privacy_acknowledgment',snapshot_sha256:'a'.repeat(64)});
+ await setImmediate();
+ assert.equal(h.root.querySelector('[name="signedPrivacyScan"]'),null);assert.equal(f.privacy.value,'');assert.equal(f.witness.checked,false);
+ assert.equal(h.coordinator.getContext().intakeReference,null);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);
+ fire(f.privacy,'change');assert.equal(h.root.querySelector('[name="signedPrivacyScan"]'),null);h.dispose();
+});
+
+test('privacy preflight owner loss clears sibling private File owners before any request',async()=>{
+ const h=harness(),f=await files(h);h.storedSession={...session,permissions:[]};
+ fire(h.root.querySelector('[data-privacy-confirm]'),'submit');await setImmediate();
+ assert.equal(h.root.querySelector('[name="signedScan"]'),null);
+ assert.equal(h.root.querySelector('[name="signedPrivacyScan"]'),null);
+ assert.equal(f.witness.checked,false);assert.equal(h.calls.filter(c=>c.options.method).length,0);
+ h.dispose();
+});

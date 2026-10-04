@@ -10,7 +10,7 @@ export function officeCaseBanner(context,stage) {
 
 export function bindEmployeeOfficeCase({root,navigate,signal,getSession=()=>null,confirmDiscard}) {
  let disposed=false,lastStep='intake';const strips=new Map();
- const coordinator=createOfficeCaseContext({getSession,confirmDiscard,onChange:()=>{if(!disposed)render(lastStep);}});
+ const coordinator=createOfficeCaseContext({getSession,confirmDiscard,onChange:(_value,lifecycle)=>{if(lifecycle?.disposed){for(const strip of strips.values()){strip.textContent='';if(lifecycle.accessDenied){strip.textContent='Office access is unavailable. Sign in again before continuing.';strip.setAttribute('role','alert');}else strip.remove();}if(!lifecycle.accessDenied)strips.clear();return;}if(!disposed)render(lastStep);}});
  const section=step=>root.querySelector(`#${steps.find(item=>item[0]===step)?.[1]}`);
  function render(step) {
   const node=section(step);if(!node)return;

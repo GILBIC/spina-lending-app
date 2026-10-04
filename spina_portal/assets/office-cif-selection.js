@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { mountOfficeCifReview, isReviewForClient } from './office-cif-review.js';
 import { mountOfficeCifCorrection } from './office-cif-correction.js';
 import { mountOfficeCifWorkflow } from './office-cif-workflow.js';
@@ -40,8 +41,10 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   let beginning = false;
   let beginUncertain = false;
   let recoveryCleanup;
+  let recoverBegin = null;
   const coordinator = officeCaseContext ?? createOfficeCaseContext({getSession, confirmDiscard});
   const ownsCoordinator = !officeCaseContext;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && beginning,isUncertain:()=>!disposed && beginUncertain,dispose}, coordinator);
   const children = () => [correctionCleanup, workflowCleanup].filter(Boolean);
   const isDirty = () => children().some(child => child.isDirty?.());
   const isWritePending = () => beginning || children().some(child => child.isWritePending?.());
@@ -90,7 +93,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
     if (statusRoot) statusRoot.innerHTML = '';
     selected = null;
     selectedReview = null;
-    beginUncertain = false;
+    beginUncertain = false; recoverBegin=null;
     recoveryCleanup?.(); recoveryCleanup=null;
   }
 
@@ -188,6 +191,22 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
         button.addEventListener('click',read);
         recoveryCleanup=()=>button.removeEventListener('click',read);
       };
+      recoverBegin = async () => {
+        if(disposed || currentRequest!==request || beginning || !beginUncertain)return false;
+        beginning=true;
+        try {
+          const value=await api.request(`/api/v1/management/clients/${encodeURIComponent(selection.client_id)}/cif/review-summary`,{signal});
+          if(disposed || currentRequest!==request)return false;
+          if(!isReviewForClient(value,selection.client_id))throw new Error('The current CIF does not match the original Client.');
+          establishedCif=true;beginUncertain=false;selectedReview=value;
+          coordinator.acceptVerifiedContext(contextFor(selection,value),coordinator.getGeneration());
+          const loaded=await openSelected();
+          if(!disposed)statusRoot.textContent='A current CIF is established for the original Client. This read does not identify which request created it.';
+          if(!loaded && !disposed)savedRecovery('Established CIF',openSelected);
+          return true;
+        }catch(error){if([401,403].includes(error?.status)){denyAccess(error);return false;}if(!disposed)statusRoot.innerHTML=errorCard(error)+'<p>The original CIF draft outcome remains uncertain. Reload the original Client record.</p>';return false;}
+        finally{beginning=false;}
+      };
       const offerFirstDraft = (error) => {
         if (disposed || currentRequest !== request || establishedCif || ![404, 409].includes(error?.status)) return;
         workflowRoot.innerHTML = '<p>No eligible current CIF is available. Start the first draft from this promoted Client when intake is eligible.</p><button type="button" data-begin-cif>Begin CIF draft</button><div data-begin-cif-status role="status"></div>';
@@ -214,8 +233,10 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
             if ([401, 403].includes(failure?.status)) {
               denyAccess(failure); return;
             }
-            beginUncertain = ![400,404,409,422].includes(failure?.status);
-            workflowRoot.querySelector('[data-begin-cif-status]').innerHTML = errorCard(failure);
+            beginUncertain = !failure?.beforeWrite && ![400,404,409,422].includes(failure?.status);
+            const target=workflowRoot.querySelector('[data-begin-cif-status]');
+            target.innerHTML = errorCard(failure)+(beginUncertain?'<p>The original draft outcome is uncertain.</p><button type="button" data-reconcile-first-cif>Reload original Client CIF</button>':'');
+            target.querySelector('[data-reconcile-first-cif]')?.addEventListener('click',recoverBegin);
           } finally { beginning = false; if (!disposed && currentRequest === request) button.disabled = beginUncertain; }
         };
         button.addEventListener('click', begin);
@@ -317,7 +338,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   const handle = {getContext:()=>!disposed && selected ? contextFor(selected,selectedReview) : null, isDirty, getRevision:()=>revision, isWritePending, isUncertain,
     openCase:reference => { if(disposed)return false;input.value=reference; return openReview({preventDefault(){}}); },
     resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false; invalidate(); input.value=''; return true;},
-    refreshReadOnly:()=>{if(isDirty() || isWritePending() || isUncertain() || !selected)return false; return handle.openCase(selected.application_reference);}, dispose};
+    refreshReadOnly:()=>{if(beginUncertain)return recoverBegin?.()??false;if(correctionCleanup?.isUncertain?.())return correctionCleanup.refreshReadOnly();if(isDirty() || isWritePending() || isUncertain() || !selected)return false; return handle.openCase(selected.application_reference);}, dispose};
   registerHandle?.(handle); if (ownsCoordinator) coordinator.registerStage('cif',handle);
   return dispose;
 }

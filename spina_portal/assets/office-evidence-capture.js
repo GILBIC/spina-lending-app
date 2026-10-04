@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, hasPermission, loadingPanel } from './ui.js';
 
@@ -14,6 +15,7 @@ export function mountOfficeEvidenceCapture({
   let disposed = false; let context; let requestId; let selectedFile; let busy = false;
   let removers = [];
   let revision = 0, uncertain = false;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && busy,isUncertain:()=>!disposed && uncertain,dispose});
   const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId) && UUID.test(cifVersionId) && ['cif_review','application_review'].includes(purpose) && (purpose !== 'application_review' || (UUID.test(applicationId) && UUID.test(applicationVersionId)));
   const isDirty = () => !disposed && Boolean(root.querySelector('[name="signedScan"]')?.files?.length || root.querySelector('[name="witnessed"]')?.checked);
   function edited() { revision++; onDraftChange?.(); }
@@ -63,8 +65,8 @@ export function mountOfficeEvidenceCapture({
   }
   async function capture(event) {
     event.preventDefault(); if (disposed || busy || !context) return;
-    const file = root.querySelector('[name="signedScan"]').files?.[0];
-    if (!root.querySelector('[name="witnessed"]').checked || !file) {
+    const file = uncertain ? selectedFile : root.querySelector('[name="signedScan"]').files?.[0];
+    if ((!uncertain && !root.querySelector('[name="witnessed"]').checked) || !file) {
       fail(new Error('Witness the applicant’s wet signature and select the signed scan.')); return;
     }
     if (!TYPES.includes(file.type) || file.size < 1 || file.size > 10 * 1024 * 1024) {
@@ -74,6 +76,7 @@ export function mountOfficeEvidenceCapture({
     const query = new URLSearchParams(source);
     query.set('request_id', requestId); query.set('expected_snapshot_sha256', context.snapshot_sha256);
     query.set('witnessed_wet_signature', 'true');
+    const wasUncertain=uncertain;
     busy = true; root.querySelector('button[type="submit"]').disabled = true;
     root.querySelector('[data-capture-status]').innerHTML = loadingPanel('Saving signed review evidence…');
     try {
@@ -92,14 +95,15 @@ export function mountOfficeEvidenceCapture({
       onCaptured?.(record);
     } catch (error) {
       if (disposed) return;
-      if (error?.status === 409) {
+      if (error?.status === 409 && !wasUncertain) {
         uncertain = false;
         context = null; selectedFile = null; clear();
         root.innerHTML = `${errorCard(error)}<p>Reload this review before capturing another signed copy.</p>`;
-      } else { uncertain = ![400,404,422].includes(error?.status); fail(error); }
+      } else { uncertain = wasUncertain || !error?.beforeWrite && ![400,404,422].includes(error?.status); fail(error); }
     } finally {
       busy = false;
-      const submit = root.querySelector('button[type="submit"]'); if (submit && context) submit.disabled = false;
+      const submit = root.querySelector('button[type="submit"]'); if (submit && context) {submit.disabled = false;submit.textContent=uncertain?'Retry original signed evidence':'Save signed review evidence';}
+      for(const input of root.querySelectorAll('input'))input.disabled=uncertain;
     }
   }
   async function load() {

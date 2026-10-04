@@ -192,8 +192,7 @@ test('lookup denial is escaped and cannot restore previous applicant information
   await setImmediate();
   assertNoPii(h.root);
   assert.doesNotMatch(h.root.innerHTML, /<img\b/i);
-  assert.match(h.root.innerHTML, /&lt;img/);
-  assert.ok(h.root.querySelector('[role="alert"]'));
+  assert.equal(h.root.innerHTML,'');
 });
 
 for (const outcome of ['success', 'error']) {

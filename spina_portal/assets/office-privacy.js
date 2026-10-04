@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner, officeSessionOwner } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { errorCard, escapeHtml, hasPermission } from './ui.js';
 
@@ -32,22 +33,25 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   let busy = false;
   let context;
   let uncertain = false;
+  let operation = null;
   let writing = false, revision = 0;
   let savedOptional = false;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && writing,isUncertain:()=>!disposed && uncertain,dispose});
   const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId || '') && UUID.test(cifVersionId || '');
   const isDirty = () => !disposed && [...root.querySelectorAll('input')].some(input => input.getAttribute('type') === 'file' ? Boolean(input.files?.length) : input.getAttribute('name') === 'optionalServiceCommunications' ? Boolean(input.checked) !== savedOptional : Boolean(input.checked));
   function edited() { revision++; onDraftChange?.(); }
   function deny(error) { dispose(); onAccessDenied?.(error); }
   const listeners = [];
   let documentListeners = [];
-  const token = session?.access_token;
+  const mountedOwner = officeSessionOwner(session);
+  const mountedDevice = api.sessionStore?.deviceId?.();
   function alive() {
-    if (!disposed && (signal?.aborted || (api.sessionStore && api.sessionStore.load()?.access_token !== token))) dispose();
+    if (!disposed && (signal?.aborted || api.isOfficeCurrent?.() === false || (api.sessionStore && (officeSessionOwner(api.sessionStore.load()) !== mountedOwner || api.sessionStore.deviceId?.() !== mountedDevice)))) dispose();
     return !disposed;
   }
   function dispose() {
     if (disposed) return;
-    disposed = true; generation += 1; context = null;
+    disposed = true; generation += 1; context = null; operation = null;
     for (const [element, event, listener] of listeners) element.removeEventListener(event, listener);
     for (const remove of documentListeners) remove();
     documentListeners = [];
@@ -61,7 +65,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     isWritePending:()=>!disposed && writing,isUncertain:()=>!disposed && uncertain,
     openCase:()=>disposed || !authorized || isDirty() || busy || uncertain ? false : load(),
     resetCase:()=>{if(disposed || !authorized || writing || uncertain)return false;invalidate();optional.checked=false;savedOptional=false;return true;},
-    refreshReadOnly:()=>disposed || !authorized || isDirty() || busy ? false : load(),dispose});
+    refreshReadOnly:()=>disposed || !authorized || busy ? false : uncertain ? reconcile() : isDirty() ? false : load(),dispose});
   if (signal?.aborted) { dispose(); return dispose; }
   signal?.addEventListener('abort', dispose, {once:true});
   if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session,'client_onboarding.requirement.review') || !UUID.test(clientId || '') || !UUID.test(cifVersionId || '')) {
@@ -90,7 +94,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   const prefix = `/api/v1/management/clients/${encodeURIComponent(clientId)}`;
   function listen(element,event,handler) { element.addEventListener(event,handler); listeners.push([element,event,handler]); }
   function controls() {
-    optional.disabled = busy; refresh.disabled = busy;
+    optional.disabled = busy || uncertain; refresh.disabled = busy;
     for (const element of [...form.querySelectorAll('input'), ...form.querySelectorAll('button')]) element.disabled = busy || uncertain;
   }
   function invalidate() {
@@ -101,6 +105,8 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   }
   async function load() {
     if (!alive() || busy) return;
+    if (uncertain) return reconcile();
+    if (context && isDirty()) return false;
     invalidate(); const current = generation; busy = true; controls();
     try {
       const result = await api.request(`${prefix}/privacy/context?cif_version_id=${encodeURIComponent(cifVersionId)}&optional_service_communications=${optional.checked}`, {signal});
@@ -142,32 +148,70 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     } catch(error) { if(alive() && generation === current) { if ([401,403].includes(error?.status)) { deny(error); return; } context = null; form.hidden = true; documents.innerHTML = ''; status.innerHTML = errorCard(error); } }
     finally { if(alive()) { busy = false; controls(); } }
   }
-  listen(optional,'change',invalidate);
+  listen(optional,'change',()=>{if(busy || uncertain){optional.checked=operation?.optional ?? savedOptional;return;}invalidate();});
   for (const input of root.querySelectorAll('input')) { listen(input,'input',edited); listen(input,'change',edited); }
   listen(refresh,'click',load);
-  listen(form,'submit',async event => {
-    event.preventDefault();
-    if (!alive() || busy || uncertain || !context?.issuable || !witness.checked) return;
-    const file = fileInput.files?.[0];
-    if (!file || !['application/pdf','image/png','image/jpeg'].includes(file.type) || file.size <= 0 || file.size > 10485760) { status.textContent = 'Choose a signed PDF, PNG or JPEG of at most 10 MiB.'; return; }
-    const selected = context; const current = generation; busy = true; writing = true; controls();
+  function validSaved(saved, selected, capture) {
+    return validAcknowledgment(saved, clientId, cifVersionId)
+      && saved.optional_service_communications === selected.review_snapshot.optional_service_communications
+      && sameId(saved.evidence_id, capture?.evidence_id)
+      && ['notice','consent'].every(kind => saved[`${kind}_version`] === selected.review_snapshot[kind].version && saved[`${kind}_sha256`] === selected.review_snapshot[kind].sha256);
+  }
+  function completed() {
+    savedOptional = operation.optional; optional.checked = savedOptional;
+    uncertain = false; operation = null; invalidate();
+    status.textContent = 'Privacy acknowledgment recorded. Load the current record to review it.';
+  }
+  function recovery(message) {
+    status.innerHTML = `<p>${escapeHtml(message)}</p><p>Reconcile before another attempt. The original signed File, choice and request are retained. Load checks the original record; Retry repeats only that exact operation.</p><button type="button" data-privacy-retry>Retry original privacy acknowledgment</button>`;
+    const retained=operation;
+    status.querySelector('[data-privacy-retry]').addEventListener('click',()=>{if(operation===retained && uncertain)void save();});
+  }
+  async function reconcile() {
+    if (!alive() || busy || !operation) return false;
+    busy = true; controls();
     try {
-      const query = new URLSearchParams({purpose:'privacy_acknowledgment', cif_version_id:cifVersionId, optional_service_communications:String(optional.checked), request_id:crypto.randomUUID(), expected_snapshot_sha256:selected.snapshot_sha256, witnessed_wet_signature:'true'});
-      const capture = await api.request(`${prefix}/review-evidence?${query}`, {method:'POST',rawBody:file,headers:{'Content-Type':file.type},signal});
+      const value = await api.request(`${prefix}/privacy/context?cif_version_id=${encodeURIComponent(cifVersionId)}&optional_service_communications=${operation.optional}`, {signal});
+      if (!alive()) return false;
+      if (!validContext(value,clientId,cifVersionId,operation.optional)) throw new Error('The privacy recovery response does not match the original choice.');
+      if (operation.capture && validSaved(value.acknowledgment,operation.selected,operation.capture)) { completed(); return true; }
+      recovery('The current record does not yet prove the original acknowledgment.'); return false;
+    } catch(error) {
+      if (alive()) { if ([401,403].includes(error?.status)) deny(error); else recovery(error.message); }
+      return false;
+    } finally { if (alive()) {busy=false;controls();} }
+  }
+  async function save(event) {
+    event?.preventDefault();
+    if (!alive() || busy || (!operation && (!context?.issuable || !witness.checked))) return;
+    if (!operation) {
+      const file = fileInput.files?.[0];
+      if (!file || !['application/pdf','image/png','image/jpeg'].includes(file.type) || file.size <= 0 || file.size > 10485760) { status.textContent = 'Choose a signed PDF, PNG or JPEG of at most 10 MiB.'; return; }
+      operation = {file, selected:context, optional:optional.checked, capture:null,
+        query:new URLSearchParams({purpose:'privacy_acknowledgment', cif_version_id:cifVersionId, optional_service_communications:String(optional.checked), request_id:crypto.randomUUID(), expected_snapshot_sha256:context.snapshot_sha256, witnessed_wet_signature:'true'})};
+    }
+    const original=operation, current=generation;
+    busy=true;writing=true;controls();
+    try {
+      if (!original.capture) {
+        const capture = await api.request(`${prefix}/review-evidence?${original.query}`, {method:'POST',rawBody:original.file,headers:{'Content-Type':original.file.type},signal});
+        if (!alive() || current !== generation) return;
+        if (!sameId(capture?.client_id,clientId) || !sameId(capture?.cif_version_id,cifVersionId) || capture.application_id !== null || capture.application_version_id !== null || capture.purpose !== 'privacy_acknowledgment' || capture.snapshot_sha256 !== original.selected.snapshot_sha256 || !UUID.test(capture.evidence_id || '') || capture.evidence_reference !== `office-evidence:${capture.evidence_id}`) throw new Error('Signed privacy capture does not match the review.');
+        original.capture=capture;
+      }
+      const saved=await api.request(`${prefix}/privacy/acknowledgments`,{method:'POST',body:{cif_version_id:cifVersionId,optional_service_communications:original.optional,evidence_reference:original.capture.evidence_reference},signal});
       if (!alive() || current !== generation) return;
-      if (!sameId(capture?.client_id, clientId) || !sameId(capture?.cif_version_id, cifVersionId) || capture.application_id !== null || capture.application_version_id !== null || capture.purpose !== 'privacy_acknowledgment' || capture.snapshot_sha256 !== selected.snapshot_sha256 || !UUID.test(capture.evidence_id || '') || capture.evidence_reference !== `office-evidence:${capture.evidence_id}`) throw new Error('Signed privacy capture does not match the review.');
-      const saved = await api.request(`${prefix}/privacy/acknowledgments`, {method:'POST',body:{cif_version_id:cifVersionId, optional_service_communications:optional.checked, evidence_reference:capture.evidence_reference},signal});
-      if (!alive() || current !== generation) return;
-      if (!validAcknowledgment(saved, clientId, cifVersionId)
-        || saved.optional_service_communications !== selected.review_snapshot.optional_service_communications
-        || !sameId(saved.evidence_id, capture.evidence_id)
-        || !['notice','consent'].every(kind => saved[`${kind}_version`] === selected.review_snapshot[kind].version && saved[`${kind}_sha256`] === selected.review_snapshot[kind].sha256)) throw new Error('Reload to reconcile the privacy acknowledgment.');
-      status.textContent = 'Privacy acknowledgment recorded. Application confirmation and loan signing remain separate.';
-      savedOptional = optional.checked;
-      invalidate(); status.textContent = 'Privacy acknowledgment recorded. Load the current record to review it.';
-    } catch(error) { if(alive() && current === generation) { if ([401,403].includes(error?.status)) { deny(error); return; } uncertain = true; status.innerHTML = errorCard(error) + '<p>Load the current privacy record before another attempt.</p>'; } }
-    finally { writing = false; if(alive()) { busy = false; controls(); } }
-  });
+      if (!validSaved(saved,original.selected,original.capture)) throw new Error('The privacy acknowledgment could not be verified.');
+      completed();
+    } catch(error) {
+      if (alive() && current===generation) {
+        if ([401,403].includes(error?.status)) {deny(error);return;}
+        if(error?.beforeWrite && !uncertain && !original.capture) {operation=null;status.innerHTML=errorCard(error);}
+        else {uncertain=true;optional.checked=original.optional;recovery(error.message);}
+      }
+    } finally {writing=false;if(alive()){busy=false;controls();}}
+  }
+  listen(form,'submit',event=>{event.preventDefault();if(!uncertain)void save();});
   void load();
   return dispose;
 }

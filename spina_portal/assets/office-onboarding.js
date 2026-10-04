@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 import { createOfficeCaseContext } from './office-case-context.js';
@@ -63,9 +64,11 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   let state = 'idle';
   let record = null;
   let intakeUncertain = false;
+  let originalWrite = null;
   let writeUncertain = false, baseline = '', revision = 0;
   const coordinator = collector ? null : officeCaseContext ?? createOfficeCaseContext({getSession,confirmDiscard});
   const ownsCoordinator = !collector && !officeCaseContext;
+  if (!collector) api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && state === 'saving', isUncertain:()=>!disposed && (intakeUncertain || writeUncertain), dispose}, coordinator);
   let caseListeners = [];
   const listeners = [];
   let caseRoot;
@@ -111,7 +114,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   }
   function dispose() {
     if (disposed) return;
-    disposed = true;
+    disposed = true; originalWrite=null;
     invalidate();
     for (const remove of listeners) remove();
     signal?.removeEventListener('abort', dispose);
@@ -172,6 +175,13 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
         if (!accepted || disposed) { if (current(request)) statusRoot.textContent = 'Your existing work has been kept.'; return; }
         token = request;
       } else { await read(); if (!current(request)) return; }
+      if(writeUncertain && originalWrite && !originalWrite.acknowledged) {
+        const saved=originalWrite.eligibility ? result.status==='eligible_for_cif' && uuid(result.client_id)
+          && (!originalWrite.body || (result.bypass_reason===originalWrite.body.reason && JSON.stringify([...result.bypassed_requirements].sort())===JSON.stringify([...originalWrite.body.bypassed_requirements].sort())))
+          : Object.entries(originalWrite.body ?? {}).every(([key,value])=>result.requirements[key.replace(/_status$/,'')]?.status===value);
+        if(!saved)throw new Error('The protected intake record does not yet establish the original changes. Keep the original operation before another write.');
+      }
+      originalWrite=null;
       record = result;
       referenceInput.value = result.application_reference;
       statusRoot.innerHTML = '';
@@ -205,6 +215,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
     const request = {};
     token = request;
     state = 'saving';
+    if(!collector)originalWrite={path,body,method,intake,eligibility,acknowledged:false};
     if (intake) { intakeUncertain = true; newButton.disabled = true; }
     setDisabled(true);
     statusRoot.innerHTML = loadingPanel('Recording office information…');
@@ -216,6 +227,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
         || (eligibility && (result.status !== 'eligible_for_cif' || !uuid(result.client_id)))) {
         throw new Error('The saved result could not be verified.');
       }
+      if(originalWrite)originalWrite.acknowledged=true;
       if (intake) { intakeUncertain = false; newButton.disabled = false; }
       state = 'blocked';
       if (!collector) coordinator.acceptVerifiedContext(contextFor({...result,application_reference:intake ? result.application_reference : selected,applicant_id:record?.applicant_id,client_id:result.client_id ?? record?.client_id}),coordinator.getGeneration());
@@ -223,8 +235,9 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
       await loadCase(intake ? result.application_reference : selected,{refresh:true,confirmedSave:true});
     } catch (error) {
       if (!current(request)) return;
-      const retry = [400, 422].includes(error?.status);
+      const retry = error?.beforeWrite || [400, 422].includes(error?.status);
       state = retry ? (intake ? 'intake' : 'case') : 'blocked';
+      if(retry)originalWrite=null;
       if (intake && retry) { intakeUncertain = false; newButton.disabled = false; }
       if (!collector && !intake) writeUncertain = !retry;
       setDisabled(!retry);

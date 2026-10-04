@@ -2,7 +2,18 @@
 const identityFields = ['applicantId', 'intakeReference', 'clientId', 'applicationReference', 'applicationId', 'applicationVersionId'];
 const empty = () => ({mode:'none', ...Object.fromEntries(identityFields.map(key=>[key,null])), applicationSaved:false, applicantName:null, stageFacts:{}});
 const same = (field,left,right) => field === 'applicationReference' ? left === right : String(left).toLowerCase() === String(right).toLowerCase();
-const owner = session => session?.user ? `${session.user.id ?? ''}:${session.user.role ?? ''}:${(session.user.roles ?? []).join(',')}` : null;
+export const officeSessionOwner = session => session?.user ? JSON.stringify({
+  id:session.user.id ?? null, role:session.user.role ?? null, roles:[...(session.user.roles ?? [])].sort(),
+  permissions:[...(session.permissions ?? [])].sort(), userPermissions:[...(session.user.permissions ?? [])].sort(),
+  status:session.user.status ?? null, deviceRegistered:session.user.device_registered ?? null,
+}) : null;
+const owner = officeSessionOwner;
+const officeApis = new WeakMap();
+// Each concrete writer owns its flags. Parent aggregates are only transition guards.
+export function bindOfficeWriteOwner(api, handle, coordinator) {
+  const inherited = officeApis.get(api);
+  return (coordinator ?? inherited?.coordinator)?.bindWriteOwner(inherited?.api ?? api, handle) ?? api;
+}
 function project(value) {
   const result = empty();
   result.mode = value?.mode ?? 'saved-case';
@@ -23,15 +34,25 @@ function project(value) {
 export function createOfficeCaseContext({getSession, confirmDiscard = message => globalThis.confirm?.(message) === true, onChange = () => {}}) {
   const mountedOwner = owner(getSession?.());
   const stages = new Map();
+  const writers = new Set();
+  const stores = new Map();
+  const requests = new Set();
   let disposed = false, generation = 0, activeStage = 'intake', context = empty();
   const snapshot = () => ({...context,stageFacts:Object.fromEntries(Object.entries(context.stageFacts).map(([key,value])=>[key,{...value}])),activeStage,generation});
-  function dispose() {
+  function dispose({accessDenied=false} = {}) {
     if (disposed) return;
     disposed = true; generation++; context = empty();
+    for(const request of requests)request.abort();
+    requests.clear();
     for (const handle of stages.values()) handle.dispose?.();
-    stages.clear(); onChange(snapshot());
+    stages.clear();
+    for (const writer of writers) writer.dispose?.();
+    writers.clear(); onChange(snapshot(),{disposed:true,accessDenied});
   }
-  function alive() { if (!disposed && owner(getSession?.()) !== mountedOwner) dispose(); return !disposed; }
+  function alive() {
+    if (!disposed && (owner(getSession?.()) !== mountedOwner || [...stores].some(([store,value])=>owner(store.load())!==value.owner || store.deviceId?.()!==value.device))) dispose({accessDenied:true});
+    return !disposed;
+  }
   const locked = () => [...stages.values()].some(handle=>handle.isWritePending?.() || handle.isUncertain?.());
   const dirty = (handles = [...stages.values()]) => handles.some(handle=>handle.isDirty?.());
   const revisions = () => [...stages.values()].map(handle=>handle.getRevision?.());
@@ -55,7 +76,7 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
     if (kind === 'open') {
       let value;
       try { value = typeof candidate === 'function' ? await candidate(request) : candidate; }
-      catch(error) { if([401,403].includes(error?.status)){dispose();return false;} throw error; }
+      catch(error) { if([401,403].includes(error?.status)){dispose({accessDenied:true});return false;} throw error; }
       if (!alive() || request !== generation || locked()) return false;
       next = project(value);
       if (!next || next.mode !== 'saved-case') return false;
@@ -94,5 +115,49 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
     // Lookup or owner-held draft edits revoke an in-flight replacement decision.
     invalidateCandidate() { if (alive()) generation++; },
     requestTransition, acceptVerifiedContext, dispose,
+    detachReleaseFact(saved) {
+      if(!alive() || saved.clientId!==context.clientId || saved.applicationId!==context.applicationId || saved.applicationVersionId===context.applicationVersionId)return false;
+      const {['first-loan']:removed,...facts}=context.stageFacts;
+      context={...context,stageFacts:facts};onChange(snapshot());return true;
+    },
+    isWritePending() { return alive() && locked(); },
+    refreshReadOnly(stage = activeStage) { if (!alive()) return false; return stages.get(stage)?.refreshReadOnly?.() ?? false; },
+    bindWriteOwner(api, handle) {
+      const device = api.sessionStore?.deviceId?.();
+      const storeOwner = api.sessionStore ? owner(api.sessionStore.load()) : mountedOwner;
+      if(api.sessionStore && !stores.has(api.sessionStore))stores.set(api.sessionStore,{owner:storeOwner,device});
+      const current = () => {
+        if (api.sessionStore && (owner(api.sessionStore.load()) !== storeOwner || api.sessionStore.deviceId?.() !== device)) dispose({accessDenied:true});
+        return alive();
+      };
+      writers.add(handle);
+      const bound = Object.create(api);
+      bound.isOfficeCurrent = current;
+      bound.request = async (path, options = {}) => {
+        if (!current()) throw Object.assign(new Error('Office access is unavailable.'), {status:403,beforeWrite:true});
+        if (!['GET','HEAD'].includes((options.method ?? 'GET').toUpperCase()) && [...writers].some(writer => writer !== handle && (writer.isWritePending?.() || writer.isUncertain?.()))) {
+          throw Object.assign(new Error('Keep the original Office operation and reconcile it before another write.'), {beforeWrite:true});
+        }
+        const request = new AbortController();
+        const abort = () => request.abort();
+        requests.add(request);
+        options.signal?.addEventListener('abort',abort,{once:true});
+        if(options.signal?.aborted)abort();
+        try {
+          const result = await api.request(path, {...options,signal:request.signal});
+          if (!current()) throw Object.assign(new Error('Office access changed.'), {status:403});
+          return result;
+        } catch (error) {
+          if ([401,403].includes(error?.status)) dispose({accessDenied:true});
+          current();
+          throw error;
+        } finally {
+          requests.delete(request);
+          options.signal?.removeEventListener('abort',abort);
+        }
+      };
+      officeApis.set(bound,{api,coordinator:this});
+      return bound;
+    },
   };
 }

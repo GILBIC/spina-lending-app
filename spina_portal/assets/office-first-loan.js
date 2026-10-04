@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { createOfficeCaseContext } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { disclosureBreakdown, savedDisclosureSelection } from './first-loan-disclosure.js';
@@ -34,6 +35,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   let disposed = false;
   let token = {};
   let state = 'editing';
+  let operation = null;
   let review = null;
   let context = null;
   let loan = null;
@@ -52,6 +54,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   let selectedContext=null, lookupRequest={}, baseline=null, revision=0;
   const coordinator=officeCaseContext ?? createOfficeCaseContext({getSession,confirmDiscard});
   const ownsCoordinator=!officeCaseContext;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && state==='saving',isUncertain:()=>!disposed && state==='blocked',dispose}, coordinator);
   const values=()=>JSON.stringify([...workspace.querySelectorAll('input'),...workspace.querySelectorAll('textarea'),...workspace.querySelectorAll('select')].map(control=>[control.getAttribute('name'),control.value,control.checked===true,[...(control.files??[])].map(file=>[file.name,file.size,file.type,file.lastModified])]));
   const isDirty=()=>!disposed && baseline!==null && values()!==baseline;
   const isWritePending=()=>!disposed && state==='saving';
@@ -92,7 +95,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   function invalidate() {
     token = {};
     selectedContext=null;baseline=null;
-    state = 'editing'; review = null; context = null; loan = null; evidence = {}; decisions = [];
+    operation = null; state = 'editing'; review = null; context = null; loan = null; evidence = {}; decisions = [];
     disclosure = null; disclosureTerms = null;
     clearActions(); wipe(workspace); wipe(status); preserveStatus = false;
     if (workspace) workspace.innerHTML = '';
@@ -110,7 +113,9 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   function current(request) { return !disposed && request === token; }
   function showError(error, blocked = false) {
     wipe(status); preserveStatus = false;
-    status.innerHTML = `<div role="alert">${errorCard(error)}</div>${blocked ? '<p>Reload the authoritative record before trying another action.</p>' : ''}`;
+    status.innerHTML = `<div role="alert">${errorCard(error)}</div>${blocked ? '<p>Reload the authoritative record before trying another action. The original operation remains protected until its result is verified.</p>' : ''}${blocked && operation?.retryable && !operation.acknowledged ? '<button type="button" data-retry-office-action>Retry original action</button>' : ''}`;
+    const retained=operation;
+    status.querySelector('[data-retry-office-action]')?.addEventListener('click',()=>{if(state==='blocked' && operation===retained && retained)void perform(retained);});
   }
   function denyAccess(error) {
     coordinator.dispose(); dispose(); root.innerHTML=errorCard(error);
@@ -130,6 +135,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
     const result = await api.request(`${BASE}/by-application/${encodeURIComponent(review.application_id)}`, { signal });
     if (!current(request)) return;
     if (!validRecords(result,review)) throw new Error('The first-loan response is invalid or does not match this application.');
+    if (operation && !operation.acknowledged) { state='blocked'; disableActions(); showError(new Error('The current history does not prove the original command outcome. Use its exact retry where available.'),true); return false; }
     const next = result.loans.find((item) => item.status !== 'cancelled') || result.loans[0] || null;
     if (next?.packet_hash !== loan?.packet_hash) evidence = {};
     else if (next?.authorization?.id !== loan?.authorization?.id) delete evidence.borrower_cash_received;
@@ -183,23 +189,46 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   }
 
   async function mutate(path, buildBody, validate = object, after) {
-    if (disposed || state !== 'editing') return;
+    if (disposed || state !== 'editing' || operation) return;
     const request = token;
-    state = 'saving'; disableActions(); wipe(status); preserveStatus = false; status.innerHTML = loadingPanel('Recording the office action…');
+    state='saving';disableActions();
     try {
-      const body = typeof buildBody === 'function' ? await buildBody() : buildBody;
-      if (!current(request)) return;
-      const result = await api.request(path, { method: 'POST', body, signal, financial: true });
-      if (!current(request)) return;
-      if (!validate(result)) throw new Error('The result could not be verified.');
-      if (after) await after(result, request); else await refresh(request);
-      if (current(request)) { state = 'editing'; disableActions(); if (!preserveStatus) status.innerHTML = ''; }
-    } catch (error) {
-      if (!current(request)) return;
-      if ([401, 403].includes(error?.status)) { denyAccess(error); return; }
-      state = [400, 422].includes(error?.status) || error?.beforeWrite ? 'editing' : 'blocked';
-      disableActions(); showError(error, state === 'blocked');
+      const body=typeof buildBody==='function' ? await buildBody() : buildBody;
+      if(!current(request))return;
+      operation={path,body,validate,after,request,acknowledged:false,result:null,
+        retryable:/\/(approve|reject|cancel-approval|authorize-release|revoke-release|evidence|release)$/.test(path) && uid(body?.request_id) || /\/first-loans\/[^/]+\/documents$/.test(path)};
+      await perform(operation);
+    }catch(error){if(current(request)){state='editing';disableActions();showError(error);}}
+  }
+  async function perform(original) {
+    if(disposed || operation!==original)return;
+    const request=original.request;
+    const previouslyAttempted=original.attempted===true;original.attempted=true;
+    state='saving';disableActions();wipe(status);preserveStatus=false;status.innerHTML=loadingPanel('Recording the office action...');
+    try {
+      const result=await api.request(original.path,{method:'POST',body:original.body,signal,financial:true});
+      if(!current(request))return;
+      if(!original.validate(result))throw new Error('The result could not be verified.');
+      original.acknowledged=true;original.result=result;
+      if(original.after)await original.after(result,request);else await refresh(request);
+      if(current(request)){operation=null;state='editing';disableActions();if(!preserveStatus)status.innerHTML='';}
+    }catch(error){
+      if(!current(request))return;
+      if([401,403].includes(error?.status)){denyAccess(error);return;}
+      // A rejected follow-up GET cannot undo a validated command acknowledgment.
+      const rejected=!previouslyAttempted && !original.acknowledged && (error?.beforeWrite || [400,422].includes(error?.status));
+      state=rejected?'editing':'blocked';if(rejected)operation=null;
+      disableActions();showError(error,!rejected);
     }
+  }
+  async function recover() {
+    if(disposed || state==='saving' || !operation)return false;
+    try {
+      if(operation.acknowledged && operation.after)await operation.after(operation.result,token);else await refresh(token);
+      if(disposed)return false;
+      if(state==='editing'){operation=null;if(!preserveStatus)status.innerHTML='';return true;}
+      return false;
+    }catch(error){if([401,403].includes(error?.status)){denyAccess(error);return false;}if(!disposed){state='blocked';disableActions();showError(error,true);}return false;}
   }
 
   function approvalMarkup() {
@@ -348,7 +377,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
       ${manager && (!loan || loan.status === 'cancelled') ? approvalMarkup() : ''}`;
     baseline=values();
     for(const control of [...workspace.querySelectorAll('input'),...workspace.querySelectorAll('textarea'),...workspace.querySelectorAll('select')]){on(control,'input',edited,true);on(control,'change',edited,true);}
-    action('reload', async () => { if(state==='saving')return;if(state==='blocked'){try{await refresh(token);if(!disposed)status.innerHTML='';}catch(error){if([401,403].includes(error?.status)){denyAccess(error);return;}if(!disposed){state='blocked';disableActions();showError(error,true);}}}else await open(null,selectedContext); });
+    action('reload', async () => { if(state==='saving')return;if(state==='blocked')return recover();await open(null,selectedContext); });
     const approval = workspace.querySelector('[data-approval]');
     if (approval) on(approval, 'submit', (event) => {
       event.preventDefault();
@@ -425,7 +454,7 @@ export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseCon
   const handle={getContext:()=>!disposed?selectedContext:null,isDirty,isWritePending,isUncertain,getRevision:()=>revision,
     openCase:selection=>{if(disposed || !selection || typeof selection!=='object')return false;intake.value=selection.intakeReference??'';reference.value=selection.applicationReference??'';return open(null,selection);},
     resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false;invalidate();intake.value='';reference.value='';return true;},
-    refreshReadOnly:()=>{if(!selectedContext || isDirty() || isWritePending() || isUncertain())return false;return handle.openCase(selectedContext);},dispose};
+    refreshReadOnly:()=>{if(isWritePending())return false;if(isUncertain())return recover();if(!selectedContext || isDirty())return false;return handle.openCase(selectedContext);},dispose};
   Object.assign(dispose,handle);registerHandle?.(handle);if(ownsCoordinator)coordinator.registerStage('first-loan',handle);
   return dispose;
 }

@@ -48,3 +48,21 @@ for(const status of [404,409])test(`${status}: acknowledged first draft recovery
  fire(root.querySelector('[data-reload-saved-cif]'),'click');await setImmediate();assert.equal(root.querySelector('[data-begin-cif]'),null);
  readable=true;fire(root.querySelector('[data-reload-saved-cif]'),'click');await setImmediate();assert.ok(root.querySelector('[data-open-cif-workflow]'));assert.equal(calls.filter(call=>call.options.method==='POST').length,1);controller.abort();
 });
+
+test('uncertain first CIF draft reconciles only the original protected client summary without another POST',async()=>{
+ const root=new Element(),calls=[];let handle,readable=false;const controller=new AbortController();
+ mountOfficeCifSelection({root,signal:controller.signal,registerHandle:value=>handle=value,session:{user:{role:'employee'},permissions:['client_onboarding.requirement.review']},api:{async request(path,options={}){
+  calls.push({path,options});
+  if(path.endsWith('/cif-client'))return {application_reference:'INTAKE-ORIGINAL',client_id:CLIENT};
+  if(options.method==='POST')throw Error('Response lost');
+  if(!readable)throw new ApiError('Summary unavailable',{status:404});
+  return {client_id:CLIENT,cif_version_id:CIF,version_number:1,status:'draft',review_scope:'cif_information_only',full_name:'Synthetic established CIF',phone_number:'09170000000',email:null,present_address:'Synthetic address'};
+ }}});
+ root.querySelector('input').value='INTAKE-ORIGINAL';fire(root.querySelector('form'),'submit');await setImmediate();
+ fire(root.querySelector('[data-begin-cif]'),'click');await setImmediate();assert.equal(handle.isUncertain(),true);
+ root.querySelector('input').value='EDITED-CANDIDATE';
+ await handle.refreshReadOnly();assert.equal(handle.isUncertain(),true);
+ readable=true;await handle.refreshReadOnly();
+ assert.equal(handle.isUncertain(),false);assert.equal(handle.getContext().clientId,CLIENT);assert.equal(handle.getContext().intakeReference,'INTAKE-ORIGINAL');
+ assert.equal(calls.filter(c=>c.options.method==='POST').length,1);assert.ok(root.querySelector('[data-open-cif-workflow]'));controller.abort();
+});

@@ -75,3 +75,16 @@ for(const status of [404,'network'])test(`intake candidate ${status} preserves o
 test('further intake edits revoke an awaited discard decision',async()=>{
  let consent;const h=harness(()=>new Promise(resolve=>consent=resolve));await open(h);const decision=field(h,'tin_id_status');decision.value='failed';fire(decision,'change');await open(h,'INTAKE-B');decision.value='passed';fire(decision,'change');consent(true);await setImmediate();assert.equal(field(h,'tin_id_status'),decision);assert.equal(decision.value,'passed');assert.equal(h.binding.coordinator.getContext().intakeReference,'INTAKE-A');h.dispose();h.binding.dispose();
 });
+
+test('delayed intake submit protects New Open Close and read-only Refresh through uncertainty',async()=>{
+ const h=harness(()=>true);fire(h.root.querySelector('[data-new-intake]'),'click');await setImmediate();
+ for(const [name,value] of Object.entries({full_name:'Synthetic pending',phone_number:'00000000000',present_address:'Synthetic address',national_id_egov_evidence_reference:'External',tin_id_egov_evidence_reference:'External',meralco_bill_evidence_reference:'External'}))field(h,name).value=value;
+ field(h,'privacy_consent').checked=true;field(h,'accuracy_declaration').checked=true;
+ let reject;h.read=()=>new Promise((_,no)=>reject=no);const form=h.root.querySelector('[data-intake-form]'),name=field(h,'full_name');fire(form,'submit');await setImmediate();
+ for(const kind of ['new-intake','open','close'])assert.equal(await h.binding.coordinator.requestTransition({kind,candidate:{mode:'saved-case',intakeReference:'OTHER'}}),false);
+ assert.equal(await h.binding.coordinator.refreshReadOnly('intake'),false);assert.equal(h.binding.coordinator.isWritePending(),true);
+ assert.equal(field(h,'full_name'),name);assert.equal(name.value,'Synthetic pending');
+ reject(Error('Lost original intake'));await setImmediate();
+ assert.equal(h.binding.coordinator.isWritePending(),true);assert.equal(await h.binding.coordinator.requestTransition({kind:'close'}),false);fire(form,'submit');await setImmediate();
+ assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);h.dispose();h.binding.dispose();
+});

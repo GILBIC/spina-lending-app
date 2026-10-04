@@ -106,14 +106,14 @@ test('changing optional choice invalidates signature and requires a fresh exact 
   assert.equal(h.calls.at(-1).body.optional_service_communications, true); h.dispose();
 });
 
-test('uncertain upload locks mutation until an explicit fresh record load', async () => {
+test('uncertain upload remains locked after a generic fresh record load', async () => {
   const h = harness(); await setImmediate();
   h.response = (path) => { if (path.includes('/privacy/context')) return context(); throw Object.assign(new Error('Uncertain upload'), { code: 'network_uncertain' }); };
   choose(h); submit(h); await setImmediate(); submit(h); await setImmediate();
   assert.equal(h.calls.length, 2); assert.equal(h.root.querySelector('button[type="submit"]').disabled, true);
   assert.match(h.root.textContent, /before another attempt/);
   fire(button(h, 'refresh'), 'click'); await setImmediate();
-  assert.equal(h.calls.length, 3); assert.equal(field(h, 'signedPrivacyScan').value, ''); h.dispose();
+  assert.equal(h.calls.length, 3); assert.equal(field(h, 'signedPrivacyScan').value, 'private-scan.pdf'); assert.equal(h.dispose.isUncertain(),true); h.dispose();
 });
 
 for (const mutate of [(saved) => { saved.optional_service_communications = true; }, (saved) => { saved.consent_sha256 = 'b'.repeat(64); }]) {
@@ -164,4 +164,43 @@ test('access denial after capture begins clears sensitive state and prevents fur
   const h = harness(); await setImmediate(); const oldForm = h.root.querySelector('form');
   h.response = () => { throw Object.assign(new Error('No access'), { status: 403 }); }; choose(h); submit(h); await setImmediate();
   assert.equal(h.root.innerHTML, ''); fire(oldForm, 'submit'); await setImmediate(); assert.equal(h.calls.length, 2);
+});
+
+test('same-owner compatible token refresh retains native privacy File during upload and acknowledgment', async () => {
+  let resolve; const hold=new Promise(r=>resolve=r);
+  const h=harness(); await setImmediate();
+  const nativeFile=new File(['signed'],'synthetic.pdf',{type:'application/pdf'});
+  choose(h); field(h,'signedPrivacyScan').files=[nativeFile];
+  h.response=(path,request)=>path.includes('/review-evidence?')?hold:path.endsWith('/privacy/acknowledgments')?acknowledgment():context();
+  const original=field(h,'signedPrivacyScan'); submit(h); await setImmediate();
+  h.currentSession={...h.session,access_token:'rotated-compatible-token'};
+  resolve(captured()); await setImmediate();
+  assert.equal(h.calls.filter(call=>call.method==='POST').length,2);
+  assert.equal(h.calls[1].rawBody,nativeFile);
+  assert.equal(field(h,'signedPrivacyScan'),original);
+  assert.match(h.root.textContent,/acknowledgment recorded/); h.dispose();
+});
+
+test('uncertain privacy upload cannot be cleared by choice edit or generic context Reload', async () => {
+  const h=harness(); await setImmediate(); choose(h);
+  const original=field(h,'signedPrivacyScan'), nativeFile=new File(['signed'],'retained.pdf',{type:'application/pdf'});
+  original.files=[nativeFile];
+  h.response=(path,request)=>request.method?Promise.reject(Error('Lost upload')):context();
+  submit(h); await setImmediate();
+  field(h,'optionalServiceCommunications').checked=true;
+  fire(field(h,'optionalServiceCommunications'),'change');
+  fire(button(h,'refresh'),'click'); await setImmediate();
+  assert.equal(h.dispose.isUncertain(),true);
+  assert.equal(original.files[0],nativeFile);
+  assert.equal(field(h,'optionalServiceCommunications').checked,false);
+  assert.equal(h.calls.filter(call=>call.method==='POST').length,1); h.dispose();
+});
+
+test('privacy exact retry retains original File request snapshot choice and acknowledgment identity',async()=>{
+ const h=harness();await setImmediate();choose(h);const file=new File(['original'],'original.pdf',{type:'application/pdf'});field(h,'signedPrivacyScan').files=[file];
+ let lost=true;h.response=(path,request)=>path.includes('/review-evidence?')?(lost?Promise.reject(Error('Lost upload')):captured()):path.endsWith('/privacy/acknowledgments')?acknowledgment():context();
+ submit(h);await setImmediate();const first=h.calls.find(c=>c.method==='POST');
+ field(h,'signedPrivacyScan').files=[new File(['different'],'different.pdf',{type:'application/pdf'})];field(h,'optionalServiceCommunications').checked=true;fire(field(h,'optionalServiceCommunications'),'change');
+ lost=false;fire(button(h,'retry'),'click');await setImmediate();
+ const writes=h.calls.filter(c=>c.method==='POST');assert.equal(writes.length,3);assert.equal(writes[1].path,first.path);assert.equal(writes[1].rawBody,file);assert.equal(writes[2].body.optional_service_communications,false);assert.equal(h.dispose.isUncertain(),false);h.dispose();
 });

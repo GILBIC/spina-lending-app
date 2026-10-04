@@ -195,3 +195,32 @@ test('authoritative refresh retains older cancelled history after current packet
   assert.match(h.root.textContent, /Recorded packet application version: 2/);
   handle();
 });
+
+for (const status of [400,422]) test(`acknowledged financial write followed by ${status} read stays locked until protected read succeeds`,async()=>{
+ const h=harness();h.loans=[approved()];let handle;const dispose=(await mount())({...h,registerHandle:value=>handle=value});await open(h);
+ h.request=(path,options)=>options.method==='POST'?{id:CLIENT,content_sha256:'b'.repeat(64),byte_count:100}:Promise.reject(Object.assign(Error('Read unavailable'),{status}));
+ fire(button(h,'Generate locked PDF packet'),'click');await setImmediate();
+ assert.equal(handle.isUncertain(),true);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);
+ h.request=h.defaultRequest;fire(button(h,'Reload saved record'),'click');await setImmediate();
+ assert.equal(handle.isUncertain(),false);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);dispose();
+});
+
+test('generic first-loan history does not resolve an unacknowledged financial command',async()=>{
+ const h=harness();h.loans=[approved()];let handle;const dispose=(await mount())({...h,registerHandle:value=>handle=value});await open(h);
+ h.request=(path,options)=>options.method==='POST'?Promise.reject(Error('Lost response')):h.defaultRequest(path);
+ fire(button(h,'Generate locked PDF packet'),'click');await setImmediate();assert.equal(handle.isUncertain(),true);
+ field(h,'applicationReference').value='EDITED-CANDIDATE';
+ fire(button(h,'Reload saved record'),'click');await setImmediate();
+ assert.equal(handle.isUncertain(),true);assert.equal(handle.getContext().applicationReference,'Loan-Mixed');
+ assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);dispose();
+});
+
+test('uncertain release exact retry preserves original body identity despite lookup and form edits',async()=>{
+ const h=harness('employee');h.loans=[{...approved(),document:{id:PRODUCT,content_sha256:'b'.repeat(64),byte_count:8},authorization:{id:APP,revoked:false},evidence:{borrower_contract_signed:{evidence_reference:`office-evidence:${CLIENT}`},borrower_cash_received:{evidence_reference:`office-evidence:${VERSION}`}}}];
+ h.request=(path,options)=>options.method==='POST'?Promise.reject(Error('Lost release')):h.defaultRequest(path);
+ const dispose=(await mount())(h);await open(h);field(h,'cashAmount').value='1000.00';field(h,'borrowerConfirmed').checked=true;fire(h.root.querySelector('[data-release]'),'submit');await setImmediate();
+ const first=h.calls.find(c=>c.options.method==='POST');const original=structuredClone(first.options.body);
+ field(h,'cashAmount').value='9999.99';field(h,'borrowerConfirmed').checked=false;field(h,'applicationReference').value='DIFFERENT';
+ fire(h.root.querySelector('[data-retry-office-action]'),'click');await setImmediate();
+ const writes=h.calls.filter(c=>c.options.method==='POST');assert.equal(writes.length,2);assert.equal(writes[1].path,first.path);assert.deepEqual(writes[1].options.body,original);assert.equal(writes[1].options.body,first.options.body);dispose();
+});

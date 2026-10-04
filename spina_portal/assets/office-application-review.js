@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { createOfficeCaseContext } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { mountOfficeApplicationEntry } from './office-application-entry.js';
@@ -200,6 +201,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   let creating = false;
   let selectedContext = null, lookupRequest = {}, revision = 0, confirmationHandle = null;
   const coordinator = officeCaseContext ?? createOfficeCaseContext({getSession,confirmDiscard});
+  api = bindOfficeWriteOwner(api, {dispose}, coordinator);
   const ownsCoordinator = !officeCaseContext;
   const children = () => [entryCleanup,confirmationHandle].filter(Boolean);
   const isDirty = () => children().some(child=>child.isDirty?.());
@@ -369,6 +371,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     let pending = false, uncertain = false;
     let closed = false;
     const active = () => !disposed && !closed && currentRequest === token && selectedReview === review;
+    const confirmationApi = bindOfficeWriteOwner(api,{isWritePending:()=>active() && pending,isUncertain:()=>active() && uncertain});
     const captureCleanup = mountOfficeEvidenceCapture({
       root: container.querySelector('[data-application-signed-evidence]'), api, session,
       clientId: review.client_id, cifVersionId: review.cif_version_id, purpose: 'application_review',
@@ -388,11 +391,12 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
     }
     async function saveConfirmation() {
       if (!active() || pending || !evidence) return;
+      const wasUncertain=uncertain;
       pending = true; uncertain = true;
       confirm.disabled = true;
       status.innerHTML = loadingPanel('Recording applicant confirmation…');
       try {
-        const saved = await api.request(`/api/v1/management/clients/${encodeURIComponent(review.client_id)}/loan-applications/${encodeURIComponent(review.application_id)}/review-confirmations`, {
+        const saved = await confirmationApi.request(`/api/v1/management/clients/${encodeURIComponent(review.client_id)}/loan-applications/${encodeURIComponent(review.application_id)}/review-confirmations`, {
           method: 'POST', signal, body: { application_version_id: review.application_version_id, applicant_confirmation_evidence_reference: evidence.evidence_reference },
         });
         if (!active()) return;
@@ -408,13 +412,10 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
       } catch (error) {
         if (!active()) return;
         if ([401, 403].includes(error?.status)) { coordinator.dispose();dispose(); return; }
-        const retry = [400, 422].includes(error?.status);
+        const retry = !wasUncertain && (error?.beforeWrite || [400, 422].includes(error?.status));
         if (retry) {uncertain=false;confirm.disabled = false;}
-        else {
-          evidence = null;
-          captureCleanup();
-        }
-        status.innerHTML = `${errorCard(error)}${retry ? '' : '<p>Open the application review again before another confirmation attempt.</p>'}`;
+        else {confirm.disabled=false;confirm.textContent='Retry original application confirmation';}
+        status.innerHTML = `${errorCard(error)}${retry ? '' : '<p>The original confirmation evidence and saved version are retained. Retry only this exact confirmation.</p>'}`;
       } finally { pending = false; }
     }
     confirm.addEventListener('click', saveConfirmation);
@@ -441,6 +442,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
           const offerSavedRead=message=>{if(disposed)return;statusRoot.innerHTML=`<p>Application version ${escapeHtml(saved.version_number)} saved. ${message}</p><button type="button" class="button button-outline" data-reload-saved-application>Open saved application</button>`;
             statusRoot.querySelector('[data-reload-saved-application]').addEventListener('click',async()=>{const loaded=await handle.openCase(savedContext);if(!loaded && !disposed)offerSavedRead('Current details are unavailable or protected work has been kept. Opening reads the saved application before any replacement.');});};
           if(!coordinator.acceptVerifiedContext(savedContext,coordinator.getGeneration())){
+            coordinator.detachReleaseFact(savedContext);
             offerSavedRead('Approval & release work remains attached to the previously selected version. Open this saved application to verify and deliberately change that selection.');return;
           }
           void openReview(null,savedContext).then(loaded=>{if(!loaded && !disposed && currentRequest===token)offerSavedRead('Current details are unavailable. Opening reads the saved application; it does not repeat the save.');});
@@ -539,7 +541,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   const handle={getContext:()=>!disposed?selectedContext:null,isDirty,isWritePending,isUncertain,getRevision:()=>revision,
     openCase:selection=>{if(disposed || !selection || typeof selection!=='object')return false; intakeInput.value=selection.intakeReference ?? '';applicationInput.value=selection.applicationReference ?? '';return openReview(null,selection);},
     resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false;invalidate();intakeInput.value='';applicationInput.value='';return true;},
-    refreshReadOnly:()=>{if(!selectedContext || isDirty() || isWritePending() || isUncertain())return false;return handle.openCase(selectedContext);},dispose};
+    refreshReadOnly:()=>{if(entryCleanup?.isUncertain?.())return entryCleanup.refreshReadOnly();if(!selectedContext || isDirty() || isWritePending() || isUncertain())return false;return handle.openCase(selectedContext);},dispose};
   Object.assign(dispose,handle);registerHandle?.(handle);if(ownsCoordinator)coordinator.registerStage('application',handle);
   return dispose;
 }

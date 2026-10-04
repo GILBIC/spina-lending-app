@@ -409,7 +409,7 @@ export async function mountManagementWorkspace(context) {
   if(context.signal?.aborted)return;
   context.managementTaskController?.dispose();
   context.accountingExportCleanup = null;
-  const {root,api:originalApi,session,setNavigation}=context;let treasuryHandle=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>context.managementTaskController?.isWritePending('management-treasury')===true,getRoleWriteOwner:()=>context.managementTaskController?.writeOwner?.()});const api=treasuryGate.api;context.api=api;
+  const {root,api:originalApi,session,setNavigation}=context;let treasuryHandle=null,officeCoordinator=null;const treasuryGate=createTreasuryRoleGate(originalApi,{isTreasuryPending:()=>treasuryHandle?.isWritePending()===true,isRolePending:()=>context.managementTaskController?.isWritePending('management-treasury')===true,getRoleWriteOwner:path=>path.startsWith('/api/v1/management/first-loans/')||path.endsWith('/7x7-pricing-compliance/review')?officeCoordinator:context.managementTaskController?.writeOwner?.()});const api=treasuryGate.api;context.api=api;
   const getSession=context.getSession || (()=>context.signal?.aborted?null:context.session);
   const active=()=>!context.signal?.aborted && !!getSession();
   const can=permission=>hasPermission(getSession(),permission);
@@ -521,10 +521,12 @@ export async function mountManagementWorkspace(context) {
   add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
   add('management-loans','management-clients-loans','Portfolio',async()=>{const h=mountManagementPortfolio({...options('[data-management-portfolio]')});await h.refresh();return h;});
   add('management-office','management-clients-loans','Office applications',()=>{
-    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard,onChange:value=>{const banner=root.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=officeCaseBanner(value,value.activeStage);}});
+    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard,onChange:(value,lifecycle)=>{const banner=root.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=lifecycle?.disposed?(lifecycle.accessDenied?'<p role="alert">Office access is unavailable. Sign in again before continuing.</p>':''):officeCaseBanner(value,value.activeStage);}});
+    officeCoordinator=coordinator;
     const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,registerHandle:handle=>coordinator.registerStage(stage,handle),onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
     const handlers=[mountOfficeFirstLoan(stageOptions('[data-office-first-loan]','first-loan')),mountOfficeOnboarding(stageOptions('[data-office-onboarding]','intake')),mountOfficeCifSelection(stageOptions('[data-office-cif-selection]','cif')),mountOfficeApplicationReview(stageOptions('[data-office-application-review]','application')),bindManagementOfficeWorkflow(root,context,coordinator)];
-    return ()=>{coordinator.dispose();handlers.forEach(dispose=>dispose?.());};
+    const dispose=()=>{coordinator.dispose();handlers.forEach(cleanup=>cleanup?.());};
+    return {dispose,refresh:()=>coordinator.refreshReadOnly(),isWritePending:()=>coordinator.isWritePending()};
   },'client_onboarding.requirement.review');
   add('management-renewals','management-clients-loans','Renewals',async()=>{
     const h=mountManagementRenewals({...options('[data-management-renewal-workflow]'),onSaved:refreshOverview});await h.refresh();return h;

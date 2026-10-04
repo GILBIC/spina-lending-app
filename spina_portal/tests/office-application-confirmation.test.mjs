@@ -83,17 +83,18 @@ for (const action of ['input', 'clear', 'edit', 'abort', 'dispose', 'remount']) 
   if(['input','clear','edit'].includes(action)){assert.equal(scan.value,'');assert.equal(h.calls.filter(call=>call.path.endsWith('/review-confirmations')).length,1);}else{assert.equal(scan.value,'');assert.equal(h.calls.some(call => call.path.endsWith('/review-confirmations')), false);} h.dispose();
 });
 
-for (const failure of [409, 503, 'network_uncertain', 'mismatched-success']) test(`${failure} confirmation requires reload and never retries blindly`, async () => {
+for (const failure of [409, 503, 'network_uncertain', 'mismatched-success']) test(`${failure} confirmation retains exact evidence for a deliberate identical retry`, async () => {
   const h = harness(); await open(h); await prepare(h); await captureSigned(h);
   h.response = () => {
     if (failure === 'mismatched-success') return { ...confirmation(), application_version_id: CIF };
     throw Object.assign(new Error('Synthetic confirmation error'), typeof failure === 'number' ? { status: failure } : { code: failure });
   };
   click(h, 'confirm-application'); await setImmediate(); click(h, 'confirm-application'); await setImmediate();
-  assert.equal(h.calls.filter(call => call.path.endsWith('/review-confirmations')).length, 1);
-  assert.match(h.root.textContent, /Open the application review again/);
+  const attempts=h.calls.filter(call=>call.path.endsWith('/review-confirmations'));
+  assert.equal(attempts.length,2);assert.deepEqual(attempts[1].body,attempts[0].body);
+  assert.match(h.root.textContent,/original confirmation evidence/);
   assert.doesNotMatch(h.root.textContent, /Applicant application review confirmed/);
-  assert.equal(button(h, 'application-signed-evidence').innerHTML, ''); h.dispose();
+  assert.match(button(h,'application-signed-evidence').textContent,/Signed review evidence saved/); h.dispose();
 });
 
 test('validation error keeps captured exact evidence for an intentional retry', async () => {

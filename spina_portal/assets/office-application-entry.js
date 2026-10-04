@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
@@ -123,6 +124,8 @@ export function mountOfficeApplicationEntry({
   let request;
   let state = 'loading';
   let needsReconciliation = false;
+  let submittedInformation = null;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && state==='saving',isUncertain:()=>!disposed && needsReconciliation,dispose});
   let reference = typeof applicationReference === 'string' ? applicationReference.trim() : '';
   let original = null;
   let context = null;
@@ -159,6 +162,7 @@ export function mountOfficeApplicationEntry({
     original = null;
     review = null;
     reference = '';
+    submittedInformation = null;
     onSaved = null;
     onCancel = null;
     replaceContent('');
@@ -169,6 +173,7 @@ export function mountOfficeApplicationEntry({
   function current(token) { return !disposed && request === token; }
   function close(reload) {
     if (disposed || state === 'saving' || (needsReconciliation && !reload)) return;
+    if(needsReconciliation && reload){void reconcileSave();return;}
     const callback = onCancel;
     const reconcile = reload || needsReconciliation;
     dispose();
@@ -351,6 +356,17 @@ export function mountOfficeApplicationEntry({
       && sameInformation(information, original.information) && sameInformation(saved.information, original.information);
   }
 
+  async function reconcileSave() {
+    if(disposed || state==='saving' || !needsReconciliation || !submittedInformation)return false;
+    const token=request;state='saving';
+    try {
+      const saved=await api.request(`/api/v1/management/clients/${encodeURIComponent(clientId)}/loan-applications/by-reference/${encodeURIComponent(reference)}/review-summary`,{signal});
+      if(!current(token))return false;
+      if(!validSave(saved,submittedInformation) || !sameInformation(saved.information,submittedInformation))throw new Error('The protected saved version does not yet match the original submitted information. The original save remains uncertain.');
+      const callback=onSaved;dispose();callback?.(saved);return true;
+    }catch(error){if(!current(token))return false;if([401,403].includes(error?.status)){denyAccess(error);return false;}state='blocked';showError(error,true);return false;}
+  }
+
   async function save(event) {
     event.preventDefault();
     if (disposed || state !== 'editing' || !sourceChosen()) return;
@@ -370,6 +386,7 @@ export function mountOfficeApplicationEntry({
     request = token;
     state = 'saving';
     needsReconciliation = true;
+    submittedInformation = information;
     setDisabled(true);
     root.querySelector('[data-entry-status]').innerHTML = loadingPanel('Saving application information…');
     let saved;
@@ -386,7 +403,7 @@ export function mountOfficeApplicationEntry({
     } catch (error) {
       if (!current(token)) return;
       if ([401, 403].includes(error?.status)) { needsReconciliation = false; denyAccess(error); return; }
-      const retry = [400, 422].includes(error?.status);
+      const retry = error?.beforeWrite || [400, 422].includes(error?.status);
       if (retry) needsReconciliation = false;
       state = retry ? 'editing' : 'blocked';
       setDisabled(!retry);
@@ -401,7 +418,7 @@ export function mountOfficeApplicationEntry({
   const handle = {getContext:()=>!disposed && original ? {clientId,applicationReference:reference,applicationId:original.application_id,applicationVersionId:original.application_version_id,applicationSaved:true} : null,
     isDirty, getRevision:()=>revision, isWritePending:()=>!disposed && state==='saving', isUncertain:()=>!disposed && needsReconciliation,
     resetCase:()=>{if(state==='saving' || needsReconciliation)return false;dispose();return true;},
-    refreshReadOnly:()=>false, dispose};
+    refreshReadOnly:()=>needsReconciliation?reconcileSave():false, dispose};
   Object.assign(dispose, handle); registerHandle?.(handle);
   mounts.set(root, dispose);
   if (signal?.aborted) { dispose(); return dispose; }

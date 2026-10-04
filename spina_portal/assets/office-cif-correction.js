@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
@@ -58,7 +59,9 @@ export function mountOfficeCifCorrection({
   let fields = {};
   let listeners = [];
   let successor = false;
+  let submitted = null;
   let revision = 0, baseline = new Map(), uncertain = false;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && state==='saving',isUncertain:()=>!disposed && uncertain,dispose});
   const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && typeof clientId === 'string' && UUID.test(clientId);
   const isDirty = () => !disposed && Object.entries(fields).some(([name,field])=>field.value !== baseline.get(name));
   function edited() { revision++; onDraftChange?.(); }
@@ -82,7 +85,7 @@ export function mountOfficeCifCorrection({
   function clearSnapshot() {
     request = {};
     original = null;
-    expectedInformation = null;
+    expectedInformation = null; submitted=null;
   }
 
   function dispose() {
@@ -171,6 +174,7 @@ export function mountOfficeCifCorrection({
   }
 
   async function loadCurrent() {
+    if(uncertain)return reconcileCorrection();
     if (disposed || state === 'denied' || state === 'saving') return;
     const initiatingControl = root.querySelector('[data-correct-cif]');
     const previousState = state;
@@ -229,6 +233,18 @@ export function mountOfficeCifCorrection({
     }
   }
 
+  async function reconcileCorrection() {
+    if(disposed || state==='saving' || !uncertain || !submitted)return false;
+    const token=request;state='saving';
+    try {
+      const value=await api.request(`/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary?include_correction_availability=true${includeIdentity?'&include_identity_information=true':''}`);
+      if(!current(token))return false;
+      const versionMatches=successor ? value?.version_number===original.version_number+1 && value.cif_version_id!==original.cif_version_id : validReview(value,clientId,original);
+      const agrees=Object.entries(submitted.information).every(([key,expected])=>key==='identity_information'?JSON.stringify(value[key])===JSON.stringify(expected):value[key]===expected);
+      if(!validReview(value,clientId) || !versionMatches || !agrees)throw new Error('The current CIF does not yet establish the original correction. The original version and edits remain protected.');
+      uncertain=false;clearSnapshot();start();onSaved?.(value);return true;
+    }catch(error){if(!current(token))return false;if([401,403].includes(error?.status)){denyAccess(error);return false;}state='blocked';showError(error,true);return false;}
+  }
   async function save(event) {
     event.preventDefault();
     if (disposed || state !== 'editing') return;
@@ -248,6 +264,7 @@ export function mountOfficeCifCorrection({
     const token = {};
     request = token;
     state = 'saving';
+    submitted=edited;
     setFieldsDisabled(true);
     root.querySelector('[data-correction-status]').innerHTML = loadingPanel('Saving correction…');
     let saved;
@@ -275,7 +292,7 @@ export function mountOfficeCifCorrection({
         denyAccess(error);
         return;
       }
-      const canRetry = [400, 422].includes(error?.status);
+      const canRetry = error?.beforeWrite || [400, 422].includes(error?.status);
       uncertain = !canRetry;
       state = canRetry ? 'editing' : 'blocked';
       setFieldsDisabled(!canRetry);
@@ -292,7 +309,7 @@ export function mountOfficeCifCorrection({
   Object.assign(dispose, {getContext:()=>!disposed && original ? {clientId,...original} : null, isDirty, getRevision:()=>revision,
     isWritePending:()=>!disposed && state === 'saving', isUncertain:()=>!disposed && uncertain,
     openCase:()=>disposed || !authorized || isDirty() ? false : loadCurrent(), resetCase:()=>{if(disposed || !authorized || state === 'saving' || uncertain)return false; clearSnapshot(); start();return true;},
-    refreshReadOnly:()=>disposed || !authorized || isDirty() || state === 'saving' ? false : loadCurrent(), dispose});
+    refreshReadOnly:()=>disposed || !authorized || state==='saving' ? false : uncertain ? reconcileCorrection() : isDirty() ? false : loadCurrent(), dispose});
   if (signal?.aborted) {
     dispose();
     return dispose;

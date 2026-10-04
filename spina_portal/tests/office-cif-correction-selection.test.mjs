@@ -149,7 +149,7 @@ test('correction access denial clears the selection and all applicant informatio
   assert.equal(h.root.querySelector('[data-office-cif-review]'), null);
   assert.equal(h.root.querySelector('[data-office-cif-correction]'), null);
   assert.doesNotMatch(h.root.textContent,/Original Applicant|Original private address/);
-  assert.match(h.root.textContent, /Office access is no longer available/);
+  assert.equal(h.root.innerHTML,'');
   assert.equal(h.requests.some((r) => r.path === PATCH), false);
 });
 

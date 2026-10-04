@@ -259,7 +259,7 @@ test('references, facts, obligation notes and server errors are escaped', async 
   submit(h);
   await setImmediate();
   assert.doesNotMatch(h.root.innerHTML, /<img\b/i);
-  assert.match(h.root.innerHTML, /&lt;img/);
+  assert.equal(h.root.innerHTML,'');
   noFacts(h);
 });
 
