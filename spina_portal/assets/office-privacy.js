@@ -95,9 +95,10 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   function listen(element,event,handler) { element.addEventListener(event,handler); listeners.push([element,event,handler]); }
   function controls() {
     optional.disabled = busy || uncertain; refresh.disabled = busy;
-    for (const element of [...form.querySelectorAll('input'), ...form.querySelectorAll('button')]) element.disabled = busy || uncertain;
+    for (const element of [...form.querySelectorAll('input'), ...form.querySelectorAll('button'), ...documents.querySelectorAll('button')]) element.disabled = busy || uncertain;
   }
   function invalidate() {
+    if (operation) return false;
     for (const remove of documentListeners) remove();
     documentListeners = [];
     generation += 1; context = null; form.hidden = true; documents.innerHTML = '';
@@ -123,22 +124,27 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
         documents.innerHTML = ['notice','consent'].map(kind => `<p>${escapeHtml(kind)} version ${escapeHtml(result.review_snapshot[kind]?.version)} <button type="button" class="button button-outline" data-privacy-document="${kind}">Download ${kind}</button></p>`).join('');
         for (const button of documents.querySelectorAll('[data-privacy-document]')) {
           const download = async () => {
-          if (!alive() || busy || context !== result) return;
+          if (!alive() || busy || operation || context !== result) return;
           button.disabled = true;
           try {
             const kind = button.getAttribute('data-privacy-document');
             const expectedHash = result.review_snapshot[kind].sha256;
             const blob = await api.request(`${prefix}/privacy/documents/${kind}?cif_version_id=${encodeURIComponent(cifVersionId)}&expected_sha256=${expectedHash}`, {responseType:'blob',signal});
-            if (!alive() || context !== result) return;
+            if (!alive() || operation || context !== result) return;
             if (!(blob instanceof Blob) || blob.type !== 'application/pdf' || !blob.size || blob.size > 10485760) throw new Error('The privacy document is invalid. Load the current record.');
             const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))].map(value => value.toString(16).padStart(2, '0')).join('');
-            if (!alive() || context !== result) return;
+            if (!alive() || operation || context !== result) return;
             if (digest !== expectedHash) throw new Error('The privacy document changed. Load the current record before signing.');
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a'); anchor.href = url; anchor.download = `privacy-${kind}.pdf`; anchor.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-          } catch(error) { if(alive() && context === result) { if ([401,403].includes(error?.status)) { deny(error); return; } invalidate(); status.innerHTML = errorCard(error); } }
-          finally { if(alive()) button.disabled = false; }
+          } catch(error) {
+            if (!alive()) return;
+            if ([401,403].includes(error?.status)) { deny(error); return; }
+            // A document read may predate Save. It does not own that command or its File.
+            if (operation || context !== result) return;
+            invalidate(); status.innerHTML = errorCard(error);
+          } finally { if(alive()) button.disabled = busy || uncertain; }
           };
           button.addEventListener('click', download);
           documentListeners.push(() => button.removeEventListener('click', download));
@@ -190,21 +196,21 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
       operation = {file, selected:context, optional:optional.checked, capture:null,
         query:new URLSearchParams({purpose:'privacy_acknowledgment', cif_version_id:cifVersionId, optional_service_communications:String(optional.checked), request_id:crypto.randomUUID(), expected_snapshot_sha256:context.snapshot_sha256, witnessed_wet_signature:'true'})};
     }
-    const original=operation, current=generation;
+    const original=operation;
     busy=true;writing=true;controls();
     try {
       if (!original.capture) {
         const capture = await api.request(`${prefix}/review-evidence?${original.query}`, {method:'POST',rawBody:original.file,headers:{'Content-Type':original.file.type},signal});
-        if (!alive() || current !== generation) return;
+        if (!alive() || operation !== original) return;
         if (!sameId(capture?.client_id,clientId) || !sameId(capture?.cif_version_id,cifVersionId) || capture.application_id !== null || capture.application_version_id !== null || capture.purpose !== 'privacy_acknowledgment' || capture.snapshot_sha256 !== original.selected.snapshot_sha256 || !UUID.test(capture.evidence_id || '') || capture.evidence_reference !== `office-evidence:${capture.evidence_id}`) throw new Error('Signed privacy capture does not match the review.');
         original.capture=capture;
       }
       const saved=await api.request(`${prefix}/privacy/acknowledgments`,{method:'POST',body:{cif_version_id:cifVersionId,optional_service_communications:original.optional,evidence_reference:original.capture.evidence_reference},signal});
-      if (!alive() || current !== generation) return;
+      if (!alive() || operation !== original) return;
       if (!validSaved(saved,original.selected,original.capture)) throw new Error('The privacy acknowledgment could not be verified.');
       completed();
     } catch(error) {
-      if (alive() && current===generation) {
+      if (alive() && operation===original) {
         if ([401,403].includes(error?.status)) {deny(error);return;}
         if(error?.beforeWrite && !uncertain && !original.capture) {operation=null;status.innerHTML=errorCard(error);}
         else {uncertain=true;optional.checked=original.optional;recovery(error.message);}

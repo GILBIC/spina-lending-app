@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
+import { createOfficeCaseContext, bindOfficeWriteOwner } from '../assets/office-case-context.js';
 import { mountOfficePrivacy } from '../assets/office-privacy.js';
 import { Element, fire } from './helpers/dom.mjs';
 
@@ -41,7 +42,12 @@ function harness(options = {}) {
     if (path.endsWith('/privacy/acknowledgments')) return acknowledgment(request.body.optional_service_communications);
     return captured();
   } };
+  if(options.coordinated){
+    h.coordinator=createOfficeCaseContext({getSession:()=>h.currentSession});
+    h.api=bindOfficeWriteOwner(h.api,{},h.coordinator);
+  }
   h.dispose = mountOfficePrivacy(h);
+  h.coordinator?.registerStage('cif',h.dispose);
   return h;
 }
 function field(h, name) { return h.root.querySelector(`[name="${name}"]`); }
@@ -203,4 +209,98 @@ test('privacy exact retry retains original File request snapshot choice and ackn
  field(h,'signedPrivacyScan').files=[new File(['different'],'different.pdf',{type:'application/pdf'})];field(h,'optionalServiceCommunications').checked=true;fire(field(h,'optionalServiceCommunications'),'change');
  lost=false;fire(button(h,'retry'),'click');await setImmediate();
  const writes=h.calls.filter(c=>c.method==='POST');assert.equal(writes.length,3);assert.equal(writes[1].path,first.path);assert.equal(writes[1].rawBody,file);assert.equal(writes[2].body.optional_service_communications,false);assert.equal(h.dispose.isUncertain(),false);h.dispose();
+});
+
+const deferred = () => {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return {promise, resolve, reject};
+};
+async function downloadingPrivacyWrite(phase) {
+  const h = harness({coordinated:true});
+  await setImmediate();
+  h.documentRead = deferred(); h.upload = deferred(); h.ack = deferred();
+  h.response = path => path.includes('/privacy/documents/') ? h.documentRead.promise
+    : path.includes('/review-evidence?') ? h.upload.promise : h.ack.promise;
+  fire(h.root.querySelector('[data-privacy-document="notice"]'), 'click');
+  choose(h);
+  h.scan = field(h, 'signedPrivacyScan');
+  h.file = new File(['signed'], 'original-privacy.pdf', {type:'application/pdf'});
+  h.scan.files = [h.file];
+  submit(h); await setImmediate();
+  if (phase === 'acknowledgment') { h.upload.resolve(captured()); await setImmediate(); }
+  assert.equal(h.coordinator.isWritePending(), true);
+  return h;
+}
+for (const phase of ['upload','acknowledgment']) {
+  for (const readFailure of ['network','invalid document']) {
+    test(`in-flight document ${readFailure} during privacy ${phase} preserves original command and exact recovery`, async t => {
+      const h = await downloadingPrivacyWrite(phase); t.after(() => h.coordinator.dispose());
+      const first = h.calls.find(call => call.method === 'POST');
+      if (readFailure === 'network') h.documentRead.reject(Error('Document unavailable'));
+      else h.documentRead.resolve(new Blob(['wrong media'], {type:'text/plain'}));
+      await setImmediate();
+      assert.equal(field(h, 'signedPrivacyScan'), h.scan);
+      assert.equal(h.scan.value, 'private-scan.pdf'); assert.equal(h.scan.files[0], h.file);
+      assert.equal(field(h, 'witnessedPrivacySignature').checked, true);
+      assert.equal(await h.coordinator.requestTransition({kind:'close'}), false);
+      if (phase === 'upload') { h.upload.resolve(captured()); await setImmediate(); }
+      assert.equal(h.calls.filter(call => call.method === 'POST').length, 2);
+      h.ack.reject(Error('Acknowledgment response lost')); await setImmediate();
+      assert.equal(h.dispose.isUncertain(), true); assert.equal(h.coordinator.isWritePending(), true);
+      assert.equal(h.scan.files[0], h.file); assert.ok(button(h, 'retry'));
+      const originalAck = h.calls.find(call => call.path.endsWith('/privacy/acknowledgments'));
+      h.response = () => acknowledgment(); fire(button(h, 'retry'), 'click'); await setImmediate();
+      const writes = h.calls.filter(call => call.method === 'POST');
+      assert.equal(writes.length, 3); assert.equal(writes[0].rawBody, h.file);
+      assert.equal(writes[0].path, first.path); assert.deepEqual(writes[2].body, originalAck.body);
+      assert.equal(writes[2].path, originalAck.path); assert.equal(h.coordinator.isWritePending(), false);
+      assert.equal(h.scan.value, ''); assert.match(h.root.textContent, /acknowledgment recorded/);
+    });
+  }
+  test(`late document network failure preserves uncertain privacy ${phase} and its recovery control`, async t => {
+    const h = await downloadingPrivacyWrite(phase); t.after(() => h.coordinator.dispose());
+    (phase === 'upload' ? h.upload : h.ack).reject(Error('Write response lost')); await setImmediate();
+    assert.equal(h.dispose.isUncertain(), true);
+    const retry = button(h, 'retry'); h.documentRead.reject(Error('Late document failure')); await setImmediate();
+    assert.equal(button(h, 'retry'), retry); assert.equal(h.scan.value, 'private-scan.pdf');
+    assert.equal(h.scan.files[0], h.file); assert.equal(h.coordinator.isWritePending(), true);
+    assert.equal(await h.coordinator.requestTransition({kind:'new-intake'}), false);
+  });
+  for (const status of [401,403]) test(`in-flight document ${status} during privacy ${phase} tears down all private owners`, async t => {
+    const h = await downloadingPrivacyWrite(phase); t.after(() => h.coordinator.dispose());
+    let siblingDisposed = false;
+    h.coordinator.registerStage('application', {dispose(){siblingDisposed=true;}});
+    h.documentRead.reject(Object.assign(Error('Access unavailable'), {status})); await setImmediate();
+    assert.equal(siblingDisposed, true); assert.equal(h.root.innerHTML, ''); assert.equal(h.scan.value, '');
+    const count = h.calls.length;
+    h.upload.resolve(captured()); h.ack.resolve(acknowledgment()); await setImmediate();
+    assert.equal(h.calls.length, count); assert.equal(h.root.innerHTML, '');
+  });
+}
+
+for (const phase of ['upload','acknowledgment']) test(`in-flight document success during privacy ${phase} keeps the command until acknowledgment`, async t => {
+  const h = await downloadingPrivacyWrite(phase); t.after(() => h.coordinator.dispose());
+  h.documentRead.resolve(PDF); await setImmediate();
+  assert.equal(h.scan.value, 'private-scan.pdf'); assert.equal(h.scan.files[0], h.file);
+  assert.equal(h.coordinator.isWritePending(), true);
+  assert.equal(h.root.querySelector('[data-privacy-document="notice"]').disabled, true);
+  h.upload.resolve(captured()); await setImmediate(); h.ack.resolve(acknowledgment()); await setImmediate();
+  assert.equal(h.calls.filter(call => call.method === 'POST').length, 2);
+  assert.equal(h.coordinator.isWritePending(), false); assert.equal(h.scan.value, '');
+  assert.match(h.root.textContent, /acknowledgment recorded/);
+});
+test('document failure followed by privacy upload rejection retains the exact raw upload retry', async t => {
+  const h = await downloadingPrivacyWrite('upload'); t.after(() => h.coordinator.dispose());
+  const original = h.calls.find(call => call.method === 'POST');
+  h.documentRead.reject(Error('Document unavailable')); await setImmediate();
+  h.upload.reject(Error('Upload response lost')); await setImmediate();
+  assert.equal(h.dispose.isUncertain(), true); assert.equal(h.coordinator.isWritePending(), true);
+  assert.equal(h.scan.files[0], h.file); assert.equal(h.scan.value, 'private-scan.pdf');
+  h.response = path => path.includes('/review-evidence?') ? captured() : acknowledgment();
+  fire(button(h, 'retry'), 'click'); await setImmediate();
+  const writes = h.calls.filter(call => call.method === 'POST');
+  assert.equal(writes.length, 3); assert.equal(writes[1].path, original.path);
+  assert.equal(writes[1].rawBody, original.rawBody); assert.equal(writes[1].rawBody, h.file);
+  assert.equal(h.coordinator.isWritePending(), false); assert.match(h.root.textContent, /acknowledgment recorded/);
 });
