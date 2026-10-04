@@ -114,10 +114,12 @@ Coordinator operations: `registerStage(stage, handle)`, `getContext()`, `request
 **Consumes:** Existing request/retry identities and read-only recovery.
 **Produces:** All entry, navigation, refresh and replacement paths respect operation ownership.
 
-- [ ] Add RED tests for delayed intake submit plus New/Open/Close/Refresh, uncertain first-loan outcome plus stage change, successful write followed by failed read, cancelled dirty-dialog plus current write, and a response arriving after owner/permission changes.
-- [ ] Make coordinator transitions consult every affected stage's pending/uncertain handle. Keep the original operation recoverable and block conflicting writes; a search result is not resolution of an uncertain command. Ordinary same-case navigation may retain a pending view only when existing policy permits and never clears its lock.
-- [ ] Ensure 401/403/device/session loss clears banner, visible/hidden/detached forms, files, finder and child controllers; late callbacks cannot recreate them. Read-only refresh must preserve unfinished work and moved focus. Protect global shell Refresh, not just local buttons.
-- [ ] Run all Office tests, relevant shared role/write/privacy tests and `npm test`. Inspect no newly added persistence or permission widening. Commit `fix: retain Office write locks and private-state cleanup`.
+- [x] Add RED tests for delayed intake submit plus New/Open/Close/Refresh, uncertain first-loan outcome plus stage change, successful write followed by failed read, cancelled dirty-dialog plus current write, and a response arriving after owner/permission changes.
+- [x] Make coordinator transitions consult every affected stage's pending/uncertain handle. Keep the original operation recoverable and block conflicting writes; a search result is not resolution of an uncertain command. Ordinary same-case navigation may retain a pending view only when existing policy permits and never clears its lock.
+- [x] Ensure 401/403/device/session loss clears banner, visible/hidden/detached forms, files, finder and child controllers; late callbacks cannot recreate them. Read-only refresh must preserve unfinished work and moved focus. Protect global shell Refresh, not just local buttons.
+- [x] Run all Office tests, relevant shared role/write/privacy tests and `npm test`. Inspect no newly added persistence or permission widening. Commit `fix: retain Office write locks and private-state cleanup`.
+
+Task 4 scoped review approved through 2513fa10. Its registered-owner lifecycle is complete; Task 7 must adopt that seam for the new finder in both directions. Full/browser evidence at 1fbd158b and covering fix evidence at 2513fa10 are recorded separately in the acceptance ledger.
 
 ## Task 5 — Refine responsive entry/navigation without a shell redesign
 
