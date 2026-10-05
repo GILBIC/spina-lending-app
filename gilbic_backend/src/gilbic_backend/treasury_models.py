@@ -428,6 +428,14 @@ class SettlementPreview(StrictModel):
     credit_application_id: UUID | None = None
     credit_application_version: Version | None = None
 
+    @model_validator(mode="after")
+    def paired_application_reference(self):
+        if (self.credit_application_id is None) != (
+            self.credit_application_version is None
+        ):
+            raise ValueError("Application ID and version must be supplied together.")
+        return self
+
 
 class CollectorCountRecord(Command):
     action: Literal["collector_count_record"]
@@ -448,6 +456,14 @@ class CollectorCountAccept(Command):
     physical_receipt_acknowledged: StrictBool
     credit_application_id: UUID | None = None
     credit_application_version: Version | None = None
+
+    @model_validator(mode="after")
+    def paired_application_reference(self):
+        if (self.credit_application_id is None) != (
+            self.credit_application_version is None
+        ):
+            raise ValueError("Application ID and version must be supplied together.")
+        return self
 
 
 class CollectorSurplusRecognize(Command):

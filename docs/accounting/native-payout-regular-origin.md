@@ -1,6 +1,6 @@
 # Native payout origin for Regular assessment and application accounting
 
-Design and initial behavioral tests only.0156 is reserved for this origin extension after the first0155 legacy-greenfield application slice. It changes neither0153 nor0155 SQL in this review, and it creates no release or cash journal. The current0148 release-day proof and0139 Treasury-funding guard remain intact.
+0156 implements the private native-origin helper after the first0155 legacy-greenfield application slice. Its first five real-source tests failed on the missing function before implementation. The helper and thirteen total PostgreSQL cases are now written and awaiting their initial GREEN run. It changes neither0153 nor0155 dispatch, and it creates no release or cash journal. The current0148 release-day proof and0139 Treasury-funding guard remain intact.
 
 ## Origin boundary
 
@@ -83,7 +83,7 @@ Maintain source locks until commit. Deferred validation recomputes the same nati
 8. Current chart-role changes and same-transaction backdated source changes invalidate preparation/posting; name changes and retirement preserve retained exact history. Role revocation, private-account denial and unchanged completed retries retain existing behavior.
 9. Existing148 release-day,153 legacy-prefix and155 first-legacy-application fixtures remain exact with unchanged source digests.0139 still rejects the legacy Treasury-funded cash journal.
 
-These cases require native operational payout fixtures, not inserted fake legacy journals. Product SQL remains deferred until the initial tests have failed against the real PostgreSQL baseline.
+These cases require native operational payout fixtures, not inserted fake legacy journals. The first five baseline failures reached the missing normalizer after the real-source and exact154 proof assertions passed. Later153/155 integration remains a separately tested change.
 
 ## Initial156 test boundary
 
@@ -94,3 +94,9 @@ The initial private return contract is `ready`, `blockers`, `origin_kind='native
 These first cases prove the missing origin boundary only. The existing first-loan operation requires the signed basis date to equal the actual server business day and records release at that actual time.153 separately requires an elapsed cutoff strictly after origin and rejects future cutoffs. Therefore the current-day operational fixture cannot honestly prove a positive elapsed native153 assessment or a closed historical release period. Those two cases remain explicitly unverified until a coherent historical native retained fixture is designed. No production clock override, date-validator patch, fabricated legacy proof, or future-period certification is introduced to make them pass.
 
 155 currently preserves `treasury_application_7x7_origin/coordinates` and adds legacy-only `treasury_regular_application_origin/coordinates`, with shared product dispatch. Its retained legacy anchor JSON and other source fields must remain byte-for-byte compatible when156 later supplies the native branch. The common normalizer does not itself change those existing aliases or authorize any new application.
+
+The standalone156 helper currently accepts native origins only. Existing legacy origins continue through their unchanged0051/153/155 authority. Its unknown-control check covers the original completion date and earlier; it does not certify a later loan rollforward. The future153/155 caller must keep its own dated journal whitelist, prefix reconciliation and freshness locks. No private wallet authority is granted by executing the helper internally, and PUBLIC/anon/authenticated/service_role receive no direct execution grant.
+
+The additional boundary cases cover an unposted actual completion, later debit correction, loss of posting role, incompatible wallet ownership, an appended unsigned installment, unknown offsetting original-control journals, stable history after display rename/retirement, and private function grants. Two further cases prove that recoding an unrelated 1110/1120 account cannot hide an extra loan-dimensional journal. A separate1190 case proves that its existing protected ECL guard rejects the proposed manual fixture and leaves origin history unchanged. These introduce no mutation of immutable approved contracts or original audits.
+
+The first fresh156 run exposed a PL/pgSQL reserved-variable syntax error; renaming that local variable allowed the behavioral tests to execute. Then all13 original cases passed, two account-recoding regressions reproduced the bypass, and the proposed1190 fixture was rejected by its existing protected ECL guard before reaching recoding. The1190 test now asserts that existing protection; it is not counted as a reproduced bypass. The repair rejects every extra posted loan-dimensional journal through origination independently of its current account code. This scope matches the first Regular application guard and cannot be bypassed by changing an unrelated account's display or classification. Full current-schema validation is recorded in the execution ledger.
