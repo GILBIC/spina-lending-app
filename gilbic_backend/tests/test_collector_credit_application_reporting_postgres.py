@@ -124,7 +124,14 @@ def test_only_the_physical_principal_is_an_internal_cash_handover(credit_applica
         for row in proof.values()
         if row["journal_entry_id"] == str(cash_id)
     ) == [Decimal("-96.00"), Decimal("96.00")]
-    assert not any(row["journal_entry_id"] == str(credit_id) for row in proof.values())
+    # The credit is paid out of cash already in custody. It is not another
+    # internal handover or wallet cash event, but its selected-cash use is proven.
+    application = [
+        row for row in proof.values() if row["journal_entry_id"] == str(credit_id)
+    ]
+    assert len(application) == 1
+    assert application[0]["source_kind"] == "credit_application"
+    assert application[0]["internal_principal"] == Decimal("0.00")
     repository = PostgresCollectorLiabilityAccountingRepository()
     for preparation in (cash, credit):
         public = repository._public_review(f["conn"], preparation["snapshot"])

@@ -103,10 +103,11 @@ Files: extend Task 2 inventory/guards and close tests; EIR/ECL/tax assessment re
 Files: financial_statements_repository.py/API, focused reporting modules, retained classification/note evidence migrations, Portal/Flutter statements and tests.
 
 - [x] Add explicit cash/cash-equivalent and cash-flow category policies, with unavailable status for unclassified activity.
-- [ ] Build cash-flow and changes-in-equity statements, including profit/loss, retained-earnings transfers, owner funding/withdrawals, noncash items, fees, internal transfers and reversals.
+- [x] Build posted-ledger cash-flow and changes-in-equity statements, including profit/loss, retained-earnings transfers, owner funding/withdrawals, reviewed noncash components, fees, protected internal transfers and reversals.0158 adds financing-liability reconciliation; unsupported source-proof adapters remain explicit coverage blockers.
 - [x] Add comparative periods and retained Management-reviewed notes/policy references without claiming external approval. The user delegated the accounting design.
 - [x] Verify cash-flow ending cash equals GL cash; equity rollforward equals financial position; all sections share one snapshot and book identity.
-- [ ] Test positive/loss/zero-activity periods, retired accounts, malformed data and role/session changes in web/native clients.
+- [x] Test positive/loss/zero-activity calculations, retired chart semantics, malformed components/totals, session changes, rejected saves and exact retry in web/native clients.0158 also covers a320px mobile review at2×text scale.
+- [ ] Complete remaining source-proof adapters and the annual statutory package, then prove combined reporting with the wider lending/correction lifecycle. New presentation reviews require an open period; accounting close alone does not certify disclosure completeness.
 
 ## Task 7 — Current-schema integration, recovery and release evidence
 

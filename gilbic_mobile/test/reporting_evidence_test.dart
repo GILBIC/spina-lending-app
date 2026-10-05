@@ -3,8 +3,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/management/reporting_evidence.dart';
 import 'package:gilbic_mobile/src/features/management/reporting_supplement_card.dart';
 import 'support/reporting_fixture.dart';
+import 'journal_disclosure_evidence_test.dart' show disclosureContract;
 
 void main() {
+  testWidgets('full mixed disclosure replaces the old cashless inventory', (
+    tester,
+  ) async {
+    final data = reportingTestSupplement()
+      ..['journal_disclosures'] = disclosureContract();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ReportingSupplementCard(supplement: data),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Cash and noncash disclosure review'), findsOneWidget);
+    expect(find.text('Journals with no cash movement'), findsNothing);
+  });
   test(
     'cash allocations retain signed cents and must cover the exact line',
     () {

@@ -102,3 +102,35 @@ def test_actual_collector_return_remains_external_cash_with_exact_proof(damage):
         line["collector_cash"]["internal_principal"] = "-5.00"
     result = report([line], closing="95.00")
     assert result["reconciled"] is (damage == "none")
+
+
+@pytest.mark.parametrize(
+    "damage", ["none", "missing", "internal", "positive", "wrong_account"]
+)
+def test_credit_paid_from_custody_is_a_cash_use_not_another_handover(damage):
+    line = cash("-4.00", "operating")
+    line.update(source_type="collector_liability", account_code="1020")
+    line["collector_cash"] = {
+        "source_kind": "credit_application",
+        "source_id": str(uuid4()),
+        "journal_entry_id": str(line["journal_entry_id"]),
+        "internal_principal": "0.00",
+    }
+    if damage == "missing":
+        line.pop("collector_cash")
+    elif damage == "internal":
+        line["collector_cash"]["internal_principal"] = "-4.00"
+        line["allocations"] = [{"category": "internal", "amount": "-4.00"}]
+    elif damage == "positive":
+        line["amount"] = Decimal("4.00")
+        line["allocations"] = [{"category": "operating", "amount": "4.00"}]
+    elif damage == "wrong_account":
+        line["account_code"] = "1010"
+    result = report([line], closing="96.00")
+    assert result["reconciled"] is (damage == "none")
+    if damage == "none":
+        assert result["categories"]["operating"] == {
+            "receipts": "0.00",
+            "payments": "4.00",
+            "net": "-4.00",
+        }

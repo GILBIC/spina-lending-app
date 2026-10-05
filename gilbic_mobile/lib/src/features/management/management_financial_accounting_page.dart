@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/management/management_journal_disclosures_page.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -278,6 +279,19 @@ class _ManagementFinancialAccountingPageState
     if (mounted) await _load();
   }
 
+  Future<void> _openJournalDisclosures() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementJournalDisclosuresPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _openPayoutAccounting() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -531,6 +545,18 @@ class _ManagementFinancialAccountingPageState
               onTap: _periodActionInProgress
                   ? null
                   : () => _openSourceAccounting(SourceAccountingMode.reporting),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('journal-disclosures'),
+              leading: const Icon(Icons.compare_arrows),
+              title: const Text('Cash and noncash disclosures'),
+              subtitle: const Text(
+                'Review mixed journal components and reconcile financing liabilities.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openJournalDisclosures,
             ),
           ),
           if (widget.session.hasPermission('accounting.journal.manage'))

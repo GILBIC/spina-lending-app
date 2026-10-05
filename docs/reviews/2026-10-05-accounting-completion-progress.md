@@ -163,3 +163,36 @@ Actual service-response fixtures exposed a missing returned-approval comparison 
 Counts overlap and must not be summed. The new disposable validator is included in CI. This is bounded software verification, not production activation or complete lending-company/annual-package readiness. Native elapsed integration, broader lifecycle corrections and0158 mixed disclosure remain unfinished. Production books, opening balances and tax facts are unchanged.
 
 0157 Git-staged SQL (LF) SHA256: `e049e626953b99e397016974eed477ad0d98bead1109b5d6d1c423ed05ce4604`.
+
+## 0158 mixed-disclosure implementation in progress
+
+The 0158 baseline is implemented but not yet release-verified. Immutable financing-policy versions and journal-component reviews bind the book, current reporting policy, original posted lines, semantic chart identities, current source status, latest cash classifications, evidence, actor and actual review timestamp. Every component pairs a debit with a credit in the same journal; exact totals cover every line. Cash-connected portions reconcile to retained cash classifications. Full-period candidate coverage and a financing-liability rollforward replace residual inference. Protected opening and formal-close identities have separate treatment. Unknown source adapters remain explicit blockers.
+
+Current Management and all contributing private wallet scopes (including prior-period balances and retained Collector wallets) are checked before figures are returned. The main statement API now passes its current actor and reads the disclosures in its existing repeatable-read snapshot. Reviews are included in new close manifests; periods without disclosure evidence preserve the previous manifest shape.
+
+Observed checks (overlapping counts, do not sum):
+
+- `disclosure158-backend.txt`: 92 pass, zero skips, fresh0158, 78.90 seconds. Includes exact amounts, invalid allocations, stale policies/cash revisions, immutable history, current access, actual Collector source correction, simultaneous review revisions, audit rollback, populated review restore, direct-client barriers, statement snapshot consistency and the existing close/restore cycle.
+- `disclosure158-contract.txt`: 67 pass, zero skips, fresh0158. Exports an actual synthetic backend report with period/book identity and retained cash allocations for client tests.
+- The new dual-prefix API tests and existing reporting API tests pass (19); statement actor-binding plus new API tests pass (15). These are focused runs, not a full backend regression.
+- `disclosure158-portal-partial.txt`: 48 pass. Includes exact component parsing, actual backend-response tampering (including a balanced but incorrectly split financing movement), remaining amounts, statement rendering, guided confirmation, unchanged retry after a lost response, role-change clearing and accounting navigation. Further UI/recovery cases and broader regression remain.
+
+Outstanding before accepting0158: mobile parser/review/report/navigation, UI field and small-screen verification, more protected-source/economic cases and race coverage, final scoped lint, a dedicated disposable validator/CI registration, release documentation and final review. No production schema, entity facts, balances, tax settings or flags have been changed.
+
+## Verified 0158 posted-journal disclosure checkpoint
+
+This supersedes the preceding0158 in-progress checklist. Portal and Flutter now provide guided financing-account selection, debit/credit component entry, remaining amounts, evidence, explicit review/save, unchanged retry, rejected-save recovery and state clearing after access/session changes. Both validate the same actual synthetic backend contract, including financing changes derived independently from its components. A stale review remains readable, but malformed retained line IDs/amounts cannot enter an editor.
+
+Self-review found and repaired three gaps with observed failing tests: approved Collector credit uses were excluded from cash proof; disclosure writes did not take the existing period-transition advisory boundary; and both clients skipped structural validation of stale components. Exact Collector application proof now establishes a negative1020 cash use with zero internal principal when custody is selected as cash. It does not manufacture a receiving-wallet event or another internal handover. Actual partial-credit/excess-cash and full-credit/no-new-wallet-cash cases reconcile gross receipts, payments, closing cash and journal disclosures. A competing period transition wins before new retention, and an actual period-review manifest preserves all earlier reviews while new revisions are frozen. Unchanged completed retry still returns the original record.
+
+Final observed evidence (selections overlap; do not sum):
+
+- `disclosure158-final.txt`:144 pass, zero skips, fresh0158,121.78seconds. Includes the new actual Collector economics, period-transition race/freeze, concurrent revisions, current private scopes, same-snapshot statement changes, source correction, rollback, exact retry, direct-client barriers and populated restore.
+- `disclosure158-cash-regression.txt`:25 pass, including earlier equity/cash reporting cases and the expanded Collector custody cash checks.
+- `disclosure158-portal-final.txt`:257 pass. Includes component creation/removal, explicit financing policy, closed/read-only views,403/409 rejection, unchanged recovery, malformed/stale backend responses and broader accounting/Treasury regressions.
+- `disclosure158-mobile-final.txt`:101 pass across the14files retained in `disclosure158-mobile-files.txt`. Includes actual dropdown/field entry and confirmation, financing policy, closed/read-only views,403/409 rejection, session clearing, lost-response recovery and320px/2×text layout. An initial new-entry widget test needed its scrolling fixture reset before returning to offscreen debit inputs; no application defect was waived.
+- `disclosure158-mobile-analyze-final.txt`: all10changed Dart files have no issues. All17changed/new Python files pass scoped Ruff lint and format. The CI workflow parses and the new disposable validator compiles and is registered in CI. Full hosted CI and independent whole-program review have not been run here.
+
+The design, reporting guide, release/recovery procedure and implementation plan are updated.0158 is a verified local increment, not production activation or unrestricted lending-company readiness. Unknown disclosure source adapters, native elapsed integration, wider loan/correction lifecycles, the annual statutory package and final combined release proof remain work. Disclosure revisions require an open period; an accounting close does not certify complete presentation evidence or implement post-close amendments. Actual company identity, opening balances and tax facts remain unconfigured.
+
+0158 Git-staged SQL (LF) SHA256: `8f4d4f508ee6781bbaa553631db52076a7f85d0d1f43583094e2dfe6c02d0e39`.

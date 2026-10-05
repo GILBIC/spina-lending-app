@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
+import psycopg
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from .account_repository import PostgresAccountRepository
@@ -130,11 +131,18 @@ def create_financial_statements_router() -> APIRouter:
                 },
             )
         try:
-            pack = statements.load_statement_pack(period_id=period_id)
+            pack = statements.load_statement_pack(
+                period_id=period_id, actor_user_id=actor.user_id
+            )
         except StatementPeriodNotFound as error:
             raise HTTPException(
                 status_code=404,
                 detail={"code": error.code, "message": str(error)},
+            ) from error
+        except psycopg.Error as error:
+            raise HTTPException(
+                status_code=403 if error.sqlstate == "42501" else 503,
+                detail="Current statement disclosure access or evidence is unavailable.",
             ) from error
         return {"success": True, "data": {"statements": _pack_payload(pack)}}
 

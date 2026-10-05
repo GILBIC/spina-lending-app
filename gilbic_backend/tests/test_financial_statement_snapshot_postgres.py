@@ -84,12 +84,27 @@ def test_statement_pack_uses_one_snapshot_during_concurrent_post(
                     )
             return rows
 
-    report = InterleavedReport().load_statement_pack(period_id=period)
+    report = InterleavedReport().load_statement_pack(
+        period_id=period, actor_user_id=actor
+    )
     assert report.net_income == Decimal("100.00")
     assert report.unclosed_earnings_to_date == report.net_income
     assert report.total_assets == Decimal("100.00")
     # The next request must see the newly committed journal.
     fresh = statements.PostgresFinancialStatementsRepository().load_statement_pack(
-        period_id=period
+        period_id=period, actor_user_id=actor
     )
     assert fresh.net_income == fresh.total_assets == Decimal("125.00")
+    if int(os.getenv("SPINA_CURRENT_SCHEMA_THROUGH", "0")) >= 158:
+        assert (
+            report.reporting_supplement["journal_disclosures"]["coverage"][
+                "journal_count"
+            ]
+            == 1
+        )
+        assert (
+            fresh.reporting_supplement["journal_disclosures"]["coverage"][
+                "journal_count"
+            ]
+            == 2
+        )

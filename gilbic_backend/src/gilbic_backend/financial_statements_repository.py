@@ -10,6 +10,7 @@ from psycopg.rows import dict_row
 from .accounting_book_repository import AccountingBookIdentity, read_book_identity
 from .database import open_connection
 from .financial_reporting import cash_flow_statement, equity_rollforward, money
+from .journal_disclosure_repository import read_journal_disclosures
 from .reporting_evidence_repository import (
     read_internal_collector_cash,
     read_internal_transfer_principals,
@@ -159,6 +160,7 @@ class PostgresFinancialStatementsRepository:
         self,
         *,
         period_id: UUID | None = None,
+        actor_user_id: UUID | None = None,
     ) -> FinancialStatementPack:
         with (
             open_connection() as connection,
@@ -169,6 +171,17 @@ class PostgresFinancialStatementsRepository:
             cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             book_identity = read_book_identity(cursor)
             period = self._load_period(cursor, period_id)
+            disclosure_actor = None
+            if actor_user_id is not None:
+                cursor.execute(
+                    "SELECT to_regclass('accounting.journal_disclosure_reviews') AS relation"
+                )
+                if cursor.fetchone()["relation"] is not None:
+                    cursor.execute(
+                        "SELECT accounting.require_disclosure_actor(%s,%s,'accounting.view')",
+                        (actor_user_id, period.period_id),
+                    )
+                    disclosure_actor = actor_user_id
             period_movements = self._load_movements(
                 cursor,
                 period_id=period.period_id,
@@ -189,10 +202,20 @@ class PostgresFinancialStatementsRepository:
             )
             return replace(
                 pack,
-                reporting_supplement=self._supplement(cursor, pack, period_movements),
+                reporting_supplement=self._supplement(
+                    cursor, pack, period_movements, disclosure_actor=disclosure_actor
+                ),
             )
 
-    def _supplement(self, cursor, pack, period_movements, *, include_comparative=True):
+    def _supplement(
+        self,
+        cursor,
+        pack,
+        period_movements,
+        *,
+        include_comparative=True,
+        disclosure_actor=None,
+    ):
         opening = self._load_movements(
             cursor,
             period_id=None,
@@ -322,6 +345,13 @@ class PostgresFinancialStatementsRepository:
             "comparative": None,
             "notice": "These are posted-ledger reports. Retained notes and classifications are Management evidence; they do not certify statutory compliance or complete source recognition.",
         }
+        if disclosure_actor is not None:
+            disclosures = read_journal_disclosures(
+                cursor, pack.period.period_id, disclosure_actor
+            )
+            result["journal_disclosures"] = disclosures
+            result["noncash_disclosure_status"] = disclosures["status"]
+            result["noncash_inventory_scope"] = "all_posted_journals"
         if include_comparative:
             cursor.execute(
                 "SELECT id FROM accounting.fiscal_periods WHERE end_date<%s ORDER BY end_date DESC,start_date DESC LIMIT 1",
@@ -353,7 +383,11 @@ class PostgresFinancialStatementsRepository:
                 result["comparative"] = replace(
                     previous,
                     reporting_supplement=self._supplement(
-                        cursor, previous, movements, include_comparative=False
+                        cursor,
+                        previous,
+                        movements,
+                        include_comparative=False,
+                        disclosure_actor=disclosure_actor,
                     ),
                 )
         return result

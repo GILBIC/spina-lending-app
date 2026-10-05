@@ -87,7 +87,7 @@ def read_internal_transfer_principals(cursor, period_id):
 
 
 def read_internal_collector_cash(cursor, period_id):
-    """Protected cash principal, including custody cash already recognized once."""
+    """Exact custody cash use and handover proof; an application has no internal leg."""
     cursor.execute(
         "SELECT to_regclass('accounting.collector_liability_posting_status') AS relation"
     )
@@ -109,7 +109,8 @@ def read_internal_collector_cash(cursor, period_id):
           AND proof.book_id=(SELECT id FROM accounting.book_identity WHERE singleton)
           AND journal.fiscal_period_id=%s AND journal.status='posted'
           AND journal.source_type='collector_liability'
-          AND proof.source_kind IN('settlement','return_debit','return_reversal')
+          AND proof.source_kind IN('settlement','return_debit','return_reversal','credit_application')
+          AND (proof.source_kind<>'credit_application' OR (account.code='1020' AND line.credit>0 AND line.debit=0))
           AND account.code IN('1010','1020','1030')""",
         (period_id,),
     )

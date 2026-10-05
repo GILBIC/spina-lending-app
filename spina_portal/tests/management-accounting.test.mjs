@@ -28,6 +28,12 @@ test('accounting requires Management plus view permission before reading private
   }
 });
 
+test('accounting navigation exposes mixed disclosure reviews', async () => {
+  const f = await setup();
+  assert.ok(f.root.querySelector('[data-accounting-tab="disclosures"]'));
+  f.cleanup();
+});
+
 test('new fiscal period requires review and one confirmed submission', async () => {
   let resolveWrite;
   const f = await setup({ write: () => new Promise((resolve) => { resolveWrite = resolve; }) });

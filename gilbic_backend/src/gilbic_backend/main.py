@@ -72,6 +72,7 @@ from .greenfield_regular_renewal_rollforward_api import (
     create_greenfield_regular_renewal_rollforward_router,
 )
 from .initial_capital_funding_api import create_initial_capital_funding_router
+from .journal_disclosure_api import create_journal_disclosure_router
 from .liability_control_api import create_liability_control_router
 from .loan_application_api import create_loan_application_router
 from .loan_disbursement_cancellation_api import (
@@ -266,6 +267,7 @@ def create_app() -> FastAPI:
     app.include_router(create_liability_control_router())
     app.include_router(create_treasury_receipt_accounting_router())
     app.include_router(create_reporting_evidence_router())
+    app.include_router(create_journal_disclosure_router())
     app.include_router(create_retained_cutoff_assessment_router())
     app.include_router(create_elapsed_period_assessment_router())
     app.include_router(create_treasury_application_accounting_router())

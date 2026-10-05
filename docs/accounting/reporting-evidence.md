@@ -1,6 +1,6 @@
 # Reporting evidence and statement package
 
-This implementation adds direct cash flows, changes in equity, preceding-period comparatives, a noncash journal inventory and retained Management notes to the posted-ledger statement pack. Every section uses the same database snapshot and book identity. It does not assert that all business activity has been recorded or that an annual statutory package has been approved.
+This implementation adds direct cash flows, changes in equity, preceding-period comparatives, retained Management notes and reviewed cash/noncash journal components to the posted-ledger statement pack. Migration0158 adds financing-liability reconciliation and explicit coverage of every posted journal. Every section uses the same database snapshot and book identity. It does not assert that all business activity has been recorded or that an annual statutory package has been approved.
 
 ## Cash definition and classifications
 
@@ -14,7 +14,15 @@ Protected Collector settlement cash uses the same principle. When both custody a
 
 The design follows the distinction between operating, investing and financing cash flows, separate noncash disclosure and reconciliation to financial position described in the [IFRS Foundation's IAS7 overview](https://www.ifrs.org/issued-standards/list-of-standards/ias-7-statement-of-cash-flows/). Actual framework applicability and individual classifications remain retained entity-specific facts; the user has authorized the software design.
 
-With 0157 credit-funded remittances, only gross custody less approved credit is the physical internal handover. Actual excess is separate. The credit discharge has its own accepted-date journal (2220 to 1020), while actual cash retains the count date. A zero-cash settlement creates no cash event or internal handover pair. Remittance history and notifications show exact gross, cash, credit and excess amounts. Mixed cash/noncash disclosure remains an independent unfinished reporting scope.
+With 0157 credit-funded remittances, only gross custody less approved credit is the physical internal handover. Actual excess is separate. The credit discharge has its own accepted-date journal (2220 to 1020), while actual cash retains the count date. A zero-cash settlement creates no receiving-wallet cash event or internal handover pair. Under a retained definition including1020, the approved discharge is a payment from cash already held in custody. It requires current exact application proof, a negative1020 line, zero internal principal and an explicit external cash classification. It is neither another receipt nor a hidden internal offset. If1020 is excluded, the liability/custody component is noncash under that selected definition. This interpretation follows the distinction between cash on hand and internal cash transfers in [IAS7](https://www.ifrs.org/issued-standards/list-of-standards/ias-7-statement-of-cash-flows/); no additional Treasury payment is fabricated.
+
+## Mixed journals and financing liabilities
+
+Management retains a financing-account policy for the period, including an explicit empty selection when none apply. Each reviewed journal is decomposed into positive exact-cent portions linking one original debit and one original credit. Portions must cover every line exactly. Cash portions must agree with the current retained cash-flow classifications. Noncash investing, financing, combined investing/financing, operating and other reclassifications remain separate; no grand noncash total is inferred. A1,000 asset financed with400 cash and600 borrowing discloses600 once.
+
+Every posted journal has a current review, a protected opening/close exclusion, or a visible blocker. Missing reviews, unknown/corrected source proof, changed policies, changed account semantics and changed cash classifications prevent a complete coverage result. Each selected financing liability reconciles opening balance, cash changes, noncash changes and protected opening adjustments to its closing GL balance. Incomplete coverage leaves those movement totals unavailable. The main statements and comparatives read this evidence in the same snapshot as their balances.
+
+Both clients guide account/amount/evidence entry, show unallocated portions, and require review before saving. Lost responses retain the original request for unchanged retry. Current private grants for every contributing wallet, including opening balances and both Collector wallets, are checked before any figures are returned. Evidence retention shares the protected period-transition boundary. Retained reviews enter the close manifest; new versions require an open period. An accounting close does not itself certify disclosure coverage. Complete the presentation reviews before moving to period review; post-close presentation amendments are not implemented.
 
 ## Equity and comparatives
 
@@ -27,7 +35,7 @@ The comparative is the immediately preceding fiscal period by end date, with its
 - Policies and cash classifications are immutable versions with current Management authority, exact retry semantics, book binding and atomic audit writes. They create no GL entry or money movement.
 - Notes preserve supplied title, text, reference and digest. They are labelled Management evidence; the system never manufactures an accountant's approval.
 - A policy or classification can be corrected through a new version while the period is open. Historical exact retry returns the original result, with current authorization checked again.
-- The noncash inventory identifies posted journals without a selected cash control. Its gross debit is a journal reference amount, not an additive total of a financial-statement category. Mixed cash and noncash transactions still require disclosure review; this inventory cannot certify complete noncash disclosure.
+- The older noncash inventory remains a compatibility fallback before0158. Its gross debit is a journal reference amount, not an additive financial-statement total. With0158 the clients show the complete candidate/review coverage and financing reconciliation instead. Unsupported source adapters remain blockers, even when their journals balance.
 - Source completeness and annual statutory-package completeness remain separate assurance flags. Missing source adapters and dated assessments cannot be cured by adding a report note.
 
 Validation includes exact classifications, immutable evidence, book/permission checks, loss/profit/zero-activity periods, formal close and comparative reconciliation. The execution ledger records the currently completed runs and remaining integration work.

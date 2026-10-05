@@ -1,6 +1,6 @@
-# Mixed cash and noncash disclosure evidence — proposed 0158
+# Mixed cash and noncash disclosure evidence — 0158
 
-Status: design only. The current report keeps `noncash_disclosure_status=mixed_transactions_require_review`. No migration, retained review API or completeness claim is implemented by this document.
+Status: implemented locally in migration0158, the backend, Portal and Flutter. Fresh database, client and recovery checks are recorded in the dated completion progress log. This verifies the supported posted-ledger scope; it is not production activation or a lending-company readiness claim. Unknown source-proof adapters remain explicit coverage blockers.
 
 ## Scope and accounting basis
 
@@ -16,11 +16,13 @@ Use explicit retained component allocations. Every component links one debit lin
 
 ## Retained contract
 
-Reserve migration 0158 for immutable `accounting.journal_disclosure_reviews` and narrow private functions. A review binds the book, fiscal period, current reporting-policy version, posted journal identity and reversal relationship, complete ordered journal lines, semantic chart identities, actor, actual review timestamp, evidence reference, reason and version. Retain a stable canonical digest of that snapshot. Display names and retirement do not invalidate historical meaning; changed IDs/codes/system keys/account type/normal balance/posting role do.
+Migration0158 adds immutable `accounting.journal_disclosure_reviews` and narrow private functions. A review binds the book, fiscal period, current reporting-policy version, posted journal identity and reversal relationship, complete ordered journal lines, semantic chart identities, actor, actual review timestamp, evidence reference, reason and version. It retains a stable canonical digest of that snapshot. Display names and retirement do not invalidate historical meaning; changed IDs/codes/system keys/account type/normal balance/posting role do.
 
 Each allocation contains debit-line ID, credit-line ID, exact positive amount, a supported disclosure classification and an evidence reference. Supported noncash classifications should distinguish investing, financing, combined investing/financing, operating adjustments, and other documented reclassifications. Combined investing/financing is one component displayed with both labels, never added twice to a grand total. Avoid a grand noncash total across unrelated categories. Opening balances and formal closing transfers are separately identified and excluded from current-period transaction totals through protected source identity, including reversals of opening journals.
 
 An allocation involving a selected cash line is a cash-connected component. It cannot also be reported as a noncash component. It must reconcile to that line's retained cash-flow allocations. Existing protected internal-transfer and Collector physical-principal checks remain authoritative; disclosure review cannot override a missing/corrected source proof, classify a credit application as a second physical cash event, or conceal a selected-cash movement.
+
+The verified Collector credit case has zero internal principal and a negative1020 line: when custody is selected as cash, the approved credit discharge is a use of that already-collected cash. Actual physical handover remains gross custody less approved credit, and excess remains separate. Zero physical handover does not imply zero use of custody cash. The test journals reconcile both partial-credit/excess-cash and full-credit/no-new-wallet-cash cases.
 
 The review is immutable, append-only and versioned. Exact request replay returns the same review; a changed request body conflicts. New revisions supersede only the selected review, preserving prior content and timestamps. A journal reversal is a different posted source requiring its own economic classification and explicit reference to the original; no automatic sign inversion may certify an unrelated replacement transaction.
 
@@ -29,6 +31,8 @@ The review is immutable, append-only and versioned. Exact request replay returns
 Read policy, reviews, journals, chart semantics, cash classifications and source proof within the existing repeatable-read statement snapshot. Reporting must include a candidate for every posted journal in the fiscal period, with explicit protected opening/close exclusions. An omitted review, changed policy, changed semantic chart, unclassified allocation, missing correction proof or new journal yields an exact coverage blocker. Zero activity is complete for the posted-ledger disclosure scope only when a valid current reporting policy exists.
 
 Prepare/write uses current Management authority, the established period/book locks and optimistic review version. Recompute the bound source digest under those locks before inserting the new version. Use existing evidence validation and private grants. This is presentation evidence, not a new monetary posting; it cannot bypass journal admission or reopen a period. If post-close presentation review is supported, label its actual date and preserve the original closed review snapshot separately.
+
+Implemented retention takes the existing period-close advisory boundary before source locks. New versions require an open period; unchanged historical retry remains possible with current authorization. New period-review manifests retain the disclosure policy and all review versions. Periods without disclosure evidence keep their earlier manifest shape. Accounting close does not imply complete disclosure coverage, and post-close presentation amendments remain unsupported: finish reviews before freezing the period.
 
 Financing-liability reconciliation must follow the retained financing-account policy and classify every change between opening and closing carrying balance into cash, noncash components and protected opening adjustments. It must equal the balance sheet and must not count the two sides of a debt-to-equity conversion as two liability changes. Keep payable control reconciliation separate: an unpaid reconciled liability is valid.
 
@@ -49,4 +53,4 @@ Portal and Flutter should guide review by transaction: show the posted debit/cre
 7. Simultaneous revision, post/close/source races, rollback after audit, exact retry, revoked authority and all-page privacy have real database proof.
 8. Both clients reject malformed totals, recover the original request after a lost response, and clear state on role/session change. Fresh-schema populated restore preserves every review and its report output.
 
-This design is not verification evidence. Implement and observe each baseline before marking the reporting task complete.
+This design describes intended behavior; the execution ledger records observed evidence. Broader source adapters, final combined release proof and actual-company activation remain separate work.

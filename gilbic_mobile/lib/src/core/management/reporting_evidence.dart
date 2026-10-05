@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/management/source_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/journal_disclosure_evidence.dart';
 import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
 
 const cashFlowCategories = ['operating', 'investing', 'financing', 'internal'];
@@ -44,6 +45,9 @@ List<Map<String, dynamic>> validateCashAllocations(
 }
 
 Map<String, dynamic> validateReportingSupplement(Map<String, dynamic> value) {
+  if (value['journal_disclosures'] != null) {
+    validateJournalDisclosures(accountingObject(value['journal_disclosures']));
+  }
   final equity = accountingObject(value['changes_in_equity']),
       cash = accountingObject(value['cash_flows']),
       notes = accountingObject(value['notes']);

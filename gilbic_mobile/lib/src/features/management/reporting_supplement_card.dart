@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/management/journal_disclosure_card.dart';
 import 'package:gilbic_mobile/src/core/management/reporting_evidence.dart';
 import 'package:gilbic_mobile/src/core/management/source_accounting_repository.dart';
 
@@ -128,23 +129,28 @@ class ReportingSupplementCard extends StatelessWidget {
               ],
             ),
         ]),
-        section('Journals with no cash movement', [
-          const Text(
-            'This inventory excludes mixed journals containing both cash and noncash activity. Further noncash disclosure may be required.',
-          ),
-          if (accountingRows(data['noncash_activity']).isEmpty)
-            Text(
-              cash['policy'] == null ||
-                      cash['status'] == 'cash_definition_changed'
-                  ? 'Noncash activity is unavailable until the cash definition is retained.'
-                  : 'No noncash activity returned for this period.',
+        if (data['journal_disclosures'] != null)
+          JournalDisclosureCard(
+            disclosures: accountingObject(data['journal_disclosures']),
+          )
+        else
+          section('Journals with no cash movement', [
+            const Text(
+              'This inventory excludes mixed journals containing both cash and noncash activity. Further noncash disclosure may be required.',
             ),
-          for (final row in accountingRows(data['noncash_activity']))
-            fact(
-              '${row['entry_number'] ?? row['journal_entry_id']} · ${row['posting_date']} · Gross debit',
-              money(row['gross_debit']),
-            ),
-        ]),
+            if (accountingRows(data['noncash_activity']).isEmpty)
+              Text(
+                cash['policy'] == null ||
+                        cash['status'] == 'cash_definition_changed'
+                    ? 'Noncash activity is unavailable until the cash definition is retained.'
+                    : 'No noncash activity returned for this period.',
+              ),
+            for (final row in accountingRows(data['noncash_activity']))
+              fact(
+                '${row['entry_number'] ?? row['journal_entry_id']} · ${row['posting_date']} · Gross debit',
+                money(row['gross_debit']),
+              ),
+          ]),
         if (includeComparative && data['comparative'] != null)
           _comparative(accountingObject(data['comparative']))
         else if (includeComparative)
