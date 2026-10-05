@@ -185,7 +185,11 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
     if (conflict) {
       const version = ++navigationVersion;
       feedback.innerHTML = '<p>This stage already contains a different case or application. Your existing work has been kept. Open it to review before changing cases.</p><button type="button" class="button button-outline" data-office-show-existing>Show existing case</button>';
-      feedback.querySelector('[data-office-show-existing]').addEventListener('click',()=>{if(version===navigationVersion)show(step);},{once:true});
+      feedback.querySelector('[data-office-show-existing]').addEventListener('click',async()=>{
+        if (disposed || version !== navigationVersion) return;
+        if (!await coordinator.requestTransition({kind:'navigate',targetStage:step}) || disposed || version !== navigationVersion) return;
+        show(step);
+      },{once:true});
       return;
     }
     if (!await coordinator.requestTransition({kind:'navigate',targetStage:step}) || disposed) return;

@@ -216,6 +216,69 @@ const deferred = () => {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return {promise, resolve, reject};
 };
+for (const role of ['employee', 'management']) {
+  for (const editTiming of ['before read', 'during read']) test(`${role}: recoverable privacy download failure retains unsubmitted draft edited ${editTiming}`, async t => {
+    const h = harness({role, coordinated:true});
+    t.after(() => h.coordinator.dispose());
+    await setImmediate();
+    const read = deferred(), scan = field(h, 'signedPrivacyScan');
+    const file = new File(['signed'], 'retained.pdf', {type:'application/pdf'});
+    const source = h.dispose.getContext();
+    const edit = () => { choose(h); scan.files = [file]; fire(scan, 'change'); };
+    h.response = () => read.promise;
+    if (editTiming === 'before read') edit();
+    fire(h.root.querySelector('[data-privacy-document="notice"]'), 'click');
+    if (editTiming === 'during read') edit();
+    read.reject(Object.assign(Error('Recoverable document outage'), {status:503}));
+    await setImmediate();
+    assert.equal(field(h, 'signedPrivacyScan'), scan);
+    assert.equal(scan.value, 'private-scan.pdf');
+    assert.equal(scan.files[0], file);
+    assert.equal(field(h, 'witnessedPrivacySignature').checked, true);
+    assert.equal(h.root.querySelector('form').hidden, false);
+    assert.deepEqual(h.dispose.getContext(), source);
+    assert.equal(h.dispose.isDirty(), true);
+    assert.equal(h.calls.filter(call => call.method === 'POST').length, 0);
+    assert.match(h.root.textContent, /Recoverable document outage/);
+  });
+  for (const failure of ['invalid media', 'hash mismatch', 'server source conflict']) test(`${role}: ${failure} blocks privacy signing without clearing draft until exact document recovery`, async t => {
+    const h = harness({role, coordinated:true});
+    t.after(() => h.coordinator.dispose());
+    await setImmediate(); choose(h);
+    const scan = field(h, 'signedPrivacyScan'), file = new File(['signed'], 'retained.pdf', {type:'application/pdf'});
+    scan.files = [file];
+    const notice = h.root.querySelector('[data-privacy-document="notice"]');
+    h.response = () => {
+      if (failure === 'server source conflict') throw Object.assign(Error('Privacy document changed'), {status:409});
+      return failure === 'invalid media' ? new Blob(['invalid'], {type:'text/plain'}) : new Blob(['changed'], {type:'application/pdf'});
+    };
+    fire(notice, 'click');
+    while (notice.disabled) await setImmediate();
+    assert.equal(scan.value, 'private-scan.pdf');
+    assert.equal(scan.files[0], file);
+    assert.equal(field(h, 'witnessedPrivacySignature').checked, true);
+    assert.equal(h.root.querySelector('form').hidden, false);
+    assert.equal(h.root.querySelector('button[type="submit"]').disabled, true);
+    assert.match(h.root.textContent, /signing.*blocked/i);
+    submit(h); fire(button(h, 'refresh'), 'click'); await setImmediate();
+    assert.equal(h.calls.length, 2, 'blocked draft cannot write or be erased by a generic load');
+    const originalDocument = globalThis.document;
+    globalThis.document = {createElement:() => ({click(){}})};
+    t.after(() => { globalThis.document = originalDocument; });
+    h.response = () => PDF;
+    fire(notice, 'click');
+    while (notice.disabled) await setImmediate();
+    assert.equal(field(h, 'signedPrivacyScan'), scan);
+    assert.equal(scan.files[0], file);
+    assert.equal(field(h, 'witnessedPrivacySignature').checked, true);
+    assert.equal(h.root.querySelector('button[type="submit"]').disabled, false);
+    h.response = path => path.includes('/review-evidence?') ? captured() : acknowledgment();
+    submit(h); await setImmediate();
+    assert.equal(h.calls.filter(call => call.method === 'POST').length, 2);
+    assert.equal(h.calls.find(call => call.method === 'POST').rawBody, file);
+    assert.match(h.root.textContent, /acknowledgment recorded/);
+  });
+}
 async function downloadingPrivacyWrite(phase) {
   const h = harness({coordinated:true});
   await setImmediate();

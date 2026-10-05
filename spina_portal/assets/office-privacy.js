@@ -36,6 +36,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   let operation = null;
   let writing = false, revision = 0;
   let savedOptional = false;
+  const blockedDocuments = new Set();
   api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && writing,isUncertain:()=>!disposed && uncertain,dispose});
   const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId || '') && UUID.test(cifVersionId || '');
   const isDirty = () => !disposed && [...root.querySelectorAll('input')].some(input => input.getAttribute('type') === 'file' ? Boolean(input.files?.length) : input.getAttribute('name') === 'optionalServiceCommunications' ? Boolean(input.checked) !== savedOptional : Boolean(input.checked));
@@ -96,12 +97,14 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   function controls() {
     optional.disabled = busy || uncertain; refresh.disabled = busy;
     for (const element of [...form.querySelectorAll('input'), ...form.querySelectorAll('button'), ...documents.querySelectorAll('button')]) element.disabled = busy || uncertain;
+    form.querySelector('button[type="submit"]').disabled = busy || uncertain || blockedDocuments.size > 0;
   }
   function invalidate() {
     if (operation) return false;
     for (const remove of documentListeners) remove();
     documentListeners = [];
     generation += 1; context = null; form.hidden = true; documents.innerHTML = '';
+    blockedDocuments.clear();
     fileInput.value = ''; witness.checked = false; status.innerHTML = '';
   }
   async function load() {
@@ -126,15 +129,24 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
           const download = async () => {
           if (!alive() || busy || operation || context !== result) return;
           button.disabled = true;
+          const kind = button.getAttribute('data-privacy-document');
+          let invalidDocument = false;
           try {
-            const kind = button.getAttribute('data-privacy-document');
             const expectedHash = result.review_snapshot[kind].sha256;
             const blob = await api.request(`${prefix}/privacy/documents/${kind}?cif_version_id=${encodeURIComponent(cifVersionId)}&expected_sha256=${expectedHash}`, {responseType:'blob',signal});
             if (!alive() || operation || context !== result) return;
-            if (!(blob instanceof Blob) || blob.type !== 'application/pdf' || !blob.size || blob.size > 10485760) throw new Error('The privacy document is invalid. Load the current record.');
+            invalidDocument = true;
+            if (!(blob instanceof Blob) || blob.type !== 'application/pdf' || !blob.size || blob.size > 10485760) {
+              throw new Error('The privacy document is invalid.');
+            }
             const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))].map(value => value.toString(16).padStart(2, '0')).join('');
             if (!alive() || operation || context !== result) return;
-            if (digest !== expectedHash) throw new Error('The privacy document changed. Load the current record before signing.');
+            if (digest !== expectedHash) {
+              throw new Error('The privacy document does not match the displayed source.');
+            }
+            blockedDocuments.delete(kind);
+            status.textContent = blockedDocuments.size ? 'Privacy signing is blocked. Retry each failed document download to verify the displayed source. Your draft is retained.' : result.detail;
+            controls();
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a'); anchor.href = url; anchor.download = `privacy-${kind}.pdf`; anchor.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -143,7 +155,9 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
             if ([401,403].includes(error?.status)) { deny(error); return; }
             // A document read may predate Save. It does not own that command or its File.
             if (operation || context !== result) return;
-            invalidate(); status.innerHTML = errorCard(error);
+            if (invalidDocument || error?.status === 409) blockedDocuments.add(kind);
+            status.innerHTML = errorCard(error) + (blockedDocuments.size ? '<p>Privacy signing is blocked. Retry each failed document download to verify the displayed source. Your draft is retained.</p>' : '');
+            controls();
           } finally { if(alive()) button.disabled = busy || uncertain; }
           };
           button.addEventListener('click', download);
@@ -189,7 +203,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   }
   async function save(event) {
     event?.preventDefault();
-    if (!alive() || busy || (!operation && (!context?.issuable || !witness.checked))) return;
+    if (!alive() || busy || (!operation && (!context?.issuable || blockedDocuments.size || !witness.checked))) return;
     if (!operation) {
       const file = fileInput.files?.[0];
       if (!file || !['application/pdf','image/png','image/jpeg'].includes(file.type) || file.size <= 0 || file.size > 10485760) { status.textContent = 'Choose a signed PDF, PNG or JPEG of at most 10 MiB.'; return; }
