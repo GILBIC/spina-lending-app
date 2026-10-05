@@ -39,7 +39,9 @@ TESTS = (
 )
 
 
-def main() -> int:
+def main(
+    *, bootstrap_through=141, extra_migrations=(), tests=TESTS, timeout_seconds=300
+) -> int:
     if os.environ.get("SPINA_ALLOW_DISPOSABLE_DATABASE") != "1":
         raise SystemExit("Explicit SPINA_ALLOW_DISPOSABLE_DATABASE=1 is required.")
     params = disposable._safe_local_connection_params(
@@ -52,7 +54,7 @@ def main() -> int:
             "Use an explicit loopback administrative database, without test prefix/options/passfile."
         )
     disposable._clear_endpoint_environment()
-    disposable.BOOTSTRAP_THROUGH = 141
+    disposable.BOOTSTRAP_THROUGH = bootstrap_through
     disposable.TEST_DATABASE_PREFIX = PREFIX
     name = PREFIX + uuid4().hex[:24]
     admin_url = disposable._conninfo_for_database(params, "postgres")
@@ -68,6 +70,10 @@ def main() -> int:
         created = True
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
+        for migration in extra_migrations:
+            path = ROOT / "gilbic_backend/sql" / migration
+            with psycopg.connect(test_url) as connection:
+                connection.execute(path.read_text(encoding="utf-8"))
         env = {
             k: v
             for k, v in os.environ.items()
@@ -78,8 +84,11 @@ def main() -> int:
             GILBIC_DATABASE_URL=test_url,
             GILBIC_TEST_DATABASE_URL=test_url,
             SPINA_ALLOW_DISPOSABLE_DATABASE="1",
+            SPINA_CURRENT_SCHEMA_THROUGH=str(bootstrap_through),
             PYTHONDONTWRITEBYTECODE="1",
         )
+        if os.getenv("SPINA_POSTGRES_BIN"):
+            env["SPINA_POSTGRES_BIN"] = os.environ["SPINA_POSTGRES_BIN"]
         env["PYTHONPATH"] = os.pathsep.join(
             str(ROOT / part)
             for part in (
@@ -106,12 +115,12 @@ def main() -> int:
                     str(Path(scratch) / "pytest"),
                     "--junitxml",
                     str(junit),
-                    *(str(ROOT / "gilbic_backend/tests" / test) for test in TESTS),
+                    *(str(ROOT / "gilbic_backend/tests" / test) for test in tests),
                 ],
                 cwd=ROOT,
                 env=env,
                 check=False,
-                timeout=300,
+                timeout=timeout_seconds,
             )
             if result.returncode:
                 return result.returncode
@@ -131,7 +140,7 @@ def main() -> int:
                     "Accounting controls verification collected fewer than expected checks."
                 )
             print(
-                f"Accounting controls verified: {total} checks, zero skips, fresh schema0141."
+                f"Accounting controls verified: {total} checks, zero skips, fresh schema{bootstrap_through:04d} with extras {extra_migrations}."
             )
         return 0
     finally:

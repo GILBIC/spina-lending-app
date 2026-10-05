@@ -1,0 +1,31 @@
+# Reporting evidence and statement package
+
+This implementation adds direct cash flows, changes in equity, preceding-period comparatives, a noncash journal inventory and retained Management notes to the posted-ledger statement pack. Every section uses the same database snapshot and book identity. It does not assert that all business activity has been recorded or that an annual statutory package has been approved.
+
+## Cash definition and classifications
+
+Management retains a versioned cash definition for an open fiscal period. The current supported controls are 1010 office cash, 1020 Collector custody and 1030 bank/wallet cash. The policy pins account identities, codes, system keys, types, normal balances and posting roles. Every report and new classification checks that definition again. A changed definition makes cash totals unavailable until a new reviewed policy is retained; it cannot turn existing cash into a complete zero report. Actual inclusion, basis and notes are explicitly reviewed. Other investments or restricted balances are not automatically treated as cash equivalents. A policy change preserves earlier versions and requires new classifications under the new policy.
+
+Each posted cash line is allocated in exact signed cents among operating, investing, financing and internal amounts. Splits must equal the original line and preserve its direction. Internal allocations must offset within one journal or the exact protected principal legs of one owned transfer in the selected period. The repository derives transfer grouping from current exact0150 posting audits and their mapped cash lines; user classifications cannot supply a group identity. Two different transfers, corrected proof, fee amounts, duplicate legs, unselected cash accounts and legs outside the period cannot qualify as a pair. An unmatched transit leg cannot disappear as an internal transfer. Fees remain separately classified. Opening-balance cash entries and their protected reversals are displayed as opening adjustments and cannot be labelled operating receipts or financing proceeds by this API.
+
+The report shows gross receipts and gross payments in each category. Any missing or invalid classification makes the complete net cash-flow amount unavailable. A zero net amount does not hide two unclassified opposing cash movements. Classified net flows plus opening cash and separately disclosed opening adjustments must equal selected GL cash balances at period end.
+
+Protected Collector settlement cash uses the same principle. When both custody and receiving cash controls are selected, the exact remitted principal is an internal handover, not a second business receipt/payment. Actual excess remains separately classified external cash. The repository derives this split from current exact 0152 evidence; corrected or missing proof cannot restore gross business classifications. Actual Collector returns retain their own external cash classification. If a custody account is outside the selected definition, an absent cash counterpart cannot be offset. Internal grouping details stay private to the report calculation.
+
+The design follows the distinction between operating, investing and financing cash flows, separate noncash disclosure and reconciliation to financial position described in the [IFRS Foundation's IAS7 overview](https://www.ifrs.org/issued-standards/list-of-standards/ias-7-statement-of-cash-flows/). Actual framework applicability and individual classifications remain retained entity-specific facts; the user has authorized the software design.
+
+## Equity and comparatives
+
+Opening and closing equity include unclosed earnings. The rollforward adds the selected period's profit or loss and other posted equity movements, excluding the formal period-close transfer. This keeps total equity unchanged when temporary accounts are transferred to retained earnings. A difference is shown explicitly.
+
+The comparative is the immediately preceding fiscal period by end date, with its actual dates displayed. It is not silently presented as a prior year or an equal-length period. Its statements, cash definition, notes and classifications are read in the same snapshot as the selected period. No previous period produces a null comparative.
+
+## Retained evidence and boundaries
+
+- Policies and cash classifications are immutable versions with current Management authority, exact retry semantics, book binding and atomic audit writes. They create no GL entry or money movement.
+- Notes preserve supplied title, text, reference and digest. They are labelled Management evidence; the system never manufactures an accountant's approval.
+- A policy or classification can be corrected through a new version while the period is open. Historical exact retry returns the original result, with current authorization checked again.
+- The noncash inventory identifies posted journals without a selected cash control. Its gross debit is a journal reference amount, not an additive total of a financial-statement category. Mixed cash and noncash transactions still require disclosure review; this inventory cannot certify complete noncash disclosure.
+- Source completeness and annual statutory-package completeness remain separate assurance flags. Missing source adapters and dated assessments cannot be cured by adding a report note.
+
+Validation includes exact classifications, immutable evidence, book/permission checks, loss/profit/zero-activity periods, formal close and comparative reconciliation. The execution ledger records the currently completed runs and remaining integration work.

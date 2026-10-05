@@ -3,6 +3,15 @@ import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:http/http.dart' as http;
 
+const accountingSourceFamilyLabels = <String, String>{
+  'treasury': 'Treasury',
+  'collector': 'Collector',
+  'lending': 'Lending',
+  'tax': 'Tax',
+  'period_assessment': 'Period assessment',
+  'liabilities': 'Liabilities',
+};
+
 final _recordId = RegExp(
   r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$',
   caseSensitive: false,
@@ -127,7 +136,9 @@ class AccountingSourceCoverage {
     if (payload['comprehensive_source_coverage'] != false ||
         families is! List ||
         families.isEmpty ||
-        families.any((value) => value != 'treasury' && value != 'collector') ||
+        families.any(
+          (value) => !accountingSourceFamilyLabels.containsKey(value),
+        ) ||
         blockers is! List ||
         count is! int ||
         count < blockers.length ||

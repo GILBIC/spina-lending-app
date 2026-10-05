@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/management/reporting_evidence.dart';
 
 class FinancialStatementLine {
   const FinancialStatementLine({
@@ -108,11 +109,15 @@ class FinancialPositionStatement {
       totalAssets: _requiredDouble(payload, 'total_assets'),
       totalLiabilities: _requiredDouble(payload, 'total_liabilities'),
       recordedEquity: _requiredDouble(payload, 'recorded_equity'),
-      unclosedEarningsToDate:
-          _requiredDouble(payload, 'unclosed_earnings_to_date'),
+      unclosedEarningsToDate: _requiredDouble(
+        payload,
+        'unclosed_earnings_to_date',
+      ),
       totalEquity: _requiredDouble(payload, 'total_equity'),
-      totalLiabilitiesAndEquity:
-          _requiredDouble(payload, 'total_liabilities_and_equity'),
+      totalLiabilitiesAndEquity: _requiredDouble(
+        payload,
+        'total_liabilities_and_equity',
+      ),
       balanced: payload['balanced'] == true,
     );
   }
@@ -125,6 +130,7 @@ class AccountingFinancialStatements {
     required this.financialPosition,
     required this.source,
     required this.notice,
+    this.reportingSupplement,
   });
 
   final FinancialStatementPeriod period;
@@ -132,17 +138,28 @@ class AccountingFinancialStatements {
   final FinancialPositionStatement financialPosition;
   final String source;
   final String notice;
+  final Map<String, dynamic>? reportingSupplement;
 
-  factory AccountingFinancialStatements.fromPayload(Map<String, dynamic> payload) {
+  factory AccountingFinancialStatements.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
     return AccountingFinancialStatements(
-      period: FinancialStatementPeriod.fromPayload(stringMap(payload['period'])),
-      profitOrLoss:
-          ProfitOrLossStatement.fromPayload(stringMap(payload['profit_or_loss'])),
+      period: FinancialStatementPeriod.fromPayload(
+        stringMap(payload['period']),
+      ),
+      profitOrLoss: ProfitOrLossStatement.fromPayload(
+        stringMap(payload['profit_or_loss']),
+      ),
       financialPosition: FinancialPositionStatement.fromPayload(
         stringMap(payload['financial_position']),
       ),
       source: _requiredString(payload, 'source'),
       notice: _requiredString(payload, 'notice'),
+      reportingSupplement: payload['reporting_supplement'] == null
+          ? null
+          : validateReportingSupplement(
+              stringMap(payload['reporting_supplement']),
+            ),
     );
   }
 }

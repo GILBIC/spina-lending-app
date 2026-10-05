@@ -1155,6 +1155,8 @@ def source_effective(conn, row):
 
 
 def source_summary(conn, account_id):
+    from .collector_accounting_capability import collector_accounting_capability
+
     if not conn.execute(
         "select to_regclass('treasury.collector_cases') as relation"
     ).fetchone()["relation"]:
@@ -1181,6 +1183,7 @@ def source_summary(conn, account_id):
         and ((payload->>'frozen')::boolean or payload->>'status'='recovery_required')""",
         (account_id,),
     ).fetchone()
+    accounting_capability = collector_accounting_capability(conn)
     return {
         "as_of": "current",
         "available": True,
@@ -1191,6 +1194,8 @@ def source_summary(conn, account_id):
         "collector_recovery_count": recovery["n"],
         "collector_recovery_amount": format(recovery["amount"], ".2f"),
         "source_resolved": pending == "0.00" and held == "0.00" and recovery["n"] == 0,
-        "gl_posting_available": False,
-        "message": "Cash close does not settle unidentified sources, Collector liabilities, frozen source recovery or disputed custody. Protected liability GL mapping is unavailable.",
+        "gl_posting_available": accounting_capability["available"],
+        "accounting": accounting_capability,
+        "message": "Cash close does not settle unidentified sources, Collector liabilities, frozen source recovery or disputed custody. "
+        + accounting_capability["message"],
     }

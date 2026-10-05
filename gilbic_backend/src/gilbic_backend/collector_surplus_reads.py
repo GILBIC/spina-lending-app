@@ -516,7 +516,10 @@ def workspace(
         )
     for account in accounts:
         account.pop("_permissions", None)
+    from .collector_accounting_capability import collector_accounting_capability
+
     state = readiness()
+    accounting_capability = collector_accounting_capability(conn)
     return {
         "collector_surplus_contract_version": 1,
         "actor": {
@@ -533,7 +536,8 @@ def workspace(
             == "true",
             "application_supported": False,
             "historical_correction_supported": False,
-            "gl_supported": False,
+            "gl_supported": accounting_capability["available"],
+            "accounting": accounting_capability,
             "blockers": [
                 {
                     "code": "collector_application_custody_unavailable",
@@ -543,11 +547,17 @@ def workspace(
                     "code": "collector_historical_source_unavailable",
                     "message": "Historical correction adapter is unavailable.",
                 },
-                {
-                    "code": "collector_gl_mapping_unavailable",
-                    "message": "Collector liability GL mapping is not configured; no automatic posting.",
-                },
-            ],
+            ]
+            + (
+                []
+                if accounting_capability["available"]
+                else [
+                    {
+                        "code": "collector_gl_mapping_unavailable",
+                        "message": accounting_capability["message"],
+                    }
+                ]
+            ),
         },
         "capabilities": caps,
         "accounts": accounts,

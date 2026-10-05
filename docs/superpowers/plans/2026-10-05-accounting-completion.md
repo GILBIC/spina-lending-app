@@ -60,7 +60,7 @@ Interfaces: accounting.period_source_blockers(period_id) returns source_type, so
 - [x] Write failing tests for an actual Treasury event and Collector credit movement with no GL posting, including a source without any draft; zero PASS must not block.
 - [x] Derive blockers from authoritative rows and the Asia/Manila business date. Initial unsupported adapters stay blocking; do not fabricate completion.
 - [x] Enforce the guard in review/prepare/post and expose exact blockers to Management.
-- [ ] Prove transaction rollback, concurrent source/close ordering, backdated evidence and legitimate matched payable behavior.
+- [x] Prove transaction rollback, concurrent source/close ordering, backdated evidence and legitimate matched payable behavior.
 - [x] Run existing period-close regression and record any compatibility change explicitly.
 
 ## Task 3 — Treasury receipt, application, payout and transfer journals
@@ -69,7 +69,7 @@ Files: new reviewed mapping and source-posting migrations/modules/APIs; existing
 
 Interfaces: immutable mapping version; prepare_source_journal(source_type, source_id, expected_source_digest, mapping_version, actor); post_source_journal(preparation_id, confirmation_token, actor). Functions return existing exact results on identical retry and reject changed coordinates.
 
-- [ ] Specify deterministic line coordinates for receipt/unapplied funds, application/loan allocation, payout/transit, completion, transfer and fee.
+- [x] Specify deterministic line coordinates for the supported receipt, application, payout/transit, completion, transfer and fee paths; record wider product/correction extensions separately.
 - [ ] Add a genuine RED test for each flow, duplicate/retry conflict, stale mapping/source and audit rollback.
 - [ ] Implement one family at a time using existing protected journal/loan measurement routines. Replace 0137/0139 admission blocks only for the exact reviewed adapter.
 - [ ] Add explicit prepare/review/post Management actions and private-state recovery; do not auto-post from collection operations.
@@ -81,9 +81,9 @@ Files: new Collector accounting adapter/queue, liability register and protected 
 
 Consumes: Task 1 book identity; Task 3 mapping/posting identity. Produces per-source liability movement and aggregate control-account reconciliation.
 
-- [ ] Prove excess cash once, unidentified liability, credit reclassification, partial return, separate fees, incoming reversal and reservation-without-double-liability.
-- [ ] Implement immutable source-linked accounting and exact outstanding control balances.
-- [ ] Provide evidence-backed non-Collector liability recognition/settlement with counterparty, source, due date and account classification. Repayable owner funding remains distinct from capital.
+- [x] Prove excess cash once, unidentified liability, credit reclassification, partial return, separate fees, incoming reversal and reservation-without-double-liability.
+- [x] Implement immutable source-linked accounting and exact outstanding control balances for the supported source families.
+- [x] Provide evidence-backed non-Collector liability recognition/settlement with counterparty, source, due date and account classification. Repayable owner funding remains distinct from capital.
 - [ ] Implement currently unavailable Collector future-application/historical corrections as separately reviewed adapters; retain blockers until their tests pass.
 - [ ] Verify legitimate unpaid balances can close when reconciled and no operational record disappears after settlement/reversal.
 
@@ -91,31 +91,31 @@ Consumes: Task 1 book identity; Task 3 mapping/posting identity. Produces per-so
 
 Files: extend Task 2 inventory/guards and close tests; EIR/ECL/tax assessment readiness integration.
 
-- [ ] Inventory all active/voided collections, release/renewal/remittance, Treasury and liability sources without relying solely on prepared queues.
+- [x] Inventory active/voided collections, release/renewal/remittance, Treasury and liability sources without relying solely on prepared queues; unsupported sources remain explicit blockers.
 - [ ] Reconcile exact source effects and date/book scope to posted entries and required assessment evidence.
-- [ ] Pin the inventory digest at review; revalidate at prepare/post under a consistent source lock order. Surface late changes without reopening history.
-- [ ] Reject missing/unmapped/stale obligations but permit matched unpaid liabilities, nonfinancial PASS and disclosed valid transit.
+- [x] Pin the inventory digest at review; revalidate at prepare/post under a consistent source lock order. Surface late changes without reopening history.
+- [x] Reject missing/unmapped/stale obligations but permit matched unpaid liabilities, nonfinancial PASS and disclosed valid transit.
 - [ ] Test failure after audit write, simultaneous close/source mutation and returned-to-open review handling.
 
 ## Task 6 — Reporting package
 
 Files: financial_statements_repository.py/API, focused reporting modules, retained classification/note evidence migrations, Portal/Flutter statements and tests.
 
-- [ ] Add explicit cash/cash-equivalent and cash-flow category policies, with unavailable status for unclassified activity.
+- [x] Add explicit cash/cash-equivalent and cash-flow category policies, with unavailable status for unclassified activity.
 - [ ] Build cash-flow and changes-in-equity statements, including profit/loss, retained-earnings transfers, owner funding/withdrawals, noncash items, fees, internal transfers and reversals.
-- [ ] Add comparative periods and retained accountant-reviewed notes/policy references without claiming a framework has been approved.
-- [ ] Verify cash-flow ending cash equals GL cash; equity rollforward equals financial position; all sections share one snapshot and book identity.
+- [x] Add comparative periods and retained Management-reviewed notes/policy references without claiming external approval. The user delegated the accounting design.
+- [x] Verify cash-flow ending cash equals GL cash; equity rollforward equals financial position; all sections share one snapshot and book identity.
 - [ ] Test positive/loss/zero-activity periods, retired accounts, malformed data and role/session changes in web/native clients.
 
 ## Task 7 — Current-schema integration, recovery and release evidence
 
 Files: tools/run_accounting_cycle_disposable_postgres_validation.py or a distinct current-schema successor; integrated tests; existing CI workflow; readiness/runbook documents.
 
-- [ ] Keep the bounded 0092 proof, and add an explicit latest-schema verifier with no silent skips and loopback-only enforcement.
+- [x] Keep the bounded 0092 proof, and add explicit current-schema verifiers with no silent skips and loopback-only enforcement, including fresh 0154 close and restore.
 - [ ] Compose all supported sources from Tasks 1–6 on fresh synthetic books and independently reconcile GL/cash/loan/liability/statement totals.
-- [ ] Prove duplicate/race/rollback/access controls and populated private-evidence backup/restore.
+- [x] Prove duplicate/race/rollback/access controls and populated private-evidence backup/restore for the verified supported flows; repeat relevant proofs for each new adapter.
 - [ ] Run focused tests, full required CI checks on the final source, client checks and one independent whole-change review; repair actionable findings.
-- [ ] Preserve a concrete rollout/forward-recovery plan. Keep actual setup, opening figures, CPA and legal/BIR evidence and production parallel close as named owner/accountant gates.
+- [x] Preserve a concrete rollout/forward-recovery plan. Keep actual entity/tax facts, opening figures and production parallel-close evidence as activation requirements. The delegated accounting design proceeds without an external design-approval gate. See `docs/accounting/accounting-release-and-recovery.md`; this does not certify the unfinished software work.
 
 ## Progress and evidence
 

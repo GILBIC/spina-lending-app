@@ -76,7 +76,7 @@ class PostgresPeriodCloseRepository:
                 )
             elif name == "close_blocker":
                 fields.append(
-                    "CASE WHEN s.blocker_count > 0 THEN 'Unreconciled Treasury or Collector evidence requires source review.' ELSE q.close_blocker END AS close_blocker"
+                    "CASE WHEN s.blocker_count > 0 THEN 'Unreconciled accounting sources require review.' ELSE q.close_blocker END AS close_blocker"
                 )
             else:
                 fields.append(f"q.{name}")
@@ -155,7 +155,9 @@ class PostgresPeriodCloseRepository:
             )
             rows = cursor.fetchall()
             blockers = []
-            visibility = {}
+            # NULL scope denotes non-wallet accounting evidence already covered
+            # by the route's current Management accounting-view authorization.
+            visibility = {None: True}
             with connection.cursor(row_factory=dict_row) as authorization_cursor:
                 for row in rows:
                     account_id = row["account_id"]
@@ -197,14 +199,16 @@ class PostgresPeriodCloseRepository:
             return {
                 "fiscal_period_id": str(fiscal_period_id),
                 "comprehensive_source_coverage": False,
-                "source_families": ["treasury", "collector"],
+                "source_families": state.get(
+                    "source_families", ["treasury", "collector"]
+                ),
                 "coverage_policy": state["coverage_policy"],
                 "source_close_status": state["source_close_status"],
                 "blocker_count": state["blocker_count"],
                 "limit": limit,
                 "offset": offset,
                 "blockers": blockers,
-                "notice": "Evidence amounts may describe the same money and must not be added together. This initial check does not certify complete lending, EIR, ECL or tax coverage.",
+                "notice": "Evidence amounts may describe the same money and must not be added together. This inventory covers the listed source families; unsupported accounting and period-end assessments remain explicit blockers.",
             }
 
     def summary(self) -> dict[str, object]:

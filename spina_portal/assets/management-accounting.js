@@ -7,12 +7,13 @@ const WORKBOOK = `${BASE}/opening-balance-workbook`;
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const DIGEST = /^[0-9a-f]{64}$/i;
 const mounts = new WeakMap();
-const tabs = { periods: 'Overview', close: 'Period close', capital: 'Initial capital', workbook: 'Opening workbook', opening: 'Opening journal', measurement: 'Loan measurement', outcomes: 'Historical outcomes', tax: 'Tax & ECL' };
+const tabs = { periods: 'Overview', book: 'Accounting book', reporting: 'Reporting evidence', close: 'Period close', receipts: 'Receipt accounting', applications: 'Application accounting', transfers: 'Transfer accounting', payouts: 'Loan payouts', collector: 'Collector accounting', 'collector-controls': 'Collector controls', assessments: 'Dated cutoff assessments', elapsed: 'Historical loan assessment', liabilities: 'Liability schedule', capital: 'Initial capital', workbook: 'Opening workbook', opening: 'Opening journal', measurement: 'Loan measurement', outcomes: 'Historical outcomes', tax: 'Tax & ECL' };
 const accountingGroups = [
-  ['overview', 'Overview', [['periods', 'Overview']]],
+  ['overview', 'Overview', [['periods', 'Overview'], ['book', 'Accounting book'], ['reporting', 'Reporting evidence']]],
   ['periods', 'Periods & close', [['close', 'Period close']]],
+  ['sources', 'Cash & liabilities', [['receipts', 'Receipt accounting'], ['applications', 'Application accounting'], ['transfers', 'Transfer accounting'], ['payouts', 'Loan payouts'], ['collector', 'Collector accounting'], ['collector-controls', 'Collector controls'], ['assessments', 'Dated cutoff assessments'], ['liabilities', 'Liability schedule']]],
   ['opening', 'Opening & cutover', [['capital', 'Initial capital'], ['workbook', 'Opening workbook'], ['opening', 'Opening journal'], ['measurement', 'Loan measurement']]],
-  ['ecl', 'ECL & tax', [['outcomes', 'Historical outcomes'], ['tax', 'Tax & ECL']]],
+  ['ecl', 'ECL & tax', [['elapsed', 'Historical loan assessment'], ['outcomes', 'Historical outcomes'], ['tax', 'Tax & ECL']]],
 ];
 const fact = (name, value) => `<div class="detail-item"><span>${h(name)}</span><strong>${h(value ?? 'Not available')}</strong></div>`;
 const input = (name, label, { type = 'text', value = '', max = 500, required = true } = {}) => `<label>${h(label)}<input name="${name}" type="${type}" value="${h(value)}" maxlength="${max}"${required ? ' required' : ''} /></label>`;
@@ -197,7 +198,19 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     const currentEpoch = ++epoch; blocked = false;
     frame('<p>Loading protected accounting records…</p>'); busy = true;
     try {
-      if (selected === 'tax') {
+      if (['book', 'reporting', 'receipts', 'liabilities', 'applications', 'assessments', 'elapsed', 'transfers', 'payouts', 'collector', 'collector-controls'].includes(selected)) {
+        busy = false;
+        frame('<div id="management-source-accounting"></div>');
+        childController = new AbortController();
+        const childSignal = childController.signal;
+        const mode = selected;
+        const protectedSource = ['applications', 'assessments'].includes(mode);
+        const module = await import(mode === 'collector-controls' ? './management-collector-controls.js' : mode === 'elapsed' ? './management-elapsed-assessments.js' : mode === 'collector' ? './management-collector-accounting.js' : mode === 'payouts' ? './management-payout-accounting.js' : mode === 'transfers' ? './management-transfer-accounting.js' : protectedSource ? './management-protected-accounting.js' : './management-source-accounting.js');
+        if (!active(currentEpoch)) return;
+        const mount = mode === 'collector-controls' ? module.mountCollectorControls : mode === 'elapsed' ? module.mountElapsedAssessments : mode === 'collector' ? module.mountCollectorAccounting : mode === 'payouts' ? module.mountPayoutAccounting : mode === 'transfers' ? module.mountTransferAccounting : protectedSource ? module.mountProtectedAccounting : module.mountManagementSourceAccounting;
+        const cleanup = await mount({ root: root.querySelector('#management-source-accounting'), api, session, signal: childSignal, mode });
+        if (!active(currentEpoch)) cleanup?.(); else childCleanup = cleanup;
+      } else if (selected === 'tax') {
         busy = false;
         frame('<div id="management-tax-ecl"></div>');
         childController = new AbortController();

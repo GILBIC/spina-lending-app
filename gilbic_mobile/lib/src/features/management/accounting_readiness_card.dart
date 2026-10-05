@@ -157,10 +157,10 @@ class _AccountingReadinessCardState extends State<AccountingReadinessCard> {
                 const Text('Loading source blockers for this period…')
               else ...[
                 Text(
-                  'Partial source coverage: ${coverage.sourceFamilies.map((family) => family == 'treasury' ? 'Treasury' : 'Collector').join(', ')}.',
+                  'Partial source coverage: ${coverage.sourceFamilies.map((family) => accountingSourceFamilyLabels[family]).join(', ')}.',
                 ),
                 const Text(
-                  'This check does not certify readiness for other source families.',
+                  'This check does not certify readiness for other source families. Evidence rows can describe the same money; do not add their amounts.',
                 ),
                 Text(
                   'Showing ${coverage.blockers.isEmpty ? '0' : '${coverage.offset + 1}–${coverage.offset + coverage.blockers.length}'} of ${coverage.blockerCount} source blockers.',

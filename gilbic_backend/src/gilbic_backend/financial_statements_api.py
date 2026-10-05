@@ -38,7 +38,7 @@ def _line_payload(line: FinancialStatementLine) -> dict[str, object]:
 
 
 def _pack_payload(pack: FinancialStatementPack) -> dict[str, object]:
-    return {
+    result = {
         "book": book_identity_payload(pack.book_identity),
         "period": {
             "period_id": str(pack.period.period_id),
@@ -77,10 +77,18 @@ def _pack_payload(pack: FinancialStatementPack) -> dict[str, object]:
             "These statements are generated only from posted General Ledger entries. "
             "Draft journals are excluded. Balanced totals do not establish that all "
             "business activity and liabilities have been recorded. Source reconciliation "
-            "and accountant review are still required. This report does not yet include "
+            "and retained accounting review are still required. This report does not yet include "
             "a complete annual reporting package."
         ),
     }
+    if pack.reporting_supplement:
+        supplemental = pack.reporting_supplement
+        result["reporting_supplement"] = supplemental | {
+            "comparative": _pack_payload(supplemental["comparative"])
+            if supplemental["comparative"] is not None
+            else None
+        }
+    return result
 
 
 def create_financial_statements_router() -> APIRouter:

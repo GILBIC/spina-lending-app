@@ -207,7 +207,7 @@ def test_setup_checks_current_management_authority(book_db, change):
         "UPDATE accounting.book_identity SET evidence_reference='replacement'",
         "UPDATE accounting.book_identity SET entity_label='replacement'",
         "DELETE FROM accounting.book_identity",
-        "TRUNCATE accounting.book_identity",
+        "TRUNCATE accounting.book_identity CASCADE",
     ],
 )
 def test_identity_and_evidence_are_immutable(book_db, statement):

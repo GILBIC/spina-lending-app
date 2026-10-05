@@ -8,6 +8,7 @@ import {
   formatMoney,
 } from './ui.js';
 import { mountAccountingReadiness, postedLedgerScopeNotice } from './management-general-journal.js';
+import { reportingSupplementMarkup } from './accounting-reporting.js';
 
 const STATEMENTS_PATH = '/api/v1/management/financial-accounting/statements';
 
@@ -91,7 +92,7 @@ function totalItem(label, value) {
   return `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${formatMoney(value)}</strong></div>`;
 }
 
-export function financialStatementsMarkup(payload) {
+export function financialStatementsMarkup(payload, includeComparative = true) {
   const statements = payload?.statements;
   if (!statements || typeof statements !== 'object') {
     return emptyState('No Financial Statement pack is currently available.');
@@ -158,6 +159,7 @@ export function financialStatementsMarkup(payload) {
       </div>
     </article>
 
+    ${reportingSupplementMarkup(statements.reporting_supplement, includeComparative ? (prior) => financialStatementsMarkup({ statements: prior }, false) : null)}
     ${statements.notice ? `<details class="notice-card" data-financial-statements-about><summary>About these statements</summary><p>${escapeHtml(statements.notice)}</p></details>` : ''}
   </div>`;
 }

@@ -15,23 +15,27 @@ Preserve existing account codes and historical posted classification. New defini
 | Account | Control purpose | Normal balance |
 |---|---|---|
 |1010/1020/1030 (existing)|Office cash / Collector custody / bank and wallet cash|Debit|
-|1040 (proposed)|Transfer funds in transit|Debit|
-|1050 (proposed)|Loan payout funds in transit|Debit|
-|1060 (proposed)|Collector return funds in transit|Debit|
+|1040|Transfer funds in transit|Debit|
+|1050|Loan payout funds in transit|Debit|
+|1060|Collector return funds in transit|Debit|
 |1100/1110/1120/1190 (existing)|Regular /7x7 loan carrying balances, accrued interest and loss allowance|Existing protected policy|
 |2000/2100 (existing)|Trade and other payables / tax payables|Credit|
 |2200|Unapplied borrower funds|Credit|
-|2210 (proposed)|Unidentified receipts pending attribution|Credit|
-|2220 (proposed)|Amounts payable to Collectors|Credit|
+|2210|Unidentified receipts pending attribution|Credit|
+|2220|Amounts payable to Collectors|Credit|
 |2230 (proposed)|Borrower refunds payable|Credit|
-|2300 (proposed)|External borrowings|Credit|
-|2310 (proposed)|Repayable owner or related-party funding|Credit|
-|2320 (proposed)|Accrued funding interest|Credit|
-|2330/2340 (proposed)|Payroll and statutory contribution liabilities|Credit|
+|2300|External borrowings|Credit|
+|2310|Repayable owner or related-party funding|Credit|
+|2320|Accrued funding interest|Credit|
+|2330/2340|Payroll and statutory contribution liabilities|Credit|
 |3000/3100 (existing)|Capital / retained earnings|Credit|
 |5240 (existing)|Separately evidenced bank/wallet transaction fees|Debit|
 
 “Proposed” means a reserved design coordinate, not an implemented migration or actual balance. Implement each account only with its protected source adapter and reconciliation tests. If existing private configuration uses a proposed code differently, reject and require an explicit noncolliding mapping; do not rewrite it.
+
+Migration0144 implements2300–2340 with a protected generic liability schedule consuming existing posted control lines. It creates no actual borrowing, payroll amount or journal. Treasury and Collector control accounts use their own source adapters.
+
+Migrations0150,0152 and0154 implement the listed transfer, Collector and payout controls with exact source-linked audits. Their currently supported paths and verified boundaries are recorded in the individual adapter documents and execution ledger. A chart account existing does not imply every correction, loan product or historical source is supported.
 
 ## Journal rules
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
+from dataclasses import dataclass, replace
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -9,6 +9,12 @@ from psycopg.rows import dict_row
 
 from .accounting_book_repository import AccountingBookIdentity, read_book_identity
 from .database import open_connection
+from .financial_reporting import cash_flow_statement, equity_rollforward, money
+from .reporting_evidence_repository import (
+    read_internal_collector_cash,
+    read_internal_transfer_principals,
+    read_reporting_policy,
+)
 
 ZERO = Decimal(0)
 
@@ -58,6 +64,7 @@ class FinancialStatementPack:
     total_liabilities_and_equity: Decimal
     balanced: bool
     book_identity: AccountingBookIdentity | None = None
+    reporting_supplement: dict | None = None
 
 
 class FinancialStatementsError(RuntimeError):
@@ -174,12 +181,182 @@ class PostgresFinancialStatementsRepository:
                 through_date=period.end_date,
                 exclude_period_close=False,
             )
-            return build_financial_statement_pack(
+            pack = build_financial_statement_pack(
                 period=period,
                 period_movements=period_movements,
                 cumulative_movements=cumulative_movements,
                 book_identity=book_identity,
             )
+            return replace(
+                pack,
+                reporting_supplement=self._supplement(cursor, pack, period_movements),
+            )
+
+    def _supplement(self, cursor, pack, period_movements, *, include_comparative=True):
+        opening = self._load_movements(
+            cursor,
+            period_id=None,
+            through_date=pack.period.start_date - timedelta(days=1),
+            exclude_period_close=False,
+        )
+        opening_equity = sum(
+            (
+                item.total_credit - item.total_debit
+                for item in opening
+                if item.account_type in {"equity", "income", "expense"}
+            ),
+            ZERO,
+        )
+        equity = equity_rollforward(
+            pack, opening_equity=opening_equity, equity_movements=period_movements
+        )
+        policy = read_reporting_policy(cursor, pack.period.period_id)
+        lines = []
+        opening_cash = closing_cash = None
+        noncash = []
+        if policy and policy["cash_definition_valid"]:
+            codes = policy["cash_account_codes"]
+            opening_cash = sum(
+                (
+                    item.total_debit - item.total_credit
+                    for item in opening
+                    if item.account_code in codes
+                ),
+                ZERO,
+            )
+            closing_cash = sum(
+                (
+                    item.amount
+                    for item in pack.asset_lines
+                    if item.account_code in codes
+                ),
+                ZERO,
+            )
+            cursor.execute(
+                """SELECT line.id AS journal_line_id,journal.id AS journal_entry_id,
+                account.code AS account_code,line.debit-line.credit AS amount,journal.entry_number,journal.source_type,
+                reviewed.payload->'allocations' AS allocations,coalesce(reviewed.version,0) AS classification_version,
+                (journal.source_type='opening_balance' OR EXISTS(SELECT 1 FROM accounting.journal_entries original
+                    WHERE original.id=journal.reversal_of_entry_id AND original.source_type='opening_balance')) AS is_opening_adjustment
+                FROM accounting.journal_lines line JOIN accounting.journal_entries journal ON journal.id=line.journal_entry_id
+                JOIN accounting.accounts account ON account.id=line.account_id
+                LEFT JOIN LATERAL (SELECT version,payload FROM accounting.cash_flow_classifications item
+                    WHERE item.policy_id=%s AND item.journal_line_id=line.id ORDER BY version DESC LIMIT 1) reviewed ON true
+                WHERE journal.status='posted' AND journal.fiscal_period_id=%s AND account.code=ANY(%s)
+                ORDER BY journal.posting_date,journal.id,line.line_number""",
+                (UUID(policy["id"]), pack.period.period_id, codes),
+            )
+            lines = list(cursor.fetchall())
+            transfer_principals = read_internal_transfer_principals(
+                cursor, pack.period.period_id
+            )
+            collector_cash = read_internal_collector_cash(cursor, pack.period.period_id)
+            lines = [
+                line
+                | {
+                    "internal_transfer": transfer_principals.get(
+                        line["journal_line_id"]
+                    ),
+                    "collector_cash": collector_cash.get(line["journal_line_id"]),
+                }
+                for line in lines
+            ]
+            cursor.execute(
+                """SELECT journal.id AS journal_entry_id,journal.entry_number,journal.posting_date,
+                journal.source_type,sum(line.debit) AS gross_debit
+                FROM accounting.journal_entries journal JOIN accounting.journal_lines line ON line.journal_entry_id=journal.id
+                JOIN accounting.accounts account ON account.id=line.account_id
+                WHERE journal.status='posted' AND journal.fiscal_period_id=%s AND journal.source_type<>'period_close'
+                GROUP BY journal.id HAVING NOT bool_or(account.code=ANY(%s))
+                ORDER BY journal.posting_date,journal.id""",
+                (pack.period.period_id, codes),
+            )
+            noncash = [
+                {
+                    "journal_entry_id": str(row["journal_entry_id"]),
+                    "entry_number": row["entry_number"],
+                    "posting_date": row["posting_date"].isoformat(),
+                    "source_type": row["source_type"],
+                    "gross_debit": money(row["gross_debit"]),
+                }
+                for row in cursor.fetchall()
+            ]
+        cash = cash_flow_statement(
+            policy=policy,
+            opening_cash=opening_cash,
+            closing_cash=closing_cash,
+            lines=lines,
+        )
+        cash["cash_lines"] = [
+            {
+                **{
+                    key: str(row[key])
+                    for key in (
+                        "journal_line_id",
+                        "journal_entry_id",
+                        "account_code",
+                        "entry_number",
+                        "source_type",
+                    )
+                },
+                "amount": money(row["amount"]),
+                "classification_version": row["classification_version"],
+                "allocations": row["allocations"],
+                "is_opening_adjustment": row["is_opening_adjustment"],
+            }
+            for row in lines
+        ]
+        result = {
+            "changes_in_equity": equity,
+            "cash_flows": cash,
+            "notes": {
+                "status": "retained_management_notes"
+                if policy
+                else "reporting_policy_required",
+                "items": policy["notes"] if policy else [],
+                "framework_label": policy["framework_label"] if policy else None,
+            },
+            "noncash_activity": noncash,
+            "noncash_disclosure_status": "mixed_transactions_require_review",
+            "noncash_inventory_scope": "journals_with_no_cash_leg",
+            "comparative": None,
+            "notice": "These are posted-ledger reports. Retained notes and classifications are Management evidence; they do not certify statutory compliance or complete source recognition.",
+        }
+        if include_comparative:
+            cursor.execute(
+                "SELECT id FROM accounting.fiscal_periods WHERE end_date<%s ORDER BY end_date DESC,start_date DESC LIMIT 1",
+                (pack.period.start_date,),
+            )
+            prior = cursor.fetchone()
+            if prior:
+                period = self._load_period(cursor, prior["id"])
+                # Explicit base implementation prevents instrumentation of the
+                # selected-period read from being replayed for the comparative.
+                movements = PostgresFinancialStatementsRepository._load_movements(
+                    cursor,
+                    period_id=period.period_id,
+                    through_date=None,
+                    exclude_period_close=True,
+                )
+                cumulative = self._load_movements(
+                    cursor,
+                    period_id=None,
+                    through_date=period.end_date,
+                    exclude_period_close=False,
+                )
+                previous = build_financial_statement_pack(
+                    period=period,
+                    period_movements=movements,
+                    cumulative_movements=cumulative,
+                    book_identity=pack.book_identity,
+                )
+                result["comparative"] = replace(
+                    previous,
+                    reporting_supplement=self._supplement(
+                        cursor, previous, movements, include_comparative=False
+                    ),
+                )
+        return result
 
     @staticmethod
     def _load_period(cursor, period_id: UUID | None) -> AccountingStatementPeriod:

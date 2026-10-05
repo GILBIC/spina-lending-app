@@ -75,6 +75,13 @@ test('source coverage for a different period is rejected', async () => {
   await tick(); assert.match(root.textContent, /Source coverage is unavailable/); assert.doesNotMatch(root.textContent, /source-private/);
 });
 
+test('expanded source families stay partial and their evidence is not a cash total', async () => {
+  const root = new Element(), payload = coverage();
+  payload.source_coverage.source_families = ['treasury', 'collector', 'lending', 'tax', 'period_assessment', 'liabilities'];
+  mountAccountingReadiness({ root, periodId: period, showBook: false, api: { async request() { return payload; } } });
+  await tick(); assert.match(root.textContent, /Lending, Tax, Period Assessment, Liabilities/); assert.match(root.textContent, /Partial source coverage/); assert.match(root.textContent, /do not add their amounts/);
+});
+
 test('remount and session abort discard late private source rows', async () => {
   const root = new Element(); let finish;
   const old = mountAccountingReadiness({ root, periodId: period, showBook: false, api: { request() { return new Promise((resolve) => { finish = resolve; }); } } });

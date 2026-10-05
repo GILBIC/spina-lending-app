@@ -1,0 +1,65 @@
+# Legacy source completeness — migration 0143 design
+
+This increment inventories authoritative lending/custody sources independently of journal preparation. It extends the initial Treasury/Collector guard without changing 0141. Source-local financial effects and dated assessment requirements are separate rows. A row disappears only when exact protected posting/reversal evidence proves its accounting effect or the source is genuinely nonfinancial. A matching journal amount or source key alone is insufficient.
+
+## Interface and integration
+
+`accounting.period_legacy_source_blockers(period_id)` returns the same six columns as 0141: source_type, source_id, effective_date, amount, reason, account_id. `account_id` is NULL for legacy accounting/lending sources; the consumer must require current Management `accounting.view` for those rows. For Treasury-funded collections/payouts the exact Treasury account ID is returned and existing private-history account authorization remains mandatory. NULL must never mean unrestricted public access.
+
+`accounting.assert_period_legacy_source_complete(period_id)` acquires its source locks and raises a generic, date/amount/ID-free error on any blocker. Its integration with 0141/0142 is explicit; the existing guard is not silently replaced. Root will combine inventories for queue counts, details and late closed-period warnings. Neither inventory is an additive financial total.
+
+## Source lineage and decision rules
+
+| Source | Date and identity | Accounting proof |
+|---|---|---|
+| Collection | `lending.collection_transactions.collection_date`; `collection:<transaction_id>` | Full receipt reconciles to applied plus unallocated. Positive unapplied money needs liability accounting. A cash-funded Regular source requires the complete immutable preparation/posting set, matching source identities/dates/dimensions and balanced protected collection/EIR lines. A 7x7 source requires `seven_by_seven_journal_posting_status.posted_audit_exact` plus current source amount/loan/client/date equality. |
+| Collection void | Original collection date and the Manila void date are separately relevant. | A zero PASS is nonfinancial unless a journal falsely exists. A void before any journal/audit exists is nonfinancial after the void. Posted sources require exact protected reversal sets and swapped lines. A draft remaining after void remains unresolved. A future-dated reversal cannot satisfy an earlier-period obligation. |
+| New loan release | `loan_disbursement_events.business_date`; `loan_disbursement:<event_id>` | `loan_disbursement_journal_posting_status.posted_audit_exact` plus source amount/loan/client/date and account linkage. Cancelled releases require `loan_disbursement_cancellation_status.cancelled_reversal_audit_exact` and exact swapped journal lines. A loan row/date alone is not proof of actual disbursement. |
+| Renewal/restructure | Raw renewal release plus `loan_renewal_execution_events.business_date`; `loan_renewal_execution:<event_id>` | Missing execution or a missing supported execution-posting adapter blocks. Boundary EIR posting alone never substitutes for loan derecognition/recognition/cash accounting. Unsupported policy is a named blocker rather than fabricated zero amounts. |
+| Remittance | Received custody timestamp in Manila until retained transfer evidence supplies business date; `remittance_transfer:<remittance_id>` | Received positive cash must have reviewed destination evidence and `remittance_transfer_journal_status.posted_audit_exact` with exact amount/source/date. A reversed transfer with still-current received custody needs replacement accounting; reversal alone does not erase the received cash. |
+
+Regular audit derivation uses 0040 preparation/entry rows, 0042 posting sets/entries, and 0043 reversal sets/entries. Check complete counts and exact linkage, source/reference/key, posting-date containment, original/posted line identities and ledger amounts. Do not use `regular_journal_draft_preparation_status.draft_integrity_ready` after posting. Renewal boundary EIR must likewise avoid `renewal_boundary_eir_journal_status.integrity_ready`, whose `period.status='open'` test becomes false during legitimate review.
+
+For historical dates, current `is_voided` flags alone do not prove a void existed at the reporting cutoff. Compare retained void/cancellation dates and reversal posting dates to period end. A late source/change remains visible against the affected date without rewriting closed journals. Evidence outside the target period is included only when an in-period reversal/adjustment or outstanding dated assessment requires it; old unpaid liability status alone is never a blocker.
+
+## EIR, ECL and tax requirements
+
+1. A positive loan carrying balance at period end is determined from posted loan-dimension GL lines through period end, not today's loan status. It requires dated period-end EIR assessment coverage. Existing collection/renewal-driven accruals do not automatically prove accrual through period end on days without receipts. Until a reviewed as-of assessment adapter exists, return an explicit dated assessment-required blocker rather than asserting completeness.
+2. ECL must use an immutable measurement for the reporting date and reconcile the allowance posted through that date. Current `ecl_quantitative_measurement_queue` is keyed to `current_date`; it cannot validate an old period. Missing as-of measurement, missing/stale exact posting or an unsupported as-of reconstruction remains a blocker. A supported zero measurement plus zero required allowance is valid; no fake zero journal is required.
+3. DST sources begin with raw nonvoid disbursement evidence. Percentage-tax sources begin with raw positive collections, because the existing readiness view begins with posted collections and would omit entirely unposted sources. Missing rule/allocation evidence is visible. Use effective liability/adjustment linkage to avoid demanding duplicate tax after a protected correction.
+4. Recognized unpaid tax may remain a liability. A recorded payment/refund/credit application with an in-period effective date must have its exact protected journal and audit; mere absence of payment never blocks. Superseded evidence is not automatically an extra full liability. Distinguish current evidence, protected adjustments and genuinely unresolved stale postings.
+
+The initial acceptance tests cover source inventory/admission first; assessment/adjustment families require their own exact tests before they are described as implemented. This document is a design, not a completion claim.
+
+## Implemented boundaries in 0143
+
+The raw inventory and protected proof now cover cash-funded Regular and 7x7 collection posting, protected collection reversals, pure new Regular releases and cancellation reversals, received remittance transfers, plus explicit unsupported renewal execution and cash custody observations. The guard also starts tax completeness from raw receipts/releases. `legacy_tax_liability_posted_exact` verifies immutable liability audits, headers and both dimensioned lines; retained zero-tax evidence needs no journal.
+
+`legacy_tax_movement_proof` starts from raw base payment, adjustment, additional-liability amendment, additional payment, refund, and credit-application evidence. Its posted branch checks retained preparation/audit amounts, digests, identities, accounts, dates, fiscal periods, headers, and exact two-line patterns. It does not use current queue labels. A posted settled decrease or additional delta can cover its replacement evidence without demanding a second full liability. Outstanding recognized tax/payables remain valid; the absence of a payment is not a blocker.
+
+Period-end carrying is computed from posted, loan-dimensioned 1100/1110/1120 lines through the reporting date, separately for each control. Negative balances return `negative_<control code>_balance_requires_borrower_credit_review`, with the loan ID and credit amount. Another control's debit cannot hide that obligation or error; positive controls independently enter the assessment population. Nonzero control balances with no loan dimension are explicit `unallocated_control_balance` blockers. Positive gross carrying produces `eir_asof_source_reconciliation_required` and either `ecl_reporting_date_measurement_required` or `ecl_asof_source_reconciliation_required`. These are truthful missing-capability blockers: 0143 does **not** implement a historical EIR replay or certify that an existing dated ECL measurement is complete/fresh. A later protected as-of adapter must supply that proof before these rows can clear; `comprehensive_source_coverage` remains false.
+
+Tax movement rows describe retained accounting evidence already protected by accounting authorization; their wallet scope is NULL. Raw Treasury-funded collections/releases and their tax source rows retain the known private funding account. A consumer must continue to enforce Management accounting access for every row and additional wallet history access for every non-NULL funding scope.
+
+Known remaining limits include EIR/ECL as-of adapters, renewal recognition/derecognition and custody posting adapters, Treasury collection application/payout mappings, post-write-off recovery reconciliation, and the combined book/liability/source report integration owned by later migrations. This guard reports missing accounting; it does not automatically create or post any journal, invent a tax rule, or erase an obligation.
+
+## Race and failure semantics
+
+Use READ COMMITTED for closing, fresh queries after ordered source-table locks, and retain locks to transaction end. Covered raw source mutations, protected audits and journal facts must not change during the assertion. Treasury locks and legacy locks need one combined order at integration; otherwise opposite source/journal/period lock acquisition can deadlock. A detected deadlock fails the command and preserves retryability; it must not report success or discard source evidence.
+
+Source recording after a close transaction wins remains allowed and is surfaced as late historical review. A same-transaction source write after close assertion must be caught by deferred revalidation. Preparation retry must revalidate source completeness, while exact replay of an already-posted close remains historical replay plus a live warning.
+
+0143 locks raw lending sources, accounting period/account/journal facts, every included protected audit and tax evidence table, and payout scope in its declared order. The public preparation wrapper preserves the 0141 implementation as `prepare_period_close_initial_source_snapshot`. New legacy trigger names run before 0141 source triggers. Opposite lock acquisition in existing posting workflows can produce a PostgreSQL deadlock; that aborts the command safely and requires retry. It never authorizes a stale close. The focused two-session tests cover a source writer committing while review waits and review committing while a late source writer waits.
+
+## RED-first verification
+
+`test_legacy_source_completeness_postgres.py` uses the root-owned loopback disposable PostgreSQL harness. With `SPINA_LEGACY_CLOSE_BASELINE=1`, new migration installation is omitted and `test_review_rejects_raw_legacy_source_without_draft` must fail with `DID NOT RAISE` for raw collection, release and received-remittance evidence. The normal implementation must pass those cases, genuine zero PASS, empty period, void-before-accounting, partial receipt, and exact protected posted-source cases. Add audit-corruption, date/reversal, privacy linkage and two-session tests as each family is implemented. Root runs all PostgreSQL tests serially; no production endpoint or alternate server is used.
+
+Root observed the three raw-family RED failures, then nine initial GREEN cases. Subsequent RED evidence covered missing EIR/ECL rows, raw tax populations, unallocated loan controls, and a raw tax payment without preparation. Root then observed 31 legacy plus five composition tests pass. Three further RED cases demonstrated that an offsetting control debit hid each of the 1100/1110/1120 loan credit balances. After the per-control fix the full 34-case legacy suite passed in 23.52 seconds; evidence is `checkpoints/accounting-completion-20261005/legacy-negative-red.txt` and `legacy-negative-green.txt` outside the isolated checkout. The synthetic tax fixture proves exact payment accounting while correctly refusing formal review for its unresolved receivable opening. Run with the task's allowlisted disposable database URL and `SPINA_ALLOW_DISPOSABLE_DATABASE=1`:
+
+```text
+../.venv/Scripts/python.exe -m pytest gilbic_backend/tests/test_legacy_source_completeness_postgres.py -q
+../.venv/Scripts/python.exe -m ruff check gilbic_backend/tests/test_legacy_source_completeness_postgres.py
+```
+
+Ruff and Python compilation also passed. The final composed coverage and broader regression review remain the root task's responsibility; the legacy suite does not certify the missing as-of EIR/ECL adapters.

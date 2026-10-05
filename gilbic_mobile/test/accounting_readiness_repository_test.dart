@@ -20,6 +20,21 @@ const session = UserSession(
 );
 
 void main() {
+  test('expanded source families retain explicitly partial coverage', () {
+    final coverage = AccountingSourceCoverage.fromPayload({
+      'comprehensive_source_coverage': false,
+      'source_families': accountingSourceFamilyLabels.keys.toList(),
+      'blockers': [],
+      'blocker_count': 0,
+      'limit': 100,
+      'offset': 0,
+    });
+    expect(
+      coverage.sourceFamilies,
+      containsAll(['lending', 'tax', 'period_assessment', 'liabilities']),
+    );
+    expect(coverage.comprehensiveSourceCoverage, isFalse);
+  });
   test('an optional missing amount remains unavailable rather than zero', () {
     final blocker = AccountingSourceBlocker.fromPayload({
       'source_type': 'treasury_receipt',

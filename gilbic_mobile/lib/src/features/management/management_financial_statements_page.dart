@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/management/reporting_supplement_card.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
@@ -235,6 +236,7 @@ class _ManagementFinancialStatementsPageState
           _ProfitOrLossCard(statements: statements),
           const SizedBox(height: 16),
           _FinancialPositionCard(statements: statements),
+          ReportingSupplementCard(supplement: statements.reportingSupplement),
           const SizedBox(height: 16),
           Card(
             child: Padding(
