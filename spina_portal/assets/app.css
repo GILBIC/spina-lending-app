@@ -2386,6 +2386,34 @@ button.management-audit-row { min-height: 48px; }
 .office-case-guidance { margin-top:.35rem; font-size:.875rem; }
 .office-case-guidance summary { cursor:pointer; padding-block:.3rem; }
 .office-case-guidance p { margin-block:.25rem; }
+.office-case-next { margin:.35rem 0; }
+.office-reference-lookup, .office-cif-saved-details { margin-block:.5rem; }
+.office-reference-lookup > summary, .office-cif-saved-details > summary { cursor:pointer; min-height:44px; padding:.65rem 0; font-weight:600; }
+.office-cif-saved-details:has([data-office-cif-review]:empty) { display:none; }
+.office-cif-checklist { max-width:58rem; margin-block:1rem; }
+.office-cif-task { border:1px solid var(--line); border-radius:var(--radius-sm); margin-block:.6rem; background:white; }
+.office-cif-task > summary { min-height:48px; padding:.8rem 1rem; cursor:pointer; font-weight:700; color:var(--ink-800); overflow-wrap:anywhere; }
+.office-cif-task[open] { border-color:var(--pink-600); }
+.office-cif-task[data-complete="true"] > summary { color:#176348; }
+.office-cif-task-body { padding:0 1rem 1rem; }
+.office-cif-task-body > p { margin-top:0; }
+.office-cif-task .entry-form { padding:.75rem; }
+.office-cif-task .entry-form > button { justify-self:start; }
+.office-workflow-card .office-signing-form label:has(input[type="checkbox"]), .office-workflow-card [data-baseline-cif] label:has(input[type="checkbox"]) { display:flex; align-items:flex-start; gap:.6rem; }
+.office-workflow-card .office-signing-form input[type="checkbox"], .office-workflow-card [data-baseline-cif] input[type="checkbox"] { flex:0 0 1.1rem; width:1.1rem; height:1.1rem; min-height:0; margin:.15rem 0 0; padding:0; }
+.office-cif-task .detail-grid { margin-bottom:1rem; }
+.office-cif-signing-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); gap:1rem; }
+.office-cif-signing-grid > div { min-width:0; }
+.office-cif-signing-facts .detail-grid { grid-template-columns:1fr; }
+@media(max-width:700px) {
+ .office-cif-signing-grid { grid-template-columns:1fr; }
+ .office-cif-task-body { padding-inline:.5rem; }
+ .office-cif-task .entry-form.office-signing-form { padding:0; border:0; box-shadow:none; }
+}
+.office-cif-finish { border-top:1px solid var(--line); margin-top:1rem; padding-top:.5rem; }
+.office-next-action { padding:1rem; margin-block:.75rem; background:var(--pink-50); border-left:3px solid var(--pink-600); border-radius:var(--radius-sm); }
+.office-next-action p { margin:0 0 .6rem; }
+.office-workflow-card summary:focus-visible { outline:3px solid var(--pink-600); outline-offset:3px; }
 [data-office-case-strip] .inline-actions { margin-top:.5rem; gap:.4rem; }
 .office-intake-start { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem 1rem; margin-block:.5rem .75rem; }
 .office-intake-start p { flex:1 1 20rem; margin:0; font-size:.875rem; line-height:1.45; }

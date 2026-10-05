@@ -37,7 +37,7 @@ function harness(role = 'employee') {
   h.api = { async request(path, options = {}) {
     h.requests.push({ path, options });
     if (path === LOOKUP) return { application_reference: REFERENCE, client_id: CLIENT };
-    if (path === SUMMARY) return { ...h.record };
+    if (path === SUMMARY) {if(h.summaryError)throw h.summaryError;return { ...h.record };}
     if (path === EDIT) {
       if (h.editError) throw h.editError;
       return { ...h.record, can_correct_information: true };
@@ -76,6 +76,16 @@ function save(root) {
   root.querySelector('[name="reason"]').value = 'Applicant corrected the recorded name';
   fire(root.querySelector('form'), 'submit');
 }
+
+test('failed summary after cancelling a correction reopens visible review feedback',async t=>{
+ const h=harness();t.after(h.dispose);await open(h);
+ h.root.querySelector('[data-cif-saved-details]').removeAttribute('open');
+ const editor=await edit(h);h.summaryError=new Error('Synthetic offline');
+ fire(button(editor,'Cancel'),'click');await setImmediate();
+ const panel=h.root.querySelector('[data-cif-saved-details]');
+ assert.equal(panel.getAttribute('open'),'','failed reload must not remain collapsed');
+ assert.notEqual(panel.getAttribute('hidden'),'');assert.match(panel.textContent,/unavailable|offline/i);
+});
 
 for (const role of ['employee', 'management']) {
   test(`${role}: complete correction refreshes the selected read-only CIF after one PATCH`, async (t) => {

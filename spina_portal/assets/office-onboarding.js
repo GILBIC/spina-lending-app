@@ -56,7 +56,7 @@ export function mountOfficeOnboarding(options) {
 
 // The two role surfaces share selection and request disposal; their forms,
 // response projections and mutation permissions remain specific to onboarding.
-export function mountOnboardingCase({ root, api, session, getSession = () => session, signal, collector, registerHandle, onContextChange, officeCaseContext, confirmDiscard }) {
+export function mountOnboardingCase({ root, api, session, getSession = () => session, signal, collector, registerHandle, onContextChange, onContinueCif, officeCaseContext, confirmDiscard }) {
   mounts.get(root)?.();
   root.innerHTML = '';
   let disposed = false;
@@ -287,11 +287,13 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   }
 
   function renderCase() {
+    root.querySelector('[data-intake-lookup]')?.removeAttribute('open');
     const currentCase = record;
     const requirements = collector ? [['collector_visit', 'Collector residence visit']] : REQUIREMENTS;
     const required = collector ? { collector_visit: record.collector_visit } : record.requirements;
     const nonPassed = collector ? [] : REQUIREMENTS.filter(([name]) => required[name].status !== 'passed');
-    replaceCase(`<article class="data-card"><h3>Office intake case</h3><div class="detail-grid">
+    const nextAction=!collector && record.status==='eligible_for_cif' ? `<div class="office-next-action"><p><strong>Eligible for CIF. Next: client information.</strong></p><p>Review the CIF, collect the applicant’s signature and complete identity verification.</p>${onContinueCif ? '<button type="button" class="button button-primary" data-continue-cif>Continue to CIF</button>' : '<p>Continue CIF work using this office intake reference.</p>'}</div>` : '';
+    replaceCase(`${nextAction}<article class="data-card"><h3>Office intake case</h3><div class="detail-grid">
       ${fact('Office intake reference', record.application_reference)}${fact('Status', label(record.status))}
       ${fact('Full name', record.full_name)}${fact('Phone number', record.phone_number)}
       ${!collector ? fact('Email', record.email) : ''}${fact('Present address', record.present_address)}</div>
@@ -305,7 +307,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
         <label>Visit note<textarea name="note" maxlength="500"></textarea></label>
         <label>External visit evidence reference (optional)<input name="evidence_reference" maxlength="500" autocomplete="off" /></label>
         <button class="button button-primary" type="submit">Record residence visit</button></form>`
-        : record.status === 'eligible_for_cif' ? '<p class="notice-card">Eligible for CIF. Continue CIF work using this office intake reference. Eligibility alone does not create credentials or a loan.</p>'
+        : record.status === 'eligible_for_cif' ? ''
           : `<form class="entry-form" data-document-review><h4>Review document requirements</h4>${REQUIREMENTS.slice(0, 3).map(([name, title]) => decision(`${name}_status`, title)).join('')}
             <button class="button button-primary" type="submit">Save document review</button></form>
             <p>Normal CIF eligibility requires all four requirements to be passed.</p><button class="button button-primary" type="button" data-eligibility${nonPassed.length ? ' disabled' : ''}>Approve CIF eligibility</button>
@@ -313,6 +315,11 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
               ${nonPassed.map(([name, title]) => `<label><input type="checkbox" name="bypass_${name}" />${escapeHtml(title)} (${escapeHtml(label(required[name].status))})</label>`).join('')}
               <label>Bypass reason<textarea name="bypass_reason" minlength="3" maxlength="500" required></textarea></label>
               <button class="button button-primary" type="submit">Approve requirement bypass</button></form>` : ''}`}`);
+    if (!collector && record.status === 'eligible_for_cif' && onContinueCif) {
+      listen(caseRoot.querySelector('[data-continue-cif]'), 'click', () => {
+        if (state === 'case' && record === currentCase) void onContinueCif(contextFor(currentCase));
+      });
+    }
     if (collector) {
       listen(caseRoot.querySelector('[data-visit-form]'), 'submit', (event) => {
         event.preventDefault();
@@ -355,9 +362,9 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   if (!(collector ? sessionHasRole(session, 'collector') : sessionHasRole(session, 'employee', 'management')) || !hasPermission(session, permission)) {
     root.innerHTML = emptyState('The required role and onboarding permission are needed.'); return dispose;
   }
-  root.innerHTML = `${collector?'':`<div class="office-intake-start"><button class="button button-primary" type="button" data-new-intake>New office intake</button><p>Start an intake for an applicant visiting the office. SPINA assigns the intake reference after the record is saved.</p></div>`}<form class="entry-form" data-case-lookup>${collector?'':'<h3>Continue existing intake</h3><p>Enter a saved office intake reference to continue this case.</p>'}<label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>
+  root.innerHTML = `${collector?'':`<div class="office-intake-start"><button class="button button-primary" type="button" data-new-intake>New office intake</button><p>Start an intake for an applicant visiting the office. SPINA assigns the intake reference after the record is saved.</p></div><details class="office-reference-lookup" data-intake-lookup open><summary>Find an intake by reference</summary>`}<form class="entry-form" data-case-lookup>${collector?'':'<h3>Continue existing intake</h3><p>Enter a saved office intake reference to continue this case.</p>'}<label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>
     <div class="action-row"><button class="button button-primary" type="submit">${collector ? 'Open residence visit' : 'Open intake case'}</button><button class="button button-outline" type="button" data-clear-case>${collector ? 'Clear' : 'Close case'}</button>
-    ${collector ? '' : '<button class="button button-outline" type="button" data-clear-intake-search>Clear search</button>'}</div></form>
+    ${collector ? '' : '<button class="button button-outline" type="button" data-clear-intake-search>Clear search</button>'}</div></form>${collector?'':'</details>'}
     <div data-onboarding-status role="status" aria-live="polite"></div><div data-onboarding-case></div>`;
   caseRoot = root.querySelector('[data-onboarding-case]');
   statusRoot = root.querySelector('[data-onboarding-status]');
@@ -372,7 +379,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   if (!collector) {
     listen(root.querySelector('[data-clear-intake-search]'),'click',()=>{referenceInput.value='';editLookup();referenceInput.focus();},false);
     const handle = {getContext:()=>coordinator.getContext(),isDirty,isWritePending:()=>state==='saving',isUncertain:()=>intakeUncertain||writeUncertain,getRevision:()=>revision,
-      openCase:selection=>loadCase(selection.intakeReference),resetCase:()=>{if(state==='saving'||intakeUncertain||writeUncertain)return false;invalidate();referenceInput.value='';return true;},refreshReadOnly:()=>record&&!isDirty()&&!intakeUncertain&&state!=='saving'?loadCase(record.application_reference,{refresh:true}):false,dispose};
+      openCase:selection=>loadCase(selection.intakeReference),resetCase:()=>{if(state==='saving'||intakeUncertain||writeUncertain)return false;invalidate();referenceInput.value='';root.querySelector('[data-intake-lookup]')?.setAttribute('open','');return true;},refreshReadOnly:()=>record&&!isDirty()&&!intakeUncertain&&state!=='saving'?loadCase(record.application_reference,{refresh:true}):false,dispose};
     registerHandle?.(handle); if(ownsCoordinator) coordinator.registerStage('intake',handle);
     newButton = root.querySelector('[data-new-intake]');
     listen(newButton, 'click', () => {

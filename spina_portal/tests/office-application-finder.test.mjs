@@ -10,6 +10,24 @@ const apps=(items=[],next_cursor=null)=>({...page(items,next_cursor),intake:{app
 const saved=(reference='APP/A')=>({application_id:app,application_reference:reference,client_id:client,created_at:'2026-10-01T00:00:00Z',application_version_id:version,version_number:2,recorded_at:'2026-10-02T00:00:00Z'});
 const flush=async()=>{await setImmediate();await setImmediate();};
 const disposers=[];
+test('application choices stay out of CIF and retain the same page when returning to applications',async()=>{
+ const {root,handle,calls}=mount(path=>path.includes('/applications')?apps([saved()]):page([row()]));await flush();
+ const context={mode:'saved-case',intakeReference:'INT/A',clientId:client,activeStage:'cif'};
+ handle.setContext(context);await flush();
+ assert.equal(root.querySelector('[data-application-panel]').getAttribute('hidden'),'');
+ const choice=root.querySelector('[data-choose-application]'),reads=calls.length;
+ handle.setContext({...context,activeStage:'application'});
+ assert.equal(root.querySelector('[data-application-panel]').getAttribute('hidden'),null);
+ assert.equal(root.querySelector('[data-choose-application]'),choice);
+ assert.equal(calls.length,reads);
+});
+test('empty applications without another page have no unusable paging controls',async()=>{
+ const {root,handle}=mount(path=>path.includes('/applications')?apps():page());await flush();
+ handle.setContext({mode:'saved-case',intakeReference:'INT/A',clientId:client,activeStage:'application'});await flush();
+ assert.match(root.querySelector('[data-application-results]').textContent,/No saved applications/);
+ assert.equal(root.querySelector('[data-applications-next]'),null);
+ assert.equal(root.querySelector('[data-applications-previous]'),null);
+});
 afterEach(()=>{for(const dispose of disposers.splice(0))dispose();});
 function mount(read=()=>page([row()]),options={}){const root=new Element(),calls=[],session={user:{id:'staff',role:'employee'},permissions:['client_onboarding.requirement.review']};const handle=mountOfficeApplicationFinder({root,api:{request:async(path)=>{calls.push(path);return read(path);}},getSession:()=>session,...options});disposers.push(handle);return {root,calls,handle,session};}
 function search(root,q,status=''){root.querySelector('[name="q"]').value=q;root.querySelector('[name="status"]').value=status;fire(root.querySelector('[data-finder-search]'),'submit');}

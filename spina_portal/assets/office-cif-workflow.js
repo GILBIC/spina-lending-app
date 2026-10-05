@@ -23,7 +23,7 @@ function verifiedCifContext(context, review) {
   return JSON.stringify(canonical(context.review_snapshot)) === JSON.stringify(canonical(expected)) ? '' : null;
 }
 
-export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, onChanged, onAccessDenied, onDraftChange }) {
+export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, onChanged, onOpened, onAccessDenied, onDraftChange }) {
   mounts.get(root)?.();
   let disposed = false; let busy = false; let review; let captured; let captureCleanup; let privacyCleanup;
   let writing = false, uncertain = false, revision = 0;
@@ -38,6 +38,18 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
   const controller = new AbortController(); let removers = [];
   const base = `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif`;
   const listen = (element, type, callback) => { element.addEventListener(type, callback); removers.push(() => element.removeEventListener(type, callback)); };
+  function showTask(name) {
+    if (disposed) return;
+    for (const task of root.querySelectorAll('[data-cif-task]')) {
+      if (task.getAttribute('data-cif-task') === name) { task.setAttribute('open',''); task.querySelector('summary')?.focus(); }
+      else task.removeAttribute('open');
+    }
+  }
+  function completeTask(name,label) {
+    const task=root.querySelector(`[data-cif-task="${name}"]`);
+    task?.setAttribute('data-complete','true');
+    if(task)task.querySelector('summary').textContent=label;
+  }
   function clear() {
     captureCleanup?.(); privacyCleanup?.(); captureCleanup = null; privacyCleanup = null;
     for (const remove of removers) remove(); removers = [];
@@ -84,6 +96,8 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
       captured = null;
       uncertain = false; originalAction=null;
       root.querySelector('[data-cif-workflow-status]').innerHTML = '<p>Applicant confirmation saved for this exact CIF version.</p>';
+      completeTask('signature','2. Applicant signature — Confirmed');
+      showTask('privacy');
     } catch (error) { fail(error); }
     finally { busy = false; writing = false; if (!disposed && captured && review) button.disabled = false; }
   }
@@ -104,6 +118,7 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
       root.querySelector('[data-cif-workflow-status]').innerHTML = '<p>Controlled baseline verification result recorded.</p>';
       root.querySelector('[name="providerReference"]').value = '';
       root.querySelector('[name="providerPassed"]').checked = false; uncertain = false; originalAction=null;
+      completeTask('identity','4. Identity verification — Recorded');
     } catch (error) { fail(error); } finally { busy = false; writing = false; }
   }
   async function activate() {
@@ -130,27 +145,37 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
       }
       review = value;
       const all = { ...Object.fromEntries(FIELDS.map(key => [key, review[key]])), ...(review.identity_information || {}) };
-      root.innerHTML = `<h3>Applicant review and confirmation</h3><p>CIF version ${escapeHtml(review.version_number)}</p>
-        <div class="detail-grid">${Object.entries(all).map(([key, value]) => `<div class="detail-item"><span>${escapeHtml(key.replaceAll('_', ' '))}</span><strong>${escapeHtml(value ?? 'Not provided')}</strong></div>`).join('')}</div>
+      const detailsMarkup=`<div class="detail-grid">${Object.entries(all).map(([key, value]) => `<div class="detail-item"><span>${escapeHtml(key.replaceAll('_', ' '))}</span><strong>${escapeHtml(value ?? 'Not provided')}</strong></div>`).join('')}</div>`;
+      root.innerHTML = `<div class="office-cif-checklist"><p class="meta">Complete these steps for CIF version ${escapeHtml(review.version_number)}. Open any step to review it.</p>
+        <details class="office-cif-task" data-cif-task="details" open><summary>1. Review details</summary><div class="office-cif-task-body">
+        ${detailsMarkup}
+        <button type="button" class="button button-primary" data-cif-next="signature">Continue to applicant signature</button></div></details>
+        <details class="office-cif-task" data-cif-task="signature"><summary>2. Applicant signature</summary><div class="office-cif-task-body"><p>Signing the details in step 1 for <strong>${escapeHtml(review.full_name)}</strong>, CIF version ${escapeHtml(review.version_number)}. Review these details with the applicant before signing.</p><div class="office-cif-signing-grid"><div class="office-cif-signing-facts">${detailsMarkup}</div><div>
         <div data-signed-cif></div><button type="button" class="button button-primary" data-confirm-cif disabled>Confirm reviewed CIF information</button>
-        <div data-privacy-cif></div>
-        ${review.status === 'draft' ? `<h3>Controlled baseline verification</h3><p>Use the result from the approved face and liveness verification process. This form records its result; it does not perform a face scan.</p>
-          <form data-baseline-cif class="entry-form"><label>Verification provider evidence reference<input name="providerReference" type="text" maxlength="500" autocomplete="off" required /></label>
-          <label><input name="providerPassed" type="checkbox" required /> Baseline face and liveness verification passed.</label><button type="submit">Record verified baseline</button></form>
-          ${sessionHasRole(session, 'management') ? '<button type="button" data-activate-cif>Activate verified CIF</button>' : '<p>Management activates the CIF after the required review and verification.</p>'}` : '<p>This CIF is already active.</p>'}
-        <div data-cif-workflow-status role="status" aria-live="polite"></div>`;
+        </div></div></div></details>
+        <details class="office-cif-task" data-cif-task="privacy"><summary>3. Privacy acknowledgment</summary><div class="office-cif-task-body"><div data-privacy-cif></div></div></details>
+        <details class="office-cif-task" data-cif-task="identity"><summary>4. Identity verification</summary><div class="office-cif-task-body">
+        ${review.status === 'draft' ? `<p>Record the result from the approved face and liveness verification process. This form does not perform a face scan.</p>
+          <form data-baseline-cif class="entry-form"><label>Verification result reference<input name="providerReference" type="text" maxlength="500" autocomplete="off" required /></label>
+          <label><input name="providerPassed" type="checkbox" required /> Baseline face and liveness verification passed.</label><button type="submit" class="button button-primary">Save verification result</button></form>` : '<p>This CIF is already active.</p>'}
+        </div></details>
+        ${review.status === 'draft' ? `<div class="office-cif-finish"><p>When the required review and verification are complete, Management can activate this CIF. SPINA checks the saved requirements before activation.</p>${sessionHasRole(session,'management')?'<button type="button" class="button button-outline" data-activate-cif>Activate verified CIF</button>':''}</div>`:''}
+        <div data-cif-workflow-status role="status" aria-live="polite"></div></div>`;
       captureCleanup = mountOfficeEvidenceCapture({ root: root.querySelector('[data-signed-cif]'), api, session, clientId,
         cifVersionId: review.cif_version_id, purpose: 'cif_review', signal: controller.signal,
         verifiedContextMarkup: context => verifiedCifContext(context, review),
         onCaptured: record => { captured = record; edited(); root.querySelector('[data-confirm-cif]').disabled = false; }, onAccessDenied, onDraftChange:edited });
       privacyCleanup = mountOfficePrivacy({ root: root.querySelector('[data-privacy-cif]'), api, session, clientId,
-        cifVersionId: review.cif_version_id, signal: controller.signal, onDraftChange:edited, onAccessDenied });
+        cifVersionId: review.cif_version_id, signal: controller.signal, onDraftChange:edited, onAccessDenied,
+        onRecorded:()=>{completeTask('privacy','3. Privacy acknowledgment — Recorded');showTask('identity');} });
       listen(root.querySelector('[data-confirm-cif]'), 'click', confirm);
+      for (const button of root.querySelectorAll('[data-cif-next]')) listen(button,'click',()=>showTask(button.getAttribute('data-cif-next')));
       if (review.status === 'draft') {
         listen(root.querySelector('[data-baseline-cif]'), 'submit', baseline);
         for (const input of root.querySelector('[data-baseline-cif]').querySelectorAll('input')) { listen(input,'input',edited);listen(input,'change',edited); }
         if (sessionHasRole(session, 'management')) listen(root.querySelector('[data-activate-cif]'), 'click', activate);
       }
+      onOpened?.();
     } catch (error) { fail(error); } finally { busy = false; }
   }
   mounts.set(root, dispose); signal?.addEventListener('abort', dispose, { once: true });
@@ -163,7 +188,7 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
     root.innerHTML = emptyState('Office access, onboarding review permission and a valid Client selection are required.');
     return dispose;
   }
-  root.innerHTML = '<button type="button" data-open-cif-workflow>Open signing, privacy and verification</button>';
+  root.innerHTML = '<button type="button" class="button button-primary" data-open-cif-workflow>Review and sign CIF</button>';
   listen(root.querySelector('[data-open-cif-workflow]'), 'click', open);
   return dispose;
 }

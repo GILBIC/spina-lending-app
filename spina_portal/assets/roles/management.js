@@ -196,6 +196,7 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
     if (intakeControl && !intakeControl.value.trim() && context.intakeReference) intakeControl.value = context.intakeReference;
     if (applicationControl && !applicationControl.value.trim() && context.applicationReference) applicationControl.value = context.applicationReference;
     show(step);
+    return true;
   }
 
   const removers = buttons.map((button) => {
@@ -205,7 +206,7 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
   });
 
   show('intake');
-  return Object.assign(() => {disposed = true; removers.forEach((remove) => remove());},{activate:show});
+  return Object.assign(() => {disposed = true; removers.forEach((remove) => remove());},{activate:show,navigate:activate});
 }
 
 function staffRows(accounts, canManageDevices) {
@@ -455,21 +456,21 @@ export async function mountManagementWorkspace(context) {
       <button class="office-workflow-step" type="button" data-office-step-target="application">3. Loan application</button>
       <button class="office-workflow-step" type="button" data-office-step-target="first-loan">4. Approval &amp; release</button>
     </div>
-    <p class="meta">Choose a saved intake below or enter its reference to continue through these steps.</p>
+    <p class="meta">Choose a client, then follow the four office steps.</p>
     <aside class="notice-card" data-office-context-banner></aside>
     <div data-office-case-feedback role="status" aria-live="polite"></div>
+    <div data-office-finder></div>
     <div data-office-step="intake">
       <section id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>
     </div>
-    <div data-office-finder></div>
     <div data-office-step="cif" hidden>
-      <section id="management-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Continue the selected office intake. SPINA rechecks the reference before showing Client information.</p></div></div><div data-office-cif-selection></div></section>
+      <section id="management-cif-review"><div class="section-heading"><div><h2>Client information (CIF)</h2><p>Review the details, collect signatures and record identity verification.</p></div></div><div data-office-cif-selection></div></section>
     </div>
     <div data-office-step="application" hidden>
       <section id="management-application-review"><div class="section-heading"><div><h2>Loan application review</h2><p>Continue the selected Client and application. SPINA rechecks both references before loading saved details.</p></div></div><div data-office-application-review></div></section>
     </div>
     <div data-office-step="first-loan" hidden>
-      <section id="management-first-loan"><h2>First-loan approval and office release</h2><p class="meta">Selected references are carried forward for convenience and revalidated by the protected first-loan workflow.</p><div data-office-first-loan></div></section>
+      <section id="management-first-loan"><h2>Approval and office release</h2><p class="meta">Review the saved application before approval, signing and payout.</p><div data-office-first-loan></div></section>
     </div>
   </section>` : ''}
   <section class="section-card" id="management-loans" data-screen-share-section><div data-management-portfolio></div></section>
@@ -530,7 +531,15 @@ export async function mountManagementWorkspace(context) {
     let finder; const handles=new Map();
     const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard,onChange:(value,lifecycle)=>{if(!lifecycle?.disposed)finder?.setContext(value);const banner=root.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=lifecycle?.disposed?(lifecycle.accessDenied?'<p role="alert">Office access is unavailable. Sign in again before continuing.</p>':''):officeCaseBanner(value,value.activeStage);}});
     officeCoordinator=coordinator;
-    const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,registerHandle:handle=>{handles.set(stage,handle);coordinator.registerStage(stage,handle);},onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
+    const continueCif=async selection=>{
+      const current=coordinator.getContext();
+      if(current.intakeReference!==selection.intakeReference||current.clientId!==selection.clientId)return false;
+      if(!await handlers.at(-1).navigate('cif'))return false;
+      const cif=handles.get('cif'),loaded=cif?.getContext?.();
+      if(loaded?.intakeReference===selection.intakeReference&&loaded?.clientId===selection.clientId)return true;
+      return cif?.openCase(selection.intakeReference);
+    };
+    const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,onContinueCif:continueCif,registerHandle:handle=>{handles.set(stage,handle);coordinator.registerStage(stage,handle);},onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
     const handlers=[mountOfficeFirstLoan(stageOptions('[data-office-first-loan]','first-loan')),mountOfficeOnboarding(stageOptions('[data-office-onboarding]','intake')),mountOfficeCifSelection(stageOptions('[data-office-cif-selection]','cif')),mountOfficeApplicationReview(stageOptions('[data-office-application-review]','application')),bindManagementOfficeWorkflow(root,context,coordinator)];
     finder=mountOfficeApplicationFinder({...options('[data-office-finder]'),api:coordinator.bindReadOnlyApi(api),onDenied:()=>coordinator.dispose({accessDenied:true}),onChooseCase:async selection=>{const accepted=await handles.get('intake')?.openCase(selection);if(accepted===true)handlers.at(-1).activate('intake');return accepted;},onChooseApplication:async selection=>{const accepted=await handles.get('application')?.openCase(selection);if(accepted===true)handlers.at(-1).activate('application');return accepted;}});
     coordinator.registerPrivateDisposer(finder);
