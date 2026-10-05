@@ -12,7 +12,6 @@ from psycopg import Connection
 
 from .config import Settings, get_settings
 
-
 _LOGGER = logging.getLogger(__name__)
 _DATABASE_URL_ENV_NAMES = (
     "GILBIC_DATABASE_URL",
@@ -63,11 +62,7 @@ def _available_database_environment_names() -> tuple[str, ...]:
             name
             for name, value in os.environ.items()
             if value.strip()
-            and (
-                "POSTGRES_URL" in name
-                or name.endswith("DATABASE_URL")
-                or name.endswith("DB_URL")
-            )
+            and ("POSTGRES_URL" in name or name.endswith(("DATABASE_URL", "DB_URL")))
         )
     )
 
@@ -101,11 +96,28 @@ def connect_database(settings: Settings | None = None) -> Connection[Any]:
 
     active_settings = settings or get_settings()
     database_url = normalize_database_url_for_psycopg(active_settings.database_url)
-    return psycopg.connect(
+    connection = psycopg.connect(
         database_url,
         connect_timeout=5,
         application_name="gilbic-backend",
     )
+    expected_book_id = active_settings.expected_accounting_book_id
+    if expected_book_id is not None:
+        try:
+            row = connection.execute(
+                "SELECT id FROM accounting.book_identity WHERE singleton"
+            ).fetchone()
+            if row is None or str(row[0]) != str(expected_book_id):
+                raise ValueError(
+                    "Accounting book identity does not match this deployment."
+                )
+            # End the read probe, so the caller can establish its own isolation
+            # level before any business statement. The identity is immutable.
+            connection.rollback()
+        except Exception:
+            connection.close()
+            raise
+    return connection
 
 
 @contextmanager
@@ -129,10 +141,9 @@ def open_connection(settings: Settings | None = None) -> Iterator[Connection[Any
 
 def database_ready(settings: Settings | None = None) -> bool:
     try:
-        with open_connection(settings) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("select 1")
-                return cursor.fetchone() == (1,)
+        with open_connection(settings) as connection, connection.cursor() as cursor:
+            cursor.execute("select 1")
+            return cursor.fetchone() == (1,)
     except (psycopg.Error, ValueError) as error:
         _LOGGER.warning(
             "Database readiness unavailable: source=%s available=%s reason=%s error=%s sqlstate=%s",

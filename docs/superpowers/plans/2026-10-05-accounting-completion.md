@@ -34,10 +34,10 @@ Files: financial_statements_repository.py, financial_statements_api.py, matching
 
 Interface: preserve load_statement_pack(period_id=...) and its existing response fields; establish a read-only REPEATABLE READ transaction before the first report query.
 
-- [ ] Add a two-connection regression where a journal commits between period and cumulative reads; assert one consistent snapshot.
-- [ ] Verify failure against baseline, implement transaction isolation, rerun focused report checks.
-- [ ] Make the response distinguish arithmetic balance from source-completeness/annual-reporting approval; do not claim missing components exist.
-- [ ] Record source, commands, results and commit the reviewed change.
+- [x] Add a two-connection regression where a journal commits between period and cumulative reads; assert one consistent snapshot.
+- [x] Verify failure against baseline, implement transaction isolation, rerun focused report checks.
+- [x] Make the response distinguish arithmetic balance from source-completeness/annual-reporting approval; do not claim missing components exist.
+- [x] Record source, commands, results and commit the reviewed change.
 
 ## Task 1 — Book identity and isolated corporate deployment contract
 
@@ -45,11 +45,11 @@ Files: new accounting_book_repository.py, accounting_book_api.py, additive book-
 
 Interfaces: get_book_identity(); configure_book_identity(kind, entity_label, evidence_reference, evidence_digest, actor_user_id); require_accounting_context(context_id) under the same transaction. One immutable identity per database; no actual identity seeded by migrations.
 
-- [ ] Prove unconfigured state, strict exact retry, changed-identity rejection, wrong-role rejection and immutable evidence.
-- [ ] Implement Management setup/read routes and database functions; expose the identity with reports without accepting a client-supplied connection string.
-- [ ] Prove owner/corporate/synthetic context matches, and reject owner-personal wallets in corporate books.
-- [ ] Document independent database, auth, private evidence, backup and period setup; verify two synthetic databases cannot read each other's business rows.
-- [ ] Add book identity to web/native accounting entry and report labels; test stale/unauthorized reads without data leakage.
+- [x] Prove unconfigured state, strict exact retry, changed-identity rejection, wrong-role rejection and immutable evidence.
+- [x] Implement Management setup/read routes and database functions; expose the identity with reports without accepting a client-supplied connection string.
+- [x] Prove owner/corporate/synthetic context matches, and reject owner-personal wallets in corporate books.
+- [x] Document independent database, auth, private evidence, backup and period setup; verify two synthetic databases cannot read each other's business rows.
+- [x] Add book identity to web/native accounting entry and report labels; test stale/unauthorized reads without data leakage.
 
 ## Task 2 — Immediate close protection and visible source inventory
 
@@ -57,11 +57,11 @@ Files: additive close-completeness migration; close API/repository; close screen
 
 Interfaces: accounting.period_source_blockers(period_id) returns source_type, source_id, effective_date, amount, reason; accounting.assert_period_source_complete(period_id) raises on any blocking row.
 
-- [ ] Write failing tests for an actual Treasury event and Collector credit movement with no GL posting, including a source without any draft; zero PASS must not block.
-- [ ] Derive blockers from authoritative rows and the Asia/Manila business date. Initial unsupported adapters stay blocking; do not fabricate completion.
-- [ ] Enforce the guard in review/prepare/post and expose exact blockers to Management.
+- [x] Write failing tests for an actual Treasury event and Collector credit movement with no GL posting, including a source without any draft; zero PASS must not block.
+- [x] Derive blockers from authoritative rows and the Asia/Manila business date. Initial unsupported adapters stay blocking; do not fabricate completion.
+- [x] Enforce the guard in review/prepare/post and expose exact blockers to Management.
 - [ ] Prove transaction rollback, concurrent source/close ordering, backdated evidence and legitimate matched payable behavior.
-- [ ] Run existing period-close regression and record any compatibility change explicitly.
+- [x] Run existing period-close regression and record any compatibility change explicitly.
 
 ## Task 3 — Treasury receipt, application, payout and transfer journals
 

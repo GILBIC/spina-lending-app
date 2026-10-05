@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from . import __version__
 from .account_api import create_account_router
+from .accounting_book_api import create_accounting_book_router
 from .accounting_export_api import create_accounting_export_router
 from .activity_notification_api import create_activity_notification_router
 from .area_management_api import create_area_management_router
@@ -19,7 +20,6 @@ from .client_loan_api import create_client_loan_router
 from .client_onboarding_api import create_client_onboarding_router
 from .client_payment_api import create_client_payment_router
 from .client_payment_proof_api import create_client_payment_proof_router
-from .treasury_api import create_treasury_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
 from .collection_void_api import create_collection_void_router
@@ -130,6 +130,7 @@ from .seven_by_seven_journal_posting_api import (
 )
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
+from .treasury_api import create_treasury_router
 from .v1_tax_additional_amendment_api import create_v1_tax_additional_amendment_router
 from .v1_tax_adjustment_api import create_v1_tax_adjustment_router
 from .v1_tax_evidence_api import create_v1_tax_evidence_router
@@ -248,6 +249,7 @@ def create_app() -> FastAPI:
     app.include_router(create_past_due_reporting_router())
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
+    app.include_router(create_accounting_book_router())
     app.include_router(create_source_event_accounting_router())
     app.include_router(create_seven_by_seven_journal_draft_router())
     app.include_router(create_seven_by_seven_journal_posting_router())

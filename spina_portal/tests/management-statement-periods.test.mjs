@@ -16,7 +16,7 @@ test('period controls use actual fiscal periods and reject a mismatched pack whi
 test('late statements and aborted reads cannot replace the selected period',async()=>{
  const mod=await import('../assets/management-financial-statements.js');assert.equal(typeof mod.mountManagementFinancialStatements,'function');
  const root=new Element(),pending=[],controller=new AbortController();
- const h=mod.mountManagementFinancialStatements({root,getSession:()=>session,signal:controller.signal,api:{async request(path){if(path.endsWith('/financial-accounting'))return {fiscal_periods:[{period_id:A},{period_id:B}]};return new Promise(resolve=>pending.push(resolve));}}});
+ const h=mod.mountManagementFinancialStatements({root,getSession:()=>session,signal:controller.signal,api:{async request(path){if(path.endsWith('/book'))return {book:{status:'unconfigured'}};if(path.endsWith('/financial-accounting'))return {fiscal_periods:[{period_id:A},{period_id:B}]};return new Promise(resolve=>pending.push(resolve));}}});
  const first=h.refresh();await tick();const select=root.querySelector('[data-statement-period]');select.value=B;fire(select,'change');await tick();pending[1](pack(B));await tick();pending[0](pack(A));await first;assert.match(root.querySelector('[data-statement-results]').textContent,/September/);
  const last=h.refresh();await tick();controller.abort();pending[2](pack(A));await last;assert.doesNotMatch(root.querySelector('[data-statement-results]').textContent,/August/);
 });

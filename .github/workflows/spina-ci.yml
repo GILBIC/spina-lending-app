@@ -570,6 +570,7 @@ jobs:
             tools/run_0102_remittance_review_disposable_postgres_validation.py \
             tools/run_v1_tax_evidence_disposable_postgres_validation.py \
             tools/run_mvp_private_schema_barrier_validation.py \
+            tools/run_accounting_controls_disposable_validation.py \
             tools/run_treasury_disposable_postgres_validation.py
 
       - name: Create isolated validation databases
@@ -593,6 +594,7 @@ jobs:
           REMIT_REVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancereview?sslmode=disable
           TAX_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/v1tax?sslmode=disable
           TREASURY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/treasury_test?sslmode=disable
+          ACCOUNTING_CONTROLS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
           GILBIC_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mvp_private_schema_test?sslmode=disable
         run: |
           set -euo pipefail
@@ -608,6 +610,7 @@ jobs:
             python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
             python tools/run_mvp_private_schema_barrier_validation.py
             python tools/run_treasury_disposable_postgres_validation.py
+            python tools/run_accounting_controls_disposable_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
       - name: Restore synthetic database and private evidence from backup

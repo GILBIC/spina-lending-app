@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from .account_repository import PostgresAccountRepository
+from .accounting_book_repository import book_identity_payload
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .financial_statements_repository import (
@@ -17,7 +19,9 @@ from .financial_statements_repository import (
 from .request_auth import authenticated_device_context
 
 
-def financial_statements_repository_dependency() -> PostgresFinancialStatementsRepository:
+def financial_statements_repository_dependency() -> (
+    PostgresFinancialStatementsRepository
+):
     return PostgresFinancialStatementsRepository()
 
 
@@ -35,6 +39,7 @@ def _line_payload(line: FinancialStatementLine) -> dict[str, object]:
 
 def _pack_payload(pack: FinancialStatementPack) -> dict[str, object]:
     return {
+        "book": book_identity_payload(pack.book_identity),
         "period": {
             "period_id": str(pack.period.period_id),
             "label": pack.period.label,
@@ -59,17 +64,21 @@ def _pack_payload(pack: FinancialStatementPack) -> dict[str, object]:
             "recorded_equity": _decimal(pack.recorded_equity),
             "unclosed_earnings_to_date": _decimal(pack.unclosed_earnings_to_date),
             "total_equity": _decimal(pack.total_equity),
-            "total_liabilities_and_equity": _decimal(
-                pack.total_liabilities_and_equity
-            ),
+            "total_liabilities_and_equity": _decimal(pack.total_liabilities_and_equity),
             "balanced": pack.balanced,
         },
         "source": "posted_general_ledger_only",
+        "assurance": {
+            "arithmetic_balanced": pack.balanced,
+            "comprehensive_source_coverage": False,
+            "annual_reporting_package_complete": False,
+        },
         "notice": (
             "These statements are generated only from posted General Ledger entries. "
-            "Draft journals are excluded. Opening-balance cutover, automatic lending "
-            "posting, ECL posting, tax posting, and formal closing entries remain "
-            "separate controlled accounting stages."
+            "Draft journals are excluded. Balanced totals do not establish that all "
+            "business activity and liabilities have been recorded. Source reconciliation "
+            "and accountant review are still required. This report does not yet include "
+            "a complete annual reporting package."
         ),
     }
 
@@ -83,14 +92,18 @@ def create_financial_statements_router() -> APIRouter:
         include_in_schema=False,
     )
     def financial_statements(
-        period_id: UUID | None = Query(default=None),
+        *,
+        period_id: Annotated[UUID | None, Query()] = None,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
-        auth: SupabaseAuthClient = Depends(auth_client_dependency),
-        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        statements: PostgresFinancialStatementsRepository = Depends(
-            financial_statements_repository_dependency
-        ),
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        statements: Annotated[
+            PostgresFinancialStatementsRepository,
+            Depends(financial_statements_repository_dependency),
+        ],
     ) -> dict[str, object]:
         actor = authenticated_device_context(
             authorization=authorization,

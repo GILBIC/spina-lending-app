@@ -227,6 +227,9 @@ def test_management_can_view_posted_ledger_financial_statements() -> None:
     assert statements["profit_or_loss"]["net_income"] == "1000.00"
     assert statements["financial_position"]["total_assets"] == "6800.00"
     assert statements["financial_position"]["balanced"] is True
+    assert statements["assurance"]["arithmetic_balanced"] is True
+    assert statements["assurance"]["comprehensive_source_coverage"] is False
+    assert statements["assurance"]["annual_reporting_package_complete"] is False
 
 
 def test_financial_statements_require_management_role() -> None:

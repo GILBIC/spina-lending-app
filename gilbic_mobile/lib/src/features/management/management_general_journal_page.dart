@@ -4,6 +4,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal_repository.dart';
+import 'package:gilbic_mobile/src/core/management/accounting_readiness_repository.dart';
+import 'package:gilbic_mobile/src/features/management/accounting_readiness_card.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
@@ -14,6 +16,7 @@ class ManagementGeneralJournalPage extends StatefulWidget {
     required this.accounts,
     required this.periods,
     this.repository,
+    this.readinessRepository,
     super.key,
   });
 
@@ -22,6 +25,7 @@ class ManagementGeneralJournalPage extends StatefulWidget {
   final List<AccountingAccount> accounts;
   final List<AccountingFiscalPeriod> periods;
   final GeneralJournalRepository? repository;
+  final AccountingReadinessRepository? readinessRepository;
 
   @override
   State<ManagementGeneralJournalPage> createState() =>
@@ -41,6 +45,9 @@ class _ManagementGeneralJournalPageState
   bool _uncertain = false;
   bool _reconciliationLoaded = false;
   int _loadGeneration = 0;
+  late String _sessionScope;
+  String get _currentSessionScope =>
+      '${widget.session.userId}:${widget.session.accessToken}:${widget.session.permissions.join(',')}:${widget.session.workspaceRoles.join(',')}';
 
   bool get _canMutate =>
       _fresh &&
@@ -53,28 +60,47 @@ class _ManagementGeneralJournalPageState
   void initState() {
     super.initState();
     _repository = widget.repository ?? SpinaGeneralJournalRepository();
+    _sessionScope = _currentSessionScope;
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant ManagementGeneralJournalPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_sessionScope != _currentSessionScope ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider) {
+      _sessionScope = _currentSessionScope;
+      _snapshot = null;
+      _trialBalance = null;
+      _selectedPeriodId = null;
+      _load();
+    }
   }
 
   Future<void> _load() async {
     if (!mounted) return;
     final generation = ++_loadGeneration;
+    final session = widget.session;
+    final periodId = _selectedPeriodId;
     setState(() {
       _loading = true;
       _fresh = false;
       _reconciliationLoaded = false;
       _errorMessage = null;
+      _trialBalance = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      if (!mounted || generation != _loadGeneration) return;
       final snapshot = await _repository.loadJournals(
-        widget.session,
+        session,
         deviceId: identity.installationId,
       );
+      if (!mounted || generation != _loadGeneration) return;
       final trial = await _repository.loadTrialBalance(
-        widget.session,
+        session,
         deviceId: identity.installationId,
-        periodId: _selectedPeriodId,
+        periodId: periodId,
       );
       if (mounted && generation == _loadGeneration) {
         setState(() {
@@ -462,6 +488,11 @@ class _ManagementGeneralJournalPageState
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
+          AccountingReadinessCard(
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            repository: widget.readinessRepository,
+          ),
           if (_uncertain)
             Card(
               child: Padding(
@@ -625,6 +656,8 @@ class _TrialBalanceCard extends StatelessWidget {
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
+          const Text(postedLedgerScopeNotice),
+          const SizedBox(height: 8),
           DropdownButtonFormField<String?>(
             initialValue: selectedPeriodId,
             isExpanded: true,

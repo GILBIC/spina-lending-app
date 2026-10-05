@@ -7,6 +7,7 @@ import {
   formatDate,
   formatMoney,
 } from './ui.js';
+import { mountAccountingReadiness, postedLedgerScopeNotice } from './management-general-journal.js';
 
 const STATEMENTS_PATH = '/api/v1/management/financial-accounting/statements';
 
@@ -16,10 +17,10 @@ export function loadManagementFinancialStatements(api, periodId = '') {
 
 export function mountManagementFinancialStatements({root,api,signal,getSession}) {
   const owner=getSession?.()?.user?.id;
-  let disposed=false,generation=0,periods=null,periodsPromise=null;
+  let disposed=false,generation=0,periods=null,periodsPromise=null,readiness=()=>{};
   const alive=()=>!disposed&&!signal?.aborted&&getSession?.()?.user?.id===owner;
   const validId=value=>typeof value==='string'&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value);
-  root.innerHTML='<div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements.</p></div></div><label>Accounting period<select data-statement-period><option value="">Server default period</option></select></label><div data-statement-results></div><button type="button" class="button button-outline" data-statement-retry hidden>Retry statements</button>';
+  root.innerHTML='<div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements.</p></div></div><div data-accounting-readiness></div><label>Accounting period<select data-statement-period><option value="">Server default period</option></select></label><div data-statement-results></div><button type="button" class="button button-outline" data-statement-retry hidden>Retry statements</button>';
   const select=root.querySelector('[data-statement-period]'),results=root.querySelector('[data-statement-results]'),retry=root.querySelector('[data-statement-retry]');
   async function loadPeriods() {
     if(periods)return periods;
@@ -38,6 +39,7 @@ export function mountManagementFinancialStatements({root,api,signal,getSession})
   async function refresh({reloadPeriods=true}={}) {
     if(!alive())return;
     const version=++generation,selected=select.value||'';
+    readiness();readiness=mountAccountingReadiness({root:root.querySelector('[data-accounting-readiness]'),api,signal});
     if(reloadPeriods)periods=null;
     results.innerHTML='<p role="status">Loading statements for the selected period…</p>';retry.hidden=true;
     try {
@@ -53,7 +55,7 @@ export function mountManagementFinancialStatements({root,api,signal,getSession})
     }catch(error){if(alive()&&version===generation){results.innerHTML=errorCard(error);retry.hidden=false;}}
   }
   const request=()=>void refresh(),change=()=>void refresh({reloadPeriods:false});select.addEventListener('change',change);retry.addEventListener('click',request);
-  function dispose(){if(disposed)return;disposed=true;generation++;select.removeEventListener('change',change);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
+  function dispose(){if(disposed)return;disposed=true;generation++;readiness();results.innerHTML='';select.removeEventListener('change',change);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});
   return{refresh,dispose};
 }
@@ -109,6 +111,7 @@ export function financialStatementsMarkup(payload) {
     ? 'Posted General Ledger only' : statements.source || 'Authoritative server record';
 
   return `<div class="list-stack management-statements">
+    <p class="meta">${escapeHtml(postedLedgerScopeNotice)}</p>
     <article class="data-card">
       <div class="section-heading">
         <div>

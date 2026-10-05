@@ -13,6 +13,81 @@ const JOURNALS_PATH = '/api/v1/management/financial-accounting/journals';
 const TRIAL_BALANCE_PATH = '/api/v1/management/financial-accounting/trial-balance';
 const EXPORT_PATH = '/api/v1/management/financial-accounting/export';
 const exportMounts = new WeakMap();
+const readinessMounts = new WeakMap();
+const ACCOUNTING_PATH = '/api/v1/management/financial-accounting';
+const BOOK_KINDS = { owner_operations: 'Owner operations', corporate_legal: 'Corporate legal', synthetic: 'Synthetic' };
+const RECORD_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
+export const postedLedgerScopeNotice = 'Report scope: posted ledger only. Arithmetic balance does not establish accounting readiness or complete source coverage.';
+
+function bookIdentityMarkup(payload) {
+  const book = payload?.book;
+  if (book?.status === 'unconfigured') return '<p>Book identity is unconfigured. Separate owner and corporate accounting has not been established for this ledger.</p>';
+  if (book?.status !== 'configured' || !RECORD_ID.test(book.book_id ?? '') || !BOOK_KINDS[book.kind] || typeof book.entity_label !== 'string' || !book.entity_label.trim()) throw new Error('Invalid book identity');
+  return `<p><strong>Immutable book identity</strong>: ${escapeHtml(book.entity_label)} · ${BOOK_KINDS[book.kind]}</p><p class="meta">Book reference: ${escapeHtml(book.book_id)}</p>`;
+}
+
+function sourceCoverageMarkup(payload, periodId) {
+  const coverage = payload?.source_coverage;
+  if (coverage?.fiscal_period_id !== periodId) throw new Error('Source coverage does not match the selected period');
+  if (coverage?.comprehensive_source_coverage !== false || !Array.isArray(coverage.source_families) || !coverage.source_families.length || coverage.source_families.some((family) => !['treasury', 'collector'].includes(family)) || !Array.isArray(coverage.blockers) || !Number.isSafeInteger(coverage.blocker_count) || coverage.blocker_count < coverage.blockers.length || !Number.isSafeInteger(coverage.offset) || coverage.offset < 0 || !Number.isSafeInteger(coverage.limit) || coverage.limit < 1 || coverage.blockers.length > coverage.limit) throw new Error('Invalid source coverage');
+  const rows = coverage.blockers.map((row) => {
+    if (row?.source_type === 'restricted_source') {
+      if (row.reason !== 'treasury_account_access_required' || ['source_id', 'effective_date', 'amount'].some((key) => row[key] !== null)) throw new Error('Invalid restricted source');
+      return '<article class="sub-card"><strong>Restricted source — Treasury account access required</strong></article>';
+    }
+    if (!row || ['source_type', 'source_id', 'effective_date', 'reason'].some((key) => typeof row[key] !== 'string' || !row[key].trim()) || (row.amount !== null && (typeof row.amount !== 'string' || !/^-?\d+\.\d{2}$/.test(row.amount)))) throw new Error('Invalid source blocker');
+    return `<article class="sub-card"><strong>${escapeHtml(titleCase(row.source_type))}</strong><p>${escapeHtml(row.reason)}</p><p>${escapeHtml(row.effective_date)} · ${row.amount === null ? 'Amount unavailable' : formatMoney(row.amount)}</p><p class="meta">Source reference: ${escapeHtml(row.source_id)}</p></article>`;
+  });
+  const shown = rows.length ? `${coverage.offset + 1}–${coverage.offset + rows.length}` : '0';
+  return `<p><strong>Partial source coverage</strong>: ${escapeHtml(coverage.source_families.map(titleCase).join(', '))}.</p><p>This check does not certify readiness for other source families.</p><p>Showing ${shown} of ${coverage.blocker_count} source blockers.${coverage.blocker_count > rows.length ? ' The full blocker inventory is not shown on this page.' : ''}</p>${rows.join('') || (coverage.blocker_count === 0 ? '<p>No blockers returned for these source families. This does not certify readiness.</p>' : '<p>No source rows were returned for this page. Refresh the review.</p>')}`;
+}
+
+// Every mount owns its request lifetime; no book or private source data is cached.
+export function mountAccountingReadiness({ root, api, signal, periodId = null, showBook = true }) {
+  readinessMounts.get(root)?.();
+  const controller = new AbortController();
+  let disposed = false;
+  const active = () => !disposed && !signal?.aborted;
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    controller.abort();
+    signal?.removeEventListener('abort', dispose);
+    if (readinessMounts.get(root) === dispose) {
+      root.innerHTML = '';
+      readinessMounts.delete(root);
+    }
+  }
+  readinessMounts.set(root, dispose);
+  root.innerHTML = `<div class="notice-card"><p>${escapeHtml(postedLedgerScopeNotice)}</p>${showBook ? '<div data-book-identity role="status">Loading book identity…</div>' : ''}${periodId ? '<div data-source-coverage role="status">Loading source blockers for this period…</div>' : ''}</div>`;
+  signal?.addEventListener('abort', dispose, { once: true });
+  if (!active()) { dispose(); return dispose; }
+  async function read(path, selector, render, failure) {
+    try {
+      const payload = await api.request(path, { signal: controller.signal });
+      if (!active()) return;
+      const markup = render(payload);
+      root.querySelector(selector).innerHTML = markup;
+    } catch (error) {
+      if (!active()) return;
+      if ([401, 403, 426].includes(error?.status)) {
+        dispose();
+        root.innerHTML = '<p role="alert">Accounting access is unavailable. Refresh your session and permissions.</p>';
+      } else {
+        const region = root.querySelector(selector);
+        region.setAttribute('role', 'alert');
+        region.textContent = failure;
+      }
+    }
+  }
+  if (showBook) void read(`${ACCOUNTING_PATH}/book`, '[data-book-identity]', bookIdentityMarkup, 'Book identity is unavailable. Refresh before relying on this ledger.');
+  if (periodId) {
+    if (RECORD_ID.test(periodId)) void read(`${ACCOUNTING_PATH}/period-close/${encodeURIComponent(periodId)}/source-blockers`, '[data-source-coverage]', (payload) => sourceCoverageMarkup(payload, periodId), 'Source coverage is unavailable. Refresh before relying on this period review.');
+    else root.querySelector('[data-source-coverage]').textContent = 'Source coverage is unavailable. The period identity is invalid.';
+  }
+  return dispose;
+}
 
 export function loadManagementGeneralJournal(api) {
   return api.request(JOURNALS_PATH);
@@ -272,6 +347,7 @@ function trialBalanceMarkup(payload) {
       </div>
       ${balanceState}
     </div>
+    <p class="meta">${escapeHtml(postedLedgerScopeNotice)}</p>
     <div class="detail-grid trial-balance-totals">
       <div class="detail-item"><span>Total debits</span><strong>${formatMoney(trial.total_debits)}</strong></div>
       <div class="detail-item"><span>Total credits</span><strong>${formatMoney(trial.total_credits)}</strong></div>
@@ -289,6 +365,7 @@ export function managementGeneralJournalMarkup({ journals = {}, trialBalance = {
     : `Read-only accounting evidence. Automatic posting is ${automaticPosting}.`;
 
   return `<div class="list-stack general-journal-workspace">
+    <div data-accounting-readiness></div>
     <div class="notice-card"><strong>Accounting evidence</strong><br>${escapeHtml(reviewNotice)}</div>
     <div class="accounting-book-tabs" role="tablist" aria-label="Accounting books">
       <button type="button" class="accounting-book-tab active" data-accounting-book-tab="journal" aria-selected="true">General Journal</button>

@@ -25,7 +25,7 @@ def connection():
         raise RuntimeError("Close proofs require explicitly disposable PostgreSQL")
     params = disposable._safe_local_connection_params(URL)
     if not re.fullmatch(
-        r"spina_(?:onboarding_[0-9a-f]{12}|period_close_[0-9a-f]{32})", params["dbname"]
+        r"spina_(?:onboarding_[0-9a-f]{12}|period_close_[0-9a-f]{32}|treasury_validation_[0-9a-f]{24})", params["dbname"]
     ):
         raise RuntimeError(
             "Close proofs require a generated onboarding disposable database"

@@ -7,10 +7,10 @@ from uuid import UUID
 
 from psycopg.rows import dict_row
 
+from .accounting_book_repository import AccountingBookIdentity, read_book_identity
 from .database import open_connection
 
-
-ZERO = Decimal("0")
+ZERO = Decimal(0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +57,7 @@ class FinancialStatementPack:
     total_equity: Decimal
     total_liabilities_and_equity: Decimal
     balanced: bool
+    book_identity: AccountingBookIdentity | None = None
 
 
 class FinancialStatementsError(RuntimeError):
@@ -93,6 +94,7 @@ def build_financial_statement_pack(
     period: AccountingStatementPeriod,
     period_movements: tuple[AccountMovement, ...],
     cumulative_movements: tuple[AccountMovement, ...],
+    book_identity: AccountingBookIdentity | None = None,
 ) -> FinancialStatementPack:
     """Build read-only statements from posted General Ledger movements.
 
@@ -118,10 +120,9 @@ def build_financial_statement_pack(
     total_assets = sum((line.amount for line in asset_lines), ZERO)
     total_liabilities = sum((line.amount for line in liability_lines), ZERO)
     recorded_equity = sum((line.amount for line in equity_lines), ZERO)
-    unclosed_earnings_to_date = (
-        sum((line.amount for line in cumulative_income), ZERO)
-        - sum((line.amount for line in cumulative_expenses), ZERO)
-    )
+    unclosed_earnings_to_date = sum(
+        (line.amount for line in cumulative_income), ZERO
+    ) - sum((line.amount for line in cumulative_expenses), ZERO)
     total_equity = recorded_equity + unclosed_earnings_to_date
     total_liabilities_and_equity = total_liabilities + total_equity
 
@@ -142,6 +143,7 @@ def build_financial_statement_pack(
         total_equity=total_equity,
         total_liabilities_and_equity=total_liabilities_and_equity,
         balanced=total_assets == total_liabilities_and_equity,
+        book_identity=book_identity,
     )
 
 
@@ -151,26 +153,33 @@ class PostgresFinancialStatementsRepository:
         *,
         period_id: UUID | None = None,
     ) -> FinancialStatementPack:
-        with open_connection() as connection:
-            with connection.cursor(row_factory=dict_row) as cursor:
-                period = self._load_period(cursor, period_id)
-                period_movements = self._load_movements(
-                    cursor,
-                    period_id=period.period_id,
-                    through_date=None,
-                    exclude_period_close=True,
-                )
-                cumulative_movements = self._load_movements(
-                    cursor,
-                    period_id=None,
-                    through_date=period.end_date,
-                    exclude_period_close=False,
-                )
-                return build_financial_statement_pack(
-                    period=period,
-                    period_movements=period_movements,
-                    cumulative_movements=cumulative_movements,
-                )
+        with (
+            open_connection() as connection,
+            connection.cursor(row_factory=dict_row) as cursor,
+        ):
+            # Profit and cumulative balances must describe the same ledger,
+            # even if another session posts while this pack is being read.
+            cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            book_identity = read_book_identity(cursor)
+            period = self._load_period(cursor, period_id)
+            period_movements = self._load_movements(
+                cursor,
+                period_id=period.period_id,
+                through_date=None,
+                exclude_period_close=True,
+            )
+            cumulative_movements = self._load_movements(
+                cursor,
+                period_id=None,
+                through_date=period.end_date,
+                exclude_period_close=False,
+            )
+            return build_financial_statement_pack(
+                period=period,
+                period_movements=period_movements,
+                cumulative_movements=cumulative_movements,
+                book_identity=book_identity,
+            )
 
     @staticmethod
     def _load_period(cursor, period_id: UUID | None) -> AccountingStatementPeriod:

@@ -1,4 +1,5 @@
 import { sessionHasRole } from './roles.js';
+import { mountAccountingReadiness } from './management-general-journal.js';
 import { asArray, escapeHtml as h, formatMoney, formatDate, hasPermission, titleCase } from './ui.js';
 
 const BASE = '/api/v1/management/financial-accounting';
@@ -35,10 +36,10 @@ function token() { return Array.from(globalThis.crypto.getRandomValues(new Uint8
 export async function mountManagementAccounting({ root, api, session, signal }) {
   mounts.get(root)?.();
   let disposed = false, epoch = 0, busy = false, blocked = false, selected = 'periods', page = 0;
-  let data, listeners = [], childCleanup, childController, reviewOrigin = null;
+  let data, listeners = [], readinessCleanups = [], childCleanup, childController, reviewOrigin = null;
   const can = (permission) => sessionHasRole(session, 'management') && hasPermission(session, permission);
   const active = (value = epoch) => !disposed && !signal?.aborted && value === epoch;
-  function clearListeners() { for (const remove of listeners) remove(); listeners = []; childController?.abort(); childController = null; childCleanup?.(); childCleanup = null; }
+  function clearListeners() { for (const remove of listeners) remove(); listeners = []; for (const disposeReadiness of readinessCleanups) disposeReadiness(); readinessCleanups = []; childController?.abort(); childController = null; childCleanup?.(); childCleanup = null; }
   function dispose() { if (disposed) return; disposed = true; epoch++; clearListeners(); root.innerHTML = ''; signal?.removeEventListener('abort', dispose); if (mounts.get(root) === dispose) mounts.delete(root); }
   function listen(element, event, action) {
     if (!element) return;
@@ -55,7 +56,8 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     </section>`).join('');
     root.innerHTML = `<nav class="accounting-navigation" aria-label="Accounting workflows">${workflowNavigation}</nav>
       <div class="section-heading accounting-workflow-heading"><div><h3 data-accounting-heading tabindex="-1">${tabs[selected]}</h3></div>${button('data-accounting-refresh', 'Refresh')}</div>
-      <div data-accounting-message role="status"></div>${content}`;
+      <div data-accounting-message role="status"></div><div data-accounting-readiness></div>${content}`;
+    readinessCleanups.push(mountAccountingReadiness({ root: root.querySelector('[data-accounting-readiness]'), api, signal }));
     if (restoreFocus) root.querySelector('[data-accounting-heading]')?.focus({ preventScroll: true });
     listen(root.querySelector('[data-accounting-refresh]'), 'click', () => load());
     for (const tab of root.querySelectorAll('[data-accounting-tab]')) listen(tab, 'click', () => { if (blocked) return; selected = tab.getAttribute('data-accounting-tab'); page = 0; void load(); });
@@ -227,7 +229,11 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     const protectedPolicy = (row) => row.protected_period_close_enabled === true && row.retained_earnings_close_enabled === true && row.closed_period_posting_protection_enabled === true && row.period_reopen_enabled === false && row.automatic_source_posting === false;
     const canPrepare = (row) => protectedPolicy(row) && data.permissions?.close_prepare === true && can('accounting.period.close.prepare') && row.close_status === 'ready_to_prepare';
     const canPost = (row) => protectedPolicy(row) && data.permissions?.close_post === true && can('accounting.period.close.post') && row.close_status === 'prepared_confirmation_required' && UUID.test(row.preparation_id ?? '') && UUID.test(row.journal_entry_id ?? '') && DIGEST.test(row.close_digest ?? '') && Number.isInteger(row.temporary_account_count) && typeof row.net_income === 'string' && typeof row.retained_earnings_balance_before === 'string';
-    frame(`<p>${h(data.notice)}</p>${data.items.map((row, index) => `<article class="sub-card"><h4>${h(row.label)}</h4><p>${h(titleCase(row.close_status))} · ${h(row.close_blocker || '')}</p><div class="detail-grid">${fact('Period end', row.end_date)}${fact('Net income', formatMoney(row.net_income))}${fact('Retained earnings before close', formatMoney(row.retained_earnings_balance_before))}${fact('Temporary accounts', row.temporary_account_count)}</div>${canPrepare(row) ? button(`data-close-prepare="${index}"`, 'Review close preparation') : ''}${canPost(row) ? button(`data-close-post="${index}"`, 'Review retained earnings & close') : ''}</article>`).join('') || '<p>No fiscal periods are available.</p>'}`);
+    frame(`<p>${h(data.notice)}</p>${data.items.map((row, index) => `<article class="sub-card"><h4>${h(row.label)}</h4><p>${h(titleCase(row.close_status))} · ${h(row.close_blocker || '')}</p><div class="detail-grid">${fact('Period end', row.end_date)}${fact('Net income', formatMoney(row.net_income))}${fact('Retained earnings before close', formatMoney(row.retained_earnings_balance_before))}${fact('Temporary accounts', row.temporary_account_count)}</div>${button(`data-close-sources="${index}"`, 'Review source blockers')}<div data-close-source-review="${index}"></div>${canPrepare(row) ? button(`data-close-prepare="${index}"`, 'Review close preparation') : ''}${canPost(row) ? button(`data-close-post="${index}"`, 'Review retained earnings & close') : ''}</article>`).join('') || '<p>No fiscal periods are available.</p>'}`);
+    for (const element of root.querySelectorAll('[data-close-sources]')) listen(element, 'click', () => {
+      const index = Number(element.getAttribute('data-close-sources'));
+      readinessCleanups.push(mountAccountingReadiness({ root: root.querySelector(`[data-close-source-review="${index}"]`), api, signal, periodId: id(data.items[index].fiscal_period_id), showBook: false }));
+    });
     for (const element of root.querySelectorAll('[data-close-prepare]')) listen(element, 'click', () => {
       const row = data.items[Number(element.getAttribute('data-close-prepare'))]; requireThat(canPrepare(row), 'Current close preparation authority is required.');
       review('Prepare formal period close', [['Period', row.label], ['End', row.end_date], ['Status', row.fiscal_period_status]], 'Prepares the protected close from current posted journals. It does not close the period yet.', { path: `${BASE}/period-close/${id(row.fiscal_period_id)}/prepare`, body: { confirm: true }, validate: (result) => result?.item?.fiscal_period_id === row.fiscal_period_id });

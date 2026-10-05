@@ -8,9 +8,12 @@ import 'package:gilbic_mobile/src/core/management/financial_statements.dart';
 import 'package:gilbic_mobile/src/core/management/financial_statements_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
+import 'support/accounting_readiness_fixture.dart';
 
 void main() {
-  testWidgets('Management sees posted-ledger financial statements', (tester) async {
+  testWidgets('Management sees posted-ledger financial statements', (
+    tester,
+  ) async {
     final repository = _FakeStatementsRepository();
 
     await tester.pumpWidget(
@@ -20,6 +23,7 @@ void main() {
           deviceIdentityProvider: _deviceIdentityProvider(),
           periods: _periods,
           statementsRepository: repository,
+          readinessRepository: FakeAccountingReadinessRepository(),
         ),
       ),
     );
@@ -29,6 +33,12 @@ void main() {
     expect(repository.periodId, 'period-aug-2026');
     expect(find.text('Financial Statements'), findsOneWidget);
     expect(find.text('August 2026 • Open'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('profit-or-loss-statement')),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Statement of Profit or Loss'), findsOneWidget);
     expect(find.text('4000 Interest Income - Regular'), findsOneWidget);
     expect(find.text('₱1,500.00'), findsWidgets);
@@ -45,7 +55,10 @@ void main() {
 
     expect(find.text('Statement of Financial Position'), findsOneWidget);
     expect(find.text('Balanced'), findsOneWidget);
-    expect(find.text('1190 Allowance for Expected Credit Loss'), findsOneWidget);
+    expect(
+      find.text('1190 Allowance for Expected Credit Loss'),
+      findsOneWidget,
+    );
     expect(find.text('(₱200.00)'), findsOneWidget);
     expect(find.text('Total assets'), findsOneWidget);
     expect(find.text('Liabilities + equity'), findsOneWidget);
@@ -62,51 +75,70 @@ void main() {
           deviceIdentityProvider: _deviceIdentityProvider(),
           periods: _periods,
           statementsRepository: repository,
+          readinessRepository: FakeAccountingReadinessRepository(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('financial-statements-period')));
-    await tester.pumpAndSettle();
+    await _openPeriodSelector(tester);
     await tester.tap(find.text('July 2026 • Closed').last);
     await tester.pumpAndSettle();
 
     expect(repository.periodId, 'period-jul-2026');
   });
 
-  testWidgets('Failed period load never leaves previous period figures visible', (
-    tester,
-  ) async {
-    final repository = _FakeStatementsRepository(
-      failPeriodId: 'period-jul-2026',
-    );
+  testWidgets(
+    'Failed period load never leaves previous period figures visible',
+    (tester) async {
+      final repository = _FakeStatementsRepository(
+        failPeriodId: 'period-jul-2026',
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ManagementFinancialStatementsPage(
-          session: _session,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          periods: _periods,
-          statementsRepository: repository,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementFinancialStatementsPage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            periods: _periods,
+            statementsRepository: repository,
+            readinessRepository: FakeAccountingReadinessRepository(),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('profit-or-loss-statement')),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Statement of Profit or Loss'), findsOneWidget);
+      expect(find.text('₱1,500.00'), findsWidgets);
 
-    expect(find.text('Statement of Profit or Loss'), findsOneWidget);
-    expect(find.text('₱1,500.00'), findsWidgets);
+      await _openPeriodSelector(tester);
+      await tester.tap(find.text('July 2026 • Closed').last);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('financial-statements-period')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('July 2026 • Closed').last);
-    await tester.pumpAndSettle();
+      expect(repository.periodId, 'period-jul-2026');
+      expect(find.text('Statement load failed.'), findsOneWidget);
+      expect(find.text('Statement of Profit or Loss'), findsNothing);
+      expect(find.text('₱1,500.00'), findsNothing);
+    },
+  );
+}
 
-    expect(repository.periodId, 'period-jul-2026');
-    expect(find.text('Statement load failed.'), findsOneWidget);
-    expect(find.text('Statement of Profit or Loss'), findsNothing);
-    expect(find.text('₱1,500.00'), findsNothing);
-  });
+Future<void> _openPeriodSelector(WidgetTester tester) async {
+  final selector = find.byKey(const Key('financial-statements-period'));
+  await tester.scrollUntilVisible(
+    selector,
+    -250,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  expect(selector.hitTestable(), findsOneWidget);
+  await tester.tap(selector);
+  await tester.pumpAndSettle();
 }
 
 const UserSession _session = UserSession(

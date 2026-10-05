@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/management/general_journal.dart';
 import 'package:gilbic_mobile/src/core/management/general_journal_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_general_journal_page.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'support/accounting_readiness_fixture.dart';
 
 void main() {
   testWidgets(
@@ -148,12 +149,19 @@ void main() {
           accounts: _accounts,
           periods: _periods,
           repository: repository,
+          readinessRepository: FakeAccountingReadinessRepository(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('General Journal'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('general-journal-trial-balance')),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Trial Balance'), findsOneWidget);
     expect(find.textContaining('Balanced'), findsOneWidget);
     expect(find.textContaining('₱100.00 / ₱100.00'), findsOneWidget);
@@ -341,6 +349,7 @@ Future<void> _pumpCompactJournalPage(
         accounts: _accounts,
         periods: _periods,
         repository: repository,
+        readinessRepository: FakeAccountingReadinessRepository(),
       ),
     ),
   );
@@ -383,13 +392,23 @@ Future<void> _fillBalancedDraft(
 
 Future<void> _expandEntry(WidgetTester tester, {required String title}) async {
   final journalCard = find.byKey(const Key('journal-entry-1'));
+  final entryTitle = find.descendant(
+    of: journalCard,
+    matching: find.text(title),
+  );
   await tester.scrollUntilVisible(
-    journalCard,
+    entryTitle,
     300,
     scrollable: find.byType(Scrollable).first,
   );
-  await tester.tap(find.text(title));
   await tester.pumpAndSettle();
+  expect(entryTitle.hitTestable(), findsOneWidget);
+  await tester.tap(entryTitle);
+  await tester.pumpAndSettle();
+  expect(
+    find.descendant(of: journalCard, matching: find.text('Created by')),
+    findsOneWidget,
+  );
 }
 
 Future<void> _scrollToEntryAction(WidgetTester tester, Finder action) async {
@@ -399,6 +418,7 @@ Future<void> _scrollToEntryAction(WidgetTester tester, Finder action) async {
     scrollable: find.byType(Scrollable).first,
   );
   await tester.pumpAndSettle();
+  expect(action.hitTestable(), findsOneWidget);
 }
 
 const UserSession _session = UserSession(

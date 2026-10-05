@@ -6,7 +6,7 @@ User instruction: **“Plan everything and fix.”** The user additionally confi
 
 SPINA must account for actual cash once, retain amounts owed as liabilities, reconcile lending/custody/Treasury sources to the existing General Ledger, prevent an incomplete period from closing, and provide a complete accountant-reviewable reporting package. A balanced trial balance is one invariant, not an assertion of completeness or statutory compliance.
 
-There are six staged deliverables. Each has its own tests and review. A partially implemented stage must remain visibly incomplete; the program is complete only when all software gates pass. Actual book configuration, supported opening figures, CPA policy approval and production release remain explicit acceptance gates and must never be fabricated.
+There are six staged deliverables. Each has its own tests and review. A partially implemented stage must remain visibly incomplete; the program is complete only when all software gates pass. The user explicitly delegated framework/chart design on 5 October 2026 ("No need, you can do it"). Engineering does not wait for external policy approval. Actual book identity, opening amounts, tax facts and production release remain separate verified inputs and must never be fabricated. Independent review is part of statutory-use acceptance, not a reason to leave software design unfinished.
 
 ## A. Separate books
 

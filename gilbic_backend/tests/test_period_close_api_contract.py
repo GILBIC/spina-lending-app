@@ -78,6 +78,6 @@ def test_period_close_status_filters_keep_legacy_closed_periods_fail_closed() ->
     assert "ready_for_review" in REPOSITORY
     assert "ready_to_prepare" in REPOSITORY
     assert "prepared_confirmation_required" in REPOSITORY
-    assert "closed_protected" in REPOSITORY
+    assert "fiscal_period_status = 'closed'" in REPOSITORY
     assert "closed_legacy_without_protected_close_audit" in REPOSITORY
-    assert "close_status LIKE 'blocked_%'" in REPOSITORY
+    assert "close_status LIKE 'blocked_%%'" in REPOSITORY
