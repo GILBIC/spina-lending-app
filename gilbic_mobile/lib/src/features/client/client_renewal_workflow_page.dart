@@ -69,7 +69,9 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     CollectorRenewalRequest request,
     String decision,
   ) async {
-    final label = decision == 'accepted' ? 'Accept & Continue' : 'Decline Renewal';
+    final label = decision == 'accepted'
+        ? 'Accept & Continue'
+        : 'Decline Renewal';
     final confirmed = await _confirm(
       title: label,
       message: decision == 'accepted'
@@ -105,7 +107,7 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     final confirmed = await _confirm(
       title: 'Sign Renewal',
       message:
-          'You are signing this renewal from your own GILBIC account as ${_roleLabel(signer.partyRole)}. Never sign for another person.',
+          'You are signing this renewal from your own SPINA account as ${_roleLabel(signer.partyRole)}. Never sign for another person.',
       action: 'Sign',
     );
     if (!confirmed) return;
@@ -282,10 +284,9 @@ class _ClientRenewalCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '${request.isSevenBySeven ? '7x7' : request.loanTypeName} Renewal',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w900),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 _StatusPill(request.displayStatus),
@@ -304,14 +305,17 @@ class _ClientRenewalCard extends StatelessWidget {
               if (request.amountLockedAt == null)
                 const Text('Final net cash is not locked yet.')
               else ...[
-                Text('Old-loan settlement ${_money(request.renewalOffsetAmount ?? 0)}'),
+                Text(
+                  'Old-loan settlement ${_money(request.renewalOffsetAmount ?? 0)}',
+                ),
                 Text(
                   'Locked net cash ${_money(request.netReleaseAmount ?? 0)}',
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ],
             ],
-            if (request.status == 'approved' && request.clientDecision == null) ...[
+            if (request.status == 'approved' &&
+                request.clientDecision == null) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -345,13 +349,16 @@ class _ClientRenewalCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 )
               else if (borrowerSigner == null)
-                const Text('Waiting for Management to register your borrower signer requirement.')
+                const Text(
+                  'Waiting for Management to register your borrower signer requirement.',
+                )
               else ...[
                 _SignerState(signer: borrowerSigner),
                 if (!borrowerSigner.signed)
                   FilledButton.icon(
                     key: Key('client-renewal-sign-${request.requestId}'),
-                    onPressed: busy ||
+                    onPressed:
+                        busy ||
                             !borrowerSigner.governmentIdVerified ||
                             !borrowerSigner.selfieVerified
                         ? null
@@ -383,7 +390,9 @@ class _ClientRenewalCard extends StatelessWidget {
                 'Cash received: Confirmed by you',
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
-              Text('Handover proof: ${_proofLabel(request.handoverProofStatus)}'),
+              Text(
+                'Handover proof: ${_proofLabel(request.handoverProofStatus)}',
+              ),
               Text('Activation: ${_activationLabel(request.activationStatus)}'),
               if (request.activationStatus != 'active')
                 const Text(
@@ -439,9 +448,9 @@ class _StatusPill extends StatelessWidget {
         text,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SpinaTheme.brandPinkDark,
-              fontWeight: FontWeight.w900,
-            ),
+          color: SpinaTheme.brandPinkDark,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -480,22 +489,22 @@ CollectorRenewalSigner? _borrowerSigner(CollectorRenewalRequest request) {
 String _money(num value) => '₱${value.toStringAsFixed(2)}';
 
 String _roleLabel(String value) => switch (value) {
-      'guarantor' => 'Guarantor',
-      'surety' => 'Surety',
-      'solidary_co_maker' => 'Solidary co-maker',
-      _ => 'Borrower',
-    };
+  'guarantor' => 'Guarantor',
+  'surety' => 'Surety',
+  'solidary_co_maker' => 'Solidary co-maker',
+  _ => 'Borrower',
+};
 
 String _proofLabel(String value) => switch (value) {
-      'approved' => 'Approved',
-      'under_review' => 'Under Management Review',
-      'correction_required' => 'Proof Correction Required',
-      'flagged' => 'Flagged for Review',
-      _ => 'Not Submitted',
-    };
+  'approved' => 'Approved',
+  'under_review' => 'Under Management Review',
+  'correction_required' => 'Proof Correction Required',
+  'flagged' => 'Flagged for Review',
+  _ => 'Not Submitted',
+};
 
 String _activationLabel(String value) => switch (value) {
-      'active' => 'Active',
-      'released_pending_management' => 'Released — Pending Management Verification',
-      _ => 'Not Activated',
-    };
+  'active' => 'Active',
+  'released_pending_management' => 'Released — Pending Management Verification',
+  _ => 'Not Activated',
+};

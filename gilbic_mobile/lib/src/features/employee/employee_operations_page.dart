@@ -13,6 +13,7 @@ import 'package:gilbic_mobile/src/core/employee_operations/employee_operations_s
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart';
 import 'package:gilbic_mobile/src/features/employee/employee_command_form.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 
 enum EmployeeSection {
   attendance,
@@ -31,12 +32,14 @@ class EmployeeOperationsPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     this.initialSection = EmployeeSection.attendance,
     this.service,
+    this.onSignOut,
     super.key,
   });
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final EmployeeSection initialSection;
   final EmployeeOperationsService? service;
+  final Future<void> Function()? onSignOut;
   @override
   State<EmployeeOperationsPage> createState() => _EmployeeOperationsPageState();
 }
@@ -44,7 +47,7 @@ class EmployeeOperationsPage extends StatefulWidget {
 class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
   EmployeeOperationsService? _service;
   bool _ownsService = false,
-      _loading = true,
+      _loading = false,
       _capturing = false,
       _offline = false,
       _denied = false;
@@ -52,6 +55,8 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
   EmployeeWorkspace? _workspace;
   List<AttendanceEntry> _events = [];
   String? _message;
+  String? _readError;
+  int? _readStatus;
   late EmployeeSection _section = widget.initialSection;
   @override
   void didChangeDependencies() {
@@ -79,18 +84,14 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
 
   void _queueChanged() {
     if (_service?.accessDenied == true && mounted) {
-      setState(() {
-        _denied = true;
-        _workspace = null;
-        _events = [];
-        _message =
-            'Employee access is no longer authorized. Sign in again or contact the owner.';
-      });
+      _blockReads(_readStatus ?? 403);
+      return;
     }
     unawaited(_readQueue());
   }
 
   Future<void> _readQueue() async {
+    if (!mounted || _denied || _service?.accessDenied == true) return;
     final bound = _service?.binding;
     if (bound == null) {
       if (mounted) setState(() => _events = []);
@@ -99,12 +100,14 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
     try {
       final events = await _service!.outbox.entries(bound);
       if (mounted &&
+          !_denied &&
+          !_service!.accessDenied &&
           bound.userId == widget.session.userId &&
           identical(bound, _service!.binding)) {
         setState(() => _events = events);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && !_denied && !_service!.accessDenied) {
         setState(() {
           _events = [];
           _message =
@@ -115,22 +118,26 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
   }
 
   Future<void> _load() async {
+    if (!mounted || _loading || _denied || _service?.accessDenied == true) {
+      return;
+    }
     final epoch = ++_epoch;
     setState(() {
       _loading = true;
-      _workspace = null;
       _message = null;
+      _readError = null;
+      _readStatus = null;
     });
     try {
       final workspace = await _service!.repository.workspace(widget.session);
-      if (!mounted || epoch != _epoch) return;
+      if (!mounted || epoch != _epoch || _service!.accessDenied) return;
       try {
         await _service!.acceptWorkspace(widget.session, workspace);
       } on Object {
         _message =
             'Protected attendance storage is unavailable. No attendance was saved. Other connected workflows remain available.';
       }
-      if (!mounted || epoch != _epoch) return;
+      if (!mounted || epoch != _epoch || _service!.accessDenied) return;
       setState(() {
         _workspace = workspace;
         _offline = false;
@@ -141,7 +148,9 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
       if (!mounted || epoch != _epoch) return;
       final denied = staffAccessRejected(error);
       if (denied) {
+        _blockReads((error as SpinaApiException).statusCode!);
         await _service!.denyAttendance();
+        return;
       } else {
         try {
           await _service!.restoreBinding();
@@ -151,10 +160,9 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
       }
       if (!mounted || epoch != _epoch) return;
       setState(() {
-        _workspace = null;
-        _offline = !denied;
-        _denied = denied;
-        _message = staffError(error);
+        _offline = true;
+        _readError =
+            'Employee records are unavailable. Connect and retry before using connected workflows.';
       });
     } finally {
       if (mounted && epoch == _epoch) {
@@ -164,9 +172,30 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
     }
   }
 
+  void _blockReads(int status) {
+    _epoch++;
+    setState(() {
+      _loading = false;
+      _denied = true;
+      _offline = false;
+      _workspace = null;
+      _events = [];
+      _message = null;
+      _readStatus = status;
+      _readError = switch (status) {
+        401 =>
+          'Your session has expired. Sign in to view employee records again.',
+        426 =>
+          'Update required. Return to sign-in and follow the SPINA update guidance.',
+        _ =>
+          'This account or device can no longer view employee records. Contact the owner or return to your account.',
+      };
+    });
+  }
+
   Future<void> _capture(String type) async {
     final binding = _service!.binding;
-    if (_capturing || binding == null || _denied) return;
+    if (!mounted || _capturing || binding == null || _denied) return;
     setState(() => _capturing = true);
     try {
       await _service!.outbox.capture(binding, type, offline: _offline);
@@ -192,7 +221,9 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
 
   Future<void> _command(String action, {Map<String, dynamic>? record}) async {
     final workspace = _workspace;
-    if (workspace == null || _loading || _denied) return;
+    if (!mounted || workspace == null || _loading || _offline || _denied) {
+      return;
+    }
     if (record != null &&
         !stringList(record['allowed_actions']).contains(action)) {
       return;
@@ -418,7 +449,10 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
     }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: SelectableText('${employeeLabel(key)}: ${_format(value)}'),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: SelectableText('${employeeLabel(key)}: ${_format(value)}'),
+      ),
     );
   }
 
@@ -464,6 +498,20 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
         childrenPadding: const EdgeInsets.all(14),
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              for (final action in actions)
+                OutlinedButton(
+                  key: Key('employee-action-$action-${record['id']}'),
+                  onPressed: _loading || _offline || _denied
+                      ? null
+                      : () => _command(action, record: record),
+                  child: Text(employeeLabel(action)),
+                ),
+            ],
+          ),
           ExpansionTile(
             title: const Text('Details'),
             expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
@@ -502,18 +550,6 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
                   ),
               ],
             ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 6,
-            children: [
-              for (final action in actions)
-                OutlinedButton(
-                  key: Key('employee-action-$action-${record['id']}'),
-                  onPressed: () => _command(action, record: record),
-                  child: Text(employeeLabel(action)),
-                ),
-            ],
-          ),
         ],
       ),
     );
@@ -539,7 +575,7 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
           IconButton(
             key: const Key('employee-refresh'),
             tooltip: 'Refresh employee records',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -568,6 +604,27 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
             ),
             const SizedBox(height: 18),
             if (_loading) const LinearProgressIndicator(),
+            if (_readError != null)
+              WorkspaceReadNotice(
+                message: _readError!,
+                stale: workspace != null,
+                actionLabel: switch (_readStatus) {
+                  401 => 'Sign in again',
+                  403 => 'Access unavailable',
+                  426 => 'Return to sign-in',
+                  _ => 'Retry',
+                },
+                onAction: _denied
+                    ? (_readStatus == 401 || _readStatus == 426) &&
+                              widget.onSignOut != null
+                          ? () {
+                              if (mounted && _denied) {
+                                unawaited(widget.onSignOut!());
+                              }
+                            }
+                          : null
+                    : _load,
+              ),
             if (_message != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
@@ -605,7 +662,9 @@ class _EmployeeOperationsPageState extends State<EmployeeOperationsPage> {
                   ))
                     OutlinedButton(
                       key: Key('employee-create-$action'),
-                      onPressed: () => _command(action),
+                      onPressed: _loading || _offline || _denied
+                          ? null
+                          : () => _command(action),
                       child: Text(employeeLabel(action)),
                     ),
                 ],

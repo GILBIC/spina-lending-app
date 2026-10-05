@@ -42,6 +42,7 @@ import 'package:gilbic_mobile/src/features/management/management_support_request
 import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
 class ManagementDashboard extends StatefulWidget {
@@ -107,6 +108,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       _overview = null;
       _deviceId = null;
       _deviceIdLoad = null;
+      _overviewStatusCode = null;
       _overviewRepository =
           widget.overviewRepository ??
           SpinaManagementDashboardOverviewRepository();
@@ -142,6 +144,12 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
   }
 
   Future<void> _loadOverview({bool refresh = false}) async {
+    if (!mounted ||
+        _overviewStatusCode == 401 ||
+        _overviewStatusCode == 403 ||
+        _overviewStatusCode == 426) {
+      return;
+    }
     final generation = ++_requestGeneration;
     final session = widget.session;
     final repository = _overviewRepository;
@@ -169,7 +177,9 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
         if (error is SpinaApiException &&
-            (error.statusCode == 401 || error.statusCode == 403)) {
+            (error.statusCode == 401 ||
+                error.statusCode == 403 ||
+                error.statusCode == 426)) {
           _overview = null;
         }
         _overviewError = refresh
@@ -235,6 +245,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ManagementAlertsAuditNavigation.paymentUpdates =>
         ActivityNotificationsPage(
           session: session,
+          onSignOut: onSignOut,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
       ManagementAlertsAuditNavigation.staffDevices =>
@@ -258,6 +269,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ManagementAlertsAuditNavigation.remittanceReview =>
         RemittanceNotificationsPage(
           session: session,
+          onSignOut: onSignOut,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
       ManagementAlertsAuditNavigation.financialAccounting =>
@@ -288,6 +300,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ),
       _ManagementAction.employeeOperations => EmployeeOperationsPage(
         session: session,
+        onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
         initialSection: EmployeeSection.payroll,
       ),
@@ -326,6 +339,11 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       _ManagementAction.offlinePolicy => MobileOfflinePolicyPage(
         session: session,
       ),
+      _ManagementAction.notifications => NotificationCenterPage(
+        session: session,
+        onSignOut: onSignOut,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
       _ManagementAction.loans => ManagementLoanPortfolioPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
@@ -345,6 +363,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ),
       _ManagementAction.remittanceNotifications => RemittanceNotificationsPage(
         session: session,
+        onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
       ),
       _ManagementAction.directPayment => OtherAreaCollectionPage(
@@ -363,6 +382,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       ),
       _ManagementAction.employeeActivity => ManagementEmployeeActivityPage(
         session: session,
+        onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
         repository: widget.employeeActivityRepository,
       ),
@@ -696,6 +716,7 @@ class _ManagementOverviewInitialError extends StatelessWidget {
     final title = switch (statusCode) {
       401 => 'Session expired',
       403 => 'Live data access unavailable',
+      426 => 'Update required',
       _ => 'Live overview unavailable',
     };
     final guidance = switch (statusCode) {
@@ -703,6 +724,8 @@ class _ManagementOverviewInitialError extends StatelessWidget {
       403 =>
         'Your current role, permission, or device approval does not allow '
             'this live snapshot.',
+      426 =>
+        'A SPINA update is required. Return to sign-in and follow the update guidance.',
       _ => 'Retry when the live server is available.',
     };
 
@@ -720,12 +743,16 @@ class _ManagementOverviewInitialError extends StatelessWidget {
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
-              child: statusCode == 401
+              child: statusCode == 401 || statusCode == 426
                   ? FilledButton.icon(
                       key: const Key('management-overview-sign-in'),
                       onPressed: onSignInAgain,
                       icon: const Icon(Icons.login),
-                      label: const Text('Sign in again'),
+                      label: Text(
+                        statusCode == 401
+                            ? 'Sign in again'
+                            : 'Return to sign-in',
+                      ),
                     )
                   : statusCode == 403
                   ? const Text(
@@ -1275,6 +1302,7 @@ enum _ManagementAction {
   alertsActivity('management-alerts-activity'),
   myAccountDevices('management-my-account-devices'),
   offlinePolicy('management-offline-policy'),
+  notifications('management-notifications'),
   loans('management-loans'),
   contractCollectionActivation('management-contract-collection-activation'),
   noCollection('management-no-collection'),
@@ -1560,6 +1588,12 @@ const _managementSections = <_ManagementSection>[
         'See which Management data and actions require the live server',
         Icons.cloud_off_outlined,
         action: _ManagementAction.offlinePolicy,
+      ),
+      _ManagementModule(
+        'Notifications',
+        'Account activity and assigned remittance requests',
+        Icons.notifications_outlined,
+        action: _ManagementAction.notifications,
       ),
     ],
   ),

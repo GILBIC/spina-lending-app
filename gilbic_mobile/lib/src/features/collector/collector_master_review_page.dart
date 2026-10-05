@@ -3,6 +3,9 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// End-of-route review across every area assigned to the signed-in Collector.
@@ -13,11 +16,13 @@ class CollectorMasterReviewPage extends StatefulWidget {
   const CollectorMasterReviewPage({
     required this.session,
     required this.loader,
+    this.onSignOut,
     super.key,
   });
 
   final UserSession session;
   final CollectorRouteLoader loader;
+  final Future<void> Function()? onSignOut;
 
   @override
   State<CollectorMasterReviewPage> createState() =>
@@ -27,7 +32,8 @@ class CollectorMasterReviewPage extends StatefulWidget {
 class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
   CollectorRouteLoadResult? _result;
   Object? _error;
-  bool _loading = true;
+  bool _loading = false;
+  int _readGeneration = 0;
 
   @override
   void initState() {
@@ -36,23 +42,74 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
   }
 
   Future<void> _load() async {
+    if (!mounted || _loading || _readBlocked) return;
+    final generation = ++_readGeneration;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final result = await widget.loader.loadToday(widget.session);
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() => _result = result);
       }
     } on Object catch (error) {
-      if (mounted) {
-        setState(() => _error = error);
+      if (_currentRead(generation)) {
+        setState(() {
+          _error = error;
+          if (isCollectorRouteAccessRejected(error)) _result = null;
+        });
       }
     } finally {
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  bool get _readBlocked =>
+      _error != null && isCollectorRouteAccessRejected(_error!);
+
+  bool _currentRead(int generation) => mounted && generation == _readGeneration;
+
+  @override
+  void dispose() {
+    _readGeneration++;
+    super.dispose();
+  }
+
+  bool get _sessionRecovery =>
+      widget.onSignOut != null &&
+      ((_error as SpinaApiException).statusCode != 403 ||
+          !Navigator.of(context).canPop());
+
+  bool get _canRecoverRead =>
+      !_readBlocked ||
+      widget.onSignOut != null ||
+      Navigator.of(context).canPop();
+
+  String get _recoveryLabel {
+    if (!_readBlocked) return 'Retry';
+    final status = (_error as SpinaApiException).statusCode;
+    if (_sessionRecovery) {
+      return status == 401 ? 'Sign in again' : 'Return to sign-in';
+    }
+    if (Navigator.of(context).canPop()) return 'Back';
+    return status == 426
+        ? 'Update required'
+        : status == 401
+        ? 'Sign in again'
+        : 'Access unavailable';
+  }
+
+  void _recoverRead() {
+    if (!mounted) return;
+    if (!_readBlocked) {
+      _load();
+    } else if (_sessionRecovery) {
+      widget.onSignOut!();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).maybePop();
     }
   }
 
@@ -65,7 +122,7 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
         actions: [
           IconButton(
             tooltip: 'Refresh review',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _readBlocked ? null : _load,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -80,9 +137,14 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (result == null) {
-      return _ReviewLoadError(
-        message: _error?.toString() ?? 'Master Review could not be loaded.',
-        onRetry: _load,
+      return Center(
+        child: WorkspaceReadNotice(
+          message: _error == null
+              ? 'Master Review could not be loaded.'
+              : collectorReadFailureMessage(_error!),
+          actionLabel: _recoveryLabel,
+          onAction: _canRecoverRead ? _recoverRead : null,
+        ),
       );
     }
 
@@ -94,7 +156,9 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
         .toList(growable: false);
     final unresolved = reviews.where((review) => review.needsAction).toList();
     final attention = reviews.where((review) => review.needsAttention).toList();
-    final gcash = reviews.where((review) => review.hasExplicitGcashNote).toList();
+    final gcash = reviews
+        .where((review) => review.hasExplicitGcashNote)
+        .toList();
     final complete = reviews.length - unresolved.length;
 
     return RefreshIndicator(
@@ -121,9 +185,11 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
           ],
           if (_error != null) ...[
             const SizedBox(height: 10),
-            _ReadOnlyNotice(
-              message: 'The last refresh failed: $_error',
-              offline: result.isFromCache,
+            WorkspaceReadNotice(
+              message: collectorReadFailureMessage(_error!),
+              actionLabel: _recoveryLabel,
+              onAction: _canRecoverRead ? _recoverRead : null,
+              stale: true,
             ),
           ],
           const SizedBox(height: 14),
@@ -224,7 +290,9 @@ class _MasterHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = route.routeDate == null ? 'Saved route' : _date(route.routeDate!);
+    final date = route.routeDate == null
+        ? 'Saved route'
+        : _date(route.routeDate!);
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -241,9 +309,9 @@ class _MasterHeader extends StatelessWidget {
                 child: Text(
                   'All-area collection check',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: SpinaTheme.brandPinkDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: SpinaTheme.brandPinkDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               _StateChip(
@@ -270,7 +338,10 @@ class _MasterHeader extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: _MasterStat(value: '$unresolvedCount', label: 'Still open'),
+                child: _MasterStat(
+                  value: '$unresolvedCount',
+                  label: 'Still open',
+                ),
               ),
             ],
           ),
@@ -278,7 +349,10 @@ class _MasterHeader extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _MasterStat(value: '$attentionCount', label: 'Attention'),
+                child: _MasterStat(
+                  value: '$attentionCount',
+                  label: 'Attention',
+                ),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -462,7 +536,9 @@ class _OutstandingClientCard extends StatelessWidget {
               spacing: 5,
               runSpacing: 5,
               children: review.chips
-                  .map((chip) => _ReviewChip(label: chip.label, tone: chip.tone))
+                  .map(
+                    (chip) => _ReviewChip(label: chip.label, tone: chip.tone),
+                  )
                   .toList(growable: false),
             ),
             if (review.detailLines.isNotEmpty) ...[
@@ -640,36 +716,6 @@ class _ReviewChip extends StatelessWidget {
   }
 }
 
-class _ReviewLoadError extends StatelessWidget {
-  const _ReviewLoadError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.fact_check_outlined, size: 48),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ClientReview {
   _ClientReview({
     required this.client,
@@ -697,9 +743,9 @@ class _ClientReview {
     CollectorRouteClientGroup client,
     DateTime? routeDate,
   ) {
-    final unresolved = client.loans.where(
-      (loan) => !_isResolvedToday(loan, routeDate),
-    ).toList(growable: false);
+    final unresolved = client.loans
+        .where((loan) => !_isResolvedToday(loan, routeDate))
+        .toList(growable: false);
     final missed = client.loans.fold<int>(
       0,
       (value, loan) => loan.passCount > value ? loan.passCount : value,
@@ -755,6 +801,8 @@ class _ClientReview {
       chips.add(const _ChipData('ADV / COVERED', _ReviewTone.good));
     }
     if (explicitGcash) {
+      // Note classification only; the neutral label/counter never verifies a
+      // payment channel, received cash, or an official payment transaction.
       chips.add(const _ChipData('GCASH NOTE', _ReviewTone.info));
     }
     if (chips.isEmpty) {
@@ -779,7 +827,8 @@ class _ClientReview {
           '$loanLabel contractual days past due: ${loan.contractDaysPastDue}',
         );
       }
-      if (loan.contractNextUnpaidDate != null && loan.contractNextUnpaidAmount > 0) {
+      if (loan.contractNextUnpaidDate != null &&
+          loan.contractNextUnpaidAmount > 0) {
         details.add(
           '$loanLabel next unpaid: ${_date(loan.contractNextUnpaidDate!)} • ${_moneyCompact(loan.contractNextUnpaidAmount)}',
         );
@@ -787,26 +836,25 @@ class _ClientReview {
       if (loan.note.trim().isNotEmpty) {
         details.add('$loanLabel note: ${loan.note.trim()}');
       }
-      if (loan.todayNote.trim().isNotEmpty && loan.todayNote.trim() != loan.note.trim()) {
+      if (loan.todayNote.trim().isNotEmpty &&
+          loan.todayNote.trim() != loan.note.trim()) {
         details.add('$loanLabel today note: ${loan.todayNote.trim()}');
       }
     }
 
     final dueForAction = todayUnpaid > 0
         ? todayUnpaid
-        : unresolved.fold<double>(
-            0,
-            (total, loan) => total + loan.dailyAmount,
-          );
+        : unresolved.fold<double>(0, (total, loan) => total + loan.dailyAmount);
     final amount = dueForAction > 0
         ? dueForAction
         : nextUnpaid > 0
-            ? nextUnpaid
-            : client.expectedTotal;
+        ? nextUnpaid
+        : client.expectedTotal;
 
     String exceptionLabel = '';
     if (hasPassToday && hasAdvance) {
-      exceptionLabel = 'PASS/ADV exception recorded and no unresolved loan remains.';
+      exceptionLabel =
+          'PASS/ADV exception recorded and no unresolved loan remains.';
     } else if (hasPassToday) {
       exceptionLabel = 'PASS / unable-to-pay entry is recorded for today.';
     } else if (hasAdvance) {

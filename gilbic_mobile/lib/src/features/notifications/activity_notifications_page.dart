@@ -5,32 +5,40 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/notifications/activity_notification.dart';
 import 'package:gilbic_mobile/src/core/notifications/activity_notification_repository.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 
 class ActivityNotificationsPage extends StatefulWidget {
   const ActivityNotificationsPage({
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.onSignOut,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ActivityNotificationRepository? repository;
+  final Future<void> Function()? onSignOut;
 
   @override
   State<ActivityNotificationsPage> createState() =>
       _ActivityNotificationsPageState();
 }
 
-class _ActivityNotificationsPageState
-    extends State<ActivityNotificationsPage> {
-  late final ActivityNotificationRepository _repository;
+class _ActivityNotificationsPageState extends State<ActivityNotificationsPage> {
+  late ActivityNotificationRepository _repository;
 
   List<ActivityNotification> _notifications = const <ActivityNotification>[];
   String? _deviceId;
   String? _errorMessage;
-  bool _loading = true;
+  bool _loading = false;
+  bool _hasLoaded = false;
+  int _generation = 0;
+  int? _failureStatus;
+  bool get _denied =>
+      _failureStatus == 401 || _failureStatus == 403 || _failureStatus == 426;
+  bool _current(int generation) => mounted && generation == _generation;
   final Set<String> _expanded = <String>{};
   final Set<String> _updating = <String>{};
 
@@ -41,40 +49,109 @@ class _ActivityNotificationsPageState
     _load();
   }
 
+  @override
+  void didUpdateWidget(ActivityNotificationsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _generation++;
+      _notifications = const [];
+      _deviceId = null;
+      _expanded.clear();
+      _updating.clear();
+      _hasLoaded = false;
+      _loading = false;
+      _failureStatus = null;
+      _repository = widget.repository ?? SpinaActivityNotificationRepository();
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  void _failedRead(Object error, int generation) {
+    if (!_current(generation)) return;
+    setState(() {
+      _failureStatus = error is SpinaApiException ? error.statusCode : null;
+      _errorMessage = _failureStatus == 401
+          ? 'Your session has expired. Sign in again to view payment updates.'
+          : _failureStatus == 403
+          ? 'Payment update access is unavailable. Return to Account or contact SPINA for help.'
+          : _failureStatus == 426
+          ? 'SPINA must be updated before these records can be used. Return to sign-in to check app access.'
+          : 'Payment updates could not be loaded. Check your connection and retry.';
+      if (_denied) {
+        _generation++;
+        _notifications = const [];
+        _deviceId = null;
+        _expanded.clear();
+        _updating.clear();
+        _hasLoaded = false;
+        _loading = false;
+      }
+    });
+  }
+
+  Widget _readNotice() => WorkspaceReadNotice(
+    message: _errorMessage!,
+    stale: _hasLoaded,
+    actionLabel: _failureStatus == 401
+        ? 'Sign in again'
+        : _failureStatus == 403
+        ? 'Access unavailable'
+        : _failureStatus == 426
+        ? 'Return to sign-in'
+        : 'Retry',
+    onAction: _failureStatus == 401 || _failureStatus == 426
+        ? widget.onSignOut
+        : _denied || _loading
+        ? null
+        : _load,
+  );
+
   Future<void> _load() async {
+    if (!mounted || _loading || _denied) return;
+    final generation = _generation;
+    final session = widget.session;
+    final repository = _repository;
+    final provider = widget.deviceIdentityProvider;
     setState(() {
       _loading = true;
       _errorMessage = null;
+      _failureStatus = null;
     });
     try {
-      final identity = await widget.deviceIdentityProvider.load();
-      final notifications = await _repository.load(
-        widget.session,
+      final identity = await provider.load();
+      if (!_current(generation)) return;
+      final notifications = await repository.load(
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) {
+      if (!_current(generation)) {
         return;
       }
       setState(() {
         _deviceId = identity.installationId;
         _notifications = notifications;
+        _hasLoaded = true;
       });
-    } on SpinaApiException catch (error) {
-      if (mounted) {
-        setState(() => _errorMessage = error.message);
-      }
-    } on Object {
-      if (mounted) {
-        setState(() => _errorMessage = 'Payment updates could not be loaded.');
-      }
+    } on Object catch (error) {
+      _failedRead(error, generation);
     } finally {
-      if (mounted) {
+      if (_current(generation)) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _toggle(ActivityNotification notification) async {
+    if (!mounted || _denied || !_notifications.contains(notification)) return;
+    final generation = _generation;
     setState(() {
       if (!_expanded.add(notification.id)) {
         _expanded.remove(notification.id);
@@ -94,7 +171,7 @@ class _ActivityNotificationsPageState
         deviceId: deviceId,
         notificationId: notification.id,
       );
-      if (!mounted) {
+      if (!_current(generation) || !_notifications.contains(notification)) {
         return;
       }
       setState(() {
@@ -102,10 +179,16 @@ class _ActivityNotificationsPageState
             .map((item) => item.id == updated.id ? updated : item)
             .toList(growable: false);
       });
+    } on SpinaApiException catch (error) {
+      if (error.statusCode == 401 ||
+          error.statusCode == 403 ||
+          error.statusCode == 426) {
+        _failedRead(error, generation);
+      }
     } on Object {
       // The update remains visible even if the read receipt cannot be saved.
     } finally {
-      if (mounted) {
+      if (_current(generation)) {
         setState(() => _updating.remove(notification.id));
       }
     }
@@ -119,7 +202,7 @@ class _ActivityNotificationsPageState
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -134,23 +217,7 @@ class _ActivityNotificationsPageState
     }
     if (_errorMessage != null && _notifications.isEmpty) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.notifications_off_outlined, size: 48),
-              const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
+        child: Padding(padding: const EdgeInsets.all(24), child: _readNotice()),
       );
     }
 
@@ -160,13 +227,7 @@ class _ActivityNotificationsPageState
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         children: [
-          if (_errorMessage != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(_errorMessage!),
-              ),
-            ),
+          if (_errorMessage != null) _readNotice(),
           if (_notifications.isEmpty)
             const Padding(
               padding: EdgeInsets.all(32),
@@ -229,7 +290,8 @@ class _ActivityCard extends StatelessWidget {
                       children: [
                         Text(
                           notification.title,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 fontWeight: notification.isRead
                                     ? FontWeight.w600
                                     : FontWeight.w900,

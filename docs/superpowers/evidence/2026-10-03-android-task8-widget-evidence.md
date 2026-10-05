@@ -1,0 +1,16 @@
+# Android Task 8 widget evidence — 3 October 2026
+
+Original A8 widget scope passes 238 tests across 18 files on work/android-plan-489-20261003, base 37017a883dd1cd8b47b77a04348c787651751513. The base alone does not identify capture source. a8-capture-source-manifest-accepted-controls.json binds 492 source/test/pubspec files, raw/canonical SHA256 and current/base Git blobs, Flutter3.44.7 revision84fc5cbb223bc12f83d65b647ff8a56caf779ffd, and real Roboto/MaterialIcons hashes. Its SHA256 is ef725ba794b8550c65c37367f004ca7f2d18b3366652148812d87dd6cd3e44bd. All492 raw files remain unchanged after captures.
+
+Evidence lives outside shipping assets in sibling ../checkpoints/exact-plans-20261003:
+
+- resume-android-a8-implementation.md: original workflow map, repairs, verification and limits.
+- resume-android-a8-path-hashes.json:28 changed Dart paths (eight presentation,20 test/support) and four untouched protected remittance paths.
+- a8-accepted-controls-widget-captures.log: final238/238 scoped pass; a8-captures-accepted-controls/matrix.jsonl and workflows.jsonl: actual widgets, size, descendant scale, inset, scroll bounds and source references.
+- a8-capture-manifest.json and a8-source-postcapture-check.json:661 unique filenames/PNGs,212 home frames across44 configurations and449 workflow frames; unchanged frozen source, matching dimensions, complete overlapping home scrolls.
+- a8-visual-inspection-index.json, a8-visual-inspection-closure.json, a8-visual-inspection.md: all465 distinct pixel hashes inspected. Final captures freshly generated; prior inspection carries forward only for identical PNG hashes. Grayscale samples preserve originals.
+- a8-final-controls-green.log, a8-final-controls-analyze.log, a8-final-controls-format.log, a8-final-diff-check.log:23/23 focused pass, clean analyzer, pre-capture formatting and clean diff check. Historical RED/probes/captures remain separately preserved.
+
+The test-only capture boundary encloses the actual Navigator child; regressions prove pushed production routes/dialogs and changed pixels. Eight presentation repairs preserve labels, amounts, IDs, permissions, uncertainty and command lifetimes: readable Client/Management identities/summaries, natural collection-reason/recipient wrapping, scrollable correction/remittance dialogs, readable Account/notification identities, and48-pixel expanded selectable targets. Dialog scrolls exclude underlying routes. Actual body/control descendants retain requested scale; Material AppBar local clamp is recorded separately. Theme,52-high standard buttons, font scale and targets are not weakened.
+
+This is bounded synthetic widget evidence, not Task9/full-suite or native acceptance. Physical Back, maximum OS nonlinear scaling, TalkBack and Accessibility Scanner remain root-owned and pending. Widget Roboto lacks full Android fallback for U+2192 in existing allocation copy; words remain readable and native follow-up is explicit. Existing InputDecorator label/hint ellipsis and legacy result-money formatting remain unchanged. No golden automatically accepted. Earlier A3/A4 and unsuccessful A8 captures are not substituted for current routes.

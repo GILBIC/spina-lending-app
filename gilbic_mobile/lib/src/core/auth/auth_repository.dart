@@ -45,14 +45,14 @@ class SpinaAuthRepository
     Uri? meUri,
     Uri? logoutUri,
     DeviceIdentityProvider? deviceIdentityProvider,
-  })  : _client = client ?? http.Client(),
-        _registerUri = registerUri ?? ApiConfig.registerEndpoint,
-        _loginUri = loginUri ?? ApiConfig.loginEndpoint,
-        _refreshUri = refreshUri ?? ApiConfig.refreshEndpoint,
-        _meUri = meUri ?? ApiConfig.meEndpoint,
-        _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint,
-        _deviceIdentityProvider =
-            deviceIdentityProvider ?? DeviceIdentityProvider();
+  }) : _client = client ?? http.Client(),
+       _registerUri = registerUri ?? ApiConfig.registerEndpoint,
+       _loginUri = loginUri ?? ApiConfig.loginEndpoint,
+       _refreshUri = refreshUri ?? ApiConfig.refreshEndpoint,
+       _meUri = meUri ?? ApiConfig.meEndpoint,
+       _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint,
+       _deviceIdentityProvider =
+           deviceIdentityProvider ?? DeviceIdentityProvider();
 
   // Bound response waits so the app can reach its existing retry and offline
   // recovery paths. Late transport completions cannot complete this future again.
@@ -108,7 +108,7 @@ class SpinaAuthRepository
       );
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not reach the SPINA server. Check the connection and try again.',
+        'SPINA could not reach the SPINA server. Check the connection and try again.',
       );
     }
 
@@ -135,7 +135,8 @@ class SpinaAuthRepository
     return ClientRegistrationResult(
       approvalStatus:
           firstNonEmptyString(<Object?>[data['approval_status']]) ?? 'pending',
-      message: firstNonEmptyString(<Object?>[data['message']]) ??
+      message:
+          firstNonEmptyString(<Object?>[data['message']]) ??
           'Registration received. Wait for Management approval before signing in.',
       requiresEmailConfirmation: data['requires_email_confirmation'] == true,
     );
@@ -154,23 +155,25 @@ class SpinaAuthRepository
     final deviceIdentity = await _loadDeviceIdentity();
     late final http.Response response;
     try {
-      response = await _client.post(
-        _loginUri,
-        headers: const <String, String>{
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(<String, Object?>{
-          'username': normalizedUsername,
-          'password': password,
-          'device_id': deviceIdentity.installationId,
-          'platform': deviceIdentity.platform,
-          'app_version': deviceIdentity.appVersion,
-        }),
-      ).timeout(_requestDeadline);
+      response = await _client
+          .post(
+            _loginUri,
+            headers: const <String, String>{
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(<String, Object?>{
+              'username': normalizedUsername,
+              'password': password,
+              'device_id': deviceIdentity.installationId,
+              'platform': deviceIdentity.platform,
+              'app_version': deviceIdentity.appVersion,
+            }),
+          )
+          .timeout(_requestDeadline);
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not reach the SPINA server. Check the API address and connection.',
+        'SPINA could not reach the SPINA server. Check the API address and connection.',
       );
     }
 
@@ -195,22 +198,22 @@ class SpinaAuthRepository
     final deviceIdentity = await _loadDeviceIdentity();
     late final http.Response response;
     try {
-      response = await _client.post(
-        _refreshUri,
-        headers: <String, String>{
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'X-Device-Id': deviceIdentity.installationId,
-          'X-App-Platform': deviceIdentity.platform,
-          'X-App-Version': deviceIdentity.appVersion,
-        },
-        body: jsonEncode(<String, Object?>{
-          'refresh_token': refreshToken,
-        }),
-      ).timeout(_requestDeadline);
+      response = await _client
+          .post(
+            _refreshUri,
+            headers: <String, String>{
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-Device-Id': deviceIdentity.installationId,
+              'X-App-Platform': deviceIdentity.platform,
+              'X-App-Version': deviceIdentity.appVersion,
+            },
+            body: jsonEncode(<String, Object?>{'refresh_token': refreshToken}),
+          )
+          .timeout(_requestDeadline);
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not renew the login session. Check the connection and try again.',
+        'SPINA could not renew the login session. Check the connection and try again.',
       );
     }
 
@@ -228,19 +231,21 @@ class SpinaAuthRepository
     final deviceIdentity = await _loadDeviceIdentity();
     late final http.Response response;
     try {
-      response = await _client.get(
-        _meUri,
-        headers: <String, String>{
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${session.accessToken}',
-          'X-Device-Id': deviceIdentity.installationId,
-          'X-App-Platform': deviceIdentity.platform,
-          'X-App-Version': deviceIdentity.appVersion,
-        },
-      ).timeout(_requestDeadline);
+      response = await _client
+          .get(
+            _meUri,
+            headers: <String, String>{
+              'Accept': 'application/json',
+              'Authorization': 'Bearer ${session.accessToken}',
+              'X-Device-Id': deviceIdentity.installationId,
+              'X-App-Platform': deviceIdentity.platform,
+              'X-App-Version': deviceIdentity.appVersion,
+            },
+          )
+          .timeout(_requestDeadline);
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not verify the login session. Check the connection and try again.',
+        'SPINA could not verify the login session. Check the connection and try again.',
       );
     }
 
@@ -252,7 +257,7 @@ class SpinaAuthRepository
       return await _deviceIdentityProvider.load();
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not access this installation identity. Restart the app and try again.',
+        'SPINA could not access this installation identity. Restart the app and try again.',
       );
     }
   }
@@ -287,9 +292,7 @@ class SpinaAuthRepository
     final data = stringMap(
       unwrapSpinaData(payload, statusCode: response.statusCode),
     );
-    final user = stringMap(
-      data['user'] ?? data['account'] ?? data['profile'],
-    );
+    final user = stringMap(data['user'] ?? data['account'] ?? data['profile']);
     final session = stringMap(data['session']);
     final source = user.isEmpty ? data : user;
 
@@ -324,12 +327,13 @@ class SpinaAuthRepository
       throw SpinaApiException(
         rawRole == null
             ? 'The server did not return an account role.'
-            : 'The role "$rawRole" is not enabled in Gilbic yet.',
+            : 'The role "$rawRole" is not enabled in SPINA yet.',
       );
     }
     final authenticatedRoleName = rawRole!;
 
-    final userId = firstNonEmptyString(<Object?>[
+    final userId =
+        firstNonEmptyString(<Object?>[
           source['id'],
           source['user_id'],
           source['account_id'],
@@ -337,7 +341,8 @@ class SpinaAuthRepository
           data['account_id'],
         ]) ??
         fallbackUsername;
-    final displayName = firstNonEmptyString(<Object?>[
+    final displayName =
+        firstNonEmptyString(<Object?>[
           source['display_name'],
           source['full_name'],
           source['name'],
@@ -347,10 +352,8 @@ class SpinaAuthRepository
           data['username'],
         ]) ??
         fallbackUsername;
-    final returnedUsername = firstNonEmptyString(<Object?>[
-          source['username'],
-          data['username'],
-        ]) ??
+    final returnedUsername =
+        firstNonEmptyString(<Object?>[source['username'], data['username']]) ??
         fallbackUsername;
     final permissions = stringList(
       source['permissions'] ?? data['permissions'],
@@ -409,9 +412,7 @@ class SpinaAuthRepository
     final data = stringMap(
       unwrapSpinaData(payload, statusCode: response.statusCode),
     );
-    final user = stringMap(
-      data['user'] ?? data['account'] ?? data['profile'],
-    );
+    final user = stringMap(data['user'] ?? data['account'] ?? data['profile']);
     final source = user.isEmpty ? data : user;
 
     final rawRole = firstNonEmptyString(<Object?>[
@@ -426,11 +427,12 @@ class SpinaAuthRepository
       throw SpinaApiException(
         rawRole == null
             ? 'The server did not return an account role.'
-            : 'The role "$rawRole" is not enabled in Gilbic yet.',
+            : 'The role "$rawRole" is not enabled in SPINA yet.',
       );
     }
 
-    final userId = firstNonEmptyString(<Object?>[
+    final userId =
+        firstNonEmptyString(<Object?>[
           source['id'],
           source['user_id'],
           source['account_id'],
@@ -445,12 +447,11 @@ class SpinaAuthRepository
       );
     }
 
-    final returnedUsername = firstNonEmptyString(<Object?>[
-          source['username'],
-          data['username'],
-        ]) ??
+    final returnedUsername =
+        firstNonEmptyString(<Object?>[source['username'], data['username']]) ??
         current.username;
-    final displayName = firstNonEmptyString(<Object?>[
+    final displayName =
+        firstNonEmptyString(<Object?>[
           source['display_name'],
           source['full_name'],
           source['name'],

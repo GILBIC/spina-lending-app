@@ -23,11 +23,13 @@ import 'package:gilbic_mobile/src/features/collector/collector_client_tools_shee
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_tree.dart';
+import 'package:gilbic_mobile/src/features/shared/daily_workspace_widgets.dart';
 
 class CollectorRoutePage extends StatefulWidget {
   const CollectorRoutePage({
     required this.session,
     required this.loader,
+    this.onSignOut,
     this.paymentRepository,
     this.combinedPaymentRepository,
     this.correctionRepository,
@@ -39,6 +41,7 @@ class CollectorRoutePage extends StatefulWidget {
 
   final UserSession session;
   final CollectorRouteLoader loader;
+  final Future<void> Function()? onSignOut;
   final PaymentSubmissionRepository? paymentRepository;
   final CombinedPaymentSubmissionRepository? combinedPaymentRepository;
   final CollectionCorrectionRepository? correctionRepository;
@@ -68,7 +71,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       <String, CombinedPaymentSubmissionDraft>{};
   CollectorRouteLoadResult? _result;
   Object? _error;
-  bool _loading = true;
+  bool _loading = false;
+  int _readGeneration = 0;
+  ModalRoute<dynamic>? _clientToolsRoute;
 
   @override
   void initState() {
@@ -89,33 +94,91 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     _loadRoute();
   }
 
-  Future<void> _loadRoute() async {
+  Future<void> _loadRoute({bool supersede = false}) async {
+    if (!mounted || (_loading && !supersede) || _readBlocked) return;
+    final generation = ++_readGeneration;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final result = await widget.loader.loadToday(widget.session);
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() => _result = result);
       }
     } on Object catch (error) {
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() {
           _error = error;
           if (isCollectorRouteAccessRejected(error)) {
             _result = null;
-            _pendingDirectDrafts.clear();
-            _pendingCombinedDrafts.clear();
+            // Denial hides private route data, but does not decide the outcome
+            // or identity of an already submitted financial attempt.
             _expandedClients.clear();
             _expandedAreaUids.clear();
           }
         });
+        if (_readBlocked) {
+          final toolsRoute = _clientToolsRoute;
+          if (toolsRoute != null && toolsRoute.isActive) {
+            toolsRoute.navigator?.removeRoute(toolsRoute);
+          }
+        }
       }
     } finally {
-      if (mounted) {
+      if (_currentRead(generation)) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  bool get _readBlocked =>
+      _error != null && isCollectorRouteAccessRejected(_error!);
+
+  bool _currentRead(int generation) => mounted && generation == _readGeneration;
+
+  @override
+  void dispose() {
+    _readGeneration++;
+    super.dispose();
+  }
+
+  bool get _sessionRecovery =>
+      widget.onSignOut != null &&
+      (!_canLeaveRoute ||
+          (_error as SpinaApiException).statusCode != 403 ||
+          !Navigator.of(context).canPop());
+
+  bool get _canRecoverRead =>
+      !_readBlocked ||
+      widget.onSignOut != null ||
+      (_canLeaveRoute && Navigator.of(context).canPop());
+
+  String get _recoveryLabel {
+    if (!_readBlocked) return 'Retry';
+    final status = (_error as SpinaApiException).statusCode;
+    if (_sessionRecovery) {
+      return status == 401 ? 'Sign in again' : 'Return to sign-in';
+    }
+    if (!_canLeaveRoute) {
+      return 'Access unavailable. The unconfirmed payment is retained. Contact Management before leaving this session.';
+    }
+    if (Navigator.of(context).canPop()) return 'Back';
+    return status == 426
+        ? 'Update required'
+        : status == 401
+        ? 'Sign in again'
+        : 'Access unavailable';
+  }
+
+  void _recoverRead() {
+    if (!mounted) return;
+    if (!_readBlocked) {
+      _loadRoute();
+    } else if (_sessionRecovery) {
+      widget.onSignOut!();
+    } else if (_canLeaveRoute && Navigator.of(context).canPop()) {
+      Navigator.of(context).maybePop();
     }
   }
 
@@ -160,6 +223,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       return common;
     }
 
+    if (_pendingPaymentLoanIds().contains(entry.loanId)) return null;
+
     if (entry.contractCollectionReady) {
       if (entry.contractTodayScheduledAmount <= 0) {
         return 'No scheduled payment is due today. Open payment details for voluntary payment or other actions.';
@@ -183,6 +248,17 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     final common = _commonWriteBlockedReason(loaded, entry);
     if (common != null) {
       return common;
+    }
+    if (_pendingCombinedDrafts.containsKey(entry.clientId) ||
+        _pendingDirectDrafts.values.any(
+          (draft) => draft.clientId == entry.clientId,
+        ) ||
+        loaded.route.entries.any(
+          (loan) =>
+              loan.clientId == entry.clientId &&
+              _payingLoanIds.contains(loan.loanId),
+        )) {
+      return 'A payment for this client is in progress or not confirmed. Check the same payment with Retry before starting another payment.';
     }
     final canAddPartialContractReceipt =
         entry.contractCollectionReady && entry.contractTodayUnpaidAmount > 0;
@@ -277,15 +353,28 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     if (_payingLoanIds.contains(entry.loanId)) {
       return;
     }
+    if (_pendingCombinedDrafts.containsKey(entry.clientId) ||
+        _pendingDirectDrafts.values.any(
+          (draft) =>
+              draft.clientId == entry.clientId && draft.loanId != entry.loanId,
+        ) ||
+        loaded.route.entries.any(
+          (loan) =>
+              loan.clientId == entry.clientId &&
+              _payingLoanIds.contains(loan.loanId),
+        )) {
+      return;
+    }
 
     setState(() => _payingLoanIds.add(entry.loanId));
     try {
       final draft =
           _pendingDirectDrafts[entry.loanId] ??
           await _buildDirectPaymentDraft(loaded, entry);
+      if (!mounted || _readBlocked) return;
       _pendingDirectDrafts[entry.loanId] = draft;
       final result = await _paymentRepository.submit(widget.session, draft);
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
 
@@ -301,7 +390,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             ),
           ),
         );
-        await _loadRoute();
+        await _loadRoute(supersede: true);
         return;
       }
 
@@ -309,9 +398,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(result.message)));
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     } on SpinaApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       final status = error.statusCode;
@@ -332,7 +421,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         ),
       );
     } on Object {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -353,9 +442,31 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteClientGroup client,
   ) async {
+    if (_pendingDirectDrafts.values.any(
+          (draft) => draft.clientId == client.clientId,
+        ) ||
+        loaded.route.entries.any(
+          (loan) =>
+              loan.clientId == client.clientId &&
+              _payingLoanIds.contains(loan.loanId),
+        )) {
+      return;
+    }
+    final pending = _pendingCombinedDrafts[client.clientId];
+    final originalLoans = pending?.legs.map((leg) => leg.loanId).toSet();
     final payable = client.loans
-        .where((entry) => _directPayBlockedReason(loaded, entry) == null)
+        .where(
+          (entry) => originalLoans == null
+              ? _directPayBlockedReason(loaded, entry) == null
+              : originalLoans.contains(entry.loanId),
+        )
         .toList(growable: false);
+    if (pending != null &&
+        payable.any(
+          (entry) => _commonWriteBlockedReason(loaded, entry) != null,
+        )) {
+      return;
+    }
     if (payable.length != 2 ||
         payable.where((entry) => _isSevenBySevenLoan(entry.loanType)).length !=
             1) {
@@ -379,14 +490,14 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       var draft = _pendingCombinedDrafts[client.clientId];
       if (draft == null) {
         final baseDraft = await _buildCombinedPaymentDraft(loaded, client);
-        if (!mounted) {
+        if (!mounted || _readBlocked) {
           return;
         }
         final preview = await _combinedPaymentRepository.preview(
           widget.session,
           baseDraft,
         );
-        if (!mounted) {
+        if (!mounted || _readBlocked) {
           return;
         }
         final cash = baseDraft.cashReceivedAmount;
@@ -420,7 +531,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         widget.session,
         draft,
       );
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       if (result.requiresCashCustodyReview) {
@@ -431,7 +542,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             duration: const Duration(seconds: 10),
           ),
         );
-        await _loadRoute();
+        await _loadRoute(supersede: true);
         return;
       }
       if (result.isFinalSuccess) {
@@ -446,16 +557,16 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             ),
           ),
         );
-        await _loadRoute();
+        await _loadRoute(supersede: true);
         return;
       }
       _pendingCombinedDrafts.remove(client.clientId);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(result.message)));
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     } on SpinaApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       final status = error.statusCode;
@@ -476,7 +587,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         ),
       );
     } on Object {
-      if (!mounted) {
+      if (!mounted || _readBlocked) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -528,7 +639,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       ),
     );
     if (saved == true && mounted) {
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     }
   }
 
@@ -556,7 +667,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       ),
     );
     if (saved == true && mounted) {
-      await _loadRoute();
+      await _loadRoute(supersede: true);
     }
   }
 
@@ -564,6 +675,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
   ) {
+    if (_readBlocked) return collectorReadFailureMessage(_error!);
     if (loaded.isFromCache) {
       return 'Offline route copies are read-only. Reconnect and refresh before editing.';
     }
@@ -620,17 +732,21 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (context) => CollectorClientToolsSheet(
-        client: selectedClient,
-        directPayBlockedReasonFor: (entry) =>
-            _directPayBlockedReason(loaded, entry),
-        detailsBlockedReasonFor: (entry) =>
-            _detailsBlockedReason(loaded, entry),
-        correctionBlockedReasonFor: (entry) =>
-            _correctionBlockedReason(loaded, entry),
-      ),
+      builder: (context) {
+        _clientToolsRoute = ModalRoute.of(context);
+        return CollectorClientToolsSheet(
+          client: selectedClient,
+          directPayBlockedReasonFor: (entry) =>
+              _directPayBlockedReason(loaded, entry),
+          detailsBlockedReasonFor: (entry) =>
+              _detailsBlockedReason(loaded, entry),
+          correctionBlockedReasonFor: (entry) =>
+              _correctionBlockedReason(loaded, entry),
+        );
+      },
     );
-    if (!mounted || selection == null) return;
+    _clientToolsRoute = null;
+    if (!mounted || _readBlocked || selection == null) return;
 
     final entry = selection.entry;
     switch (selection.kind) {
@@ -662,20 +778,38 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Collection'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh route',
-            onPressed: _loading ? null : _loadRoute,
-            icon: const Icon(Icons.refresh),
+    return PopScope<void>(
+      canPop: _canLeaveRoute,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'A payment is still in progress or not confirmed. Stay on this route and check the same payment before leaving.',
+            ),
           ),
-        ],
+        );
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Daily Collection'),
+          actions: [
+            IconButton(
+              tooltip: 'Refresh route',
+              onPressed: _loading || _readBlocked ? null : _loadRoute,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: SafeArea(child: _buildBody(context)),
       ),
-      body: SafeArea(child: _buildBody(context)),
     );
   }
+
+  bool get _canLeaveRoute =>
+      _payingLoanIds.isEmpty &&
+      _pendingDirectDrafts.isEmpty &&
+      _pendingCombinedDrafts.isEmpty;
 
   Widget _buildBody(BuildContext context) {
     final result = _result;
@@ -686,29 +820,10 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     final error = _error;
     if (error != null && result == null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cloud_off, size: 48),
-              const SizedBox(height: 12),
-              Text(
-                collectorFailureMessage(
-                  error,
-                  task: CollectorFailureTask.loadRoute,
-                ),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _loadRoute,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ),
+        child: WorkspaceReadNotice(
+          message: collectorReadFailureMessage(error),
+          actionLabel: _recoveryLabel,
+          onAction: _canRecoverRead ? _recoverRead : null,
         ),
       );
     }
@@ -758,17 +873,11 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           ],
           if (error != null) ...[
             const SizedBox(height: 8),
-            MaterialBanner(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              content: Text(
-                collectorFailureMessage(
-                  error,
-                  task: CollectorFailureTask.loadRoute,
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: _loadRoute, child: const Text('Retry')),
-              ],
+            WorkspaceReadNotice(
+              message: collectorReadFailureMessage(error),
+              actionLabel: _recoveryLabel,
+              onAction: _canRecoverRead ? _recoverRead : null,
+              stale: true,
             ),
           ],
           const SizedBox(height: 8),
@@ -789,6 +898,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
                   _directPayBlockedReason(loaded, entry),
               payingLoanIds: _payingLoanIds,
               pendingDirectLoanIds: _pendingPaymentLoanIds(),
+              pendingDirectDrafts: _pendingDirectDrafts,
+              pendingCombinedDrafts: _pendingCombinedDrafts,
               onToggleArea: _toggleArea,
               onToggleClient: _toggleClient,
               onRecord: (entry) => _payNow(loaded, entry),
@@ -814,6 +925,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
                     _directPayBlockedReason(loaded, entry),
                 payingLoanIds: _payingLoanIds,
                 pendingDirectLoanIds: _pendingPaymentLoanIds(),
+                pendingDirectDrafts: _pendingDirectDrafts,
+                pendingCombinedDrafts: _pendingCombinedDrafts,
                 onToggleClient: _toggleClient,
                 onRecord: (entry) => _payNow(loaded, entry),
                 onRecordCombined: (client) => _payCombined(loaded, client),

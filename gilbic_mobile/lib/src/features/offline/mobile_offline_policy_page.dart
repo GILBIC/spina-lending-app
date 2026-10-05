@@ -72,7 +72,7 @@ class MobileOfflinePolicyPage extends StatelessWidget {
                       value: 'Blocked',
                     ),
                     const _SafetyRow(
-                      label: 'Silent offline write queue',
+                      label: 'Silent offline financial write queue',
                       value: 'Not allowed',
                     ),
                     const _SafetyRow(
@@ -85,13 +85,15 @@ class MobileOfflinePolicyPage extends StatelessWidget {
                           ? 'Encrypted route and attendance outbox'
                           : policy.role == AppRole.employee
                           ? 'Encrypted attendance outbox'
+                          : policy.role == AppRole.management
+                          ? 'Encrypted own attendance outbox, when configured'
                           : 'None',
                     ),
                     _SafetyRow(
-                      label: 'Manual idempotent retry',
+                      label: 'Manual financial idempotent retry',
                       value: policy.explicitIdempotentRetryAvailable
                           ? 'Collector submission only after explicit user retry'
-                          : 'No offline write retry workflow',
+                          : 'No offline financial retry workflow',
                     ),
                   ],
                 ),

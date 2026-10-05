@@ -57,10 +57,7 @@ class AccountDevice {
 }
 
 class AccountOverview {
-  const AccountOverview({
-    required this.profile,
-    required this.devices,
-  });
+  const AccountOverview({required this.profile, required this.devices});
 
   final AccountProfile profile;
   final List<AccountDevice> devices;
@@ -78,15 +75,9 @@ class AccountOverview {
 abstract interface class AccountRepository {
   Future<AccountOverview> fetch(UserSession session);
 
-  Future<AccountDevice> revokeDevice(
-    UserSession session,
-    String deviceId,
-  );
+  Future<AccountDevice> revokeDevice(UserSession session, String deviceId);
 
-  Future<void> changePassword(
-    UserSession session,
-    String password,
-  );
+  Future<void> changePassword(UserSession session, String password);
 }
 
 class SpinaAccountRepository implements AccountRepository {
@@ -94,10 +85,10 @@ class SpinaAccountRepository implements AccountRepository {
     http.Client? client,
     DeviceIdentityProvider? deviceIdentityProvider,
     Uri? accountUri,
-  })  : _client = client ?? http.Client(),
-        _deviceIdentityProvider =
-            deviceIdentityProvider ?? DeviceIdentityProvider(),
-        _accountUri = accountUri ?? ApiConfig.endpoint('/api/mobile/v1/account');
+  }) : _client = client ?? http.Client(),
+       _deviceIdentityProvider =
+           deviceIdentityProvider ?? DeviceIdentityProvider(),
+       _accountUri = accountUri ?? ApiConfig.endpoint('/api/mobile/v1/account');
 
   final http.Client _client;
   final DeviceIdentityProvider _deviceIdentityProvider;
@@ -107,12 +98,9 @@ class SpinaAccountRepository implements AccountRepository {
   Future<AccountOverview> fetch(UserSession session) async {
     final identity = await _loadDeviceIdentity();
     final response = await _send(
-      () => _client.get(
-        _accountUri,
-        headers: _headers(session, identity),
-      ),
+      () => _client.get(_accountUri, headers: _headers(session, identity)),
       offlineMessage:
-          'Gilbic could not load your account. Check the connection and try again.',
+          'SPINA could not load your account. Check the connection and try again.',
     );
     final data = _data(response);
     final profile = stringMap(data['profile']);
@@ -148,7 +136,7 @@ class SpinaAccountRepository implements AccountRepository {
         headers: _headers(session, identity),
       ),
       offlineMessage:
-          'Gilbic could not revoke that device. Check the connection and try again.',
+          'SPINA could not revoke that device. Check the connection and try again.',
     );
     final data = _data(response);
     final device = stringMap(data['device']);
@@ -161,10 +149,7 @@ class SpinaAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<void> changePassword(
-    UserSession session,
-    String password,
-  ) async {
+  Future<void> changePassword(UserSession session, String password) async {
     if (password.isEmpty || password.length > 200) {
       throw const SpinaApiException('Enter a valid new password.');
     }
@@ -178,7 +163,7 @@ class SpinaAccountRepository implements AccountRepository {
         body: jsonEncode(<String, String>{'password': password}),
       ),
       offlineMessage:
-          'Gilbic could not change your password. Check the connection and try again.',
+          'SPINA could not change your password. Check the connection and try again.',
     );
     Map<String, dynamic> payload;
     try {
@@ -202,15 +187,12 @@ class SpinaAccountRepository implements AccountRepository {
       return await _deviceIdentityProvider.load();
     } on Exception {
       throw const SpinaApiException(
-        'Gilbic could not access this installation identity. Restart the app and try again.',
+        'SPINA could not access this installation identity. Restart the app and try again.',
       );
     }
   }
 
-  Map<String, String> _headers(
-    UserSession session,
-    DeviceIdentity identity,
-  ) {
+  Map<String, String> _headers(UserSession session, DeviceIdentity identity) {
     return <String, String>{
       'Accept': 'application/json',
       'Authorization': 'Bearer ${session.accessToken}',
@@ -245,9 +227,7 @@ class SpinaAccountRepository implements AccountRepository {
         statusCode: response.statusCode,
       );
     }
-    return stringMap(
-      unwrapSpinaData(payload, statusCode: response.statusCode),
-    );
+    return stringMap(unwrapSpinaData(payload, statusCode: response.statusCode));
   }
 
   AccountProfile _profile(Map<String, dynamic> source) {
@@ -282,7 +262,10 @@ class SpinaAccountRepository implements AccountRepository {
     final registeredAt = DateTime.tryParse(
       firstNonEmptyString(<Object?>[source['registered_at']]) ?? '',
     );
-    if (id == null || platform == null || status == null || registeredAt == null) {
+    if (id == null ||
+        platform == null ||
+        status == null ||
+        registeredAt == null) {
       throw const SpinaApiException(
         'The SPINA server returned incomplete device information.',
       );

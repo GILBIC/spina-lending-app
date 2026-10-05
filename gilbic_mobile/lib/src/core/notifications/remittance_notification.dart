@@ -59,9 +59,7 @@ class RemittanceNotification {
       data['notification_id'],
       data['id'],
     ]);
-    final remittanceId = firstNonEmptyString(<Object?>[
-      data['remittance_id'],
-    ]);
+    final remittanceId = firstNonEmptyString(<Object?>[data['remittance_id']]);
     final remittanceNumber = firstNonEmptyString(<Object?>[
       data['remittance_number'],
     ]);
@@ -74,13 +72,15 @@ class RemittanceNotification {
       notificationId: notificationId,
       remittanceId: remittanceId,
       remittanceNumber: remittanceNumber,
-      title: firstNonEmptyString(<Object?>[data['title']]) ??
+      title:
+          firstNonEmptyString(<Object?>[data['title']]) ??
           'Remittance awaiting acceptance',
       message: firstNonEmptyString(<Object?>[data['message']]) ?? '',
       status: firstNonEmptyString(<Object?>[data['status']]) ?? 'pending',
       collectorName:
           firstNonEmptyString(<Object?>[data['collector_name']]) ?? 'Collector',
-      totalAmount: firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
+      totalAmount:
+          firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
       clientCount: firstNumber(<Object?>[data['client_count']])?.toInt() ?? 0,
       transactionCount:
           firstNumber(<Object?>[data['transaction_count']])?.toInt() ?? 0,
@@ -101,24 +101,21 @@ class RemittanceNotification {
       ),
       rejectionReason:
           firstNonEmptyString(<Object?>[data['rejection_reason']]) ?? '',
-      custodyMessage: firstNonEmptyString(<Object?>[
-            data['custody_message'],
-          ]) ??
+      custodyMessage:
+          firstNonEmptyString(<Object?>[data['custody_message']]) ??
           'Review all payments before taking action on this remittance.',
       hasHandoverPhoto: _boolValue(data['has_handover_photo']),
       handoverPhotoVersion:
           firstNumber(<Object?>[data['handover_photo_version']])?.toInt() ?? 0,
-      handoverPhotoContentType: firstNonEmptyString(<Object?>[
-            data['handover_photo_content_type'],
-          ]) ??
+      handoverPhotoContentType:
+          firstNonEmptyString(<Object?>[data['handover_photo_content_type']]) ??
           '',
       handoverPhotoUploadedAt: DateTime.tryParse(
-        firstNonEmptyString(<Object?>[data['handover_photo_uploaded_at']]) ?? '',
+        firstNonEmptyString(<Object?>[data['handover_photo_uploaded_at']]) ??
+            '',
       ),
-      handoverPhotoUrl: firstNonEmptyString(<Object?>[
-            data['handover_photo_url'],
-          ]) ??
-          '',
+      handoverPhotoUrl:
+          firstNonEmptyString(<Object?>[data['handover_photo_url']]) ?? '',
     );
   }
 }
@@ -144,15 +141,18 @@ class RemittanceAcceptanceResult {
 
   static RemittanceAcceptanceResult fromPayload(Object? value) {
     final data = stringMap(value);
-    final notification = RemittanceNotification.fromPayload(data['notification']);
+    final notification = RemittanceNotification.fromPayload(
+      data['notification'],
+    );
     final remittanceId = firstNonEmptyString(<Object?>[data['remittance_id']]);
-    final remittanceNumber =
-        firstNonEmptyString(<Object?>[data['remittance_number']]);
+    final remittanceNumber = firstNonEmptyString(<Object?>[
+      data['remittance_number'],
+    ]);
     if (notification == null ||
         remittanceId == null ||
         remittanceNumber == null) {
       throw const SpinaApiException(
-        'The Gilbic server returned an incomplete remittance acceptance.',
+        'The SPINA server returned an incomplete remittance acceptance.',
         code: 'invalid_notification_response',
       );
     }
@@ -163,9 +163,8 @@ class RemittanceAcceptanceResult {
       status: firstNonEmptyString(<Object?>[data['status']]) ?? 'received',
       custodyUserId:
           firstNonEmptyString(<Object?>[data['custody_user_id']]) ?? '',
-      custodyMessage: firstNonEmptyString(<Object?>[
-            data['custody_message'],
-          ]) ??
+      custodyMessage:
+          firstNonEmptyString(<Object?>[data['custody_message']]) ??
           'Money is now under your custody.',
       receivedAt: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['received_at']]) ?? '',

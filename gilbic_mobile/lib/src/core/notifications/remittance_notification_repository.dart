@@ -70,7 +70,7 @@ class SpinaRemittanceNotificationRepository
     final notification = RemittanceNotification.fromPayload(data);
     if (notification == null) {
       throw const SpinaApiException(
-        'The Gilbic server returned an incomplete notification.',
+        'The SPINA server returned an incomplete notification.',
         code: 'invalid_notification_response',
       );
     }
@@ -159,7 +159,7 @@ class SpinaRemittanceNotificationRepository
           : await _client.get(uri, headers: headers);
     } on Exception {
       throw const SpinaApiException(
-        'The notification request could not reach the Gilbic server.',
+        'The notification request could not reach the SPINA server.',
         code: 'network_unavailable',
       );
     }
@@ -192,7 +192,7 @@ class SpinaRemittanceNotificationRepository
       return decodeJsonObject(response.body);
     } on Object {
       throw SpinaApiException(
-        'The Gilbic server returned unreadable notification data.',
+        'The SPINA server returned unreadable notification data.',
         statusCode: response.statusCode,
         code: 'invalid_server_response',
       );

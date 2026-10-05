@@ -40,6 +40,7 @@ import 'package:gilbic_mobile/src/features/management/management_renewal_request
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
@@ -69,6 +70,7 @@ const _managementDestinations = <(String, Type)>[
   ('management-support', ManagementSupportRequestsPage),
   ('management-my-account-devices', AccountSettingsPage),
   ('management-offline-policy', MobileOfflinePolicyPage),
+  ('management-notifications', NotificationCenterPage),
   ('management-financial-accounting', ManagementFinancialAccountingPage),
   ('management-ecl-outcome-review', ManagementEclOutcomeReviewPage),
   ('management-accounting-measurement', ManagementAccountingMeasurementPage),
@@ -214,9 +216,7 @@ void main() {
 
       expect(find.byType(ManagementFinancialAccountingPage), findsNothing);
       expect(
-        find.text(
-          'Your account does not have access to this Management view.',
-        ),
+        find.text('Your account does not have access to this Management view.'),
         findsOneWidget,
       );
     },

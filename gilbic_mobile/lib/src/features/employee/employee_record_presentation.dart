@@ -57,8 +57,10 @@ EmployeeRecordPresentation presentEmployeeRecord(
     for (final key in [
       'description',
       'event_type',
+      'request_kind',
       'request_type',
       'work_date',
+      'due_date',
       'week_start',
       'week_end',
       'period_start',
@@ -76,6 +78,7 @@ EmployeeRecordPresentation presentEmployeeRecord(
     }
     for (final key in [
       'amount',
+      'shortage_amount',
       'gross_pay',
       'net_pay',
       'deductions',

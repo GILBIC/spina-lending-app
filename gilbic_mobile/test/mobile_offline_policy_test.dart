@@ -20,56 +20,84 @@ void main() {
     }
   });
 
-  test('collector cache and employee attendance use protected persistent data', () {
-    expect(
-      MobileOfflinePolicy.forRole(AppRole.collector).hasPersistentOfflineData,
-      isTrue,
-    );
-    expect(
-      MobileOfflinePolicy.forRole(AppRole.collector)
-          .explicitIdempotentRetryAvailable,
-      isTrue,
-    );
+  test(
+    'protected attendance is conditional and never grants financial retry',
+    () {
+      expect(
+        MobileOfflinePolicy.forRole(AppRole.collector).hasPersistentOfflineData,
+        isTrue,
+      );
+      expect(
+        MobileOfflinePolicy.forRole(
+          AppRole.collector,
+        ).explicitIdempotentRetryAvailable,
+        isTrue,
+      );
 
-    for (final role in <AppRole>[
-      AppRole.management,
-      AppRole.client,
-    ]) {
-      final policy = MobileOfflinePolicy.forRole(role);
-      expect(policy.hasPersistentOfflineData, isFalse, reason: role.label);
-      expect(policy.explicitIdempotentRetryAvailable, isFalse, reason: role.label);
-    }
-  });
+      for (final role in <AppRole>[AppRole.management, AppRole.employee]) {
+        final policy = MobileOfflinePolicy.forRole(role);
+        expect(policy.hasPersistentOfflineData, isTrue, reason: role.label);
+        expect(
+          policy.explicitIdempotentRetryAvailable,
+          isFalse,
+          reason: role.label,
+        );
+      }
+      expect(
+        MobileOfflinePolicy.forRole(AppRole.client).hasPersistentOfflineData,
+        isFalse,
+      );
+      expect(
+        MobileOfflinePolicy.forRole(
+          AppRole.client,
+        ).explicitIdempotentRetryAvailable,
+        isFalse,
+      );
+    },
+  );
 
   for (final role in AppRole.values) {
-    testWidgets('${role.label} sees its offline and sync boundary', (tester) async {
+    testWidgets('${role.label} sees its offline and sync boundary', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(800, 1400));
       addTearDown(() async {
         await tester.binding.setSurfaceSize(null);
       });
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: MobileOfflinePolicyPage(session: _sessionFor(role)),
-        ),
+        MaterialApp(home: MobileOfflinePolicyPage(session: _sessionFor(role))),
       );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
       expect(find.text('${role.label} offline policy'), findsOneWidget);
       expect(find.text('Financial writes while offline'), findsOneWidget);
-      expect(find.text('Silent offline write queue'), findsOneWidget);
+      expect(find.text('Silent offline financial write queue'), findsOneWidget);
       expect(find.text('Automatic financial replay'), findsOneWidget);
       expect(find.text('Blocked'), findsOneWidget);
       expect(find.text('Not allowed'), findsNWidgets(2));
 
       if (role == AppRole.collector) {
-        expect(find.text('Encrypted route and attendance outbox'), findsOneWidget);
+        expect(
+          find.text('Encrypted route and attendance outbox'),
+          findsOneWidget,
+        );
         expect(find.byKey(const Key('collector-retry-safety')), findsOneWidget);
         expect(find.textContaining('Offline copy'), findsWidgets);
         expect(find.textContaining('Retry same entry'), findsOneWidget);
       } else if (role == AppRole.employee) {
         expect(find.text('Encrypted attendance outbox'), findsOneWidget);
+      } else if (role == AppRole.management) {
+        expect(
+          find.text('Encrypted own attendance outbox, when configured'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('When your own active staff profile'),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('collector-retry-safety')), findsNothing);
       } else {
         expect(find.text('None'), findsOneWidget);
         expect(find.byKey(const Key('collector-retry-safety')), findsNothing);

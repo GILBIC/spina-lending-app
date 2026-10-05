@@ -142,6 +142,8 @@ class ImageRecoveryHost extends StatefulWidget {
     required this.sessionRestored,
     required this.deviceIdentityProvider,
     required this.child,
+    this.retainChildWhileRebinding = false,
+    this.onBindingComplete,
     super.key,
   });
   final ImageRecoveryController controller;
@@ -149,6 +151,10 @@ class ImageRecoveryHost extends StatefulWidget {
   final bool sessionRestored;
   final DeviceIdentityProvider deviceIdentityProvider;
   final Widget child;
+  // The app may retain its already-drained Collector root while recovery changes
+  // ownership. Interaction and semantics stay covered until binding completes.
+  final bool retainChildWhileRebinding;
+  final ValueChanged<bool>? onBindingComplete;
   @override
   State<ImageRecoveryHost> createState() => _ImageRecoveryHostState();
 }
@@ -157,6 +163,7 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost>
     with WidgetsBindingObserver {
   int _binding = 0;
   bool _bound = false;
+  bool _retainingRebind = false;
   String _scope(UserSession? session) {
     if (session == null) return 'signed-out';
     final roles = [...session.roles]..sort();
@@ -195,11 +202,13 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost>
 
   Future<void> _bind() async {
     final revision = ++_binding;
+    _retainingRebind = widget.retainChildWhileRebinding && _bound;
     _bound = false;
     widget.controller.suspend();
     if (!widget.sessionRestored) return;
     final controller = widget.controller;
     final session = widget.session;
+    var identified = true;
     try {
       if (session == null) {
         await controller.initialize(null);
@@ -215,11 +224,16 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost>
         );
       }
     } on Object {
+      identified = false;
       // Device identity failures cannot attach an old photo to an unknown user.
       if (mounted && revision == _binding) await controller.initialize(null);
     }
     if (mounted && revision == _binding) {
-      setState(() => _bound = true);
+      setState(() {
+        _bound = true;
+        _retainingRebind = false;
+      });
+      widget.onBindingComplete?.call(identified && controller.ready);
       if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         await controller.recoverPending();
       }
@@ -239,7 +253,7 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost>
     child: ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
-        if (widget.sessionRestored && !_bound) {
+        if (widget.sessionRestored && !_bound && !_retainingRebind) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -251,33 +265,49 @@ class _ImageRecoveryHostState extends State<ImageRecoveryHost>
         final pending = widget.session == null
             ? null
             : widget.controller.pending;
-        return Column(
+        return Stack(
           children: [
-            if (recovered != null || error != null || pending != null)
-              Material(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.photo_outlined),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            recovered != null
-                                ? 'Photo recovered for ${recovered.context.label}. Open that form and choose a photo to review it.'
-                                : error ??
-                                      'Photo selection was interrupted. Return to the original form and choose a photo to continue.',
+            Offstage(
+              offstage: widget.sessionRestored && !_bound,
+              child: ExcludeFocus(
+                excluding: widget.sessionRestored && !_bound,
+                child: Column(
+                  children: [
+                    if (recovered != null || error != null || pending != null)
+                      Material(
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        child: SafeArea(
+                          bottom: false,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.photo_outlined),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    recovered != null
+                                        ? 'Photo recovered for ${recovered.context.label}. Open that form and choose a photo to review it.'
+                                        : error ??
+                                              'Photo selection was interrupted. Return to the original form and choose a photo to continue.',
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    Expanded(child: widget.child),
+                  ],
                 ),
               ),
-            Expanded(child: widget.child),
+            ),
+            if (widget.sessionRestored && !_bound)
+              const Positioned.fill(
+                child: Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+              ),
           ],
         );
       },

@@ -67,16 +67,19 @@ class _RenewalSignatureTasksPageState extends State<RenewalSignatureTasksPage> {
 
   Future<void> _sign(RenewalSignatureTask task) async {
     final deviceId = _deviceId;
-    if (deviceId == null || !task.readyToSign || _busy.contains(task.signerId)) {
+    if (deviceId == null ||
+        !task.readyToSign ||
+        _busy.contains(task.signerId)) {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Sign renewal?'),
             content: Text(
-              'You are signing from your own Gilbic account as '
+              'You are signing from your own SPINA account as '
               '${_roleLabel(task.partyRole)} for ${task.borrowerName}. '
               'Do not sign for another person.',
             ),
@@ -111,14 +114,16 @@ class _RenewalSignatureTasksPageState extends State<RenewalSignatureTasksPage> {
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Renewal signature could not be saved.')),
+          const SnackBar(
+            content: Text('Renewal signature could not be saved.'),
+          ),
         );
       }
     } finally {
@@ -150,7 +155,7 @@ class _RenewalSignatureTasksPageState extends State<RenewalSignatureTasksPage> {
               child: const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
-                  'Only sign a renewal when Gilbic shows the role assigned to your own account. '
+                  'Only sign a renewal when SPINA shows the role assigned to your own account. '
                   'Borrower acceptance and required identity verification must be complete first.',
                 ),
               ),
@@ -168,7 +173,8 @@ class _RenewalSignatureTasksPageState extends State<RenewalSignatureTasksPage> {
                 message: 'No renewal signatures are assigned to this account.',
               )
             else ...[
-              if (_error != null) _MessageCard(message: _error!, onRetry: _load),
+              if (_error != null)
+                _MessageCard(message: _error!, onRetry: _load),
               for (final task in _tasks) ...[
                 _SignatureTaskCard(
                   task: task,
@@ -251,7 +257,7 @@ class _SignatureTaskCard extends StatelessWidget {
             ] else if (!task.governmentIdVerified || !task.selfieVerified) ...[
               const SizedBox(height: 10),
               const Text(
-                'Identity verification is still pending. Gilbic will keep remote signing locked.',
+                'Identity verification is still pending. SPINA will keep remote signing locked.',
               ),
             ],
             const SizedBox(height: 12),
@@ -265,7 +271,9 @@ class _SignatureTaskCard extends StatelessWidget {
                         dimension: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(task.signed ? Icons.check_circle : Icons.draw_outlined),
+                    : Icon(
+                        task.signed ? Icons.check_circle : Icons.draw_outlined,
+                      ),
                 label: Text(task.signed ? 'Signed' : 'Sign renewal'),
               ),
             ),

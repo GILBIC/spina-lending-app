@@ -1,3 +1,5 @@
+import 'support/android_workflow_capture.dart';
+import 'support/android_role_fixture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -15,22 +17,26 @@ void main() {
     'exact Regular + 7x7 Pay previews and saves atomically with one user tap',
     (tester) async {
       final repository = _RecordingCombinedRepository();
-      await tester.binding.setSurfaceSize(const Size(430, 1100));
-      addTearDown(() async => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: CollectorRoutePage(
-            session: _session,
-            loader: _CombinedRouteLoader(),
-            combinedPaymentRepository: repository,
-            deviceIdentityProvider: _deviceIdentityProvider(),
-            deviceSequence: MemoryCollectionDeviceSequence(),
-          ),
+      await pumpAndroidRoleFixture(
+        tester,
+        size: const Size(320, 640),
+        textScaler: TextScaler.linear(2),
+        home: CollectorRoutePage(
+          session: _session,
+          loader: _CombinedRouteLoader(),
+          combinedPaymentRepository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
         ),
       );
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(
+        find.byKey(const Key('record-client-client-combined')),
+      );
+      await tester.pumpAndSettle();
+      await captureAndroidWorkflowScroll(tester, 'C3-combined-before-one-tap');
       await tester.tap(find.byKey(const Key('record-client-client-combined')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -48,6 +54,16 @@ void main() {
       );
       expect(find.byKey(const Key('combined-payment-total')), findsNothing);
       expect(find.textContaining('saved • Receipts'), findsOneWidget);
+      final message = find.descendant(
+        of: find.textContaining('saved • Receipts'),
+        matching: find.byType(RichText),
+      );
+      expect(
+        tester.widget<RichText>(message).text.style?.fontFamily,
+        'Roboto',
+        reason: 'Actual result snackbar must use Android glyphs',
+      );
+      await captureAndroidWorkflowScroll(tester, 'C3-combined-saved');
     },
   );
 }

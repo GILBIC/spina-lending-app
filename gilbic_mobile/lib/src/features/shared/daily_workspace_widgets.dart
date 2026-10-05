@@ -87,6 +87,7 @@ class WorkspaceAccountMenu extends StatelessWidget {
         ),
         'notifications' => NotificationCenterPage(
           session: session,
+          onSignOut: onSignOut,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
         _ => MobileOfflinePolicyPage(session: session),

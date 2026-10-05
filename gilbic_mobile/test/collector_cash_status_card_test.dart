@@ -12,6 +12,110 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  testWidgets(
+    '426 cash read shows update guidance without a same-version retry',
+    (tester) async {
+      var requests = 0;
+      await http.runWithClient(
+        () async {
+          await _pump(tester);
+          await tester.pumpAndSettle();
+          _expectNoCashAmounts();
+          expect(find.textContaining('Update required'), findsOneWidget);
+          expect(find.textContaining('private_secret'), findsNothing);
+          final refresh = tester.widget<IconButton>(
+            find.byKey(const Key('collector-cash-status-refresh')),
+          );
+          expect(refresh.onPressed, isNull);
+          expect(refresh.tooltip, 'Update required');
+          expect(requests, 1);
+        },
+        () => MockClient((request) async {
+          expect(request.method, 'GET');
+          requests++;
+          return http.Response('{"detail":{"message":"private_secret"}}', 426);
+        }),
+      );
+    },
+  );
+
+  testWidgets(
+    '426 cash refresh blocks retained retries and old alerts; explicit sign-in recovery is real',
+    (tester) async {
+      var cashRequests = 0;
+      var renewalRequests = 0;
+      var signOuts = 0;
+      final cashRefresh = Completer<http.Response>();
+      final oldRenewal = Completer<http.Response>();
+      final alerts = <String>[];
+      await http.runWithClient(
+        () async {
+          await _pump(
+            tester,
+            permissions: _cashAndRenewalPermissions,
+            onCashReleaseAlert: (request) => alerts.add(request.requestId),
+            onSignOut: () async {
+              signOuts++;
+            },
+          );
+          await tester.pump();
+          _expectActualCash();
+          expect(renewalRequests, 1);
+          final retainedRefresh = tester
+              .widget<IconButton>(
+                find.byKey(const Key('collector-cash-status-refresh')),
+              )
+              .onPressed!;
+          await tester.tap(
+            find.byKey(const Key('collector-cash-status-refresh')),
+          );
+          retainedRefresh();
+          await tester.pump();
+          _expectActualCash();
+          cashRefresh.complete(
+            http.Response('{"detail":{"message":"private_secret"}}', 426),
+          );
+          await tester.pumpAndSettle();
+          expect(cashRequests, 2);
+          expect(find.textContaining('Update required'), findsOneWidget);
+          expect(signOuts, 0);
+          retainedRefresh();
+          await tester.pump();
+          expect(cashRequests, 2);
+          expect(find.textContaining('Update required'), findsOneWidget);
+          oldRenewal.complete(_renewalResponse());
+          await tester.pumpAndSettle();
+          expect(alerts, isEmpty);
+          expect(renewalRequests, 1);
+          _expectNoCashAmounts();
+          expect(
+            tester
+                .widget<IconButton>(
+                  find.byKey(const Key('collector-cash-status-refresh')),
+                )
+                .tooltip,
+            'Return to sign-in',
+          );
+          await tester.tap(
+            find.byKey(const Key('collector-cash-status-refresh')),
+          );
+          await tester.pump();
+          expect(signOuts, 1);
+          expect(cashRequests, 2);
+        },
+        () => MockClient((request) async {
+          expect(request.method, 'GET');
+          if (request.url.path.endsWith('/cash-accountability')) {
+            cashRequests++;
+            return cashRequests == 1 ? _cashResponse() : cashRefresh.future;
+          }
+          renewalRequests++;
+          return oldRenewal.future;
+        }),
+      );
+    },
+  );
+
   testWidgets('initial cash load shows progress without invented amounts', (
     tester,
   ) async {
@@ -87,40 +191,49 @@ void main() {
     );
   }
 
-  testWidgets('failed refresh clears previous amounts and retry recovers', (
-    tester,
-  ) async {
-    var calls = 0;
-    final refresh = Completer<http.Response>();
-    await http.runWithClient(
-      () async {
-        await _pump(tester);
-        await tester.pumpAndSettle();
-        _expectActualCash();
+  testWidgets(
+    'transient refresh keeps stale cash snapshot and retry recovers',
+    (tester) async {
+      var calls = 0;
+      final refresh = Completer<http.Response>();
+      await http.runWithClient(
+        () async {
+          await _pump(tester);
+          await tester.pumpAndSettle();
+          _expectActualCash();
 
-        await tester.tap(
-          find.byKey(const Key('collector-cash-status-refresh')),
-        );
-        await tester.pump();
-        _expectNoCashAmounts();
-        refresh.completeError(http.ClientException('Offline'));
-        await tester.pumpAndSettle();
-        _expectUnavailable();
+          await tester.tap(
+            find.byKey(const Key('collector-cash-status-refresh')),
+          );
+          await tester.pump();
+          _expectActualCash();
+          refresh.completeError(http.ClientException('Offline'));
+          await tester.pumpAndSettle();
+          _expectActualCash();
+          expect(
+            find.textContaining('Last successful cash status'),
+            findsOneWidget,
+          );
 
-        await tester.tap(
-          find.byKey(const Key('collector-cash-status-refresh')),
-        );
-        await tester.pumpAndSettle();
-        _expectActualCash();
-        expect(find.textContaining('Cash status unavailable'), findsNothing);
-        expect(calls, 3);
-      },
-      () => MockClient((request) async {
-        calls++;
-        return calls == 2 ? refresh.future : _cashResponse();
-      }),
-    );
-  });
+          await tester.tap(
+            find.byKey(const Key('collector-cash-status-refresh')),
+          );
+          await tester.pumpAndSettle();
+          _expectActualCash();
+          expect(
+            find.textContaining('Last successful cash status'),
+            findsNothing,
+          );
+          expect(find.textContaining('Cash status unavailable'), findsNothing);
+          expect(calls, 3);
+        },
+        () => MockClient((request) async {
+          calls++;
+          return calls == 2 ? refresh.future : _cashResponse();
+        }),
+      );
+    },
+  );
 
   testWidgets('verified zero amounts still display as zero', (tester) async {
     await http.runWithClient(() async {
@@ -130,6 +243,60 @@ void main() {
       expect(find.textContaining('Cash status unavailable'), findsNothing);
     }, () => MockClient((request) async => _cashResponse(zero: true)));
   });
+
+  for (final status in [401, 403, 426, 503]) {
+    testWidgets('$status refresh retains only permissible stale cash facts', (
+      tester,
+    ) async {
+      var calls = 0;
+      await http.runWithClient(
+        () async {
+          await _pump(tester);
+          await tester.pumpAndSettle();
+          _expectActualCash();
+          final retainedRefresh = tester
+              .widget<IconButton>(
+                find.byKey(const Key('collector-cash-status-refresh')),
+              )
+              .onPressed!;
+          await tester.tap(
+            find.byKey(const Key('collector-cash-status-refresh')),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          expect(calls, 2);
+          if (status == 503) {
+            _expectActualCash();
+            expect(
+              find.textContaining('Last successful cash status'),
+              findsOneWidget,
+            );
+          } else {
+            _expectNoCashAmounts();
+            expect(
+              find.textContaining('Last successful cash status'),
+              findsNothing,
+            );
+            retainedRefresh();
+            await tester.pumpAndSettle();
+            expect(calls, 2);
+          }
+          expect(find.textContaining('private_secret'), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+        () => MockClient((request) async {
+          expect(request.method, 'GET');
+          calls++;
+          return calls == 1
+              ? _cashResponse()
+              : http.Response(
+                  '{"detail":{"message":"private_secret"}}',
+                  status,
+                );
+        }),
+      );
+    });
+  }
 
   for (final canLoadRenewals in <bool>[false, true]) {
     testWidgets(
@@ -364,6 +531,7 @@ Future<void> _pump(
   DeviceIdentityProvider? identity,
   List<String> permissions = const <String>['remittance.view'],
   ValueChanged<CollectorRenewalRequest>? onCashReleaseAlert,
+  Future<void> Function()? onSignOut,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -384,6 +552,7 @@ Future<void> _pump(
           onOpenCashToReceive: () {},
           onOpenCashToClient: () {},
           onCashReleaseAlert: onCashReleaseAlert,
+          onSignOut: onSignOut,
         ),
       ),
     ),

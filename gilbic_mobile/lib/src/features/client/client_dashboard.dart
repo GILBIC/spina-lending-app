@@ -43,9 +43,11 @@ class _ClientDashboardState extends State<ClientDashboard> {
   ClientLoanPortfolio? _portfolio;
   Map<String, ClientLoanSchedule> _homeObligationSchedules = const {};
   String? _errorMessage;
-  bool _loading = true;
+  bool _loading = false;
   int _generation = 0;
   int? _failureStatus;
+  bool get _readBlocked =>
+      _failureStatus == 401 || _failureStatus == 403 || _failureStatus == 426;
   final _scheduleLoading = <String>{};
   final _scheduleUnavailable = <String>{};
 
@@ -69,6 +71,8 @@ class _ClientDashboardState extends State<ClientDashboard> {
       _homeObligationSchedules = const {};
       _scheduleLoading.clear();
       _scheduleUnavailable.clear();
+      _loading = false;
+      _failureStatus = null;
       _loanRepository = widget.loanRepository ?? SpinaClientLoanRepository();
       _scheduleRepository =
           widget.scheduleRepository ?? SpinaClientScheduleRepository();
@@ -85,7 +89,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
       _errorMessage = error is SpinaApiException
           ? _clientHomeFailureMessage(error)
           : 'Your latest loan information could not be loaded. Try again in a moment.';
-      if (_failureStatus == 401 || _failureStatus == 403) {
+      if (_readBlocked) {
         _generation++;
         _portfolio = null;
         _homeObligationSchedules = const {};
@@ -97,6 +101,9 @@ class _ClientDashboardState extends State<ClientDashboard> {
   }
 
   Future<void> _loadPortfolio() async {
+    if (!mounted || _loading || _readBlocked) {
+      return;
+    }
     final generation = ++_generation;
     final session = widget.session;
     final repository = _loanRepository;
@@ -133,7 +140,9 @@ class _ClientDashboardState extends State<ClientDashboard> {
   }
 
   Future<void> _loadScheduleForLoan(String loanId) async {
-    if (_scheduleLoading.contains(loanId) ||
+    if (!mounted ||
+        _readBlocked ||
+        _scheduleLoading.contains(loanId) ||
         !(_portfolio?.activeLoans.any((loan) => loan.loanId == loanId) ??
             false)) {
       return;
@@ -172,7 +181,9 @@ class _ClientDashboardState extends State<ClientDashboard> {
     } on Object catch (error) {
       if (!valid()) return;
       if (error is SpinaApiException &&
-          (error.statusCode == 401 || error.statusCode == 403)) {
+          (error.statusCode == 401 ||
+              error.statusCode == 403 ||
+              error.statusCode == 426)) {
         _failedRead(error, generation);
       } else {
         setState(() => _scheduleUnavailable.add(loanId));
@@ -185,6 +196,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
   String get _recoveryLabel => switch (_failureStatus) {
     401 => 'Sign in again',
     403 => 'Access unavailable',
+    426 => 'Return to sign-in',
     _ => 'Retry',
   };
 
@@ -232,6 +244,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
     _push(
       ActivityNotificationsPage(
         session: widget.session,
+        onSignOut: widget.onSignOut,
         deviceIdentityProvider: widget.deviceIdentityProvider,
       ),
     );
@@ -261,6 +274,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
     _push(
       NotificationCenterPage(
         session: widget.session,
+        onSignOut: widget.onSignOut,
         deviceIdentityProvider: widget.deviceIdentityProvider,
       ),
     );
@@ -309,7 +323,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
                   homeObligationSchedules: _homeObligationSchedules,
                   loading: _loading,
                   errorMessage: _errorMessage,
-                  onRetry: _failureStatus == 401
+                  onRetry: _failureStatus == 401 || _failureStatus == 426
                       ? () => unawaited(widget.onSignOut())
                       : _failureStatus == 403
                       ? null
@@ -765,6 +779,9 @@ String _clientHomeFailureMessage(SpinaApiException error) {
   }
   if (error.statusCode == 403) {
     return 'This account or device is not allowed to view these loan records. Contact Management if this is unexpected.';
+  }
+  if (error.statusCode == 426) {
+    return 'A SPINA update is required before loan information can be opened. Return to sign-in and follow the update guidance.';
   }
   if (error.code == 'network_unavailable') {
     return 'SPINA could not refresh your loan information. Check your connection and try again.';
