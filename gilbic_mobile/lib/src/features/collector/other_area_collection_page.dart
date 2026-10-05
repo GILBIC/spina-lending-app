@@ -383,6 +383,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
 
   String? _blockedReason(OtherAreaClient client) {
     final entry = client.entry;
+    if (entry.canUndoToday && _isSevenBySevenLoan(entry.loanType)) {
+      return 'Ask Management to correct this 7x7 receipt in SPINA desktop.';
+    }
     if (entry.processedToday) {
       final recorder = entry.todayCollectorName.trim().isEmpty
           ? 'another collector'
@@ -478,6 +481,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
 
   bool _canUndo(CollectorRouteEntry entry) =>
       !_isManagement &&
+      !_isSevenBySevenLoan(entry.loanType) &&
       widget.session.hasPermission('collection.correct.own_unremitted') &&
       entry.canUndoToday &&
       !entry.todayIsLocked &&

@@ -12,6 +12,39 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 
 void main() {
+  testWidgets('7x7 other-area receipt requires Management correction', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtherAreaCollectionPage(
+          session: _collectorSession,
+          paymentRepository: _PaymentRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          repository: _OtherAreaRepository(
+            sevenBySeven: true,
+            processedToday: true,
+            canUndo: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('undo-other-area-loan-other')), findsNothing);
+    expect(find.text('Correct mistaken Pay'), findsNothing);
+    expect(
+      find.text('Ask Management to correct this 7x7 receipt in SPINA desktop.'),
+      findsOneWidget,
+    );
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('record-other-area-loan-other')),
+    );
+    expect(button.onPressed, isNull);
+  });
+
   testWidgets('original recorder can open correction from other-area work', (
     tester,
   ) async {

@@ -8,7 +8,7 @@ Android version: **0.5.1+8**, using the existing application ID and owner releas
 
 - The Collector can select Correction, confirm Undo payment with a reason, then record Unable to pay. The prior missed-payment count is restored before the new missed event adds one.
 - Undo is restricted to the original recorder, today's latest unremitted cash receipt, and the reviewed route revision. A repeated request returns the original result without a second reversal.
-- Paid-off loans remain accessible for correction on the payment date. Other-area work exposes recovery to the original recorder.
+- Paid-off loans remain accessible for correction on the payment date. Other-area work exposes recovery to the original recorder for supported loans. Other-area 7x7 corrections remain with Management because that screen cannot record the replacement collection entry.
 - Remitted, Treasury-funded, penalty-linked, extra-principal and linked follow-up receipts retain their protected Management workflows.
 - Legacy Pay-to-pass corrections update receipt allocation fields together with the balance and missed count.
 
