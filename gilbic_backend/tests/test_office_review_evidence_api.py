@@ -153,6 +153,7 @@ def test_missing_witness_attestation_and_changed_snapshot_are_not_captured():
 
 def screen_png(blank=False):
     from io import BytesIO
+
     from PIL import Image, ImageDraw
 
     image = Image.new("RGB", (640, 240), "white")

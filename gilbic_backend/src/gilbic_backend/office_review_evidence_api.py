@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import timezone
-from typing import Literal
+from typing import Literal, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
@@ -16,6 +16,7 @@ from .office_review_evidence_repository import (
     OfficeReviewEvidenceConflict,
     PostgresOfficeReviewEvidenceRepository,
 )
+from .office_review_evidence_route import PrivateOfficeRoute
 from .office_review_evidence_storage import (
     EVIDENCE_MEDIA_TYPES,
     MAX_EVIDENCE_BYTES,
@@ -23,9 +24,6 @@ from .office_review_evidence_storage import (
     validate_evidence_content,
     validate_screen_signature,
 )
-
-
-from .office_review_evidence_route import PrivateOfficeRoute
 
 # Compatibility for protected route modules integrated before the shared class
 # was extracted to avoid the CIF/evidence router import cycle.
@@ -68,7 +66,7 @@ def _actor(
     )
 
 
-def _translate(error: Exception):
+def _translate(error: Exception) -> NoReturn:
     if isinstance(error, OfficeReviewEvidenceAccessDenied):
         raise HTTPException(
             status_code=403, detail="An active authorized office account is required."

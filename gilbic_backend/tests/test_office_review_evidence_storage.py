@@ -1,9 +1,8 @@
 from importlib import import_module
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from pathlib import Path
-
 
 PDF = b"%PDF-1.4\nSynthetic signed review scan\n%%EOF\n"
 
@@ -13,6 +12,7 @@ PDF = b"%PDF-1.4\nSynthetic signed review scan\n%%EOF\n"
 )
 def test_screen_signature_requires_bounded_visible_strokes(kind):
     from io import BytesIO
+
     from PIL import Image, ImageDraw
 
     module = import_module("gilbic_backend.office_review_evidence_storage")

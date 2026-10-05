@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-from io import BytesIO
 import os
-from pathlib import Path
 import stat
+from io import BytesIO
+from pathlib import Path
 from uuid import UUID
-
 
 MAX_EVIDENCE_BYTES = 10 * 1024 * 1024
 EVIDENCE_MEDIA_TYPES = frozenset({"application/pdf", "image/png", "image/jpeg"})
@@ -33,9 +32,7 @@ def validate_screen_signature(content: bytes, media_type: str) -> None:
             image.load()
             pixels = Image.new("RGBA", image.size, "white")
             pixels.alpha_composite(image.convert("RGBA"))
-            ink = ImageChops.invert(pixels.convert("L")).point(
-                lambda value: 255 if value > 64 else 0
-            )
+            ink = ImageChops.invert(pixels.convert("L")).point([0] * 65 + [255] * 191)
             bounds = ink.getbbox()
             if bounds is None or (
                 bounds[2] - bounds[0] < 8 and bounds[3] - bounds[1] < 8
