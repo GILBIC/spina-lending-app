@@ -24,6 +24,7 @@ REQUIRED_TABLES = (
     "core.devices",
     "core.user_roles",
     "lending.clients",
+    "lending.office_review_evidence",
     "lending.loans",
     "lending.client_payment_proofs",
     "lending.first_loan_disclosure_calculations",
@@ -81,7 +82,10 @@ def probe_database(settings: Settings) -> dict[str, bool]:
     try:
         with _connect(settings) as connection, connection.cursor() as cursor:
             cursor.execute(
-                "SELECT bool_and(to_regclass(name) IS NOT NULL) "
+                "SELECT bool_and(to_regclass(name) IS NOT NULL) AND EXISTS ("
+                "SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('lending.office_review_evidence') "
+                "AND attname='capture_method' AND NOT attisdropped AND attnotnull "
+                "AND atttypid='text'::regtype) "
                 "FROM unnest(%s::text[]) AS names(name)",
                 (list(REQUIRED_TABLES),),
             )

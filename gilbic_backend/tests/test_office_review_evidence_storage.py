@@ -8,6 +8,38 @@ from pathlib import Path
 PDF = b"%PDF-1.4\nSynthetic signed review scan\n%%EOF\n"
 
 
+@pytest.mark.parametrize(
+    "kind", ["transparent", "opaque-black", "single-dot", "oversized", "truncated"]
+)
+def test_screen_signature_requires_bounded_visible_strokes(kind):
+    from io import BytesIO
+    from PIL import Image, ImageDraw
+
+    module = import_module("gilbic_backend.office_review_evidence_storage")
+    size = (2049, 128) if kind == "oversized" else (640, 240)
+    color = (
+        (0, 0, 0, 0)
+        if kind == "transparent"
+        else "black"
+        if kind == "opaque-black"
+        else "white"
+    )
+    drawing = Image.new("RGBA", size, color)
+    if kind == "single-dot":
+        ImageDraw.Draw(drawing).point((50, 50), fill="black")
+    if kind in ("oversized", "truncated"):
+        ImageDraw.Draw(drawing).line(
+            [(50, 130), (100, 60), (200, 170)], fill="black", width=4
+        )
+    output = BytesIO()
+    drawing.save(output, format="PNG")
+    content = output.getvalue()
+    if kind == "truncated":
+        content = content[:40]
+    with pytest.raises(module.EvidenceFileError):
+        module.validate_screen_signature(content, "image/png")
+
+
 def test_private_evidence_is_immutable_and_detects_tampering(tmp_path):
     module = import_module("gilbic_backend.office_review_evidence_storage")
     store = module.PrivateEvidenceStore(tmp_path / "private")

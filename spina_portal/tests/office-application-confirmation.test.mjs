@@ -30,7 +30,7 @@ function harness() {
     if (h.response) return h.response(path, options);
     if (path.endsWith('/cif-client')) return { client_id: CLIENT, application_reference: 'Intake-1' };
     if (path.endsWith('/review-summary')) return h.saved;
-    if (path.includes('/review-evidence/context')) return context();
+    if (path.includes('/review-evidence/context')) return printContext(h.saved);
     if (path.includes('/review-evidence?')) return capture();
     if (path.endsWith('/review-confirmations')) return confirmation();
     throw new Error(`Unexpected request ${path}`);
@@ -45,6 +45,16 @@ async function captureSigned(h) {
   field(h, 'signedScan').value = 'signed.pdf'; field(h, 'witnessed').checked = true;
   fire(button(h, 'application-signed-evidence').querySelector('form'), 'submit'); await setImmediate();
 }
+
+test('signing displays the exact linked CIF facts and rejects changed application context',async()=>{
+ const h=harness();await open(h);await prepare(h);
+ assert.match(button(h,'application-signed-evidence').textContent,/Saved CIF address/);
+ h.dispose();
+ const changed=harness();await open(changed);const value=printContext();value.review_snapshot.information.request.requested_amount='2000.00';
+ changed.response=()=>value;await prepare(changed);
+ assert.equal(field(changed,'signedScan'),null);assert.equal(button(changed,'confirm-application').disabled,true);
+ assert.match(changed.root.textContent,/Reload current review before signing/);changed.dispose();
+});
 
 test('review remains two GETs until staff prepares exact signed evidence, then one explicit confirmation', async () => {
   const h = harness(); await open(h); assert.equal(h.calls.length, 2);

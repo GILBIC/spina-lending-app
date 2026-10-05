@@ -610,6 +610,17 @@ jobs:
             python tools/run_treasury_disposable_postgres_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
+      - name: Verify full Office and CIF flow against PostgreSQL
+        shell: bash
+        env:
+          PYTHONPATH: tools:gilbic_backend/src:spina_backend_mobile/src:.
+          SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
+          OFFICE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: |
+          set -euo pipefail
+          python -c 'import os; from run_client_onboarding_disposable_postgres_validation import validate; validate(os.environ["OFFICE_DATABASE_URL"])' \
+            2>&1 | tee ci-artifacts/financial/office-cif-postgres.log
+
       - name: Restore synthetic database and private evidence from backup
         shell: bash
         env:

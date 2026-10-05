@@ -4,6 +4,7 @@ import test from 'node:test';
 import { createOfficeCaseContext, bindOfficeWriteOwner } from '../assets/office-case-context.js';
 import { mountOfficePrivacy } from '../assets/office-privacy.js';
 import { Element, fire } from './helpers/dom.mjs';
+import { prepareSignature } from './helpers/signature.mjs';
 
 const CLIENT = '11111111-1111-4111-8111-111111111111';
 const CIF = '22222222-2222-4222-8222-222222222222';
@@ -54,6 +55,41 @@ function field(h, name) { return h.root.querySelector(`[name="${name}"]`); }
 function button(h, name) { return h.root.querySelector(`[data-privacy-${name}]`); }
 function choose(h) { field(h, 'signedPrivacyScan').files = [PDF]; field(h, 'signedPrivacyScan').value = 'private-scan.pdf'; field(h, 'witnessedPrivacySignature').checked = true; }
 function submit(h) { fire(h.root.querySelector('form'), 'submit'); }
+
+test('privacy screen signature binds the exact documents and optional choice', async () => {
+  const h = harness(); await setImmediate();
+  const pad = prepareSignature(h.root); pad.draw();
+  h.response = path => path.endsWith('/privacy/acknowledgments') ? acknowledgment(false) : {...captured(),capture_method:'screen_signature'};
+  field(h,'witnessedPrivacySignature').checked=true; submit(h); await setImmediate();
+  assert.equal(h.calls.length,3);
+  assert.equal(h.calls[1].rawBody,pad.file);
+  const query = new URL(h.calls[1].path,'https://test.invalid').searchParams;
+  assert.equal(query.get('capture_method'),'screen_signature');
+  assert.equal(query.get('witnessed_screen_signature'),'true');
+  assert.equal(query.has('witnessed_wet_signature'),false);
+  assert.equal(query.get('optional_service_communications'),'false');
+  assert.match(h.root.textContent,/acknowledgment recorded/);assert.equal(h.dispose.isDirty(),false);h.dispose();
+});
+
+test('privacy choice change clears the drawn signature and its witness',async()=>{
+ const h=harness();await setImmediate();const pad=prepareSignature(h.root);pad.draw();
+ field(h,'witnessedPrivacySignature').checked=true;field(h,'optionalServiceCommunications').checked=true;fire(field(h,'optionalServiceCommunications'),'change');
+ fire(button(h,'refresh'),'click');await setImmediate();field(h,'witnessedPrivacySignature').checked=true;submit(h);await setImmediate();
+ assert.equal(h.calls.length,2);assert.equal(pad.exports,0);h.dispose();
+});
+
+test('privacy abort during signature export never uploads a late image',async()=>{
+ const h=harness();await setImmediate();const pad=prepareSignature(h.root,{deferExport:true});pad.draw();field(h,'witnessedPrivacySignature').checked=true;submit(h);
+ assert.equal(h.dispose.isWritePending(),true);h.controller.abort();pad.finish();await setImmediate();assert.equal(h.calls.length,1);assert.equal(h.root.innerHTML,'');
+});
+
+for(const status of [413,415]) test(`privacy ${status} before capture unlocks drawing but does not unlock an uncertain retry`,async()=>{
+ const h=harness();await setImmediate();const pad=prepareSignature(h.root);pad.draw();field(h,'witnessedPrivacySignature').checked=true;
+ h.response=()=>{throw Object.assign(new Error('rejected'),{status});};submit(h);await setImmediate();
+ assert.equal(h.dispose.isUncertain(),false);assert.equal(h.root.querySelector('[data-signature-clear]').disabled,false);
+ h.response=()=>{throw new Error('uncertain');};submit(h);await setImmediate();assert.equal(h.dispose.isUncertain(),true);
+ h.response=()=>{throw Object.assign(new Error('rejected'),{status});};fire(button(h,'retry'),'click');await setImmediate();assert.equal(h.dispose.isUncertain(),true);assert.equal(h.root.querySelector('[data-signature-clear]').disabled,true);h.dispose();
+});
 
 for (const role of ['employee', 'management']) test(`${role}: exact privacy source and optional false survive one capture and one acknowledgment`, async () => {
   const h = harness({ role }); await setImmediate();
@@ -136,6 +172,7 @@ for (const mutate of [(saved) => { saved.optional_service_communications = true;
 for (const close of ['abort', 'dispose', 'logout']) test(`${close} during upload suppresses late acknowledgment and clears file input`, async () => {
   const h = harness(); await setImmediate(); let resolve; h.response = () => new Promise((done) => { resolve = done; });
   choose(h); const scan = field(h, 'signedPrivacyScan'); submit(h);
+  await setImmediate(); // Wait for evidence preparation to reach the upload.
   if (close === 'abort') h.controller.abort(); else if (close === 'dispose') h.dispose(); else h.currentSession = null;
   resolve(captured()); await setImmediate();
   assert.equal(h.calls.length, 2); assert.equal(h.root.innerHTML, ''); assert.equal(scan.value, '');

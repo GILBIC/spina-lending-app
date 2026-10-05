@@ -154,6 +154,29 @@ def test_preflight_blocks_missing_disclosure_table(catalog):
     assert result["schema"] is False
 
 
+def test_preflight_requires_screen_signature_capture_method(catalog):
+    connection, settings = catalog
+    for table in release_preflight.REQUIRED_TABLES:
+        schema, name = table.split(".")
+        connection.execute(
+            sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema))
+        )
+        connection.execute(
+            sql.SQL("CREATE TABLE IF NOT EXISTS {} (id integer)").format(
+                sql.Identifier(schema, name)
+            )
+        )
+    assert release_preflight.probe_database(settings)["schema"] is False
+    connection.execute(
+        "ALTER TABLE lending.office_review_evidence ADD COLUMN capture_method TEXT NOT NULL DEFAULT 'paper_scan'"
+    )
+    assert release_preflight.probe_database(settings)["schema"] is True
+    connection.execute(
+        "ALTER TABLE lending.office_review_evidence ALTER COLUMN capture_method DROP NOT NULL"
+    )
+    assert release_preflight.probe_database(settings)["schema"] is False
+
+
 @pytest.mark.parametrize("table,name,function,event,level", GUARDS)
 def test_preflight_blocks_missing_disclosure_guard(
     catalog, table, name, function, event, level

@@ -85,6 +85,40 @@ def test_capture_is_exact_immutable_and_retry_does_not_create_more_metadata(
             connection.execute(sql, (first.id,))
 
 
+def test_screen_method_is_persisted_and_cannot_change_on_retry(connection, monkeypatch):
+    from test_office_review_evidence_api import screen_png
+
+    repo, cif_repo = repositories(connection, monkeypatch)
+    case = _seed(connection)
+    context = repo.get_context(**source(case))
+    values = dict(
+        **source(case),
+        expected_snapshot_sha256=context["snapshot_sha256"],
+        request_id=uuid4(),
+        content=screen_png(),
+        media_type="image/png",
+        capture_method="screen_signature",
+    )
+    record = repo.capture(**values)
+    assert record.capture_method == "screen_signature"
+    assert repo.capture(**values) == record
+    with pytest.raises(evidence.OfficeReviewEvidenceConflict):
+        repo.capture(**{**values, "capture_method": "paper_scan"})
+    with pytest.raises(psycopg.Error), connection.transaction():
+        connection.execute(
+            "update lending.office_review_evidence set capture_method='paper_scan' where id=%s",
+            (record.id,),
+        )
+    confirmation = cif_repo.confirm_review(
+        actor_user_id=case["actor"],
+        client_id=case["client"],
+        cif_version_id=case["cif"],
+        expected_information=context["review_snapshot"]["information"],
+        applicant_confirmation_evidence_reference=record.evidence_reference,
+    )
+    assert confirmation.cif_version_id == case["cif"]
+
+
 @pytest.mark.parametrize(
     "difference", ["client", "purpose", "subject", "snapshot", "actor", "file"]
 )

@@ -1,10 +1,11 @@
-const CACHE_NAME = 'spina-company-shell-v29-office-applications';
+const CACHE_NAME = 'spina-company-shell-v30-office-signatures';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/assets/app.css',
   '/assets/app.js',
+  '/assets/office-signature-input.js',
   '/assets/treasury-api.js',
   '/assets/loan-payouts.js',
   '/assets/loan-payout-contract.js',

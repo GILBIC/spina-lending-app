@@ -42,6 +42,7 @@ class Repository:
             application_id=None,
             application_version_id=None,
             purpose="cif_review",
+            capture_method=kwargs.get("capture_method", "paper_scan"),
             snapshot_sha256="a" * 64,
             content_sha256="b" * 64,
             media_type="application/pdf",
@@ -148,3 +149,71 @@ def test_missing_witness_attestation_and_changed_snapshot_are_not_captured():
         "Review changed; refresh before capturing signed evidence."
     )
     assert upload(http).status_code == 409
+
+
+def screen_png(blank=False):
+    from io import BytesIO
+    from PIL import Image, ImageDraw
+
+    image = Image.new("RGB", (640, 240), "white")
+    if not blank:
+        ImageDraw.Draw(image).line(
+            [(50, 130), (100, 60), (200, 170), (330, 70)], fill="black", width=4
+        )
+    stream = BytesIO()
+    image.save(stream, format="PNG")
+    return stream.getvalue()
+
+
+def screen_upload(
+    http,
+    *,
+    attestation="witnessed_screen_signature=true",
+    content=None,
+    method="screen_signature",
+):
+    return http.post(
+        f"{BASE}?{SOURCE}&request_id={uuid4()}&expected_snapshot_sha256={'a' * 64}"
+        f"&capture_method={method}&{attestation}",
+        headers={**summary.HEADERS, "Content-Type": "image/png"},
+        content=screen_png() if content is None else content,
+    )
+
+
+def test_screen_signature_is_truthfully_bound_to_exact_review_without_wet_attestation():
+    http, repository = client()
+    response = screen_upload(http)
+    assert response.status_code == 201, response.text
+    assert repository.calls[0]["capture_method"] == "screen_signature"
+    assert repository.calls[0]["content"] == screen_png()
+    assert response.json()["capture_method"] == "screen_signature"
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize(
+    "method,attestation",
+    [
+        ("screen_signature", "witnessed_wet_signature=true"),
+        (
+            "screen_signature",
+            "witnessed_screen_signature=true&witnessed_wet_signature=true",
+        ),
+        ("paper_scan", "witnessed_screen_signature=true"),
+        ("screen_signature", "witnessed_screen_signature=false"),
+    ],
+)
+def test_signature_method_requires_matching_unambiguous_witness_attestation(
+    method, attestation
+):
+    http, repository = client()
+    response = screen_upload(http, method=method, attestation=attestation)
+    assert response.status_code == 422
+    assert response.headers["cache-control"] == "no-store"
+    assert repository.calls == []
+
+
+def test_screen_signature_rejects_blank_image_before_persistence():
+    http, repository = client()
+    response = screen_upload(http, content=screen_png(blank=True))
+    assert response.status_code == 415
+    assert repository.calls == []

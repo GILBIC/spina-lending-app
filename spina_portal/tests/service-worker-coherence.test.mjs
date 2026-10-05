@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const source = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 
 test('Office release replaces the old cache and precaches its complete imported module graph', () => {
-  assert.match(source, /spina-company-shell-v29-office-applications/);
+  assert.match(source, /spina-company-shell-v30-office-signatures/);
   const assets = vm.runInNewContext(source.match(/const SHELL_ASSETS = (\[[\s\S]*?\]);/)[1]);
   assert.equal(new Set(assets).size, assets.length);
   const portal = fileURLToPath(new URL('../', import.meta.url));

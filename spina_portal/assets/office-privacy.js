@@ -1,4 +1,5 @@
 import { bindOfficeWriteOwner, officeSessionOwner } from './office-case-context.js';
+import { mountOfficeSignatureInput, signatureAttestation } from './office-signature-input.js';
 import { sessionHasRole } from './roles.js';
 import { errorCard, escapeHtml, hasPermission } from './ui.js';
 
@@ -36,10 +37,11 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   let operation = null;
   let writing = false, revision = 0;
   let savedOptional = false;
+  let signatureInput;
   const blockedDocuments = new Set();
   api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && writing,isUncertain:()=>!disposed && uncertain,dispose});
   const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId || '') && UUID.test(cifVersionId || '');
-  const isDirty = () => !disposed && [...root.querySelectorAll('input')].some(input => input.getAttribute('type') === 'file' ? Boolean(input.files?.length) : input.getAttribute('name') === 'optionalServiceCommunications' ? Boolean(input.checked) !== savedOptional : Boolean(input.checked));
+  const isDirty = () => !disposed && (signatureInput?.isDirty() || [...root.querySelectorAll('input')].some(input => input.getAttribute('type') === 'file' ? Boolean(input.files?.length) : input.getAttribute('name') === 'optionalServiceCommunications' ? Boolean(input.checked) !== savedOptional : Boolean(input.checked)));
   function edited() { revision++; onDraftChange?.(); }
   function deny(error) { dispose(); onAccessDenied?.(error); }
   const listeners = [];
@@ -53,6 +55,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   function dispose() {
     if (disposed) return;
     disposed = true; generation += 1; context = null; operation = null;
+    signatureInput?.dispose(); signatureInput=null;
     for (const [element, event, listener] of listeners) element.removeEventListener(event, listener);
     for (const remove of documentListeners) remove();
     documentListeners = [];
@@ -78,7 +81,8 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     <button type="button" class="button button-outline" data-privacy-refresh>Load current privacy documents</button>
     <div data-privacy-status role="status" aria-live="polite"></div>
     <div data-privacy-documents></div>
-    <form data-privacy-confirm class="entry-form" hidden>
+    <form data-privacy-confirm class="entry-form office-signing-form" hidden>
+      <div data-privacy-signature></div>
       <label>Signed privacy consent scan<input type="file" name="signedPrivacyScan" accept="application/pdf,image/png,image/jpeg" required /></label>
       <label><input type="checkbox" name="witnessedPrivacySignature" required /> I witnessed the borrower review these exact documents and sign the privacy acknowledgment with the choice shown above.</label>
       <button type="submit" class="button button-primary">Record privacy acknowledgment</button>
@@ -92,9 +96,11 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
   const refresh = root.querySelector('[data-privacy-refresh]');
   optional.checked = false;
   witness.checked = false;
+  signatureInput = mountOfficeSignatureInput({root:root.querySelector('[data-privacy-signature]'),fileInput,onChange:()=>{witness.checked=false;edited();}});
   const prefix = `/api/v1/management/clients/${encodeURIComponent(clientId)}`;
   function listen(element,event,handler) { element.addEventListener(event,handler); listeners.push([element,event,handler]); }
   function controls() {
+    signatureInput?.setDisabled(busy || uncertain || !context?.issuable || blockedDocuments.size > 0);
     optional.disabled = busy || uncertain; refresh.disabled = busy;
     for (const element of [...form.querySelectorAll('input'), ...form.querySelectorAll('button'), ...documents.querySelectorAll('button')]) element.disabled = busy || uncertain;
     form.querySelector('button[type="submit"]').disabled = busy || uncertain || blockedDocuments.size > 0;
@@ -106,6 +112,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     generation += 1; context = null; form.hidden = true; documents.innerHTML = '';
     blockedDocuments.clear();
     fileInput.value = ''; witness.checked = false; status.innerHTML = '';
+    signatureInput?.reset();
   }
   async function load() {
     if (!alive() || busy) return;
@@ -205,10 +212,20 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     event?.preventDefault();
     if (!alive() || busy || (!operation && (!context?.issuable || blockedDocuments.size || !witness.checked))) return;
     if (!operation) {
-      const file = fileInput.files?.[0];
-      if (!file || !['application/pdf','image/png','image/jpeg'].includes(file.type) || file.size <= 0 || file.size > 10485760) { status.textContent = 'Choose a signed PDF, PNG or JPEG of at most 10 MiB.'; return; }
-      operation = {file, selected:context, optional:optional.checked, capture:null,
-        query:new URLSearchParams({purpose:'privacy_acknowledgment', cif_version_id:cifVersionId, optional_service_communications:String(optional.checked), request_id:crypto.randomUUID(), expected_snapshot_sha256:context.snapshot_sha256, witnessed_wet_signature:'true'})};
+      let file, method;
+      const selected=context, choice=optional.checked, current=generation;
+      busy=true;writing=true;controls();
+      try {
+        ({file,method}=await signatureInput.getEvidence());
+        if (!alive()) return;
+        if (generation!==current || selected!==context || choice!==optional.checked || blockedDocuments.size) throw new Error('Privacy documents changed. Review them before signing.');
+      } catch(error) {
+        if(alive()){status.innerHTML=errorCard(error);busy=false;writing=false;controls();}
+        return;
+      }
+      if (!file || !['application/pdf','image/png','image/jpeg'].includes(file.type) || file.size <= 0 || file.size > 10485760) { status.textContent = 'Draw a signature or choose a signed PDF, PNG or JPEG of at most 10 MiB.';busy=false;writing=false;controls();return; }
+      operation = {file,method,selected,optional:choice,capture:null,
+        query:new URLSearchParams({purpose:'privacy_acknowledgment', cif_version_id:cifVersionId, optional_service_communications:String(choice), request_id:crypto.randomUUID(), expected_snapshot_sha256:selected.snapshot_sha256,...signatureAttestation(method)})};
     }
     const original=operation;
     busy=true;writing=true;controls();
@@ -216,7 +233,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
       if (!original.capture) {
         const capture = await api.request(`${prefix}/review-evidence?${original.query}`, {method:'POST',rawBody:original.file,headers:{'Content-Type':original.file.type},signal});
         if (!alive() || operation !== original) return;
-        if (!sameId(capture?.client_id,clientId) || !sameId(capture?.cif_version_id,cifVersionId) || capture.application_id !== null || capture.application_version_id !== null || capture.purpose !== 'privacy_acknowledgment' || capture.snapshot_sha256 !== original.selected.snapshot_sha256 || !UUID.test(capture.evidence_id || '') || capture.evidence_reference !== `office-evidence:${capture.evidence_id}`) throw new Error('Signed privacy capture does not match the review.');
+        if (!sameId(capture?.client_id,clientId) || !sameId(capture?.cif_version_id,cifVersionId) || capture.application_id !== null || capture.application_version_id !== null || capture.purpose !== 'privacy_acknowledgment' || capture.snapshot_sha256 !== original.selected.snapshot_sha256 || (original.method==='screen_signature' && capture.capture_method!==original.method) || !UUID.test(capture.evidence_id || '') || capture.evidence_reference !== `office-evidence:${capture.evidence_id}`) throw new Error('Signed privacy capture does not match the review.');
         original.capture=capture;
       }
       const saved=await api.request(`${prefix}/privacy/acknowledgments`,{method:'POST',body:{cif_version_id:cifVersionId,optional_service_communications:original.optional,evidence_reference:original.capture.evidence_reference},signal});
@@ -226,7 +243,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     } catch(error) {
       if (alive() && operation===original) {
         if ([401,403].includes(error?.status)) {deny(error);return;}
-        if(error?.beforeWrite && !uncertain && !original.capture) {operation=null;status.innerHTML=errorCard(error);}
+        if((error?.beforeWrite || [413,415].includes(error?.status)) && !uncertain && !original.capture) {operation=null;status.innerHTML=errorCard(error);}
         else {uncertain=true;optional.checked=original.optional;recovery(error.message);}
       }
     } finally {writing=false;if(alive()){busy=false;controls();}}

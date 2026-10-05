@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from io import BytesIO
 import os
 from pathlib import Path
 import stat
@@ -15,6 +16,43 @@ EVIDENCE_MEDIA_TYPES = frozenset({"application/pdf", "image/png", "image/jpeg"})
 
 class EvidenceFileError(RuntimeError):
     pass
+
+
+def validate_screen_signature(content: bytes, media_type: str) -> None:
+    """Reject empty, opaque-black and oversized drawings before private storage."""
+    from PIL import Image, ImageChops, UnidentifiedImageError
+
+    try:
+        if media_type != "image/png":
+            raise ValueError
+        with Image.open(BytesIO(content)) as image:
+            if image.format != "PNG" or not (
+                32 <= image.width <= 2048 and 32 <= image.height <= 1024
+            ):
+                raise ValueError
+            image.load()
+            pixels = Image.new("RGBA", image.size, "white")
+            pixels.alpha_composite(image.convert("RGBA"))
+            ink = ImageChops.invert(pixels.convert("L")).point(
+                lambda value: 255 if value > 64 else 0
+            )
+            bounds = ink.getbbox()
+            if bounds is None or (
+                bounds[2] - bounds[0] < 8 and bounds[3] - bounds[1] < 8
+            ):
+                raise ValueError
+            count = ink.histogram()[255]
+            if count < 16 or count > image.width * image.height * 0.5:
+                raise ValueError
+    except (
+        ValueError,
+        OSError,
+        UnidentifiedImageError,
+        Image.DecompressionBombError,
+    ) as error:
+        raise EvidenceFileError(
+            "Draw a visible signature in the signature box before saving."
+        ) from error
 
 
 def validate_evidence_content(content: bytes, media_type: str) -> None:
