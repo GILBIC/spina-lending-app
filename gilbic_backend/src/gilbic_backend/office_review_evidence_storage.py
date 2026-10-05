@@ -18,7 +18,7 @@ class EvidenceFileError(RuntimeError):
 
 
 def validate_screen_signature(content: bytes, media_type: str) -> None:
-    """Reject empty, opaque-black and oversized drawings before private storage."""
+    """Require one bounded, visible drawing frame before private storage."""
     from PIL import Image, ImageChops, UnidentifiedImageError
 
     try:
@@ -28,6 +28,8 @@ def validate_screen_signature(content: bytes, media_type: str) -> None:
             if image.format != "PNG" or not (
                 32 <= image.width <= 2048 and 32 <= image.height <= 1024
             ):
+                raise ValueError
+            if getattr(image, "n_frames", 1) != 1:
                 raise ValueError
             image.load()
             pixels = Image.new("RGBA", image.size, "white")

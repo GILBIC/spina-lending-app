@@ -7,6 +7,35 @@ import pytest
 PDF = b"%PDF-1.4\nSynthetic signed review scan\n%%EOF\n"
 
 
+@pytest.mark.parametrize("default_image", [False, True])
+def test_screen_signature_rejects_unvalidated_animation_frames(default_image):
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw
+
+    module = import_module("gilbic_backend.office_review_evidence_storage")
+    signature = Image.new("RGBA", (640, 240), "white")
+    ImageDraw.Draw(signature).line(
+        [(50, 130), (100, 60), (200, 170)], fill="black", width=4
+    )
+    blank = Image.new("RGBA", signature.size, "white")
+    output = BytesIO()
+    signature.save(
+        output,
+        format="PNG",
+        save_all=True,
+        append_images=[blank],
+        default_image=default_image,
+        duration=100,
+        loop=0,
+    )
+    content = output.getvalue()
+    with Image.open(BytesIO(content)) as image:
+        assert image.is_animated and image.n_frames == 2
+    with pytest.raises(module.EvidenceFileError):
+        module.validate_screen_signature(content, "image/png")
+
+
 @pytest.mark.parametrize(
     "kind", ["transparent", "opaque-black", "single-dot", "oversized", "truncated"]
 )
