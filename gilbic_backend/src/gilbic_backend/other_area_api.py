@@ -55,6 +55,10 @@ def _payload(record: OtherAreaLoanRecord) -> dict[str, object]:
         "today_collector_name": record.today_collector_name,
         "today_amount": _money(record.today_amount),
         "today_is_locked": record.today_is_locked,
+        "today_transaction_id": str(record.today_transaction_id)
+        if record.today_transaction_id
+        else None,
+        "can_undo_today": record.can_undo_today,
         "is_other_area": True,
     }
 

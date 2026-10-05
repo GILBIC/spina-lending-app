@@ -321,6 +321,7 @@ class CollectorRouteEntry {
     this.todayTransactionId,
     this.todayIsLocked = false,
     this.canEditToday = false,
+    this.canUndoToday = false,
     this.todayAmount = 0,
     this.dailyAmountText,
     this.todayAmountText,
@@ -378,6 +379,7 @@ class CollectorRouteEntry {
   final String? todayTransactionId;
   final bool todayIsLocked;
   final bool canEditToday;
+  final bool canUndoToday;
   final double todayAmount;
   final String todayNote;
   final List<DateTime> todayCoveredDates;
@@ -446,6 +448,7 @@ class CollectorRouteEntry {
     'today_transaction_id': todayTransactionId,
     'today_is_locked': todayIsLocked,
     'can_edit_today': canEditToday,
+    'can_undo_today': canUndoToday,
     'today_amount': todayAmountText ?? todayAmount,
     'today_note': todayNote,
     'today_covered_dates': todayCoveredDates
@@ -681,6 +684,7 @@ class CollectorRouteEntry {
       ]),
       todayIsLocked: _boolValue(data['today_is_locked'], fallback: false),
       canEditToday: _boolValue(data['can_edit_today'], fallback: false),
+      canUndoToday: data['can_undo_today'] == true,
       todayAmount:
           firstNumber(<Object?>[
             data['today_amount'],

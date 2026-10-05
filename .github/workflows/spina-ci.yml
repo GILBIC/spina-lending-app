@@ -561,6 +561,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile \
+            tools/run_collector_payment_recovery_validation.py \
             tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py \
             tools/run_combined_collection_renewal_disposable_postgres_validation.py \
             tools/run_delegated_area_disposable_postgres_validation.py \
@@ -584,6 +585,7 @@ jobs:
         shell: bash
         env:
           SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
+          COLLECTOR_RECOVERY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
           X7PREVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/x7preview?sslmode=disable
           COMBINED_RENEWAL_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/combinedrenewal?sslmode=disable
           DELEGATE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/delegatedarea?sslmode=disable
@@ -608,6 +610,7 @@ jobs:
             python tools/run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL
             python tools/run_mvp_private_schema_barrier_validation.py
             python tools/run_treasury_disposable_postgres_validation.py
+            python tools/run_collector_payment_recovery_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
       - name: Restore synthetic database and private evidence from backup

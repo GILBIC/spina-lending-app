@@ -12,6 +12,34 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 
 void main() {
+  testWidgets('original recorder can open correction from other-area work', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    final repository = _OtherAreaRepository(
+      processedToday: true,
+      canUndo: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtherAreaCollectionPage(
+          session: _collectorSession,
+          paymentRepository: _PaymentRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('undo-other-area-loan-other')));
+    await tester.pumpAndSettle();
+    expect(find.text('Correct mistaken Pay'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(repository.workLoads, 2);
+  });
+
   testWidgets(
     'collector loads approved convenience work and can open cross-route payment',
     (tester) async {
@@ -240,7 +268,11 @@ const UserSession _collectorSession = UserSession(
   role: AppRole.collector,
   rawRole: 'Collector',
   accessToken: 'collector-token',
-  permissions: <String>['collection.create', 'delegated_area.view'],
+  permissions: <String>[
+    'collection.create',
+    'delegated_area.view',
+    'collection.correct.own_unremitted',
+  ],
 );
 
 const UserSession _collectorSearchOnlySession = UserSession(
@@ -282,10 +314,12 @@ class _OtherAreaRepository implements OtherAreaClientRepository {
   _OtherAreaRepository({
     this.sevenBySeven = false,
     this.processedToday = false,
+    this.canUndo = false,
   });
 
   final bool sevenBySeven;
   final bool processedToday;
+  final bool canUndo;
   final List<String> queries = <String>[];
   int workLoads = 0;
 
@@ -336,7 +370,9 @@ class _OtherAreaRepository implements OtherAreaClientRepository {
           todayEntryType: processedToday ? 'payment' : '',
           todayCollectorName: processedToday ? 'Collector Three' : '',
           todayAmount: processedToday ? 200 : 0,
-          todayIsLocked: processedToday,
+          todayIsLocked: processedToday && !canUndo,
+          canUndoToday: canUndo,
+          todayTransactionId: canUndo ? 'receipt-other' : null,
         ),
       ),
     ];

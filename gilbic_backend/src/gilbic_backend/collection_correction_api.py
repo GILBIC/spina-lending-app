@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -24,8 +25,30 @@ from .collection_correction_repository import (
     CollectionCorrectionRecord,
     PostgresCollectionCorrectionRepository,
 )
+from .collection_void_repository import (
+    CollectionVoidError,
+    CollectionVoidForbidden,
+    CollectionVoidInvalid,
+    CollectionVoidNotFound,
+    CollectionVoidRecord,
+    PostgresCollectionVoidRepository,
+)
 from .contract_collection_correction import ContractSafeCollectionCorrectionRepository
 from .request_auth import authenticated_device_context
+
+
+class CollectorPaymentUndoBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str = Field(min_length=3, max_length=500)
+    expected_route_revision: str = Field(min_length=1, max_length=120)
+
+
+def payment_undo_repository_dependency() -> PostgresCollectionVoidRepository:
+    return PostgresCollectionVoidRepository()
+
+
+def _undo_business_date() -> date:
+    return datetime.now(timezone(timedelta(hours=8))).date()
 
 
 class CollectionCorrectionBody(BaseModel):
@@ -43,7 +66,9 @@ def correction_repository_dependency() -> PostgresCollectionCorrectionRepository
     return ContractSafeCollectionCorrectionRepository()
 
 
-def correction_history_repository_dependency() -> PostgresCollectionCorrectionHistoryRepository:
+def correction_history_repository_dependency() -> (
+    PostgresCollectionCorrectionHistoryRepository
+):
     return PostgresCollectionCorrectionHistoryRepository()
 
 
@@ -105,6 +130,70 @@ def _raise_correction_error(error: CollectionCorrectionError) -> None:
 
 def create_collection_correction_router() -> APIRouter:
     router = APIRouter(tags=["collection corrections"])
+
+    @router.post("/api/v1/collector/collections/{transaction_id}/undo-payment")
+    @router.post(
+        "/api/mobile/v1/collector/collections/{transaction_id}/undo-payment",
+        include_in_schema=False,
+    )
+    def undo_payment(
+        transaction_id: UUID,
+        body: CollectorPaymentUndoBody,
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        voids: Annotated[
+            PostgresCollectionVoidRepository,
+            Depends(payment_undo_repository_dependency),
+        ],
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="collection.correct.own_unremitted",
+            permission_error="Collection correction permission is required.",
+        )
+        try:
+            record = voids.void_unremitted(
+                actor_user_id=actor.user_id,
+                transaction_id=transaction_id,
+                reason=body.reason,
+                collector_expected_route_revision=body.expected_route_revision,
+                collector_business_date=_undo_business_date(),
+            )
+            if not isinstance(record, CollectionVoidRecord):
+                raise CollectionVoidInvalid(
+                    "This receipt requires Management review before correction."
+                )
+        except CollectionVoidError as error:
+            status = (
+                403
+                if isinstance(error, CollectionVoidForbidden)
+                else 404
+                if isinstance(error, CollectionVoidNotFound)
+                else 422
+                if isinstance(error, CollectionVoidInvalid)
+                else 409
+            )
+            raise HTTPException(
+                status_code=status, detail={"code": error.code, "message": str(error)}
+            ) from error
+        return {
+            "success": True,
+            "data": {
+                "transaction_id": str(record.transaction_id),
+                "loan_id": str(record.loan_id),
+                "receipt_number": record.receipt_number,
+                "restored_balance": format(record.restored_balance, "f"),
+                "route_revision": f"loan:{record.loan_id}:v{record.state_version}",
+                "voided_at": record.voided_at.isoformat(),
+            },
+        }
 
     @router.get("/api/v1/collector/collections/{transaction_id}/corrections")
     @router.get(

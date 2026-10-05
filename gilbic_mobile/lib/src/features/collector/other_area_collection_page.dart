@@ -9,9 +9,11 @@ import 'package:gilbic_mobile/src/core/collector/other_area_client_repository.da
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_payment_undo_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collection_payment_undo_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_summary_page.dart';
 
@@ -22,6 +24,7 @@ class OtherAreaCollectionPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     required this.deviceSequence,
     this.repository,
+    this.paymentUndoRepository,
     super.key,
   });
 
@@ -30,6 +33,7 @@ class OtherAreaCollectionPage extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence deviceSequence;
   final OtherAreaClientRepository? repository;
+  final CollectionPaymentUndoRepository? paymentUndoRepository;
 
   @override
   State<OtherAreaCollectionPage> createState() =>
@@ -472,6 +476,38 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
     }
   }
 
+  bool _canUndo(CollectorRouteEntry entry) =>
+      !_isManagement &&
+      widget.session.hasPermission('collection.correct.own_unremitted') &&
+      entry.canUndoToday &&
+      !entry.todayIsLocked &&
+      entry.todayTransactionId != null &&
+      entry.routeRevision != null;
+
+  Future<void> _undoPayment(OtherAreaClient client) async {
+    if (!_canUndo(client.entry)) return;
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (context) => CollectionPaymentUndoPage(
+          session: widget.session,
+          entry: client.entry,
+          repository:
+              widget.paymentUndoRepository ??
+              SpinaCollectionPaymentUndoRepository(),
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          returnToOtherArea: true,
+        ),
+      ),
+    );
+    // Refresh even after an uncertain network result or Back navigation.
+    if (!mounted) return;
+    if (_showingSearchResults) {
+      await _searchClients(showValidation: true);
+    } else if (_canViewConvenienceWork) {
+      await _loadWork();
+    }
+  }
+
   void _openCollectionSummary() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -816,6 +852,13 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                     const SizedBox(height: 10),
                     _TodayResult(entry: entry),
                   ],
+                  if (_canUndo(entry))
+                    OutlinedButton.icon(
+                      key: Key('undo-other-area-${entry.loanId}'),
+                      onPressed: () => _undoPayment(client),
+                      icon: const Icon(Icons.undo),
+                      label: const Text('Correct mistaken Pay'),
+                    ),
                   const SizedBox(height: 8),
                   Text(
                     blocked ??

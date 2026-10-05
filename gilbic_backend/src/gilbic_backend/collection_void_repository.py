@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from .collection_correction_authority import correction_revision_is_current
 from .database import open_connection
 
 if TYPE_CHECKING:
@@ -39,6 +40,10 @@ class CollectionVoidConflict(CollectionVoidError):
 
 class CollectionVoidInvalid(CollectionVoidError):
     code = "collection_void_invalid"
+
+
+class CollectionVoidForbidden(CollectionVoidError):
+    code = "collection_void_forbidden"
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +156,8 @@ class PostgresCollectionVoidRepository:
         reason: str,
         idempotency_key: UUID | None = None,
         connection=None,
+        collector_expected_route_revision: str | None = None,
+        collector_business_date: date | None = None,
     ) -> CollectionVoidRecord | ExtraPrincipalReversalRequestResult:
         normalized_reason = " ".join(reason.split())
         if len(normalized_reason) < 3:
@@ -174,7 +181,10 @@ class PostgresCollectionVoidRepository:
                         (transaction_id,),
                     ).fetchone()
                     reversal_request = None
-                    if adjustment_row is not None:
+                    if (
+                        adjustment_row is not None
+                        and collector_expected_route_revision is None
+                    ):
                         from .seven_by_seven_extra_principal_reversal import (
                             begin_extra_principal_reversal_request,
                         )
@@ -204,6 +214,7 @@ class PostgresCollectionVoidRepository:
                             c.full_name as client_name,
                             c.user_id as linked_client_user_id,
                             lt.name as loan_type,
+                            l.status as current_loan_status,
                             coalesce(
                                 nullif(btrim(collector.full_name), ''),
                                 nullif(btrim(collector.username), ''),
@@ -231,7 +242,34 @@ class PostgresCollectionVoidRepository:
                         raise CollectionVoidNotFound(
                             "The collection entry was not found."
                         )
+                    if collector_expected_route_revision is not None:
+                        if transaction["collector_user_id"] != actor_user_id:
+                            raise CollectionVoidForbidden(
+                                "Only the collector who recorded this payment can undo it."
+                            )
+                        if transaction["funding_source"] != "collector_cash":
+                            raise CollectionVoidForbidden(
+                                "Recipient-funded payments require authorized Treasury review."
+                            )
+                        if transaction["entry_type"] not in {"payment", "advance"}:
+                            raise CollectionVoidInvalid(
+                                "Choose a payment receipt to undo."
+                            )
+                        if adjustment_row is not None:
+                            raise CollectionVoidInvalid(
+                                "Extra-principal payments require Management reversal review."
+                            )
                     if transaction["is_voided"]:
+                        if collector_expected_route_revision is not None:
+                            replay = self._collector_undo_replay(
+                                cursor,
+                                transaction=transaction,
+                                actor_user_id=actor_user_id,
+                                reason=normalized_reason,
+                                expected_revision=collector_expected_route_revision,
+                            )
+                            if replay is not None:
+                                return replay
                         raise CollectionVoidConflict(
                             "This collection receipt was already voided."
                         )
@@ -243,11 +281,63 @@ class PostgresCollectionVoidRepository:
                             "This collection is already included in a remittance and cannot be voided."
                         )
 
+                    if collector_expected_route_revision is not None:
+                        if transaction["collection_date"] != collector_business_date:
+                            raise CollectionVoidConflict(
+                                "Only today's payment can be undone here. Ask Management to review older receipts."
+                            )
+                        if not correction_revision_is_current(
+                            expected_route_revision=collector_expected_route_revision,
+                            loan_id=transaction["loan_id"],
+                            state_version=int(transaction["state_version"]),
+                        ):
+                            raise CollectionVoidConflict(
+                                "The route changed. Refresh and review the receipt before undoing it."
+                            )
+
                     details = (
                         dict(transaction["details"])
                         if isinstance(transaction["details"], dict)
                         else {}
                     )
+                    if collector_expected_route_revision is not None:
+                        if transaction["current_loan_status"] not in {"active", "paid"}:
+                            raise CollectionVoidConflict(
+                                "The loan status changed. Ask Management to review this receipt."
+                            )
+                        linked = cursor.execute(
+                            """select exists(select 1 from lending.loan_installment_payment_allocations
+                               where transaction_id=%s and allocation_basis='borrower_catch_up_oldest_first') as catchup""",
+                            (transaction_id,),
+                        ).fetchone()
+                        penalty = cursor.execute(
+                            """select exists(
+                                select 1 from lending.seven_by_seven_penalty_assessments
+                                where source_transaction_id=%s
+                            ) or exists(
+                                select 1 from lending.seven_by_seven_penalty_payment_allocations
+                                where transaction_id=%s
+                            ) as protected""",
+                            (transaction_id, transaction_id),
+                        ).fetchone()
+                        if penalty is None or linked is None:
+                            raise CollectionVoidConflict(
+                                "Linked receipt records could not be verified. Refresh and retry."
+                            )
+                        if penalty["protected"]:
+                            raise CollectionVoidInvalid(
+                                "This receipt changed penalty records. Ask Management to review the linked penalty records before correction."
+                            )
+                        if linked["catchup"] or any(
+                            details.get(key)
+                            for key in (
+                                "past_due_followup",
+                                "past_due_promise_progress",
+                            )
+                        ):
+                            raise CollectionVoidInvalid(
+                                "This receipt changed a promise, Past Due record, or catch-up schedule. Ask Management to review all linked records."
+                            )
                     expected_state_version = details.get("state_version_after")
                     if expected_state_version is None or int(
                         expected_state_version
@@ -299,13 +389,13 @@ class PostgresCollectionVoidRepository:
                                 limit 1
                             ), 0) as pass_count_before,
                             (
-                                select max(cd.covered_date)
-                                from lending.collection_covered_dates cd
-                                join lending.collection_transactions previous
-                                  on previous.id = cd.transaction_id
+                                select previous.advance_until_after
+                                from lending.collection_transactions previous
                                 where previous.loan_id = %s
                                   and previous.id <> %s
                                   and previous.is_voided = false
+                                order by previous.accepted_at desc, previous.id desc
+                                limit 1
                             ) as advance_until_before,
                             (
                                 select previous.collection_date
@@ -352,6 +442,57 @@ class PostgresCollectionVoidRepository:
                     restored_advance_until = restored["advance_until_before"]
                     restored_last_payment_date = restored["last_payment_date_before"]
                     restored_note = str(restored["note_before"] or "")
+                    before = details.get("collection_state_before")
+                    if isinstance(before, dict):
+                        try:
+                            if Decimal(
+                                before["remaining_balance"]
+                            ) != restored_balance or int(
+                                before["state_version"]
+                            ) != int(details["state_version_before"]):
+                                raise ValueError("Inconsistent prior state")
+                            restored_pass_count = int(before["pass_count"])
+                            if restored_pass_count < 0:
+                                raise ValueError("Invalid missed-payment count")
+                            restored_advance_until = (
+                                date.fromisoformat(before["advance_until"])
+                                if before["advance_until"]
+                                else None
+                            )
+                            restored_last_payment_date = (
+                                date.fromisoformat(before["last_payment_date"])
+                                if before["last_payment_date"]
+                                else None
+                            )
+                            restored_note = str(before["note"])
+                        except (
+                            KeyError,
+                            TypeError,
+                            ValueError,
+                            ArithmeticError,
+                        ) as error:
+                            raise CollectionVoidConflict(
+                                "The saved prior state needs Management review."
+                            ) from error
+                    elif collector_expected_route_revision is not None:
+                        prior = cursor.execute(
+                            """select details ->> 'state_version_after' as version
+                               from lending.collection_transactions
+                               where loan_id=%s and is_voided=false
+                                 and (accepted_at,id) < (%s,%s)
+                               order by accepted_at desc,id desc limit 1""",
+                            (
+                                transaction["loan_id"],
+                                transaction["accepted_at"],
+                                transaction_id,
+                            ),
+                        ).fetchone()
+                        if not prior or prior["version"] != str(
+                            details.get("state_version_before")
+                        ):
+                            raise CollectionVoidConflict(
+                                "This older receipt has no verified prior state. Ask Management to review the correction."
+                            )
                     voided_at = datetime.now(UTC)
                     next_state_version = int(transaction["state_version"]) + 1
 
@@ -457,6 +598,10 @@ class PostgresCollectionVoidRepository:
                         )
 
                     updated_details = dict(details)
+                    if collector_expected_route_revision is not None:
+                        updated_details["collector_undo_revision"] = (
+                            collector_expected_route_revision
+                        )
                     updated_details.update(
                         {
                             "voided": True,
@@ -584,7 +729,11 @@ class PostgresCollectionVoidRepository:
                             notification_type="client_payment_voided",
                             title="Payment entry corrected",
                             message=(
-                                f"Management voided receipt {transaction['receipt_number']} "
+                                f"The payment recorder voided receipt {transaction['receipt_number']} "
+                                if collector_expected_route_revision is not None
+                                else f"Management voided receipt {transaction['receipt_number']} "
+                            )
+                            + (
                                 f"because it was posted incorrectly. Corrected remaining "
                                 f"balance PHP {restored_balance:.2f}."
                             ),
@@ -616,6 +765,41 @@ class PostgresCollectionVoidRepository:
                         )
 
         return prepared_void_record
+
+    @staticmethod
+    def _collector_undo_replay(
+        cursor, *, transaction, actor_user_id, reason, expected_revision
+    ):
+        """A receipt can be undone once; an exact lost-response retry is read-only."""
+        details = transaction["details"] or {}
+        if details.get("collector_undo_revision") != expected_revision:
+            return None
+        row = cursor.execute(
+            """select * from lending.collection_transaction_voids
+               where transaction_id=%s and voided_by_user_id=%s and reason=%s""",
+            (transaction["id"], actor_user_id, reason),
+        ).fetchone()
+        if row is None:
+            return None
+        state = row["state_after"]
+        return CollectionVoidRecord(
+            transaction_id=transaction["id"],
+            receipt_number=str(transaction["receipt_number"]),
+            client_id=transaction["client_id"],
+            client_code=str(transaction["client_code"]),
+            client_name=str(transaction["client_name"]),
+            loan_id=transaction["loan_id"],
+            collector_user_id=transaction["collector_user_id"],
+            collector_name=str(transaction["collector_name"]),
+            collection_date=transaction["collection_date"],
+            entry_type=str(transaction["entry_type"]),
+            amount=Decimal(transaction["amount"]),
+            covered_dates=tuple(row["previous_covered_dates"]),
+            restored_balance=Decimal(state["remaining_balance"]),
+            state_version=int(state["state_version"]),
+            reason=reason,
+            voided_at=row["voided_at"],
+        )
 
     @staticmethod
     def _money(value: Decimal | int | str) -> Decimal:

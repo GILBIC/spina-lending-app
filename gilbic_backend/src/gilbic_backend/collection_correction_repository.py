@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -14,7 +14,6 @@ from .collection_correction_authority import (
     correction_revision_is_current,
 )
 from .database import open_connection
-
 
 MONEY = Decimal("0.01")
 
@@ -126,9 +125,20 @@ class PostgresCollectionCorrectionRepository:
                         raise CollectionCorrectionForbidden(
                             "Only the original collector or assigned collector may correct this unlocked cross-area entry."
                         )
-                    if transaction["is_locked"] or transaction["remittance_id"] is not None:
+                    if (
+                        transaction["is_locked"]
+                        or transaction["remittance_id"] is not None
+                    ):
                         raise CollectionCorrectionLocked(
                             "This entry is already included in a remittance and cannot be edited."
+                        )
+                    if transaction["is_voided"]:
+                        raise CollectionCorrectionConflict(
+                            "This receipt has already been undone. Refresh the route."
+                        )
+                    if transaction["funding_source"] != "collector_cash":
+                        raise CollectionCorrectionForbidden(
+                            "Recipient-funded receipts require Treasury review."
                         )
                     if not correction_revision_is_current(
                         expected_route_revision=expected_route_revision,
@@ -144,10 +154,49 @@ class PostgresCollectionCorrectionRepository:
                         if isinstance(transaction["details"], dict)
                         else {}
                     )
-                    expected_state_version = details.get("state_version_after")
-                    if expected_state_version is None or int(expected_state_version) != int(
-                        transaction["state_version"]
+                    if any(
+                        details.get(key)
+                        for key in ("past_due_followup", "past_due_promise_progress")
                     ):
+                        raise CollectionCorrectionInvalid(
+                            "This receipt has linked follow-up records. Ask Management to review the correction."
+                        )
+                    if self._money(transaction["unallocated_amount"]) != Decimal(
+                        "0.00"
+                    ):
+                        raise CollectionCorrectionInvalid(
+                            "Undo and record the corrected payment so its allocation is rebuilt."
+                        )
+                    protected = cursor.execute(
+                        """select exists (
+                            select 1 from lending.loan_installment_payment_allocations where transaction_id=%s
+                        ) or exists (
+                            select 1 from accounting.regular_journal_draft_preparations where transaction_id=%s
+                        ) or exists (
+                            select 1 from accounting.seven_by_seven_journal_draft_preparations where transaction_id=%s
+                        ) as protected""",
+                        (transaction_id, transaction_id, transaction_id),
+                    ).fetchone()
+                    contract_marker = details.get("contract_schedule_allocation")
+                    if protected is None:
+                        raise CollectionCorrectionConflict(
+                            "Receipt protection could not be verified. Refresh and retry."
+                        )
+                    contract_controlled = isinstance(contract_marker, dict) and str(
+                        contract_marker.get("enabled", "")
+                    ).lower() in {"true", "1", "yes", "on"}
+                    if (
+                        protected["protected"]
+                        or contract_controlled
+                        or details.get("calculation_mode") == "seven_by_seven"
+                    ):
+                        raise CollectionCorrectionInvalid(
+                            "This receipt has protected allocations or accounting. Use Undo before recording a replacement."
+                        )
+                    expected_state_version = details.get("state_version_after")
+                    if expected_state_version is None or int(
+                        expected_state_version
+                    ) != int(transaction["state_version"]):
                         raise CollectionCorrectionConflict(
                             "The loan changed after this entry. Refresh before correcting it."
                         )
@@ -173,6 +222,7 @@ class PostgresCollectionCorrectionRepository:
                                 select previous.pass_count_after
                                 from lending.collection_transactions previous
                                 where previous.loan_id = %s
+                                  and previous.is_voided = false
                                   and (previous.accepted_at, previous.id) < (%s, %s)
                                 order by previous.accepted_at desc, previous.id desc
                                 limit 1
@@ -181,6 +231,7 @@ class PostgresCollectionCorrectionRepository:
                                 select previous.advance_until_after
                                 from lending.collection_transactions previous
                                 where previous.loan_id = %s
+                                  and previous.is_voided = false
                                   and (previous.accepted_at, previous.id) < (%s, %s)
                                 order by previous.accepted_at desc, previous.id desc
                                 limit 1
@@ -189,6 +240,7 @@ class PostgresCollectionCorrectionRepository:
                                 select max(previous.collection_date)
                                 from lending.collection_transactions previous
                                 where previous.loan_id = %s
+                                  and previous.is_voided = false
                                   and (previous.accepted_at, previous.id) < (%s, %s)
                                   and previous.entry_type <> 'pass'
                             ) as last_payment_date_before
@@ -206,6 +258,44 @@ class PostgresCollectionCorrectionRepository:
                         ),
                     )
                     before_state = cursor.fetchone()
+                    if before_state is None:
+                        raise CollectionCorrectionConflict(
+                            "The prior collection state could not be verified. Refresh and retry."
+                        )
+                    prior = details.get("collection_state_before")
+                    if not isinstance(prior, dict):
+                        prior_version = cursor.execute(
+                            """select details ->> 'state_version_after' as version
+                               from lending.collection_transactions
+                               where loan_id=%s and is_voided=false
+                                 and (accepted_at,id) < (%s,%s)
+                               order by accepted_at desc,id desc limit 1""",
+                            (
+                                transaction["loan_id"],
+                                transaction["accepted_at"],
+                                transaction_id,
+                            ),
+                        ).fetchone()
+                        if not prior_version or prior_version["version"] != str(
+                            details.get("state_version_before")
+                        ):
+                            raise CollectionCorrectionInvalid(
+                                "The prior collection state is unverified. Ask Management to review this older receipt."
+                            )
+                    if isinstance(prior, dict):
+                        before_state = {
+                            "pass_count_before": int(prior["pass_count"]),
+                            "advance_until_before": date.fromisoformat(
+                                prior["advance_until"]
+                            )
+                            if prior["advance_until"]
+                            else None,
+                            "last_payment_date_before": date.fromisoformat(
+                                prior["last_payment_date"]
+                            )
+                            if prior["last_payment_date"]
+                            else None,
+                        }
                     cursor.execute(
                         """
                         select covered_date
@@ -235,7 +325,9 @@ class PostgresCollectionCorrectionRepository:
                             raise CollectionCorrectionInvalid(
                                 "The corrected amount is higher than the balance before this entry."
                             )
-                        official_balance = self._money(previous_balance - corrected_amount)
+                        official_balance = self._money(
+                            previous_balance - corrected_amount
+                        )
                         pass_count_after = 0
                         last_payment_date_after = transaction["collection_date"]
                         advance_from = (
@@ -283,6 +375,12 @@ class PostgresCollectionCorrectionRepository:
                             "covered_dates": [
                                 value.isoformat() for value in selected_dates
                             ],
+                            "cash_received_amount": str(corrected_amount),
+                            "applied_amount": str(corrected_amount),
+                            "unallocated_amount": "0.00",
+                            "allocation_state": "not_applicable"
+                            if normalized_type == "pass"
+                            else "fully_allocated",
                         }
                     )
                     replacement_snapshot = {
@@ -343,6 +441,9 @@ class PostgresCollectionCorrectionRepository:
                         update lending.collection_transactions
                         set entry_type = %s,
                             amount = %s,
+                            applied_amount = %s,
+                            unallocated_amount = 0,
+                            allocation_state = %s,
                             advance_from = %s,
                             advance_until = %s,
                             note = %s,
@@ -358,6 +459,10 @@ class PostgresCollectionCorrectionRepository:
                         (
                             normalized_type,
                             corrected_amount,
+                            corrected_amount,
+                            "not_applicable"
+                            if normalized_type == "pass"
+                            else "fully_allocated",
                             advance_from,
                             advance_until,
                             note.strip(),
@@ -499,9 +604,7 @@ class PostgresCollectionCorrectionRepository:
                 )
             return
         if not covered_dates:
-            raise CollectionCorrectionInvalid(
-                "Choose at least one exact covered date."
-            )
+            raise CollectionCorrectionInvalid("Choose at least one exact covered date.")
 
     @staticmethod
     def _verify_dates_available(

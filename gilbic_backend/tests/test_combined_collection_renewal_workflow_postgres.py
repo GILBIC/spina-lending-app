@@ -450,7 +450,9 @@ def test_combined_regular_plus_7x7_is_atomic_and_retry_safe() -> None:
 
 
 @pytest.mark.parametrize("evidence", ["allocation", "marker", "legacy"])
-def test_route_edit_availability_matches_contract_receipt_evidence(evidence: str) -> None:
+def test_route_edit_availability_matches_contract_receipt_evidence(
+    evidence: str,
+) -> None:
     case = _setup_combined_case(verified_regular_schedule=evidence != "legacy")
     is_pass = evidence == "marker"
     with _connect() as connection:
@@ -464,9 +466,7 @@ def test_route_edit_availability_matches_contract_receipt_evidence(evidence: str
                 loan_id=str(case.regular_loan_id),
                 collection_date=date(2097, 8, 2),
                 entry_type=(
-                    CollectionEntryType.PASS
-                    if is_pass
-                    else CollectionEntryType.PAYMENT
+                    CollectionEntryType.PASS if is_pass else CollectionEntryType.PAYMENT
                 ),
                 amount=None if is_pass else Decimal("50.00"),
                 recorded_at=datetime(2097, 8, 2, 1, tzinfo=UTC),
@@ -535,16 +535,18 @@ def test_route_edit_availability_matches_contract_receipt_evidence(evidence: str
         collector_name="Synthetic Collector",
         route_date=date(2097, 8, 2),
     )
-    entry = next(
-        item for item in route.entries if item.loan_id == case.regular_loan_id
-    )
+    entry = next(item for item in route.entries if item.loan_id == case.regular_loan_id)
     assert entry.contract_schedule_verified is True
     assert entry.today_transaction_id == transaction_id
     assert entry.today_is_locked is False
     assert entry.can_edit_today is (evidence == "legacy")
     if evidence != "legacy":
-        assert "cannot be edited" in entry.collection_message
-        assert "Management" in entry.collection_message
+        if evidence == "allocation":
+            assert entry.can_undo_today is True
+            assert "undo a mistaken Pay" in entry.collection_message
+        else:
+            assert "cannot be edited" in entry.collection_message
+            assert "Management" in entry.collection_message
         # Route availability is advisory; the existing mutation guard remains
         # authoritative when a stale client still attempts the forbidden edit.
         with pytest.raises(CollectionCorrectionInvalid):
@@ -1010,8 +1012,7 @@ def test_combined_regular_extra_choice_requires_activated_signed_schedule() -> N
 
     assert response.status_code == 422
     assert (
-        response.json()["detail"]["code"]
-        == "combined_regular_extra_schedule_required"
+        response.json()["detail"]["code"] == "combined_regular_extra_schedule_required"
     )
 
 
@@ -1058,8 +1059,7 @@ def test_combined_7x7_advance_over_future_capacity_fails_during_preview() -> Non
 
     assert response.status_code == 422
     assert (
-        response.json()["detail"]["code"]
-        == "seven_by_seven_advance_capacity_exceeded"
+        response.json()["detail"]["code"] == "seven_by_seven_advance_capacity_exceeded"
     )
 
 
@@ -1098,8 +1098,9 @@ def test_combined_preview_virtually_activates_matured_partial_7x7_advance() -> N
     assert accepted.json()["data"]["total_amount"] == "75.00"
 
 
-def test_combined_rejects_when_same_day_payment_clears_7x7_before_future_advance(
-) -> None:
+def test_combined_rejects_when_same_day_payment_clears_7x7_before_future_advance() -> (
+    None
+):
     case = _setup_combined_case(verified_seven_schedule=True)
     _post_prior_seven_advance(
         case,
@@ -1122,7 +1123,9 @@ def test_combined_rejects_when_same_day_payment_clears_7x7_before_future_advance
     assert response.json()["detail"]["code"] == "combined_obligation_changed"
 
 
-def test_combined_signed_regular_schedule_fails_closed_when_posting_gate_is_off() -> None:
+def test_combined_signed_regular_schedule_fails_closed_when_posting_gate_is_off() -> (
+    None
+):
     case = _setup_combined_case(verified_regular_schedule=True)
     PostgresContractCollectionActivationRepository().deactivate(
         loan_id=case.regular_loan_id,
@@ -1303,8 +1306,9 @@ def test_combined_preview_rejects_unreconciled_or_disabled_loan_state() -> None:
     assert response.json()["detail"]["code"] == "combined_collection_not_ready"
 
 
-def test_combined_daily_fallback_does_not_double_subtract_prior_receipt_near_payoff(
-) -> None:
+def test_combined_daily_fallback_does_not_double_subtract_prior_receipt_near_payoff() -> (
+    None
+):
     case = _setup_combined_case()
     second_installation = f"prior-{uuid4().hex[:10]}"
     with _connect() as connection:
@@ -1625,10 +1629,7 @@ def test_combined_downstream_underallocation_rolls_back_every_component(
     )
 
     assert response.status_code == 422
-    assert (
-        response.json()["detail"]["code"]
-        == "combined_cash_allocation_contradiction"
-    )
+    assert response.json()["detail"]["code"] == "combined_cash_allocation_contradiction"
     with _connect() as connection:
         assert (
             connection.execute(
