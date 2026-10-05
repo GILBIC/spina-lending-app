@@ -2,6 +2,8 @@
 
 Implementation authorized by the owner on 4 October 2026: “Go do it.” The visible recent-intake list is required so staff can recognize and reopen saved cases without remembering reference numbers. This record tracks PR497; it is not production or financial-operation approval.
 
+This committed record contains reviewed local acceptance through implementation 1726c454. Final whole-branch review and required exact-head CI are recorded on [PR497](https://github.com/GILBIC/spina-lending-app/pull/497), including its dated completion checkpoint, after this evidence is committed. Those live results govern final completion; historical pending statements below retain their checkpoint boundaries. [Implementation decisions and costs](2026-10-03-office-applications-decisions.md) preserve the execution rulings.
+
 ## Baseline
 
 - Existing planning/list clarification: b5971866ab3af7004885fb281f0c3890d3e32d91.
@@ -30,6 +32,8 @@ Local working evidence is retained in `.superpowers/sdd/2026-10-03-office-applic
 ## Boundaries
 
 ### Task 8 final local acceptance — 5 October 2026
+
+Scoped independent review of cbc8d86f..1726c454 is approved with no Critical or Important finding. The reviewer independently checked source/build/test/capture hashes with zero mismatches, retained full-suite and browser assertions, and actual runner wiring. Synthetic listener warnings remain a documented minor; real backend/database CI remains required.
 
 Local verification starts from `cbc8d86f6640e45bba2d8c00a010bda0b6b692c0`. The only product asset changed by Task 8 is `spina_portal/sw.js`: cache `spina-company-shell-v29-office-applications` replaces v28 for the changed Office assets. The new service-worker test walks actual static/dynamic relative imports from both Office roles, the case coordinator, finder and Collector residence-visit entry; every dependency must exist in the shell registry. Task 8's ignored `task8-committed-source-receipt.json` binds the actual tested working-tree bytes, build, tests, capture hashes and unchanged Task 5 UI evidence to the scoped implementation commit after commit. Earlier capture timestamps/HEAD values remain their original provenance, rather than claiming every retained image was generated at the bookkeeping head.
 
