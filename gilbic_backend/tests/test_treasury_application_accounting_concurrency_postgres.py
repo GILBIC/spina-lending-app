@@ -10,7 +10,10 @@ from psycopg.rows import dict_row
 from test_financial_statement_snapshot_postgres import (
     isolated_statement_database as _isolated_statement_database,
 )
-from test_treasury_application_accounting_postgres import MIGRATION
+from test_treasury_application_accounting_postgres import (
+    MIGRATION,
+    keep_current_application_schema,
+)
 from test_treasury_receipt_accounting_postgres import install, seed
 from treasury_application_accounting_test_support import (
     additional_loan_gl,
@@ -29,8 +32,10 @@ def test_waiting_application_post_uses_current_committed_evidence(
 ):
     url = isolated_statement_database
     with psycopg.connect(url, row_factory=dict_row) as setup:
-        base = seed(setup)
-        install(setup, MIGRATION)
+        current = keep_current_application_schema(setup)
+        base = seed(setup, install_migrations=not current)
+        if not current:
+            install(setup, MIGRATION)
         f = create_application_source(
             base, monkeypatch, collection_delay=1 if winner == "earlier_source" else 0
         )

@@ -265,9 +265,7 @@ class _ProtectedAccountingPageState
       accountingCheck(row[key] == source[key]);
     }
     if (expected != null) {
-      for (final key in ['source_digest', 'application_id', 'amount']) {
-        accountingCheck(source[key] == expected[key]);
-      }
+      accountingCheck(jsonEncode(source) == jsonEncode(expected));
     }
     if (value['posting'] != null) {
       final posted = accountingObject(value['posting']);
@@ -341,6 +339,18 @@ class _ProtectedAccountingPageState
   }
 
   List<(String, String)> _applicationFacts(Map<String, dynamic> value) => [
+    (
+      'Loan product',
+      value['product_model'] == 'fixed_daily'
+          ? 'Regular daily loan'
+          : '7×7 loan',
+    ),
+    (
+      'Accounting basis',
+      value['product_model'] == 'fixed_daily'
+          ? 'Original first cash application (v1)'
+          : '7×7 retained-funds application (v1)',
+    ),
     ('Application reference', '${value['application_id']}'),
     ('Receipt reference', '${value['receipt_id']}'),
     ('Loan reference', '${value['loan_id']}'),
@@ -627,7 +637,7 @@ class _ProtectedAccountingPageState
         ] else if (_book != null && !_denied) ...[
           Text(
             _application
-                ? 'Review an existing Treasury application. Only supported single-loan 7×7 payment or advance applications with posted receipt cash evidence can proceed.'
+                ? 'Review an existing Treasury application. Supported original Regular first payments and single-loan 7×7 applications require posted receipt cash and exact loan evidence. Review the product and accounting basis below.'
                 : 'Review actual evidence for the selected cutoff. Only a supported Regular loan release-day boundary with dated allowance proof can proceed.',
           ),
           DropdownButtonFormField<String>(

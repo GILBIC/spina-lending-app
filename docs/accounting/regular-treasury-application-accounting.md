@@ -1,10 +1,12 @@
 # Regular Treasury application: first original cash boundary
 
-Migration 0155 implements the next bounded extension of 0146. The first actual
-operational fixtures have demonstrated the missing behavior against the prior
-schema. The new SQL is awaiting its PostgreSQL verification; the product-policy
-projection has passed its unit tests. This document does not claim that all
-Regular collections are supported.
+Migration 0155 implements the next bounded extension of 0146. The actual
+operational fixtures first demonstrated the missing behavior against the prior
+schema. Its first PostgreSQL run passed all six core cases, 20 boundary cases and
+three concurrency cases. One boundary exposed a missing original cash-account
+posting-role check; that check is repaired and awaiting the combined rerun.
+The product-policy projection passed its unit tests. This document does not
+claim that all Regular collections are supported.
 
 ## Supported source
 

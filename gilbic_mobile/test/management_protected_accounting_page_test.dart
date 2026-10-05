@@ -46,7 +46,9 @@ Map<String, dynamic> get source => {
   'posting_date': '2026-09-30',
   'source_digest': digest,
   'amount': '100.00',
-  'lines': [
+  'product_model': 'seven_by_seven',
+  'accounting_policy_version': 'treasury_seven_by_seven_application_v1',
+  'lines': <dynamic>[
     {
       'line_number': 1,
       'account_code': '2200',
@@ -67,6 +69,20 @@ Map<String, dynamic> get source => {
       'debit': '0.00',
       'credit': '10.00',
       'account_snapshot': {'name': 'Interest Income'},
+    },
+    {
+      'line_number': 4,
+      'account_code': '1120',
+      'debit': '10.00',
+      'credit': '0.00',
+      'account_snapshot': {'name': 'Interest Receivable'},
+    },
+    {
+      'line_number': 5,
+      'account_code': '1120',
+      'debit': '0.00',
+      'credit': '10.00',
+      'account_snapshot': {'name': 'Interest Receivable'},
     },
   ],
   'origin': {'secret': 'DO NOT DISPLAY'},
@@ -105,6 +121,88 @@ Map<String, dynamic> candidate(bool ready) => {
 };
 
 void main() {
+  testWidgets(
+    'Regular application shows reviewed product policy and retries the exact preparation before separate posting',
+    (tester) async {
+      final repo = ProtectedAccountingFixtureRepository()
+        ..applicationSource = regularApplicationSource()
+        ..failWrites = true;
+      await pump(tester, repo, ProtectedAccountingMode.applications);
+      await lookup(tester, true);
+      await tap(tester, 'protected-prepare-application');
+      expect(find.text('Regular daily loan'), findsOneWidget);
+      expect(find.text('Original first cash application (v1)'), findsOneWidget);
+      expect(find.textContaining('DO NOT DISPLAY'), findsNothing);
+      expect(repo.writes, isEmpty);
+      await tap(tester, 'protected-confirm');
+      expect(repo.writes, hasLength(1));
+      repo.failWrites = false;
+      await tap(tester, 'protected-retry');
+      expect(repo.writes, hasLength(2));
+      expect(repo.writes.first.$1, repo.writes.last.$1);
+      expect(repo.writes.first.$2, repo.writes.last.$2);
+      await tap(tester, 'protected-post-application');
+      expect(repo.writes, hasLength(2));
+      expect(find.text('Regular daily loan'), findsOneWidget);
+      await tap(tester, 'protected-confirm');
+      expect(repo.writes, hasLength(3));
+      expect(repo.writes.last.$2['confirm'], isTrue);
+    },
+  );
+  testWidgets(
+    'saved 7x7 preparation retains explicit projected policy and separate posting confirmation',
+    (tester) async {
+      final repo = ProtectedAccountingFixtureRepository();
+      repo.prep = applicationPreparation(source, requestId: id(30));
+      await pump(tester, repo, ProtectedAccountingMode.applications);
+      await lookup(tester, true);
+      await enter(tester, 'protected-reference', id(20));
+      await tap(tester, 'protected-recover');
+      await tap(tester, 'protected-post-application');
+      expect(find.text('7×7 loan'), findsOneWidget);
+      expect(find.text('7×7 retained-funds application (v1)'), findsOneWidget);
+      expect(repo.writes, isEmpty);
+      await tap(tester, 'protected-confirm');
+      expect(repo.writes, hasLength(1));
+      expect(repo.writes.single.$2['source_digest'], digest);
+      expect(repo.writes.single.$2['confirmation_token'], 'b' * 64);
+    },
+  );
+  testWidgets(
+    'preparation with a changed product policy cannot advance to posting',
+    (tester) async {
+      final repo = ProtectedAccountingFixtureRepository()
+        ..preparationSource = regularApplicationSource();
+      await pump(tester, repo, ProtectedAccountingMode.applications);
+      await lookup(tester, true);
+      await tap(tester, 'protected-prepare-application');
+      await tap(tester, 'protected-confirm');
+      expect(repo.writes, hasLength(1));
+      expect(find.byKey(const Key('protected-post-application')), findsNothing);
+      expect(find.textContaining('DO NOT DISPLAY'), findsNothing);
+      await visible(tester, 'protected-retry');
+    },
+  );
+  testWidgets(
+    'preparation with changed valid loan coordinates cannot replace the confirmed review',
+    (tester) async {
+      final changed = source;
+      final lines = changed['lines'] as List;
+      lines[1]['credit'] = '89.00';
+      lines[2]['credit'] = '11.00';
+      lines[3]['debit'] = '11.00';
+      lines[4]['credit'] = '11.00';
+      final repo = ProtectedAccountingFixtureRepository()
+        ..preparationSource = changed;
+      await pump(tester, repo, ProtectedAccountingMode.applications);
+      await lookup(tester, true);
+      await tap(tester, 'protected-prepare-application');
+      await tap(tester, 'protected-confirm');
+      expect(repo.writes, hasLength(1));
+      expect(find.byKey(const Key('protected-post-application')), findsNothing);
+      await visible(tester, 'protected-retry');
+    },
+  );
   testWidgets(
     'application accounting retains separate preparation and posting decisions without cash',
     (tester) async {
@@ -302,6 +400,8 @@ class ProtectedAccountingFixtureRepository
   bool unsupported = false, ready = true, failWrites = false;
   Completer<Map<String, dynamic>>? delayed;
   Map<String, dynamic>? prep;
+  Map<String, dynamic> applicationSource = source;
+  Map<String, dynamic>? preparationSource;
   final writes = <(String, Map<String, dynamic>)>[];
   @override
   Future<Map<String, dynamic>> read(
@@ -334,7 +434,10 @@ class ProtectedAccountingFixtureRepository
           statusCode: 409,
         );
       }
-      return delayed == null ? source : await delayed!.future;
+      return delayed == null ? applicationSource : await delayed!.future;
+    }
+    if (path.contains('/application-preparations/')) {
+      return {'preparation': prep, 'posting': null};
     }
     if (path.contains('/period-assessments/')) return candidate(ready);
     return {
@@ -359,24 +462,10 @@ class ProtectedAccountingFixtureRepository
       );
     }
     if (path.contains('/applications/')) {
-      final snapshot = {...source}..remove('source_digest');
-      prep = {
-        'id': id(20),
-        'request_id': body['request_id'],
-        for (final key in [
-          'book_id',
-          'application_id',
-          'transaction_id',
-          'receipt_id',
-          'treasury_account_id',
-          'loan_id',
-        ])
-          key: snapshot[key],
-        'source_digest': digest,
-        'snapshot': snapshot,
-        'actor_user_id': id(2),
-        'confirmation_token': 'b' * 64,
-      };
+      prep = applicationPreparation(
+        preparationSource ?? applicationSource,
+        requestId: body['request_id'] as String,
+      );
       return {'preparation': prep, 'posting': null};
     }
     if (path.endsWith('/post')) {
@@ -397,4 +486,44 @@ class ProtectedAccountingFixtureRepository
         ? {'preparation_id': id(20)}
         : {'confirmation_id': id(21)};
   }
+}
+
+Map<String, dynamic> regularApplicationSource() {
+  final value = source;
+  value['product_model'] = 'fixed_daily';
+  value['accounting_policy_version'] =
+      'treasury_regular_original_first_cash_v1';
+  for (final row in value['lines'] as List) {
+    if (row['account_code'] == '1110') {
+      row['account_code'] = '1100';
+    }
+    if (row['account_code'] == '4010') {
+      row['account_code'] = '4000';
+    }
+  }
+  return value;
+}
+
+Map<String, dynamic> applicationPreparation(
+  Map<String, dynamic> review, {
+  required String requestId,
+}) {
+  final snapshot = {...review}..remove('source_digest');
+  return {
+    'id': id(20),
+    'request_id': requestId,
+    for (final key in [
+      'book_id',
+      'application_id',
+      'transaction_id',
+      'receipt_id',
+      'treasury_account_id',
+      'loan_id',
+    ])
+      key: snapshot[key],
+    'source_digest': review['source_digest'],
+    'snapshot': snapshot,
+    'actor_user_id': id(2),
+    'confirmation_token': 'b' * 64,
+  };
 }

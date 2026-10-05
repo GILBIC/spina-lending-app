@@ -7,15 +7,15 @@ const id = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`, dige
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const book = { status: 'configured', book_id: id(1), kind: 'owner_operations', entity_label: 'Actual owner' };
 const session = { user: { id: id(2), role: 'Management', roles: ['management'] }, permissions: ['accounting.view', 'accounting.journal.manage', 'accounting.period.close.prepare', 'accounting.period.close.post'] };
-const app = () => ({ book_id: id(1), treasury_account_id: id(3), application_id: id(4), receipt_id: id(5), transaction_id: id(6), event_id: id(7), loan_id: id(8), fiscal_period_id: id(9), posting_date: '2026-09-30', source_digest: digest, amount: '100.00', lines: [{ line_number: 1, account_code: '2200', debit: '100.00', credit: '0.00', account_snapshot: { name: 'Unapplied Borrower Funds' } }, { line_number: 2, account_code: '1110', debit: '0.00', credit: '90.00', account_snapshot: { name: 'Loans Receivable' } }, { line_number: 3, account_code: '4010', debit: '0.00', credit: '10.00', account_snapshot: { name: 'Interest Income' } }], origin: { secret: 'DO NOT DISPLAY' } });
+const app = (regular = false) => ({ book_id: id(1), treasury_account_id: id(3), application_id: id(4), receipt_id: id(5), transaction_id: id(6), event_id: id(7), loan_id: id(8), fiscal_period_id: id(9), posting_date: '2026-09-30', source_digest: digest, amount: '100.00', product_model: regular ? 'fixed_daily' : 'seven_by_seven', accounting_policy_version: regular ? 'treasury_regular_original_first_cash_v1' : 'treasury_seven_by_seven_application_v1', lines: [{ line_number: 1, account_code: '2200', debit: '100.00', credit: '0.00', account_snapshot: { name: 'Unapplied Borrower Funds' } }, { line_number: 2, account_code: regular ? '1100' : '1110', debit: '0.00', credit: '90.00', account_snapshot: { name: 'Loans Receivable' } }, { line_number: 3, account_code: regular ? '4000' : '4010', debit: '0.00', credit: '10.00', account_snapshot: { name: 'Interest Income' } }, { line_number: 4, account_code: '1120', debit: '10.00', credit: '0.00', account_snapshot: { name: 'Accrued interest' } }, { line_number: 5, account_code: '1120', debit: '0.00', credit: '10.00', account_snapshot: { name: 'Accrued interest' } }], origin: { secret: 'DO NOT DISPLAY' } });
 const candidate = (ready = true) => ({ book, period_id: id(9), loan_id: id(8), ready, blockers: ready ? [] : ['elapsed_eir_boundary_adapter_required'], source_digest: ready ? digest : null, current_confirmation: false, preparation_id: null, confirmation_id: null, cutoff_date: ready ? '2026-09-30' : null, policy_version: ready ? 'regular_release_day_cutoff_assessment_v1' : null, measurement: ready ? { id: id(10), date: '2026-09-30', version: 1, calculation_digest: digest, ecl_amount: '4.00' } : null, balances: ready ? { '1100': '100.00', '1110': '0.00', '1120': '0.00', '1190': '4.00' } : null, boundary: ready ? { anchor_date: '2026-09-30', release_source_key: 'loan-release:actual' } : null, comprehensive_source_coverage: false });
-function fixture({ ready = true, blocked = false } = {}) {
+function fixture({ ready = true, blocked = false, regular = false } = {}) {
   const writes = []; let prep;
   return { writes, async request(path, options = {}) {
     if (path.endsWith('/book')) return { book };
     if (path.endsWith('/workspace')) return { contract_version: 1, actor: { user_id: id(2), device_id: 'device' }, enabled: true, owner_configured: true, accounts: [{ id: id(3), alias: 'Authorized wallet', kind: 'gcash', balance: {}, actions: [] }], claims: [], capabilities: {}, blockers: [] };
-    if (options.method === 'POST') { writes.push({ path, body: structuredClone(options.body) }); if (path.includes('/applications/')) { const { source_digest, ...snapshot } = app(); prep = { id: id(20), request_id: options.body.request_id, ...Object.fromEntries(['book_id', 'application_id', 'transaction_id', 'receipt_id', 'treasury_account_id', 'loan_id'].map((key) => [key, snapshot[key]])), source_digest, snapshot, actor_user_id: id(2), confirmation_token: 'b'.repeat(64) }; return { preparation: prep, posting: null }; } if (path.endsWith('/post')) return { preparation: prep, journal_entry_id: id(21), posting: { ...prep, preparation_id: prep.id, journal_entry_id: id(21), event_id: id(7), exact_posted: true, correction_pending: false } }; return path.endsWith('/prepare') ? { preparation_id: id(20) } : { confirmation_id: id(21) }; }
-    if (path.endsWith('/review')) { if (blocked) throw Error('Regular loan application accounting is not supported.'); return app(); }
+    if (options.method === 'POST') { writes.push({ path, body: structuredClone(options.body) }); if (path.includes('/applications/')) { const { source_digest, ...snapshot } = app(regular); prep = { id: id(20), request_id: options.body.request_id, ...Object.fromEntries(['book_id', 'application_id', 'transaction_id', 'receipt_id', 'treasury_account_id', 'loan_id'].map((key) => [key, snapshot[key]])), source_digest, snapshot, actor_user_id: id(2), confirmation_token: 'b'.repeat(64) }; return { preparation: prep, posting: null }; } if (path.endsWith('/post')) return { preparation: prep, journal_entry_id: id(21), posting: { ...prep, preparation_id: prep.id, journal_entry_id: id(21), event_id: id(7), exact_posted: true, correction_pending: false } }; return path.endsWith('/prepare') ? { preparation_id: id(20) } : { confirmation_id: id(21) }; }
+    if (path.endsWith('/review')) { if (blocked) throw Error('Regular loan application accounting is not supported.'); return app(regular); }
     if (path.includes('/period-assessments/')) return candidate(ready);
     return { fiscal_periods: [{ period_id: id(9), label: 'September' }] };
   } };
@@ -68,4 +68,35 @@ test('permissions changing during application review erase loaded private wallet
   assert.equal(root.querySelector('[data-source-lookup]'), null);
   assert.equal(root.querySelector('[data-prepare-application]'), null);
   assert.equal(api.writes.length, 0);
+});
+
+test('Regular review retains its original-contract basis and retries the same preparation request', async () => {
+  const root = new Element(), api = fixture({ regular: true }), original = api.request.bind(api); let lost = false;
+  api.request = async (path, options = {}) => {
+    const result = await original(path, options);
+    if (!lost && options.method === 'POST' && path.includes('/applications/')) { lost = true; throw Error('Response lost'); }
+    return result;
+  };
+  await mountProtectedAccounting({ root, api, session, mode: 'applications' }); await lookup(root, 'applications');
+  assert.match(root.textContent, /Original contract, first cash payment/);
+  assert.doesNotMatch(root.textContent, /DO NOT DISPLAY/);
+  fire(root.querySelector('[data-prepare-application]'), 'click'); await tick(); fire(root.querySelector('[data-confirm]'), 'click'); await tick(); await tick();
+  fire(root.querySelector('[data-retry]'), 'click'); await tick(); await tick();
+  assert.equal(api.writes.length, 2); assert.deepEqual(api.writes[0], api.writes[1]);
+  fire(root.querySelector('[data-post-application]'), 'click'); await tick(); fire(root.querySelector('[data-confirm]'), 'click'); await tick(); await tick();
+  assert.equal(api.writes.length, 3); assert.match(root.textContent, /Application accounting posted/);
+});
+
+test('a preparation cannot substitute another valid product policy behind the reviewed digest', async () => {
+  const root = new Element(), api = fixture(), original = api.request.bind(api);
+  api.request = async (path, options = {}) => {
+    const result = await original(path, options);
+    if (options.method === 'POST' && path.includes('/applications/')) {
+      const { source_digest, ...snapshot } = app(true); result.preparation.snapshot = snapshot;
+    }
+    return result;
+  };
+  await mountProtectedAccounting({ root, api, session, mode: 'applications' }); await lookup(root, 'applications');
+  fire(root.querySelector('[data-prepare-application]'), 'click'); await tick(); fire(root.querySelector('[data-confirm]'), 'click'); await tick(); await tick();
+  assert.equal(root.querySelector('[data-post-application]'), null); assert.equal(api.writes.length, 1);
 });

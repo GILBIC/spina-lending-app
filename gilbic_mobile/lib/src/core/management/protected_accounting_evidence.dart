@@ -26,33 +26,52 @@ Map<String, dynamic> validateApplicationAccounting(
         accountingDigest(value['source_digest']),
   );
   TreasuryMoney(value['amount'], positive: true);
+  final regular =
+      value['product_model'] == 'fixed_daily' &&
+      value['accounting_policy_version'] ==
+          'treasury_regular_original_first_cash_v1';
+  final seven =
+      value['product_model'] == 'seven_by_seven' &&
+      value['accounting_policy_version'] ==
+          'treasury_seven_by_seven_application_v1';
+  accountingCheck(regular || seven);
+  final principal = regular ? '1100' : '1110';
+  final income = regular ? '4000' : '4010';
   final lines = accountingRows(value['lines']);
   accountingCheck(lines.length >= 2 && lines.length <= 5);
+  final lineNumbers = <int>{};
+  final coordinates = <String, BigInt>{};
   var balance = BigInt.zero;
   for (final row in lines) {
     accountingCheck(
       row['line_number'] is int &&
           (row['line_number'] as int) > 0 &&
-          ['2200', '1110', '1120', '4010'].contains(row['account_code']) &&
+          lineNumbers.add(row['line_number'] as int) &&
+          ['2200', principal, '1120', income].contains(row['account_code']) &&
           accountingObject(row['account_snapshot'])['name'] is String,
     );
     TreasuryMoney(row['debit']);
     TreasuryMoney(row['credit']);
-    balance +=
-        BigInt.parse((row['debit'] as String).replaceAll('.', '')) -
-        BigInt.parse((row['credit'] as String).replaceAll('.', ''));
+    final debit = BigInt.parse((row['debit'] as String).replaceAll('.', ''));
+    final credit = BigInt.parse((row['credit'] as String).replaceAll('.', ''));
+    accountingCheck((debit > BigInt.zero) != (credit > BigInt.zero));
+    final code = row['account_code'] as String;
+    final coordinate = '$code:${debit > BigInt.zero ? 'debit' : 'credit'}';
+    accountingCheck(
+      !coordinates.containsKey(coordinate) &&
+          (code != '2200' || credit == BigInt.zero) &&
+          (code != principal && code != income || debit == BigInt.zero),
+    );
+    coordinates[coordinate] = debit + credit;
+    balance += debit - credit;
   }
+  BigInt amountAt(String coordinate) => coordinates[coordinate] ?? BigInt.zero;
+  final amount = BigInt.parse((value['amount'] as String).replaceAll('.', ''));
   accountingCheck(
     balance == BigInt.zero &&
-        lines
-                .where(
-                  (row) =>
-                      row['account_code'] == '2200' &&
-                      row['debit'] == value['amount'] &&
-                      row['credit'] == '0.00',
-                )
-                .length ==
-            1,
+        amountAt('2200:debit') == amount &&
+        amountAt('1120:debit') == amountAt('$income:credit') &&
+        amountAt('$principal:credit') + amountAt('1120:credit') == amount,
   );
   return accountingObject(
     immutableTreasury({
@@ -68,6 +87,8 @@ Map<String, dynamic> validateApplicationAccounting(
         'posting_date',
         'source_digest',
         'amount',
+        'product_model',
+        'accounting_policy_version',
       ]),
       'lines': lines
           .map(

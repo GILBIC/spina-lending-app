@@ -36,7 +36,11 @@ def _seed(conn, *, elapsed_days=7):
         is None
     ):
         install_composition(conn)
-    if MIGRATION.exists() and os.getenv("SPINA_ELAPSED_ASSESSMENT_BASELINE") != "1":
+    if (
+        MIGRATION.exists()
+        and os.getenv("SPINA_ELAPSED_ASSESSMENT_BASELINE") != "1"
+        and int(os.getenv("SPINA_CURRENT_SCHEMA_THROUGH", "153")) < 155
+    ):
         source = MIGRATION.read_text(encoding="utf-8").strip()
         assert source.startswith("BEGIN;") and source.endswith("COMMIT;")
         conn.execute(source[len("BEGIN;") : -len("COMMIT;")])

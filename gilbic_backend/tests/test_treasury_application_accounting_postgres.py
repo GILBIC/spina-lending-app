@@ -16,13 +16,27 @@ MIGRATION = (
 )
 
 
+def keep_current_application_schema(conn):
+    """A latest-schema verifier must exercise155, not silently reinstall146."""
+    current = int(os.getenv("SPINA_CURRENT_SCHEMA_THROUGH", "0")) >= 155
+    if current:
+        row = conn.execute(
+            "SELECT to_regprocedure('accounting.treasury_regular_application_coordinates(uuid)') IS NOT NULL "
+            "AND position('treasury_regular_application_coordinates' IN pg_get_functiondef("
+            "'accounting.treasury_application_coordinates(uuid)'::regprocedure))>0 AS dispatched"
+        ).fetchone()
+        assert row["dispatched"], "Latest-schema tests require the intact155 dispatcher"
+    return current
+
+
 @pytest.fixture
 def application_db():
     assert os.getenv("SPINA_ALLOW_DISPOSABLE_DATABASE") == "1"
     with connect() as conn:
         try:
-            fixture = seed(conn)
-            if MIGRATION.exists():
+            current = keep_current_application_schema(conn)
+            fixture = seed(conn, install_migrations=not current)
+            if not current and MIGRATION.exists():
                 install(conn, MIGRATION)
             yield fixture
         finally:
