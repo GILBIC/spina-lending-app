@@ -127,10 +127,12 @@ Task 4 scoped review approved through 2513fa10. Its registered-owner lifecycle i
 **Consumes:** Working S1–S3 markup and registered case context.
 **Produces:** Readable entry/editor layouts at desktop, intermediate and phone widths.
 
-- [ ] Capture failing/awkward baseline entry states at 997×857 and 1024px, including wrapped task/stage labels. Add layout assertions for overflow, visible selected-case identity and reachable primary controls.
-- [ ] Apply scoped spacing, restrained borders, compact task navigation and a deliberate four-column/2×2 stage layout. Keep six Management groups, readable inputs and focus. Adjust the sidebar only when measurement justifies it; then verify all role shells.
-- [ ] Build with `node tools/build_portal.mjs` and inspect actual browser layouts at 1440/1280/1024/997/768/390/320, 200% zoom, keyboard and reduced motion. Include long names/references and error/blocker messages. Do not accept a hidden panel screenshot as visible-destination evidence.
-- [ ] Run layout/role tests and commit `style: simplify Office applications entry and intermediate layouts` with dated synthetic captures.
+- [x] Capture failing/awkward baseline entry states at 997×857 and 1024px, including wrapped task/stage labels. Add layout assertions for overflow, visible selected-case identity and reachable primary controls.
+- [x] Apply scoped spacing, restrained borders, compact task navigation and a deliberate four-column/2×2 stage layout. Keep six Management groups, readable inputs and focus. Adjust the sidebar only when measurement justifies it; then verify all role shells.
+- [x] Build with `node tools/build_portal.mjs` and inspect actual browser layouts at 1440/1280/1024/997/768/390/320, 200% zoom, keyboard and reduced motion. Include long names/references and error/blocker messages. Do not accept a hidden panel screenshot as visible-destination evidence.
+- [x] Run layout/role tests and commit `style: simplify Office applications entry and intermediate layouts` with dated synthetic captures.
+
+Task 5 scoped review approved at f5a071be. The 146-test relevant suite, 281 module checks, seven-width actual built-role matrix and corrected native 200% zoom/keyboard/reduced-motion evidence pass. Blank Playwright zoom captures were rejected; visible CDP viewport captures and source hashes are retained. Task 7 return focus is closed. Full PWA/integrated acceptance remains Task 8.
 
 ## Task 6 — Add protected intake search and application-list reads
 
@@ -159,7 +161,7 @@ Task 4 scoped review approved through 2513fa10. Its registered-owner lifecycle i
 - [x] Preserve in-memory query/page on returning to the finder, with Clear search independent of Close case. Failure of a later page leaves prior authorized rows with a clear incomplete/read-failed notice; denial clears everything. Clear private results on disposal and mark panels private for existing screen-viewing controls.
 - [x] Run finder, case safety, both role and real-browser tests; commit `feat: find and resume exact Office applications`.
 
-Task 7 scoped quality review approved at bf0e74fe with no blocking finding. Its minor S1 return-focus mismatch after accepting an application is explicitly assigned to Task 5 and remains required before final acceptance. Listener-warning attribution and historical RED provenance limits are recorded in the acceptance ledger.
+Task 7 scoped quality review approved at bf0e74fe with no blocking finding. Its minor S1 return-focus mismatch after accepting an application was repaired and independently verified by Task 5 at f5a071be. Listener-warning attribution and historical RED provenance limits are recorded in the acceptance ledger.
 
 ## Task 8 — Complete whole-flow browser, regression and PWA acceptance
 
