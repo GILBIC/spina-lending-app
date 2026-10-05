@@ -113,7 +113,7 @@ export function mountOfficeEvidenceCapture({
       } else { uncertain = wasUncertain || !error?.beforeWrite && ![400,404,413,415,422].includes(error?.status); fail(error); }
     } finally {
       busy = false;
-      const submit = root.querySelector('button[type="submit"]'); if (submit && context) {submit.disabled = false;submit.textContent=uncertain?'Retry original signed evidence':'Save signed review evidence';}
+      const submit = root.querySelector('button[type="submit"]'); if (submit && context) {submit.disabled = false;submit.textContent=uncertain?'Retry original signed evidence':'Save signature';}
       for(const input of root.querySelectorAll('input'))input.disabled=uncertain;
       signatureInput?.setDisabled(uncertain);
     }
@@ -133,7 +133,7 @@ export function mountOfficeEvidenceCapture({
         <div data-office-signature></div>
         <label>Signed review scan <input name="signedScan" type="file" accept="application/pdf,image/png,image/jpeg" required /></label>
         <label><input name="witnessed" type="checkbox" required /> I witnessed the applicant sign this exact review.</label>
-        <button class="button button-primary" type="submit">Save signed review evidence</button>
+        <button class="button button-primary" type="submit">Save signature</button>
       </form><div data-capture-status role="status" aria-live="polite"></div>`;
       signatureInput = mountOfficeSignatureInput({root:root.querySelector('[data-office-signature]'),fileInput:root.querySelector('[name="signedScan"]'),onChange:()=>{const witness=root.querySelector('[name="witnessed"]');if(witness)witness.checked=false;edited();}});
       listen(root.querySelector('form'), 'submit', capture);

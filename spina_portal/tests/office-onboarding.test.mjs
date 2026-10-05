@@ -8,6 +8,15 @@ const APPLICANT = '11111111-1111-4111-8111-111111111111';
 const CLIENT = '22222222-2222-4222-8222-222222222222';
 const REFERENCE = 'Office / MiXeD Case';
 const REVIEW = 'client_onboarding.requirement.review';
+test('eligible intake continues the verified case to CIF without trusting edited lookup text',async()=>{
+ const h=harness(),chosen=[];h.case.status='eligible_for_cif';h.case.client_id=CLIENT;
+ h.onContinueCif=value=>chosen.push(value);const dispose=await mount(h);await open(h);
+ assert.equal(h.root.querySelector('[data-intake-lookup]').getAttribute('open'),null,'a selected intake tucks away the reference lookup');
+ const next=h.root.querySelector('[data-continue-cif]');assert.ok(next,'eligible intake needs a direct CIF handoff');
+ enter(h,'applicationReference','UNVERIFIED-CANDIDATE');fire(next,'click');await setImmediate();
+ assert.equal(chosen[0].intakeReference,REFERENCE);assert.equal(chosen[0].clientId,CLIENT);
+ assert.equal(writeCalls(h).length,0);dispose();fire(next,'click');assert.equal(chosen.length,1);
+});
 const VISIT = 'client_onboarding.visit.record';
 const BYPASS = 'client_onboarding.bypass';
 

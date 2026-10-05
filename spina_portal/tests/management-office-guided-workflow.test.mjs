@@ -22,6 +22,32 @@ function response(path) {
   return {};
 }
 
+test('Continue to CIF opens the selected intake with reads only and keeps the application picker out of the way',async()=>{
+ const root=new ManagementElement(),controller=new AbortController(),calls=[];
+ const clientId='22222222-2222-4222-8222-222222222222',cifVersionId='33333333-3333-4333-8333-333333333333';
+ try {
+  const tasks=await mountManagementWorkspace({root,signal:controller.signal,setNavigation(){},activateNavigation(){},
+   session:{user:{role:'management'},permissions:['client_onboarding.requirement.review']},
+   sessionStore:{deviceId:()=> 'synthetic-device',nextDeviceSequence:()=>1},
+   api:{async request(path,options={}){calls.push({path,options});
+    if(path.endsWith('/cif-client'))return {application_reference:'INTAKE-123',client_id:clientId};
+    if(path.includes('/cif/review-summary'))return {client_id:clientId,cif_version_id:cifVersionId,version_number:1,status:'draft',review_scope:'cif_information_only',full_name:'Synthetic applicant',phone_number:'00000000000',email:null,present_address:'Synthetic address'};
+    if(path.endsWith('/case'))return {...response(path),status:'eligible_for_cif',client_id:clientId};
+    return response(path);
+   }}});
+  await tasks.activate('management-clients-loans','management-office');
+  const intake=root.querySelector('[data-office-onboarding]');intake.querySelector('[name="applicationReference"]').value='INTAKE-123';
+  fire(intake.querySelector('[data-case-lookup]'),'submit');await setImmediate();
+  const next=intake.querySelector('[data-continue-cif]');assert.ok(next);
+  fire(next,'click');await setImmediate();await setImmediate();
+  assert.equal(root.querySelector('[data-office-step="cif"]').getAttribute('hidden'),null);
+  assert.match(root.querySelector('[data-office-cif-review]').textContent,/Synthetic applicant/);
+  assert.equal(root.querySelector('[data-cif-lookup]').getAttribute('open'),null);
+  assert.equal(root.querySelector('[data-application-panel]').getAttribute('hidden'),'');
+  assert.equal(calls.some(call=>call.options.method&&call.options.method!=='GET'),false);
+ }finally{controller.abort();}
+});
+
 test('Management office workflow carries verified identity while lookup and application text stay candidates', async () => {
   const root = new ManagementElement();
   root.dataset = {};

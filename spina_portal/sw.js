@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v30-office-signatures';
+const CACHE_NAME = 'spina-company-shell-v31-office-usability';
 const SHELL_ASSETS = [
   '/',
   '/index.html',

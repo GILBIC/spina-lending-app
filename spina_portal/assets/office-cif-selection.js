@@ -174,6 +174,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
       let establishedCif = Boolean(initialReview);
       let correctionActive = false;
       input.value = selection.application_reference;
+      root.querySelector('[data-cif-lookup]').removeAttribute('open');
       onContextChange?.(coordinator.getContext());
       statusRoot.innerHTML = '';
       const savedRecovery = (description, reload) => {
@@ -245,6 +246,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
       const refreshReview = async (first = false) => {
         if (disposed || currentRequest !== request) return;
         workflowCleanup?.(); workflowCleanup = null;
+        root.querySelector('[data-cif-saved-details]').setAttribute('open','');
         const generation = coordinator.getGeneration();
         const value = await mountOfficeCifReview({ root: reviewRoot, api, session, clientId: selection.client_id, onUnavailable: offerFirstDraft,
           ...(first === true ? {initialReview,initialError} : {}), onAccessDenied:denyAccess });
@@ -253,7 +255,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
           selectedReview = value;
           coordinator.acceptVerifiedContext(contextFor(selection,value),generation);
           workflowCleanup = mountOfficeCifWorkflow({ root: workflowRoot, api, session, clientId: selection.client_id, signal,
-            onChanged: refreshReview, onAccessDenied: denyAccess, onDraftChange:edited });
+            onChanged: refreshReview, onOpened:()=>root.querySelector('[data-cif-saved-details]').removeAttribute('open'), onAccessDenied: denyAccess, onDraftChange:edited });
         }
         return value;
       };
@@ -307,7 +309,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
     return dispose;
   }
 
-  root.innerHTML = `<p class="meta">Enter the reference recorded during office intake.</p>
+  root.innerHTML = `<details class="office-reference-lookup" data-cif-lookup open><summary>Find a CIF by intake reference</summary><p class="meta">Enter the reference recorded during office intake.</p>
   <form class="entry-form">
     <label>Office intake reference
       <input name="applicationReference" type="text" autocomplete="off" required />
@@ -317,9 +319,9 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
       <button class="button button-outline" type="button" data-clear-cif-search>Clear search</button>
       <button class="button button-outline" type="button" data-close-cif-case>Close case</button>
     </div>
-  </form>
+  </form></details>
   <div data-office-cif-status role="status" aria-live="polite"></div>
-  <div data-office-cif-review aria-live="polite"></div>
+  <details class="office-cif-saved-details" data-cif-saved-details open><summary>Saved CIF details</summary><div data-office-cif-review aria-live="polite"></div></details>
   <div data-office-cif-correction aria-live="polite"></div>
   <div data-office-cif-workflow aria-live="polite"></div>`;
 
@@ -337,7 +339,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   root.querySelector('[data-close-cif-case]').addEventListener('click', closeCase);
   const handle = {getContext:()=>!disposed && selected ? contextFor(selected,selectedReview) : null, isDirty, getRevision:()=>revision, isWritePending, isUncertain,
     openCase:reference => { if(disposed)return false;input.value=reference; return openReview({preventDefault(){}}); },
-    resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false; invalidate(); input.value=''; return true;},
+    resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false; invalidate(); input.value=''; root.querySelector('[data-cif-lookup]').setAttribute('open',''); return true;},
     refreshReadOnly:()=>{if(beginUncertain)return recoverBegin?.()??false;if(correctionCleanup?.isUncertain?.())return correctionCleanup.refreshReadOnly();if(isDirty() || isWritePending() || isUncertain() || !selected)return false; return handle.openCase(selected.application_reference);}, dispose};
   registerHandle?.(handle); if (ownsCoordinator) coordinator.registerStage('cif',handle);
   return dispose;

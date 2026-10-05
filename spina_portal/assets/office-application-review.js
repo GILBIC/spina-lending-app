@@ -519,7 +519,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
   root.innerHTML = `<form class="entry-form">
     <label>Office intake reference<input name="intakeReference" type="text" autocomplete="off" required /></label>
     <label>Loan application reference<input name="applicationReference" type="text" autocomplete="off" placeholder="Automatic for a new application" required /><span class="meta">Leave blank for New application. Enter a reference only to open an existing application.</span></label>
-    <div class="action-row"><button class="button button-primary" type="submit">Open application review</button><button class="button button-outline" type="button">Clear</button><button class="button button-outline" type="button" data-new-application>New application</button></div>
+    <div class="action-row"><button class="button button-outline" type="submit">Open application review</button><button class="button button-outline" type="button">Clear</button><button class="button button-primary" type="button" data-new-application>New application</button></div>
   </form>
   <div data-application-review-status role="status" aria-live="polite"></div>
   <div data-application-review-information aria-live="polite"></div>
