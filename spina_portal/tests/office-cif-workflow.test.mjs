@@ -49,6 +49,32 @@ test('Management activation and provider result explicitly bind the selected ver
 test('nonoffice mount exposes no actions or source requests',()=>{
  const h=harness('collector');mountOfficeCifWorkflow(h.options);assert.equal(h.root.querySelector('button'),null);assert.equal(h.calls.length,0);
 });
+test('CIF checklist changes visible tasks without replacing private drafts or confirming implicitly',async()=>{
+ const h=harness('management');const dispose=mountOfficeCifWorkflow(h.options);
+ fire(h.root.querySelector('[data-open-cif-workflow]'),'click');await setImmediate();
+ const details=h.root.querySelector('[data-cif-task="details"]'),signature=h.root.querySelector('[data-cif-task="signature"]');
+ assert.ok(details,'details must be an explicit checklist task');assert.equal(details.getAttribute('open'),'');
+ const file=h.root.querySelector('[name="signedScan"]');file.files=[{type:'application/pdf',size:48}];
+ h.root.querySelector('[name="providerReference"]').value='UNSENT-VERIFICATION';
+ fire(h.root.querySelector('[data-cif-next="signature"]'),'click');
+ assert.equal(details.getAttribute('open'),null);assert.equal(signature.getAttribute('open'),'');
+ assert.match(signature.textContent,/Synthetic town/,'the exact identity facts stay visible beside signing');
+ assert.equal(h.root.querySelector('[name="signedScan"]'),file);assert.equal(file.files.length,1);
+ assert.equal(h.root.querySelector('[name="providerReference"]').value,'UNSENT-VERIFICATION');
+ assert.equal(h.calls.some(call=>call.options.method),false,'moving through the checklist only changes presentation');
+ assert.equal(h.root.querySelector('[data-confirm-cif]').disabled,true);dispose();
+});
+for(const valid of [true,false])test(`signature task advances only after an exact confirmed response: ${valid}`,async()=>{
+ const h=harness(),request=h.options.api.request;
+ h.options.api.request=async(path,options)=>path.endsWith('review-confirmations')&&!valid?{client_id:'different-client',cif_version_id:cifVersionId,review_confirmation_id:evidenceId}:request(path,options);
+ const dispose=mountOfficeCifWorkflow(h.options);fire(h.root.querySelector('[data-open-cif-workflow]'),'click');await setImmediate();
+ fire(h.root.querySelector('[data-cif-next="signature"]'),'click');
+ h.root.querySelector('[name="signedScan"]').files=[{type:'application/pdf',size:48}];h.root.querySelector('[name="witnessed"]').checked=true;
+ fire(h.root.querySelector('[data-signed-cif]').querySelector('form'),'submit');await setImmediate();
+ fire(h.root.querySelector('[data-confirm-cif]'),'click');await setImmediate();
+ assert.equal(h.root.querySelector('[data-cif-task="privacy"]').getAttribute('open'),valid?'':null);
+ assert.equal(h.root.querySelector('[data-cif-task="signature"]').getAttribute('data-complete'),valid?'true':null);dispose();
+});
 for(const mismatch of ['changed facts','missing identity','wrong scope','missing snapshot'])test(`CIF signing fails closed when context has ${mismatch}`,async()=>{
  const snapshot={schema_version:1,scope:'cif_information_review',client_id:clientId,cif_version_id:cifVersionId,information:structuredClone(information)};
  if(mismatch==='changed facts')snapshot.information.phone_number='09999999999';

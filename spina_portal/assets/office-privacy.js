@@ -27,7 +27,7 @@ function validAcknowledgment(value, clientId, cifVersionId) {
     && ['notice', 'consent'].every(kind => validDocument({ version: value[`${kind}_version`], sha256: value[`${kind}_sha256`] }));
 }
 
-export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, signal, onDraftChange, onAccessDenied}) {
+export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, signal, onDraftChange, onAccessDenied, onRecorded}) {
   mounts.get(root)?.();
   let disposed = false;
   let generation = 0;
@@ -188,6 +188,7 @@ export function mountOfficePrivacy({root, api, session, clientId, cifVersionId, 
     savedOptional = operation.optional; optional.checked = savedOptional;
     uncertain = false; operation = null; invalidate();
     status.textContent = 'Privacy acknowledgment recorded. Load the current record to review it.';
+    onRecorded?.();
   }
   function recovery(message) {
     status.innerHTML = `<p>${escapeHtml(message)}</p><p>Reconcile before another attempt. The original signed File, choice and request are retained. Load checks the original record; Retry repeats only that exact operation.</p><button type="button" data-privacy-retry>Retry original privacy acknowledgment</button>`;

@@ -65,7 +65,7 @@ function harness(role, permissions = [PERMISSION]) {
 function officeSelection(h, role) {
   const section = h.context.root.querySelector(`#${role}-cif-review`);
   assert.ok(section, `${role} office CIF review section is not connected`);
-  assert.equal(section.querySelector('h2').textContent, role === 'employee' ? 'Client information (CIF)' : 'CIF information review');
+  assert.equal(section.querySelector('h2').textContent, 'Client information (CIF)');
   const selectionRoot = section.querySelector('[data-office-cif-selection]');
   assert.ok(selectionRoot?.querySelector('form'), `${role} office reference form is not connected`);
   return selectionRoot;

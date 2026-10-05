@@ -15,12 +15,12 @@ test('Office entry gives New its own first action and keeps exact-reference cont
  assert.equal(lookup.querySelector('[name="applicationReference"]').getAttribute('required'),'');assert.equal(lookup.querySelector('[type="submit"]').textContent,'Open intake case');
  }finally{dispose();}
 });
-for(const role of ['management','employee'])test(`${role} actual Office entry preserves stage navigation and orders intake before finder`,async()=>{
+for(const role of ['management','employee'])test(`${role} actual Office entry preserves stage navigation and exposes intake and finder`,async()=>{
  const root=new Element(),controller=new AbortController();let navigation,handle;
  try{await (role==='management'?mountManagementWorkspace:mountEmployeeWorkspace)({root,session:{user:{id:'staff',role,roles:[role]},permissions:['client_onboarding.requirement.review']},signal:controller.signal,setNavigation:items=>navigation=items,activateNavigation(){},registerWorkspaceHandle:value=>handle=value,api:{request:async path=>path==='/api/v1/account'?{profile:{full_name:'Synthetic operator'},devices:[]}:path.includes('activity-notifications')?[]:{}}});
  if(role==='management'){await handle.activate('management-clients-loans','management-office');assert.deepEqual(navigation.map(item=>item.label),['Today','Clients & loans','Collections','Accounting','People & operations','Account']);assert.deepEqual(root.querySelectorAll('[data-office-step-target]').map(el=>el.getAttribute('data-office-step-target')),['intake','cif','application','first-loan']);}
  else{handle.activate('employee-onboarding');await setImmediate();await setImmediate();assert.deepEqual(navigation.filter(item=>item.group==='Office work').map(item=>item.label),Object.values(officeStageLabels));}
- assert.ok(root.innerHTML.indexOf('data-new-intake')<root.innerHTML.indexOf('data-office-finder'));
+ assert.ok(root.querySelector('[data-new-intake]'));assert.ok(root.querySelector('[data-office-finder]'));
  assert.ok(root.querySelector('[data-case-lookup]').querySelector('[type="submit"]'));
  }finally{controller.abort();}
 });

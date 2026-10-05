@@ -47,7 +47,7 @@ function harness(options = {}) {
     h.coordinator=createOfficeCaseContext({getSession:()=>h.currentSession});
     h.api=bindOfficeWriteOwner(h.api,{},h.coordinator);
   }
-  h.dispose = mountOfficePrivacy(h);
+  h.dispose = mountOfficePrivacy({...h,onRecorded:options.onRecorded});
   h.coordinator?.registerStage('cif',h.dispose);
   return h;
 }
@@ -55,6 +55,15 @@ function field(h, name) { return h.root.querySelector(`[name="${name}"]`); }
 function button(h, name) { return h.root.querySelector(`[data-privacy-${name}]`); }
 function choose(h) { field(h, 'signedPrivacyScan').files = [PDF]; field(h, 'signedPrivacyScan').value = 'private-scan.pdf'; field(h, 'witnessedPrivacySignature').checked = true; }
 function submit(h) { fire(h.root.querySelector('form'), 'submit'); }
+
+test('privacy completion is published only after the exact acknowledgment is verified',async()=>{
+ for(const valid of [true,false]){
+  let completed=0;const h=harness({onRecorded:()=>completed++});await setImmediate();
+  assert.equal(completed,0);
+  h.response=(path,request)=>path.endsWith('/privacy/acknowledgments')?{...acknowledgment(request.body.optional_service_communications),...(valid?{}:{cif_version_id:CLIENT})}:captured();
+  choose(h);submit(h);await setImmediate();assert.equal(completed,valid?1:0);h.dispose();
+ }
+});
 
 test('privacy screen signature binds the exact documents and optional choice', async () => {
   const h = harness(); await setImmediate();
