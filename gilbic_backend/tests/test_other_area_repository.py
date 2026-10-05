@@ -5,6 +5,8 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from psycopg.sql import Composable
+
 from gilbic_backend.other_area_repository import PostgresOtherAreaRepository
 
 from gilbic_backend import other_area_repository as module
@@ -27,8 +29,10 @@ class FakeCursor:
     def __exit__(self, exc_type, exc, traceback) -> None:
         return None
 
-    def execute(self, query: str, parameters: tuple[object, ...]) -> None:
-        self.executions.append((query, parameters))
+    def execute(self, query: str | Composable, parameters: tuple[object, ...]) -> None:
+        self.executions.append(
+            (query.as_string() if isinstance(query, Composable) else query, parameters)
+        )
 
     def fetchall(self):
         return self.rows

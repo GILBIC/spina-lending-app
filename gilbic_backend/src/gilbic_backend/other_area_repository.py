@@ -6,6 +6,7 @@ from decimal import Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 from .area_management_repository import apply_due_client_area_transfers
@@ -148,7 +149,7 @@ class PostgresOtherAreaRepository:
 
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id as route_entry_id,
                         client.id as client_id,
@@ -211,7 +212,7 @@ class PostgresOtherAreaRepository:
                       )
                     left join lateral (
                         select
-                            {_UNDO_ELIGIBILITY_SQL}
+                            {undo_eligibility}
                             transaction.entry_type,
                             transaction.amount,
                             transaction.collector_user_id,
@@ -245,7 +246,10 @@ class PostgresOtherAreaRepository:
                         loan.date_released desc,
                         loan.id
                     limit %s
-                    """,
+                    """).format(
+                        undo_eligibility=sql.SQL(_UNDO_ELIGIBILITY_SQL),
+                        actor_scope_clause=sql.SQL(actor_scope_clause),
+                    ),
                     tuple(params),
                 )
                 rows = cursor.fetchall()
@@ -279,7 +283,7 @@ class PostgresOtherAreaRepository:
 
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id as route_entry_id,
                         client.id as client_id,
@@ -342,7 +346,7 @@ class PostgresOtherAreaRepository:
                       )
                     left join lateral (
                         select
-                            {_UNDO_ELIGIBILITY_SQL}
+                            {undo_eligibility}
                             transaction.entry_type,
                             transaction.amount,
                             transaction.collector_user_id,
@@ -381,7 +385,7 @@ class PostgresOtherAreaRepository:
                         loan.date_released,
                         loan.id
                     limit %s
-                    """,
+                    """).format(undo_eligibility=sql.SQL(_UNDO_ELIGIBILITY_SQL)),
                     (
                         collection_date,
                         collector_user_id,
