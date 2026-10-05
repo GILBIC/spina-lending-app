@@ -116,6 +116,7 @@ class RemittanceRecord:
     received_at: datetime | None
     items: tuple[RemittanceItemRecord, ...]
     refund_due_releases: tuple[RefundDueRemittanceItemRecord, ...] = ()
+    settlement_split: dict[str, str] | None = None
 
     @property
     def refund_due_release_count(self) -> int:
@@ -455,6 +456,9 @@ class PostgresRemittanceRepository:
                 )
                 rows = cursor.fetchall()
                 records = []
+                from .remittance_settlement_projection import attach_settlement_splits
+
+                attach_settlement_splits(cursor, rows)
                 for row in rows:
                     items = self._remittance_items(cursor, row["id"])
                     refund_due_releases = self._remittance_refund_due_releases(
@@ -916,6 +920,7 @@ class PostgresRemittanceRepository:
         refund_due_releases: tuple[RefundDueRemittanceItemRecord, ...] = (),
     ) -> RemittanceRecord:
         return RemittanceRecord(
+            settlement_split=row.get("settlement_split"),
             remittance_id=row["id"],
             remittance_number=str(row["remittance_number"]),
             collector_user_id=row["collector_user_id"],

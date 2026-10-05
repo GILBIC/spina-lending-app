@@ -1,6 +1,5 @@
 """Server totals and current own/staff scope; no private-wallet projection."""
 
-import os
 from typing import Any
 from uuid import UUID
 
@@ -42,6 +41,7 @@ CAP_ACTIONS = {
     "resolve": ["recognize", "opening_prepare", "opening_activate"],
     "settle": [
         "return_prepare",
+        "application_prepare",
         "return_record",
         "action_cancel",
         "return_reverse",
@@ -329,6 +329,16 @@ def detail(service, conn, actor, kind, target, mode=None):
         )
     if own:
         row = redacted(row)
+    else:
+        from .collector_credit_application import require_read_scope
+
+        require_read_scope(
+            conn,
+            actor,
+            credit_id=target if kind == "credits" else row.get("credit_id"),
+            remittance_id=row.get("remittance_id"),
+            approval=row.get("credit_application"),
+        )
     return row
 
 
@@ -454,6 +464,16 @@ def workspace(
         totals[key] = format(amount, ".2f")
     if own:
         items = redacted(items)
+    from .collector_credit_application import available
+    from .collector_credit_application import enabled as application_enabled
+
+    application_supported = available(conn)
+    applications_active = application_supported and application_enabled()
+    if not applications_active:
+        for account in accounts:
+            account["actions"] = [
+                a for a in account["actions"] if a != "application_prepare"
+            ]
     caps = {
         key: False
         for key in [
@@ -520,6 +540,12 @@ def workspace(
 
     state = readiness()
     accounting_capability = collector_accounting_capability(conn)
+    if not own:
+        from .collector_credit_application import require_read_scope
+
+        # Check all contributing scopes after reading totals, including rows
+        # outside this page and append-only historical applications.
+        require_read_scope(conn, actor, accounts=account_ids)
     return {
         "collector_surplus_contract_version": 1,
         "actor": {
@@ -530,19 +556,22 @@ def workspace(
         "readiness": {
             "enabled": enabled(),
             "treasury_ready": state["enabled"] and state["owner_configured"],
-            "application_enabled": os.getenv(
-                "SPINA_COLLECTOR_SURPLUS_APPLICATION_ENABLED", ""
-            ).lower()
-            == "true",
-            "application_supported": False,
+            "application_enabled": application_enabled(),
+            "application_supported": application_supported,
             "historical_correction_supported": False,
             "gl_supported": accounting_capability["available"],
             "accounting": accounting_capability,
-            "blockers": [
-                {
-                    "code": "collector_application_custody_unavailable",
-                    "message": "Application custody adapter is unavailable.",
-                },
+            "blockers": (
+                []
+                if applications_active
+                else [
+                    {
+                        "code": "collector_application_custody_unavailable",
+                        "message": "Credit application entry is disabled or its protected adapter is unavailable.",
+                    }
+                ]
+            )
+            + [
                 {
                     "code": "collector_historical_source_unavailable",
                     "message": "Historical correction adapter is unavailable.",

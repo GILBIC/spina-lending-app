@@ -10,6 +10,10 @@ const collectorAccountingStages = <String, (String, String)>{
     'Recognized Collector credit',
     'Moves identified excess into Collector credit payable. This step does not move cash.',
   ),
+  'credit_application': (
+    'Credit used for remittance',
+    'Reduces Collector credit payable and settles the approved custody obligation on the acceptance date. Actual cash received has a separate accounting review.',
+  ),
   'return_debit': (
     'Actual return debit',
     'Records actual cash paid and its separately evidenced fee. The principal awaits the Collector’s received confirmation.',
@@ -93,6 +97,31 @@ Map<String, dynamic> validateCollectorAccounting(
   }
 
   final amount = cents(value['amount']), fee = cents(value['fee']);
+  Map<String, dynamic>? split;
+  if (value['custody_split'] != null) {
+    accountingCheck(['settlement', 'credit_application'].contains(sourceKind));
+    final raw = accountingObject(value['custody_split']);
+    const keys = [
+      'gross_obligation',
+      'authorized_credit_amount',
+      'physical_cash_required',
+      'physical_amount',
+      'excess_amount',
+    ];
+    for (final key in keys) {
+      TreasuryMoney(raw[key]);
+    }
+    split = {for (final key in keys) key: raw[key]};
+    accountingCheck(
+      cents(split['authorized_credit_amount']) > BigInt.zero &&
+          cents(split['gross_obligation']) ==
+              cents(split['authorized_credit_amount']) +
+                  cents(split['physical_cash_required']) &&
+          cents(split['physical_amount']) ==
+              cents(split['physical_cash_required']) +
+                  cents(split['excess_amount']),
+    );
+  }
   final cash = lines
       .where((row) => ['1010', '1030'].contains(row['account_code']))
       .toList();
@@ -103,15 +132,42 @@ Map<String, dynamic> validateCollectorAccounting(
     final custody = lines
         .where((row) => row['account_code'] == '1020')
         .toList();
+    if (split != null) {
+      final principal = cents(split['physical_cash_required']),
+          excess = cents(split['excess_amount']);
+      accountingCheck(
+        cents(split['physical_amount']) == amount &&
+            lines.length ==
+                1 +
+                    (principal > BigInt.zero ? 1 : 0) +
+                    (excess > BigInt.zero ? 1 : 0),
+      );
+      if (principal > BigInt.zero) {
+        exact('1020', 'credit', principal);
+      } else {
+        accountingCheck(custody.isEmpty);
+      }
+      if (excess > BigInt.zero) exact('2210', 'credit', excess);
+    } else {
+      accountingCheck(
+        custody.length == 1 &&
+            custody.single['debit'] == '0.00' &&
+            cents(custody.single['credit']) > BigInt.zero &&
+            cents(custody.single['credit']) <= amount,
+      );
+      final excess = amount - cents(custody.single['credit']);
+      accountingCheck(lines.length == (excess == BigInt.zero ? 2 : 3));
+      if (excess > BigInt.zero) exact('2210', 'credit', excess);
+    }
+  } else if (sourceKind == 'credit_application') {
     accountingCheck(
-      custody.length == 1 &&
-          custody.single['debit'] == '0.00' &&
-          cents(custody.single['credit']) > BigInt.zero &&
-          cents(custody.single['credit']) <= amount,
+      split != null &&
+          cents(split['authorized_credit_amount']) == amount &&
+          cash.isEmpty &&
+          lines.length == 2,
     );
-    final excess = amount - cents(custody.single['credit']);
-    accountingCheck(lines.length == (excess == BigInt.zero ? 2 : 3));
-    if (excess > BigInt.zero) exact('2210', 'credit', excess);
+    exact('2220', 'debit', amount);
+    exact('1020', 'credit', amount);
   } else if (sourceKind == 'recognition' ||
       sourceKind == 'return_confirmation') {
     accountingCheck(lines.length == 2 && cash.isEmpty);
@@ -135,6 +191,7 @@ Map<String, dynamic> validateCollectorAccounting(
   }
   return accountingObject(
     immutableTreasury({
+      if (split != null) 'custody_split': split,
       for (final key in [
         'book_id',
         'source_kind',

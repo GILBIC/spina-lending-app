@@ -577,6 +577,7 @@ jobs:
             tools/run_accounting_lending_validation.py \
             tools/run_accounting_regular_application_validation.py \
             tools/run_accounting_native_origin_validation.py \
+            tools/run_accounting_collector_application_validation.py \
             tools/run_treasury_disposable_postgres_validation.py
 
       - name: Create isolated validation databases
@@ -624,6 +625,7 @@ jobs:
             python tools/run_accounting_lending_validation.py
             python tools/run_accounting_regular_application_validation.py
             python tools/run_accounting_native_origin_validation.py
+            python tools/run_accounting_collector_application_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
       - name: Restore synthetic database and private evidence from backup

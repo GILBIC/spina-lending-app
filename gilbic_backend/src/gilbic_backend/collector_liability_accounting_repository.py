@@ -113,6 +113,17 @@ class PostgresCollectorLiabilityAccountingRepository:
             }
             for line in source["lines"]
         ]
+        facts = source.get("source_facts", {})
+        if facts.get("application"):
+            settlement = facts["settlement"]["payload"]
+            count = facts["count"]["payload"]
+            result["custody_split"] = {
+                "gross_obligation": settlement["gross_obligation"],
+                "authorized_credit_amount": settlement["authorized_credit_amount"],
+                "physical_amount": settlement["physical_amount"],
+                "physical_cash_required": count["physical_cash_required"],
+                "excess_amount": count["difference"],
+            }
         return result
 
     def _preparation(self, conn, actor, preparation_id):

@@ -27,9 +27,11 @@ The detailed supported scope matters. Existence of an account, a balanced journa
 
 Recent verification evidence includes fresh0154 with194 passing checks, fresh0155 with136 passing checks and zero skips, the expanded web selection with163 passing checks, combined accounting Flutter with135 passing checks, and the subsequent Regular Flutter selection with28 passing checks and clean scoped analysis. These suites overlap and are not an additive unique test count.
 
+Latest 0157 verification: fresh-schema integration passes 140 checks, and the supplemental date/capacity/immutability/original-workflow selection passes 85, both with zero skips. The latter includes separate cash-count and credit-acceptance dates and an application reservation waiting behind a competing return. Portal regressions pass 270; Flutter passes 123 with clean analysis of 15 changed files; API/contract regressions pass 31. These selections overlap. Populated restore preserves application facts, posting proof and private files. No production migration or flag activation occurred.
+
 ## Remaining implementation work
 
-1. **Collector credit applications:** add actual approval/reservation, accepted credit consumption, separate physical cash and liability-discharge entries, current controls, custody reporting, close evidence and both clients. Six actual-source cases currently reproduce the missing operational adapter. The blocked path remains in force.
+1. **Collector historical coverage:** 0157 now supports current original recognized credit applied to a later exact remittance, including partial and zero-cash settlements. Opening-credit and historical correction adapters remain blocked; they are not covered by this new path.
 2. **Native payout integration:** the private origin normalizer must be connected to elapsed assessment and first application while preserving old source digests. Positive elapsed and closed-origin behavior require genuine dated native source evidence; no clock override or fabricated legacy posting will be used.
 3. **Wider lending and correction coverage:** finish the remaining supported loan lifecycle, product transitions, refunds/corrections and historical source adapters, then prove their combined control balances and close behavior.
 4. **Complete disclosure coverage:** implement retained component evidence for mixed cash/noncash journals and financing-liability reconciliation. Current reports explicitly do not claim complete mixed-transaction disclosure or a complete annual statutory package.

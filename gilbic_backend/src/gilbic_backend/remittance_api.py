@@ -120,6 +120,11 @@ def _record_payload(record) -> dict[str, object]:
     rejected_at = getattr(record, "rejected_at", None)
     rejected_by_user_id = getattr(record, "rejected_by_user_id", None)
     return {
+        **(
+            {"settlement_split": record.settlement_split}
+            if getattr(record, "settlement_split", None)
+            else {}
+        ),
         "remittance_id": str(record.remittance_id),
         "remittance_number": record.remittance_number,
         "collector_user_id": str(record.collector_user_id),

@@ -14,6 +14,8 @@ Protected Collector settlement cash uses the same principle. When both custody a
 
 The design follows the distinction between operating, investing and financing cash flows, separate noncash disclosure and reconciliation to financial position described in the [IFRS Foundation's IAS7 overview](https://www.ifrs.org/issued-standards/list-of-standards/ias-7-statement-of-cash-flows/). Actual framework applicability and individual classifications remain retained entity-specific facts; the user has authorized the software design.
 
+With 0157 credit-funded remittances, only gross custody less approved credit is the physical internal handover. Actual excess is separate. The credit discharge has its own accepted-date journal (2220 to 1020), while actual cash retains the count date. A zero-cash settlement creates no cash event or internal handover pair. Remittance history and notifications show exact gross, cash, credit and excess amounts. Mixed cash/noncash disclosure remains an independent unfinished reporting scope.
+
 ## Equity and comparatives
 
 Opening and closing equity include unclosed earnings. The rollforward adds the selected period's profit or loss and other posted equity movements, excluding the formal period-close transfer. This keeps total equity unchanged when temporary accounts are transferred to retained earnings. A difference is shown explicitly.

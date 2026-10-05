@@ -331,6 +331,21 @@ class _ManagementCollectorAccountingPageState
     ('Actual posting date', '${_source!['posting_date']}'),
     ('Source amount', 'PHP ${_source!['amount']}'),
     ('Actual transaction fee', 'PHP ${_source!['fee']}'),
+    if (_source!['custody_split'] is Map) ...[
+      (
+        'Gross custody settled',
+        'PHP ${_source!['custody_split']['gross_obligation']}',
+      ),
+      (
+        'Credit applied',
+        'PHP ${_source!['custody_split']['authorized_credit_amount']}',
+      ),
+      (
+        'Actual cash received',
+        'PHP ${_source!['custody_split']['physical_amount']}',
+      ),
+      ('Cash excess', 'PHP ${_source!['custody_split']['excess_amount']}'),
+    ],
     for (final row in accountingRows(_source!['lines']))
       (
         '${row['account_code']} · ${row['name']}',
@@ -567,7 +582,7 @@ class _ManagementCollectorAccountingPageState
             () => _lookup(recover: true),
           ),
           const Text(
-            'Opening balances, historical corrections, credit applications and disputed custody need separate reviewed evidence. Return reviews require both origin and paying account permissions.',
+            'Credit applications have separate cash and liability reviews. Opening balances, historical corrections and disputed custody need additional reviewed evidence. Current permissions for every affected account are required.',
           ),
           if (_source != null) ...[
             Text(collectorAccountingStages[_stage]!.$2),

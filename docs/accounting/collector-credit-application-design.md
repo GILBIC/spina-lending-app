@@ -1,10 +1,10 @@
-# Collector credit applied to a later remittance — proposed 0157
+# Collector credit applied to a later remittance — 0157
 
-Status: design and behavioral tests only. The current application blocker remains in force. No operational adapter or SQL migration has been implemented by this design increment.
+Status:0157 is implemented and verified locally for the scope below. Fresh-schema integration, original-flow regressions, real transaction races, populated database/private-file restore and both clients pass. It has not been deployed. Production application entry remains disabled unless its explicit feature flag is enabled after the release rehearsal.
 
-## Existing facts
+## Starting point before 0157
 
-`collector_surplus.py` already records an exact Collector-owned application request against a submitted remittance and its source digest. Its `prepare` application branch deliberately returns `blocked_adapter` before changing credit capacity. `collector_settlement.preview` rejects any application reference, count recording does not retain that reference, and acceptance always stores `authorized_credit_amount = 0.00`. An old request is therefore intent, never proof of reservation or consumption.
+Before 0157, `collector_surplus.py` recorded an exact Collector-owned application request against a submitted remittance and its source digest. Its `prepare` application branch returned `blocked_adapter` before changing credit capacity. Preview rejected an application reference, count recording did not retain it, and acceptance always stored `authorized_credit_amount = 0.00`. Those older requests remain intent, never proof of reservation or consumption.
 
 The current 0138 schema allows application actions but not application credit entries. Its credit capacity equation already deducts `applied_amount`; immutable consumption evidence is missing. Existing loan collection journals have already debited 1020. The legacy remittance custody trigger marks the recipient as custodian of an accepted gross remittance, without distinguishing a physical handover from credit settlement.
 
@@ -43,6 +43,8 @@ Use `TreasuryService.execute` request advisory locking and exact command hash re
 
 ## Accounting admission and retained evidence
 
+Operational approval and consumption require a current exact posted original recognition, with every retained evidence file checked against its digest. Staff detail, aggregate reads and exact request recovery require current explicit private grants to every contributing wallet, including for the configured owner. Safe own-Collector projections remain separate. A later source freeze retains accepted cash/credit facts while reopening current accounting proof.
+
 Retain source IDs, public dates/amounts, both wallet scopes, exact count/approval/application entry, credit recognition origin, collection proof IDs, cash event/source links/movements where present, evidence digests, chart roles, mappings, book and prerequisite posting identities. Private constituent/borrower/file snapshots remain server-side. Prepare/post reuse 0152 exact request, same actor, live permission, file-byte validation, immutable confirmation and protected-journal rules. A current operational acceptance is not a GL posting; it remains a close blocker until every required leg has exact posted proof.
 
 Credit recognition must remain exact after a legitimate later application. The existing 0152 blanket `applied_amount != 0` rejection and capacity reconstruction must be replaced by strict immutable operational application validation and subtraction of those entries. This must not require the later application GL journal to validate the earlier recognition: that would create a circular prerequisite. Historical recognition snapshots/digests exclude later legitimate consumption; new unposted application entries remain independently blocked. Corrections, fabricated entries, frozen/reclassified credit and unsupported historical openings remain blocked rather than retroactively normalized.
@@ -63,6 +65,6 @@ Coordinate this with `read_internal_collector_cash`: it currently derives intern
 
 ## Behavioral test sequence
 
-The initial regression file uses actual recorded excess, operational recognition, protected collection journals, Collector application requests and staff preparation. Its first expected failure is that the currently blocked operational approval cannot create the reserved action. No fake reservation, credit entry, cash event or accounting journal is inserted to bypass that missing phase.
+The initial regression file uses actual recorded excess, operational recognition, protected collection journals, Collector application requests and staff preparation. The initial baseline failed because the old blocked operational approval could not create a reserved action. No fake reservation, credit entry, cash event or accounting journal is inserted to bypass that missing phase.
 
-Then cover reservation/cancellation with unchanged GL and cash, exact and excess partial counts, short-count rollback, full-credit zero-cash acceptance, exact source-linked entries and capacity, separate accounting prepare/post, dated control reconciliation, wrong Collector/account/context, duplicate/conflicting requests, concurrent competing reservations, same-request acceptance replay, stale source/evidence, private projection/revocation and zero-cash custody/reporting/manifest behavior. The full service replay/race cases need a task-owned disposable database and the coordinated heavy-test window. They are not claimed as run by this design note.
+Then cover reservation/cancellation with unchanged GL and cash, exact and excess partial counts, short-count rollback, full-credit zero-cash acceptance, exact source-linked entries and capacity, separate accounting prepare/post, dated control reconciliation, wrong Collector/account/context, duplicate/conflicting requests, concurrent competing reservations, same-request acceptance replay, stale source/evidence, private projection/revocation and zero-cash custody/reporting/manifest behavior. The service replay, real transaction races, date split, immutable facts and populated restore now have passing task-owned disposable-database runs recorded in the execution ledger. Full statutory accounting and unsupported historical sources remain outside this increment.

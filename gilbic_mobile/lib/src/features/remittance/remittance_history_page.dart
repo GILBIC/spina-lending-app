@@ -426,6 +426,8 @@ class _RemittanceCard extends StatelessWidget {
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
+          if (record.settlementSplit != null)
+            Text(record.settlementSplit!.description),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(

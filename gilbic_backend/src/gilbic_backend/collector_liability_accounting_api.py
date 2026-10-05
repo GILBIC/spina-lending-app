@@ -23,6 +23,7 @@ SourceKind = Literal[
     "return_debit",
     "return_confirmation",
     "return_reversal",
+    "credit_application",
 ]
 
 

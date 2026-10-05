@@ -25,7 +25,7 @@ FILE = b"%PDF-1.4\nSynthetic Collector accounting evidence\n%%EOF"
 MANILA = timezone(timedelta(hours=8))
 
 
-def source_case(conn, tmp_path, monkeypatch):
+def source_case(conn, tmp_path, monkeypatch, *, historical_days=0):
     manager, collector = actor(conn), actor(conn, "collector")
     permissions = (
         "treasury.view",
@@ -40,7 +40,7 @@ def source_case(conn, tmp_path, monkeypatch):
     grant_live(conn, manager.user_id, *permissions)
     monkeypatch.setenv("SPINA_COLLECTOR_SURPLUS_ENABLED", "true")
     monkeypatch.setenv("SPINA_EMPLOYEE_OWNER_USER_ID", str(manager.user_id))
-    now = datetime.now(MANILA) - timedelta(seconds=2)
+    now = datetime.now(MANILA) - timedelta(days=historical_days, seconds=2)
     day = now.date()
     book = conn.execute(
         "SELECT accounting.configure_book_identity('synthetic','Synthetic Collector accounting book','test:collector-book',%s,%s) AS id",
@@ -56,7 +56,7 @@ def source_case(conn, tmp_path, monkeypatch):
     else:
         period = conn.execute(
             "SELECT accounting.create_fiscal_period('Synthetic Collector accounting day',%s,%s,%s) AS id",
-            (day, day, manager.user_id),
+            (day, datetime.now(MANILA).date(), manager.user_id),
         ).fetchone()["id"]
     context, wallet, evidence, remittance = (uuid4() for _ in range(4))
     conn.execute(

@@ -84,7 +84,8 @@ Consumes: Task 1 book identity; Task 3 mapping/posting identity. Produces per-so
 - [x] Prove excess cash once, unidentified liability, credit reclassification, partial return, separate fees, incoming reversal and reservation-without-double-liability.
 - [x] Implement immutable source-linked accounting and exact outstanding control balances for the supported source families.
 - [x] Provide evidence-backed non-Collector liability recognition/settlement with counterparty, source, due date and account classification. Repayable owner funding remains distinct from capital.
-- [ ] Implement currently unavailable Collector future-application/historical corrections as separately reviewed adapters; retain blockers until their tests pass.
+- [x] Implement Collector future applications with exact reservations, actual cash/credit splits, separate dated postings, private scopes, both clients and restore verification (0157).
+- [ ] Implement remaining historical corrections as separately reviewed adapters; retain their blockers until their tests pass.
 - [ ] Verify legitimate unpaid balances can close when reconciled and no operational record disappears after settlement/reversal.
 
 ## Task 5 — Complete source reconciliation and closing snapshots

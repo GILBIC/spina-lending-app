@@ -21,6 +21,8 @@ Apply each reviewed migration through the established migration process. Deploy 
 
 Enable supported workflows only after those checks pass. Keep unsupported source families visible as blockers. The software's partial-source and annual-package labels must continue to describe the implemented and verified scope truthfully.
 
+For 0157, install the migration and matching backend/Portal/mobile together. Run `tools/run_accounting_collector_application_validation.py` on a disposable PostgreSQL database and exercise partial-credit, zero-cash and excess-cash counts in staging. Both wallets need current explicit private grants; original credit recognition and its source files must have exact posted proof before reservation. Keep `SPINA_COLLECTOR_SURPLUS_APPLICATION_ENABLED` off until this rehearsal passes. Retain and recover existing requests when disabling new application entry; never delete an accepted application or restore over its actual cash movement.
+
 ## Recovery after a failure
 
 - **Uncertain request response:** recover the original request/preparation and confirmation identity. Do not create a new request or operational movement to test whether the first succeeded. Compare the returned immutable posting audit and journal.

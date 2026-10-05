@@ -96,7 +96,8 @@ def read_internal_collector_cash(cursor, period_id):
     cursor.execute(
         """SELECT line.id AS journal_line_id,proof.source_kind,proof.source_id,
             journal.id AS journal_entry_id,CASE WHEN proof.source_kind='settlement'
-            THEN (prepared.snapshot#>>'{source_facts,gross}')::numeric *
+            THEN coalesce(prepared.snapshot#>>'{source_facts,physical_principal}',
+                prepared.snapshot#>>'{source_facts,gross}')::numeric *
                 CASE WHEN account.code='1020' THEN -1 ELSE 1 END
             ELSE 0 END AS internal_principal
         FROM accounting.collector_liability_posting_status proof

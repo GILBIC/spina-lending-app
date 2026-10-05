@@ -31,7 +31,11 @@ def collector_accounting(tmp_path, monkeypatch):
     assert os.getenv("SPINA_ALLOW_DISPOSABLE_DATABASE") == "1"
     with connect() as conn:
         try:
-            if MIGRATION.exists():
+            if int(os.getenv("SPINA_CURRENT_SCHEMA_THROUGH", "0")) >= 157:
+                assert conn.execute(
+                    "SELECT to_regprocedure('treasury.collector_credit_application_ready()') IS NOT NULL AS available"
+                ).fetchone()["available"]
+            elif MIGRATION.exists():
                 install(conn, MIGRATION)
             yield source_case(conn, tmp_path, monkeypatch)
         finally:

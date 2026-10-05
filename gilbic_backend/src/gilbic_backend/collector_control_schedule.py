@@ -22,9 +22,9 @@ raw AS MATERIALIZED (
  SELECT account_id id FROM raw
  UNION SELECT account_id FROM treasury.collector_cases
  UNION SELECT account_id FROM treasury.collector_credits
- UNION SELECT account_id FROM treasury.collector_actions WHERE payload->>'kind'='return'
- UNION SELECT (payload->>'origin_account_id')::uuid FROM treasury.collector_actions WHERE payload->>'kind'='return'
- UNION SELECT (payload->>'paying_account_id')::uuid FROM treasury.collector_actions WHERE payload->>'kind'='return'
+ UNION SELECT account_id FROM treasury.collector_actions WHERE payload->>'kind' IN('return','application')
+ UNION SELECT (payload->>'origin_account_id')::uuid FROM treasury.collector_actions WHERE payload->>'kind' IN('return','application')
+ UNION SELECT (payload->>'paying_account_id')::uuid FROM treasury.collector_actions WHERE payload->>'kind' IN('return','application')
  UNION SELECT event.account_id FROM treasury.collector_actions action
  JOIN treasury.events event ON event.id=action.event_id WHERE action.payload->>'kind'='return'
  UNION SELECT event.account_id FROM treasury.collector_cases item
