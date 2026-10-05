@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { mountOfficeEvidenceCapture } from './office-evidence-capture.js';
 import { mountOfficePrivacy } from './office-privacy.js';
 import { sessionHasRole } from './roles.js';
@@ -7,30 +8,46 @@ const mounts = new WeakMap();
 const FIELDS = ['full_name', 'phone_number', 'email', 'present_address'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, onChanged, onAccessDenied }) {
+export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, onChanged, onAccessDenied, onDraftChange }) {
   mounts.get(root)?.();
   let disposed = false; let busy = false; let review; let captured; let captureCleanup; let privacyCleanup;
+  let writing = false, uncertain = false, revision = 0;
+  let originalAction = null;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && writing,isUncertain:()=>!disposed && uncertain,dispose});
+  const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && UUID.test(clientId);
+  const children = () => [captureCleanup,privacyCleanup].filter(Boolean);
+  const isDirty = () => !disposed && Boolean(captured || root.querySelector('[name="providerReference"]')?.value || root.querySelector('[name="providerPassed"]')?.checked || children().some(child=>child.isDirty?.()));
+  const isWritePending = () => !disposed && (writing || children().some(child=>child.isWritePending?.()));
+  const isUncertain = () => !disposed && (uncertain || children().some(child=>child.isUncertain?.()));
+  function edited() { revision++; onDraftChange?.(); }
   const controller = new AbortController(); let removers = [];
   const base = `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif`;
   const listen = (element, type, callback) => { element.addEventListener(type, callback); removers.push(() => element.removeEventListener(type, callback)); };
   function clear() {
     captureCleanup?.(); privacyCleanup?.(); captureCleanup = null; privacyCleanup = null;
     for (const remove of removers) remove(); removers = [];
-    for (const input of root.querySelectorAll('input')) input.value = '';
+    for (const input of root.querySelectorAll('input')) { input.value = ''; input.checked = false; }
     root.innerHTML = ''; captured = null;
   }
   function dispose() {
-    if (disposed) return; disposed = true; controller.abort(); clear(); review = null;
+    if (disposed) return; disposed = true; controller.abort(); clear(); review = null; originalAction=null;
     signal?.removeEventListener('abort', dispose); if (mounts.get(root) === dispose) mounts.delete(root);
   }
   function fail(error) {
     if (disposed) return;
+    if (writing) {uncertain = originalAction?.uncertain || !error?.beforeWrite && ![400,404,409,422].includes(error?.status);if(!uncertain)originalAction=null;else if(originalAction)originalAction.uncertain=true;}
     if ([401, 403].includes(error?.status)) { clear(); review = null; onAccessDenied?.(error); }
-    if (error?.status === 409) { captureCleanup?.(); captured = null; review = null; }
+    if (error?.status === 409 && !uncertain) { captureCleanup?.(); captured = null; review = null; }
     const status = root.querySelector('[data-cif-workflow-status]');
     if (status) {
       status.innerHTML = errorCard(error);
-      if (error?.status === 409) {
+      if(uncertain){
+        const retryable=['confirm','activate','baseline'].includes(originalAction?.kind);
+        status.innerHTML += retryable?'<p>The original CIF action remains protected.</p><button type="button" data-retry-cif-action>Retry original CIF action</button>':'<p>The baseline outcome is uncertain. Its original version and evidence remain protected; a general summary cannot establish this result.</p>';
+        const retained=originalAction;
+        if(retryable)listen(status.querySelector('[data-retry-cif-action]'),'click',()=>{if(originalAction!==retained || !uncertain)return;return retained.kind==='confirm'?confirm():retained.kind==='baseline'?baseline({preventDefault(){}}):activate();});
+      }
+      if (error?.status === 409 && !uncertain) {
         status.innerHTML += '<button type="button" data-reload-cif-workflow>Reload current review</button>';
         listen(status.querySelector('[data-reload-cif-workflow]'), 'click', open);
       }
@@ -38,54 +55,58 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
     else root.innerHTML = errorCard(error);
   }
   async function confirm() {
-    if (disposed || busy || !captured || !review) return;
-    busy = true; const button = root.querySelector('[data-confirm-cif]'); button.disabled = true;
+    if (disposed || busy || !captured || !review || (uncertain && originalAction?.kind!=='confirm')) return;
+    busy = true; writing = true; const button = root.querySelector('[data-confirm-cif]'); button.disabled = true;
     const information = Object.fromEntries(FIELDS.map(key => [key, review[key]]));
     if (review.identity_information != null) information.identity_information = { ...review.identity_information };
+    originalAction ??= {kind:'confirm',body:{cif_version_id:review.cif_version_id,expected_information:information,applicant_confirmation_evidence_reference:captured.evidence_reference}};
     try {
       const result = await api.request(`${base}/review-confirmations`, { method: 'POST', signal: controller.signal,
-        body: { cif_version_id: review.cif_version_id, expected_information: information,
-          applicant_confirmation_evidence_reference: captured.evidence_reference } });
+        body: originalAction.body });
       if (disposed) return;
       if (result.client_id !== clientId || result.cif_version_id !== review.cif_version_id || !UUID.test(result.review_confirmation_id)) {
         throw new Error('Confirmation response could not be verified. Retry this exact signed review.');
       }
       captured = null;
+      uncertain = false; originalAction=null;
       root.querySelector('[data-cif-workflow-status]').innerHTML = '<p>Applicant confirmation saved for this exact CIF version.</p>';
     } catch (error) { fail(error); }
-    finally { busy = false; if (!disposed && captured && review) button.disabled = false; }
+    finally { busy = false; writing = false; if (!disposed && captured && review) button.disabled = false; }
   }
   async function baseline(event) {
-    event.preventDefault(); if (disposed || busy || !review) return;
-    const reference = root.querySelector('[name="providerReference"]').value.trim();
-    const checked = root.querySelector('[name="providerPassed"]').checked;
+    event.preventDefault(); if (disposed || busy || !review || (uncertain && originalAction?.kind!=='baseline')) return;
+    const reference = uncertain ? originalAction.body.evidence_reference : root.querySelector('[name="providerReference"]').value.trim();
+    const checked = uncertain || root.querySelector('[name="providerPassed"]').checked;
     if (!reference || !checked) { fail(new Error('Record the controlled provider result only after baseline face and liveness verification passed.')); return; }
-    busy = true;
+    busy = true; writing = true;
+    originalAction ??= {kind:'baseline',body:{cif_version_id:review.cif_version_id,evidence_reference:reference,liveness_status:'passed'}};
     try {
       const result = await api.request(`${base}/baseline-live-face`, { method: 'PATCH', signal: controller.signal,
-        body: { cif_version_id: review.cif_version_id, evidence_reference: reference, liveness_status: 'passed' } });
+        body: originalAction.body });
       if (disposed) return;
       if (result.client_id !== clientId || result.version_number !== review.version_number || result.liveness_status !== 'passed') {
         throw new Error('Baseline result could not be verified. Reload the CIF before continuing.');
       }
       root.querySelector('[data-cif-workflow-status]').innerHTML = '<p>Controlled baseline verification result recorded.</p>';
       root.querySelector('[name="providerReference"]').value = '';
-    } catch (error) { fail(error); } finally { busy = false; }
+      root.querySelector('[name="providerPassed"]').checked = false; uncertain = false; originalAction=null;
+    } catch (error) { fail(error); } finally { busy = false; writing = false; }
   }
   async function activate() {
-    if (disposed || busy || !review) return; busy = true;
+    if (disposed || busy || !review || (uncertain && originalAction?.kind!=='activate')) return; busy = true; writing = true;
+    originalAction ??= {kind:'activate',body:{cif_version_id:review.cif_version_id}};
     try {
       const result = await api.request(`${base}/activate`, { method: 'POST', signal: controller.signal,
-        body: { cif_version_id: review.cif_version_id } });
+        body: originalAction.body });
       if (disposed) return;
       if (result.client_id !== clientId || result.version_number !== review.version_number || result.status !== 'active') {
         throw new Error('Activation response could not be verified. Reload the CIF.');
       }
-      clear(); root.innerHTML = '<p>CIF activated. Earlier versions and servicing history remain available.</p>'; onChanged?.();
-    } catch (error) { fail(error); } finally { busy = false; }
+      uncertain = false; originalAction=null; clear(); root.innerHTML = '<p>CIF activated. Earlier versions and servicing history remain available.</p>'; onChanged?.();
+    } catch (error) { fail(error); } finally { busy = false; writing = false; }
   }
   async function open() {
-    if (disposed || busy) return; busy = true; clear(); root.innerHTML = loadingPanel('Opening exact CIF review and signing controls…');
+    if (disposed || !authorized || busy || isDirty() || isWritePending() || isUncertain()) return false; busy = true; clear(); root.innerHTML = loadingPanel('Opening exact CIF review and signing controls…');
     try {
       const value = await api.request(`${base}/review-summary?include_identity_information=true`, { signal: controller.signal });
       if (disposed) return;
@@ -106,17 +127,22 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
         <div data-cif-workflow-status role="status" aria-live="polite"></div>`;
       captureCleanup = mountOfficeEvidenceCapture({ root: root.querySelector('[data-signed-cif]'), api, session, clientId,
         cifVersionId: review.cif_version_id, purpose: 'cif_review', signal: controller.signal,
-        onCaptured: record => { captured = record; root.querySelector('[data-confirm-cif]').disabled = false; }, onAccessDenied });
+        onCaptured: record => { captured = record; edited(); root.querySelector('[data-confirm-cif]').disabled = false; }, onAccessDenied, onDraftChange:edited });
       privacyCleanup = mountOfficePrivacy({ root: root.querySelector('[data-privacy-cif]'), api, session, clientId,
-        cifVersionId: review.cif_version_id, signal: controller.signal });
+        cifVersionId: review.cif_version_id, signal: controller.signal, onDraftChange:edited, onAccessDenied });
       listen(root.querySelector('[data-confirm-cif]'), 'click', confirm);
       if (review.status === 'draft') {
         listen(root.querySelector('[data-baseline-cif]'), 'submit', baseline);
+        for (const input of root.querySelector('[data-baseline-cif]').querySelectorAll('input')) { listen(input,'input',edited);listen(input,'change',edited); }
         if (sessionHasRole(session, 'management')) listen(root.querySelector('[data-activate-cif]'), 'click', activate);
       }
     } catch (error) { fail(error); } finally { busy = false; }
   }
   mounts.set(root, dispose); signal?.addEventListener('abort', dispose, { once: true });
+  Object.assign(dispose, {getContext:()=>review ? {clientId,cifVersionId:review.cif_version_id,versionNumber:review.version_number} : null,
+    isDirty,getRevision:()=>revision,isWritePending,isUncertain,openCase:open,
+    resetCase:()=>{if(disposed || !authorized || isWritePending() || isUncertain())return false;clear();review=null;return true;},
+    refreshReadOnly:open,dispose});
   if (signal?.aborted) { dispose(); return dispose; }
   if (!sessionHasRole(session, 'employee', 'management') || !hasPermission(session, 'client_onboarding.requirement.review') || !UUID.test(clientId)) {
     root.innerHTML = emptyState('Office access, onboarding review permission and a valid Client selection are required.');

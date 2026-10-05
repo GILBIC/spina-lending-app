@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v28-loan-payout-destinations';
+const CACHE_NAME = 'spina-company-shell-v29-office-applications';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -57,6 +57,8 @@ const SHELL_ASSETS = [
   '/assets/office-cif-selection.js',
   '/assets/office-cif-workflow.js',
   '/assets/office-onboarding.js',
+  '/assets/office-case-context.js',
+  '/assets/office-application-finder.js',
   '/assets/office-privacy.js',
   '/assets/office-evidence-capture.js',
   '/assets/office-first-loan.js',

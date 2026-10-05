@@ -132,13 +132,14 @@ for (const role of ['employee', 'management']) {
     assert.equal(button(entry, 'Save application')?.disabled ?? true, true);
     assert.equal(posts(h).length, 1);
     fire(button(entry, closeAction), 'click'); await setImmediate();
+    if(closeAction==='Cancel'){assert.equal(input(entry,'purpose').value,'Private purpose');assert.notEqual(h.requests.at(-1).path,SUMMARY);fire(button(entry,'Reload application'),'click');await setImmediate();}
     assert.equal(posts(h).length, 1);
     assert.equal(h.requests.at(-1).path, SUMMARY);
     assert.match(h.root.textContent, /Private purpose/);
   });
   }
 
-  test(`${role}: changing reference clears form and ignores a late save callback`, async (t) => {
+  test(`${role}: changing lookup reference retains original pending form and acknowledged save identity`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
     let resolve; h.holdSave = new Promise((done) => { resolve = done; });
     await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
@@ -146,11 +147,11 @@ for (const role of ['employee', 'management']) {
     const oldField = input(entry, 'purpose');
     const root = h.root.querySelector('[data-office-application-review]');
     set(root, 'applicationReference', 'Another reference');
-    assert.equal(entry.innerHTML, '');
-    assert.equal(oldField.value, '');
+    assert.equal(input(entry,'purpose'),oldField);
+    assert.equal(oldField.value,'Private purpose');
     resolve(h.saved); await setImmediate();
-    assert.doesNotMatch(root.textContent, /Private purpose/);
-    assert.equal(h.requests.filter((r) => r.path === SUMMARY).length, 0);
+    assert.match(root.textContent,/Private purpose/);assert.equal(input(root,'applicationReference').value,REFERENCE);
+    assert.equal(h.requests.filter((r) => r.path === SUMMARY).length, 1);
     assert.equal(posts(h).length, 1);
   });
 
@@ -166,14 +167,14 @@ for (const role of ['employee', 'management']) {
     assert.equal(h.requests.filter((r) => r.path === SUMMARY).length, 0);
   });
 
-  test(`${role}: stale detached edit button cannot open an editor for a changed selection`, async (t) => {
+  test(`${role}: editing lookup candidate retains the original selected saved application edit action`, async (t) => {
     const h = harness(role); t.after(() => h.controller.abort());
     await mountRoleTask(mounts[role], h.context, 'management-clients-loans', 'management-office');
     const root = select(h); fire(root.querySelector('form'), 'submit'); await setImmediate();
     const oldEdit = button(root, 'Edit application information');
     set(root, 'intakeReference', 'Other intake');
     fire(oldEdit, 'click'); await setImmediate();
-    assert.equal(h.requests.some((r) => r.path.endsWith('/entry-context')), false);
-    assert.equal(root.querySelector('[data-application-entry]').innerHTML, '');
+    assert.equal(h.requests.some((r) => r.path.endsWith('/entry-context')), true);
+    assert.equal(input(root.querySelector('[data-application-entry]'),'purpose').value,'Private purpose');
   });
 }

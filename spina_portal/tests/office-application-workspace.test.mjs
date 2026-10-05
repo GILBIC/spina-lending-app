@@ -63,7 +63,7 @@ for (const role of ['employee', 'management']) {
     const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-application-review`;
     assert.deepEqual(h.navigation.find((item) => item.id === navigationId), role === 'management'
       ? {id: navigationId, label: 'Clients & loans'}
-      : {id: navigationId, label: 'Application review', group: 'Office work'});
+      : {id: navigationId, label: 'Loan application', group: 'Office work'});
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="application"]'));
     if (role === 'management') { await activateManagementTask(h.context, 'management-operations', 'management-area-management'); await activateManagementTask(h.context, 'management-clients-loans', 'management-office'); }
     const cif = h.root.querySelector('[data-office-cif-selection]');

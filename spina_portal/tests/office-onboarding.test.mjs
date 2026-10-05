@@ -10,6 +10,25 @@ const REFERENCE = 'Office / MiXeD Case';
 const REVIEW = 'client_onboarding.requirement.review';
 const VISIT = 'client_onboarding.visit.record';
 const BYPASS = 'client_onboarding.bypass';
+
+test('lookup editing preserves the unfinished intake and its live controls', async () => {
+  const h = harness(); await mount(h); fire(button(h, 'New office intake'), 'click');
+  enter(h, 'full_name', 'Unfinished applicant'); checked(h, 'privacy_consent');
+  const original = field(h, 'full_name');
+  enter(h, 'applicationReference', 'A different lookup'); fire(field(h, 'applicationReference'), 'change');
+  assert.equal(field(h, 'full_name'), original);
+  assert.equal(original.value, 'Unfinished applicant');
+  assert.equal(field(h, 'privacy_consent').checked, true);
+  assert.equal(h.calls.length, 0);
+});
+
+test('starting a new intake detaches the previous saved intake reference', async () => {
+  const h = harness(); await mount(h); await open(h);
+  fire(button(h, 'New office intake'), 'click');
+  assert.equal(field(h, 'applicationReference').value, '');
+  assert.ok(field(h, 'full_name'));
+  assert.equal(writeCalls(h).length, 0);
+});
 const BASE = '/api/v1/management/onboarding/applicants';
 const COLLECTOR = '/api/v1/collector/onboarding/applicants';
 
@@ -213,15 +232,13 @@ for (const change of [
   });
 }
 
-for (const action of ['input', 'clear', 'abort', 'dispose', 'remount']) {
+for (const action of ['abort', 'dispose', 'remount']) {
   test(`${action} removes case PII and ignores late mutation response`, async () => {
     const h = harness(); const dispose = await mount(h); await open(h);
     const pending = deferred(); h.fetch = () => pending.promise;
     for (const name of ['national_id', 'tin_id', 'meralco_bill']) enter(h, `${name}_status`, 'passed');
     const oldForm = h.root.querySelector('[data-document-review]'); const oldInput = field(h, 'tin_id_status');
     submit(h, '[data-document-review]'); submit(h, '[data-document-review]'); assert.equal(writeCalls(h).length, 1);
-    if (action === 'input') enter(h, 'applicationReference', 'Other reference');
-    if (action === 'clear') fire(button(h, 'Clear'), 'click');
     if (action === 'abort') h.controller.abort();
     if (action === 'dispose') dispose();
     if (action === 'remount') await mount(h);
@@ -230,6 +247,18 @@ for (const action of ['input', 'clear', 'abort', 'dispose', 'remount']) {
     assert.equal(writeCalls(h).length, 1); assert.doesNotMatch(h.root.textContent, /Synthetic private applicant/);
   });
 }
+
+for (const action of ['input','close']) test(`${action} during a pending write retains operation identity and blocks replacement`,async()=>{
+ const h=harness();await mount(h);await open(h);
+ const pending=deferred();h.fetch=(_,init)=>init.method==='GET'?Promise.resolve(response(h.case)):pending.promise;
+ for(const name of ['national_id','tin_id','meralco_bill'])enter(h,`${name}_status`,'passed');
+ const original=field(h,'tin_id_status');submit(h,'[data-document-review]');
+ if(action==='input')enter(h,'applicationReference','Other reference');else fire(button(h,'Close case'),'click');
+ await setImmediate();assert.equal(field(h,'tin_id_status'),original);assert.equal(original.value,'passed');assert.equal(original.disabled,true);
+ submit(h,'[data-document-review]');assert.equal(writeCalls(h).length,1);
+ pending.resolve(response({status:'under_verification'}));await setImmediate();
+ assert.equal(writeCalls(h).length,1);assert.equal(field(h,'applicationReference').value,REFERENCE);assert.match(h.root.textContent,/Synthetic private applicant/);
+});
 
 test('late case lookup cannot restore old PII after a new reference', async () => {
   const h = harness(); const pending = deferred(); h.fetch = () => pending.promise; await mount(h);

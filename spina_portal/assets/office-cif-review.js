@@ -8,7 +8,7 @@ function isUuid(value) {
   return typeof value === 'string' && UUID_PATTERN.test(value);
 }
 
-function isReviewForClient(review, clientId) {
+export function isReviewForClient(review, clientId) {
   return review !== null
     && typeof review === 'object'
     && isUuid(review.client_id)
@@ -40,7 +40,7 @@ function reviewMarkup(review) {
   </article>`;
 }
 
-export async function mountOfficeCifReview({ root, api, session, clientId, onUnavailable }) {
+export async function mountOfficeCifReview({ root, api, session, clientId, onUnavailable, initialReview, initialError, onAccessDenied }) {
   const request = {};
   currentRequests.set(root, request);
   root.innerHTML = '';
@@ -61,7 +61,8 @@ export async function mountOfficeCifReview({ root, api, session, clientId, onUna
 
   root.innerHTML = loadingPanel('Loading CIF information for review…');
   try {
-    const review = await api.request(
+    if (initialError) throw initialError;
+    const review = initialReview ?? await api.request(
       `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary`,
     );
     if (currentRequests.get(root) !== request) return;
@@ -73,6 +74,7 @@ export async function mountOfficeCifReview({ root, api, session, clientId, onUna
   } catch (error) {
     if (currentRequests.get(root) !== request) return;
     root.innerHTML = errorCard(error, 'CIF information is unavailable.');
+    if ([401, 403].includes(error?.status)) { onAccessDenied?.(error); return; }
     onUnavailable?.(error);
   }
 }

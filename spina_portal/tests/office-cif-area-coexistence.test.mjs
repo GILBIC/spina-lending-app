@@ -79,7 +79,7 @@ async function openCif(h, role) {
   const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
   assert.deepEqual(h.navigation.filter(({ id }) => id === navigationId), [role === 'management'
     ? {id: navigationId, label: 'Clients & loans'}
-    : {id: navigationId, label: 'CIF review', group: 'Office work'}]);
+    : {id: navigationId, label: 'Client information (CIF)', group: 'Office work'}]);
   if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
   const input = selection.querySelector('input');
   input.value = REFERENCE;

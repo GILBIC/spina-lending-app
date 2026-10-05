@@ -195,7 +195,12 @@ def create_app() -> FastAPI:
                 "X-Request-ID": request.state.request_id,
                 **(
                     {"Cache-Control": "no-store"}
-                    if request.url.path.startswith("/api/v1/screen-shares")
+                    if request.url.path.startswith(
+                        (
+                            "/api/v1/screen-shares",
+                            "/api/v1/management/onboarding/applicants",
+                        )
+                    )
                     else {}
                 ),
             },

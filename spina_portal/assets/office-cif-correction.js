@@ -1,3 +1,4 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, escapeHtml, hasPermission, loadingPanel } from './ui.js';
 
@@ -46,6 +47,7 @@ function editedInformation(fields) {
 export function mountOfficeCifCorrection({
   root, api, session, clientId, signal, onEditing, onClosed, onSaved, onAccessDenied,
   allowSuccessor = false, includeIdentity = false,
+  beforeEditing, getGeneration, onDraftChange,
 }) {
   mounts.get(root)?.();
   root.innerHTML = '';
@@ -57,6 +59,12 @@ export function mountOfficeCifCorrection({
   let fields = {};
   let listeners = [];
   let successor = false;
+  let submitted = null;
+  let revision = 0, baseline = new Map(), uncertain = false;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && state==='saving',isUncertain:()=>!disposed && uncertain,dispose});
+  const authorized = sessionHasRole(session,'employee','management') && hasPermission(session,'client_onboarding.requirement.review') && typeof clientId === 'string' && UUID.test(clientId);
+  const isDirty = () => !disposed && Object.entries(fields).some(([name,field])=>field.value !== baseline.get(name));
+  function edited() { revision++; onDraftChange?.(); }
   const identityFields = ['birth_date', 'birth_place', 'civil_status', 'citizenship'];
 
   function listen(element, event, handler) {
@@ -77,7 +85,7 @@ export function mountOfficeCifCorrection({
   function clearSnapshot() {
     request = {};
     original = null;
-    expectedInformation = null;
+    expectedInformation = null; submitted=null;
   }
 
   function dispose() {
@@ -95,12 +103,12 @@ export function mountOfficeCifCorrection({
 
   function start() {
     state = 'idle';
-    replaceContent('<button class="button button-outline" type="button" data-correct-cif>Correct information</button>');
+    replaceContent('<button class="button button-outline" type="button" data-correct-cif>Correct information</button><div data-correction-status role="status" aria-live="polite"></div>');
     listen(root.querySelector('[data-correct-cif]'), 'click', loadCurrent);
   }
 
   function cancel() {
-    if (disposed) return;
+    if (disposed || state === 'saving' || uncertain) return;
     clearSnapshot();
     start();
     onClosed?.();
@@ -125,11 +133,12 @@ export function mountOfficeCifCorrection({
     return '<button class="button button-outline" type="button" data-reload-cif>Reload current CIF</button>';
   }
 
-  function showError(error, reload = false) {
+  function showError(error, reload = false, includeCancel = false) {
     const status = root.querySelector('[data-correction-status]');
     status.innerHTML = `<div role="alert">${errorCard(error)}</div>${reload
-      ? `<p>Reload the current CIF before saving again.</p>${reloadMarkup()}` : ''}`;
+      ? `<p>Reload the current CIF before saving again.</p>${reloadMarkup()}` : ''}${includeCancel ? cancelMarkup() : ''}`;
     if (reload) listen(status.querySelector('[data-reload-cif]'), 'click', loadCurrent);
+    if (includeCancel) bindCancel();
   }
 
   function setFieldsDisabled(disabled) {
@@ -160,25 +169,45 @@ export function mountOfficeCifCorrection({
     }
     listen(root.querySelector('form'), 'submit', save);
     bindCancel();
+    baseline = new Map(Object.entries(fields).map(([name,field])=>[name,field.value]));
+    for (const field of Object.values(fields)) { listen(field,'input',edited); listen(field,'change',edited); }
   }
 
   async function loadCurrent() {
+    if(uncertain)return reconcileCorrection();
     if (disposed || state === 'denied' || state === 'saving') return;
-    clearSnapshot();
-    const token = request;
+    const initiatingControl = root.querySelector('[data-correct-cif]');
+    const previousState = state;
+    const generation = getGeneration?.() ?? revision;
+    const token = {}; request = token;
     state = 'loading';
-    replaceContent(`${loadingPanel('Loading current CIF for correction…')}${cancelMarkup()}`);
-    bindCancel();
-    onEditing?.();
-    if (!current(token)) return;
+    // Keep the existing authorized editor/workflow live until the target read
+    // validates and the current discard decision is accepted.
+    let status = root.querySelector('[data-correction-status]');
+    if (!status) {
+      status = root.ownerDocument.createElement('div');
+      status.setAttribute('data-correction-status',''); status.setAttribute('role','status');
+      root.appendChild(status);
+    }
+    const needsCancel = !root.querySelector('[data-cancel-cif]');
+    status.innerHTML = loadingPanel('Loading current CIF for correction…') + (needsCancel ? cancelMarkup() : '');
+    if (needsCancel) bindCancel();
+    const retain = () => { if(current(token)){state=previousState;status.textContent='Your existing work has been kept.';initiatingControl?.focus();} };
     try {
       const review = await api.request(
         `/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary?include_correction_availability=true${includeIdentity ? '&include_identity_information=true' : ''}`,
       );
       if (!current(token)) return;
+      if ((getGeneration?.() ?? revision) !== generation) { retain(); return; }
       if (!validReview(review, clientId) || typeof review.can_correct_information !== 'boolean') {
         throw new Error('The current CIF response is invalid or does not match this Client.');
       }
+      if (beforeEditing && !await beforeEditing()) { retain(); return; }
+      if (!current(token)) return;
+      if ((getGeneration?.() ?? revision) !== generation) { retain(); return; }
+      original = null; expectedInformation = null;
+      onEditing?.();
+      if (!current(token)) return;
       successor = !review.can_correct_information && allowSuccessor;
       if (!review.can_correct_information && !allowSuccessor) {
         state = 'unavailable';
@@ -189,19 +218,33 @@ export function mountOfficeCifCorrection({
         return;
       }
       renderForm(review);
+      uncertain = false;
     } catch (error) {
-      if (!current(token)) return;
+      if (disposed) return;
       if ([401, 403].includes(error?.status)) {
         denyAccess(error);
         return;
       }
-      state = 'blocked';
-      replaceContent(`<div data-correction-status role="status" aria-live="polite"></div>${cancelMarkup()}`);
-      showError(error, true);
-      bindCancel();
+      if (!current(token)) return;
+      if ((getGeneration?.() ?? revision) !== generation) { retain(); return; }
+      state = previousState;
+      const cancelButton = root.querySelector('[data-cancel-cif]');
+      showError(error, true, !cancelButton || cancelButton.parentElement === status);
     }
   }
 
+  async function reconcileCorrection() {
+    if(disposed || state==='saving' || !uncertain || !submitted)return false;
+    const token=request;state='saving';
+    try {
+      const value=await api.request(`/api/v1/management/clients/${encodeURIComponent(clientId)}/cif/review-summary?include_correction_availability=true${includeIdentity?'&include_identity_information=true':''}`);
+      if(!current(token))return false;
+      const versionMatches=successor ? value?.version_number===original.version_number+1 && value.cif_version_id!==original.cif_version_id : validReview(value,clientId,original);
+      const agrees=Object.entries(submitted.information).every(([key,expected])=>key==='identity_information'?JSON.stringify(value[key])===JSON.stringify(expected):value[key]===expected);
+      if(!validReview(value,clientId) || !versionMatches || !agrees)throw new Error('The current CIF does not yet establish the original correction. The original version and edits remain protected.');
+      uncertain=false;clearSnapshot();start();onSaved?.(value);return true;
+    }catch(error){if(!current(token))return false;if([401,403].includes(error?.status)){denyAccess(error);return false;}state='blocked';showError(error,true);return false;}
+  }
   async function save(event) {
     event.preventDefault();
     if (disposed || state !== 'editing') return;
@@ -221,6 +264,7 @@ export function mountOfficeCifCorrection({
     const token = {};
     request = token;
     state = 'saving';
+    submitted=edited;
     setFieldsDisabled(true);
     root.querySelector('[data-correction-status]').innerHTML = loadingPanel('Saving correction…');
     let saved;
@@ -248,7 +292,8 @@ export function mountOfficeCifCorrection({
         denyAccess(error);
         return;
       }
-      const canRetry = [400, 422].includes(error?.status);
+      const canRetry = error?.beforeWrite || [400, 422].includes(error?.status);
+      uncertain = !canRetry;
       state = canRetry ? 'editing' : 'blocked';
       setFieldsDisabled(!canRetry);
       showError(error, !canRetry);
@@ -256,10 +301,15 @@ export function mountOfficeCifCorrection({
     }
     clearSnapshot();
     start();
+    uncertain = false;
     onSaved?.(saved);
   }
 
   mounts.set(root, dispose);
+  Object.assign(dispose, {getContext:()=>!disposed && original ? {clientId,...original} : null, isDirty, getRevision:()=>revision,
+    isWritePending:()=>!disposed && state === 'saving', isUncertain:()=>!disposed && uncertain,
+    openCase:()=>disposed || !authorized || isDirty() ? false : loadCurrent(), resetCase:()=>{if(disposed || !authorized || state === 'saving' || uncertain)return false; clearSnapshot(); start();return true;},
+    refreshReadOnly:()=>disposed || !authorized || state==='saving' ? false : uncertain ? reconcileCorrection() : isDirty() ? false : loadCurrent(), dispose});
   if (signal?.aborted) {
     dispose();
     return dispose;

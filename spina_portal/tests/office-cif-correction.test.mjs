@@ -271,7 +271,7 @@ for (const status of [400, 422]) {
 }
 
 for (const outcome of ['conflict', 'network_uncertain', 'server', 'malformed', 'wrong-version']) {
-  test(`${outcome} blocks blind retry and requires a fresh review before another save`, async () => {
+  test(`${outcome} retains the original correction until an exact protected read establishes it`, async () => {
     const mount = await loadMount();
     const h = harness();
     h.patchResult = () => {
@@ -296,14 +296,13 @@ for (const outcome of ['conflict', 'network_uncertain', 'server', 'malformed', '
     fire(button(h, 'Reload current CIF'), 'click');
     await setImmediate();
     assert.equal(h.calls[2].path, GET);
-    assert.equal(field(h, 'full_name').value, 'Fresh server snapshot');
-    h.patchResult = null;
-    edit(h);
-    submit(h);
-    await setImmediate();
-    assert.equal(h.calls[3].options.body.cif_version_id, OTHER_ID);
-    assert.equal(h.calls[3].options.body.expected_information.full_name, 'Fresh server snapshot');
-    assert.equal(h.callbacks.filter((name) => name === 'saved').length, 1);
+    assert.equal(field(h,'full_name').value,'Corrected Applicant');
+    assert.equal(button(h,'Save correction').disabled,true);
+    submit(h);await setImmediate();assert.equal(h.calls.length,3);
+    h.current=review({...h.calls[1].options.body.corrected_information});
+    fire(button(h,'Reload current CIF'),'click');await setImmediate();
+    assert.equal(h.calls.filter(call=>call.options.method==='PATCH').length,1);
+    assert.equal(h.callbacks.filter(name=>name==='saved').length,1);
   });
 }
 
@@ -329,7 +328,7 @@ for (const stage of ['GET', 'PATCH']) {
       assert.ok(oldFields.every((element) => element.value === ''));
       assert.equal(h.root.querySelector('button'), null);
       assert.equal(h.root.querySelector('form'), null);
-      assert.deepEqual(h.callbacks, ['editing', 'denied']);
+      assert.deepEqual(h.callbacks, stage === 'GET' ? ['denied'] : ['editing', 'denied']);
       const count = h.calls.length;
       if (oldForm) fire(oldForm, 'submit');
       await setImmediate();
@@ -359,6 +358,19 @@ for (const stage of ['GET', 'PATCH']) {
       else if (action === 'dispose') dispose();
       else if (action === 'abort') h.controller.abort();
       else mount(h.options);
+      if (action === 'Cancel' && stage === 'PATCH') {
+        assert.equal(dispose.isWritePending(),true);
+        assert.ok(oldFields.some(element=>element.value !== ''));
+        fire(oldForm,'submit');
+        assert.equal(h.calls.filter(call=>call.options.method === 'PATCH').length,1);
+        pending.resolve(h.current);
+        await setImmediate();
+        assert.equal(dispose.isWritePending(),false);
+        assert.equal(h.callbacks.includes('saved'),true);
+        assert.equal(h.callbacks.includes('closed'),false);
+        assert.ok(oldFields.every(element=>element.value === ''));
+        return;
+      }
       const cleared = h.root.innerHTML;
       const callbacks = [...h.callbacks];
       const count = h.calls.length;

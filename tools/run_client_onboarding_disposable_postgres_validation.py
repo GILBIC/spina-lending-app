@@ -111,6 +111,8 @@ FULL_FLOW_TESTS = tuple(
         "test_screen_share_postgres.py",
         "test_cash_disbursement_postgres.py",
         "test_client_onboarding_case_postgres.py",
+        "test_office_application_search_api.py",
+        "test_office_application_search_repository.py",
         "test_loan_application_extended_postgres.py",
         "test_office_review_evidence_postgres.py",
         "test_first_loan_postgres.py",

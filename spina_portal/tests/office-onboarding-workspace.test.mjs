@@ -28,7 +28,9 @@ for (const role of ['employee', 'management', 'collector']) {
     const area = h.root.querySelector(selector); assert.ok(area);
     assert.ok(h.navigation.some(item => item.id === (role === 'management' ? 'management-clients-loans' : `${role}-onboarding`)));
     if (role === 'management') assert.ok(h.root.querySelector('[data-office-step-target="intake"]'));
-    assert.equal(h.calls.some(path => path.includes('/onboarding/')), false);
+    const entryReads=h.calls.filter(path=>path.includes('/onboarding/'));
+    assert.deepEqual(entryReads,role==='collector'?[]:['/api/v1/management/onboarding/applicants?limit=25']);
+    assert.equal(h.calls.some(path=>path.includes('/by-reference/')),false,'entry never selects or reads a protected case');
     area.querySelector('[name="applicationReference"]').value = ' Intake / Case ';
     fire(area.querySelector('[data-case-lookup]'), 'submit'); await setImmediate();
     assert.equal(h.calls.at(-1), `/api/v1/${prefix}/onboarding/applicants/by-reference/Intake%20%2F%20Case/${suffix}`);

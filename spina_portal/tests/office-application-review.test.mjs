@@ -259,13 +259,13 @@ test('references, facts, obligation notes and server errors are escaped', async 
   submit(h);
   await setImmediate();
   assert.doesNotMatch(h.root.innerHTML, /<img\b/i);
-  assert.match(h.root.innerHTML, /&lt;img/);
+  assert.equal(h.root.innerHTML,'');
   noFacts(h);
 });
 
 for (const stage of ['lookup', 'summary']) {
   for (const action of ['intake input', 'application change', 'Clear', 'dispose', 'abort', 'remount']) {
-    test(`${action} clears visible facts and invalidates a pending ${stage}`, async () => {
+    test(`${action} preserves selected facts until accepted replacement or privacy cleanup during pending ${stage}`, async () => {
       const mount = await loadMount();
       const h = harness();
       const dispose = mount(h);
@@ -276,7 +276,7 @@ for (const stage of ['lookup', 'summary']) {
       h.fetch = (path) => (stage === 'lookup' ? path.startsWith(LOOKUP) : path.startsWith(SUMMARY))
         ? pending.promise : Promise.resolve(response({ application_reference: INTAKE, client_id: CLIENT_ID }));
       submit(h);
-      noFacts(h);
+      assert.match(h.root.textContent,/Synthetic inventory purchase/);
       await setImmediate();
       const oldForm = h.root.querySelector('form');
       if (action === 'intake input') enter(h, 'intakeReference', 'OTHER');
@@ -291,7 +291,7 @@ for (const stage of ['lookup', 'summary']) {
       await setImmediate();
       assert.equal(h.root.innerHTML, cleared);
       assert.equal(h.calls.length, count);
-      noFacts(h);
+      if(['intake input','application change','Clear'].includes(action))assert.match(h.root.textContent,/Synthetic inventory purchase/);else noFacts(h);
       if (['dispose', 'abort', 'remount'].includes(action)) {
         fire(oldForm, 'submit');
         await setImmediate();

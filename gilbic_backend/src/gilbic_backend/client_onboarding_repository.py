@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
@@ -8,7 +12,6 @@ from uuid import UUID
 from psycopg.rows import dict_row
 
 from .database import open_connection
-
 
 ClientOnboardingStatus = Literal[
     "requirements_incomplete",
@@ -29,9 +32,293 @@ class ClientOnboardingAccessDenied(PermissionError):
     pass
 
 
+_ONBOARDING_READ_AUTH_SQL = """
+    select 1 from core.users actor
+    where actor.id = %s and actor.status = 'active'
+      and exists (
+        select 1 from core.user_roles user_role
+        join core.roles role on role.id = user_role.role_id
+        join core.role_permissions permission on permission.role_id = role.id
+        where user_role.user_id = actor.id and role.code = any(%s)
+          and permission.permission_code = %s
+      )
+"""
+
+_SEARCH_OFFICE_CASES_SQL = """
+    select a.id as applicant_id, a.application_reference as intake_reference,
+           a.promoted_client_id as client_id, a.full_name, a.phone_number,
+           a.status as intake_status, a.created_at, a.updated_at
+    from lending.client_onboarding_applicants a
+    where (%(status)s::text is null or a.status = %(status)s)
+      and (%(q)s = '' or a.full_name ilike %(pattern)s
+           or a.application_reference ilike %(pattern)s
+           or (%(phone)s::text is not null and
+               regexp_replace(a.phone_number, '[^0-9]', '', 'g') like %(phone)s)
+           or exists (select 1 from lending.loan_applications app
+                      where app.client_id = a.promoted_client_id
+                        and app.application_reference ilike %(pattern)s))
+      and (%(created_at)s::timestamptz is null or
+           (a.created_at, a.id) < (%(created_at)s::timestamptz, %(id)s::uuid))
+    order by a.created_at desc, a.id desc
+    limit %(take)s
+"""
+
+_LIST_OFFICE_APPLICATIONS_SQL = """
+    with page as materialized (
+        select id, application_reference, client_id, created_at
+        from lending.loan_applications
+        where client_id = %(client_id)s
+          and (%(created_at)s::timestamptz is null or
+               (created_at, id) < (%(created_at)s::timestamptz, %(id)s::uuid))
+        order by created_at desc, id desc limit %(take)s
+    )
+    select page.id as application_id, page.application_reference,
+           page.client_id, page.created_at,
+           latest.id as application_version_id, latest.version_number, latest.recorded_at
+    from page
+    left join lateral (
+        select v.id, v.version_number, v.recorded_at
+        from lending.loan_application_versions v
+        where v.application_id = page.id and v.client_id = page.client_id
+        order by v.version_number desc limit 1
+    ) latest on true
+    order by page.created_at desc, page.id desc
+"""
+
+
+def _finder_inputs(q: str, status: str | None, limit: int, cursor: str | None) -> str:
+    if not isinstance(q, str):
+        raise ValueError("Finder query is invalid.")  # noqa: TRY004 -- uniform finder validation boundary
+    query = q.strip().lower()
+    if query and not 3 <= len(query) <= 200:
+        raise ValueError("Finder query is invalid.")
+    if status is not None and status not in (
+        "requirements_incomplete",
+        "under_verification",
+        "eligible_for_cif",
+        "requirements_rejected",
+    ):
+        raise ValueError("Finder status is invalid.")
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("Finder limit is invalid.")
+    if cursor is not None and (
+        not isinstance(cursor, str) or not 1 <= len(cursor) <= 2048
+    ):
+        raise ValueError("Finder cursor is invalid.")
+    return query
+
+
+def _finder_scope(parts: list[str | None]) -> str:
+    # Scope fingerprints keep names, phones and exact references out of tokens.
+    return hashlib.sha256(json.dumps(parts, separators=(",", ":")).encode()).hexdigest()
+
+
+def _decode_finder_cursor(
+    token: str | None, scope: str
+) -> tuple[datetime | None, UUID | None]:
+    if token is None:
+        return None, None
+    try:
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", token):
+            raise ValueError
+        raw = base64.b64decode(
+            token + "=" * (-len(token) % 4), altchars=b"-_", validate=True
+        )
+        payload = json.loads(raw)
+        if (
+            not isinstance(payload, dict)
+            or set(payload) != {"v", "scope", "created_at", "id"}
+            or type(payload["v"]) is not int
+            or payload["v"] != 1
+            or any(
+                not isinstance(payload[key], str)
+                for key in ("scope", "created_at", "id")
+            )
+            or payload["scope"] != scope
+        ):
+            raise ValueError
+        created_at = datetime.fromisoformat(payload["created_at"])
+        identity = UUID(payload["id"])
+        if created_at.tzinfo is None or str(identity) != payload["id"]:
+            raise ValueError
+        canonical = (
+            base64.urlsafe_b64encode(
+                json.dumps(payload, separators=(",", ":")).encode()
+            )
+            .decode()
+            .rstrip("=")
+        )
+        if canonical != token:
+            raise ValueError
+        return created_at, identity
+    except (ValueError, TypeError, KeyError, OverflowError) as error:
+        raise ValueError("Finder cursor is invalid for this selection.") from error
+
+
+def _finder_page(
+    rows: list[dict[str, Any]], *, limit: int, scope: str, identity: str
+) -> dict[str, Any]:
+    has_more = len(rows) > limit
+    items = rows[:limit]
+    token = None
+    if has_more:
+        last = items[-1]
+        payload = {
+            "v": 1,
+            "scope": scope,
+            "created_at": last["created_at"].isoformat(),
+            "id": str(last[identity]),
+        }
+        token = (
+            base64.urlsafe_b64encode(
+                json.dumps(payload, separators=(",", ":")).encode()
+            )
+            .decode()
+            .rstrip("=")
+        )
+    return {
+        "items": items,
+        "next_cursor": token,
+        "has_more": has_more,
+        "as_of": datetime.now(UTC),
+    }
+
+
+def _require_onboarding_reader(
+    cursor, actor_user_id: UUID, *, scope: Literal["office", "collector"]
+) -> None:
+    roles = ["employee", "management"] if scope == "office" else ["collector"]
+    permission = (
+        "client_onboarding.requirement.review"
+        if scope == "office"
+        else "client_onboarding.visit.record"
+    )
+    if (
+        cursor.execute(
+            _ONBOARDING_READ_AUTH_SQL,
+            (actor_user_id, roles, permission),
+        ).fetchone()
+        is None
+    ):
+        raise ClientOnboardingAccessDenied(
+            "An active authorized onboarding account is required."
+        )
+
+
 class PostgresClientOnboardingRepository:
+    def search_office_cases(
+        self,
+        *,
+        actor_user_id: UUID,
+        q: str = "",
+        status: ClientOnboardingStatus | None = None,
+        limit: int = 25,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        query = _finder_inputs(q, status, limit, cursor)
+        scope = _finder_scope(["intakes", query, status])
+        created_at, identity = _decode_finder_cursor(cursor, scope)
+        pattern = (
+            "%"
+            + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            + "%"
+        )
+        digits = "".join(c for c in query if c in "0123456789")
+        phone = (
+            "%" + digits + "%"
+            if digits and re.fullmatch(r"[0-9+().\s-]+", query)
+            else None
+        )
+        with (
+            open_connection() as connection,
+            connection.cursor(row_factory=dict_row) as reader,
+        ):
+            _require_onboarding_reader(reader, actor_user_id, scope='office')
+            rows = reader.execute(
+                _SEARCH_OFFICE_CASES_SQL,
+                {
+                    "q": query,
+                    "pattern": pattern,
+                    "phone": phone,
+                    "status": status,
+                    "created_at": created_at,
+                    "id": identity,
+                    "take": limit + 1,
+                },
+            ).fetchall()
+        return _finder_page(rows, limit=limit, scope=scope, identity="applicant_id")
+
+    def list_office_applications(
+        self,
+        *,
+        actor_user_id: UUID,
+        application_reference: str,
+        limit: int = 25,
+        cursor: str | None = None,
+    ) -> dict[str, Any] | None:
+        _finder_inputs("", None, limit, cursor)
+        if (
+            not isinstance(application_reference, str)
+            or not application_reference.strip()
+        ):
+            raise ValueError("Office intake reference must be a nonblank string.")
+        reference = application_reference.strip()
+        # Check syntax before database acquisition; relationship-bound scope is
+        # verified after resolving the currently authorized exact intake.
+        if cursor is not None:
+            try:
+                raw = base64.b64decode(
+                    cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True
+                )
+                candidate_scope = json.loads(raw)["scope"]
+                if not isinstance(candidate_scope, str):
+                    raise TypeError
+                _decode_finder_cursor(cursor, candidate_scope)
+            except (ValueError, TypeError, KeyError) as error:
+                raise ValueError("Finder cursor is invalid.") from error
+        with (
+            open_connection() as connection,
+            connection.cursor(row_factory=dict_row) as reader,
+        ):
+            _require_onboarding_reader(reader, actor_user_id, scope='office')
+            intake = reader.execute(
+                """
+                    select id as applicant_id, application_reference as intake_reference,
+                           promoted_client_id as client_id, status as intake_status
+                    from lending.client_onboarding_applicants
+                    where lower(application_reference) = lower(%s)
+                """,
+                (reference,),
+            ).fetchone()
+            if intake is None:
+                return None
+            scope = _finder_scope(
+                ["applications", str(intake["applicant_id"]), str(intake["client_id"])]
+            )
+            created_at, identity = _decode_finder_cursor(cursor, scope)
+            rows = (
+                reader.execute(
+                    _LIST_OFFICE_APPLICATIONS_SQL,
+                    {
+                        "client_id": intake["client_id"],
+                        "created_at": created_at,
+                        "id": identity,
+                        "take": limit + 1,
+                    },
+                ).fetchall()
+                if intake["client_id"] is not None
+                else []
+            )
+        return {
+            **_finder_page(rows, limit=limit, scope=scope, identity="application_id"),
+            "intake": intake,
+        }
+
     def get_case_by_reference(
-        self, *, actor_user_id: UUID, application_reference: str,
+        self,
+        *,
+        actor_user_id: UUID,
+        application_reference: str,
         scope: Literal["office", "collector"],
     ) -> dict[str, Any] | None:
         """Read one exact intake case with the minimum role-specific projection."""
@@ -40,11 +327,6 @@ class PostgresClientOnboardingRepository:
         if scope not in ("office", "collector"):
             raise ValueError("Onboarding case scope is invalid.")
         reference = application_reference.strip()
-        roles = ["employee", "management"] if scope == "office" else ["collector"]
-        permission = (
-            "client_onboarding.requirement.review" if scope == "office"
-            else "client_onboarding.visit.record"
-        )
         common = """
             id as applicant_id, application_reference, status, full_name,
             phone_number, present_address, collector_visit_status,
@@ -59,24 +341,7 @@ class PostgresClientOnboardingRepository:
         """ if scope == "office" else ""
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
-                allowed = cursor.execute(
-                    """
-                    select 1 from core.users actor
-                    where actor.id = %s and actor.status = 'active'
-                      and exists (
-                        select 1 from core.user_roles user_role
-                        join core.roles role on role.id = user_role.role_id
-                        join core.role_permissions permission on permission.role_id = role.id
-                        where user_role.user_id = actor.id and role.code = any(%s)
-                          and permission.permission_code = %s
-                      )
-                    """,
-                    (actor_user_id, roles, permission),
-                ).fetchone()
-                if allowed is None:
-                    raise ClientOnboardingAccessDenied(
-                        "An active authorized onboarding account is required."
-                    )
+                _require_onboarding_reader(cursor, actor_user_id, scope=scope)
                 row = cursor.execute(
                     f"""
                     select {common}{office}

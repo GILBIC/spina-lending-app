@@ -1,3 +1,5 @@
+import { bindOfficeWriteOwner } from './office-case-context.js';
+import { createOfficeCaseContext } from './office-case-context.js';
 import { sessionHasRole } from './roles.js';
 import { disclosureBreakdown, savedDisclosureSelection } from './first-loan-disclosure.js';
 import { emptyState, errorCard, escapeHtml as esc, hasPermission, loadingPanel } from './ui.js';
@@ -27,12 +29,13 @@ function validLoan(value, review) {
     && (value.document === null || (object(value.document) && uid(value.document.id) && HASH.test(value.document.content_sha256)));
 }
 
-export function mountOfficeFirstLoan({ root, api, session, signal }) {
+export function mountOfficeFirstLoan({ root, api, session, signal, officeCaseContext, registerHandle, onContextChange, getSession = () => session, confirmDiscard }) {
   mounts.get(root)?.();
   root.innerHTML = '';
   let disposed = false;
   let token = {};
   let state = 'editing';
+  let operation = null;
   let review = null;
   let context = null;
   let loan = null;
@@ -48,6 +51,34 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   const staff = sessionHasRole(session, 'employee', 'management') && hasPermission(session, 'lending.first_loan.release');
   const canManageCredentials = sessionHasRole(session, 'employee', 'management') && hasPermission(session, 'client.credential.manage');
   let form, intake, reference, clearButton, workspace, status;
+  let selectedContext=null, lookupRequest={}, baseline=null, revision=0;
+  const coordinator=officeCaseContext ?? createOfficeCaseContext({getSession,confirmDiscard});
+  const ownsCoordinator=!officeCaseContext;
+  api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && state==='saving',isUncertain:()=>!disposed && state==='blocked',dispose}, coordinator);
+  const values=()=>JSON.stringify([...workspace.querySelectorAll('input'),...workspace.querySelectorAll('textarea'),...workspace.querySelectorAll('select')].map(control=>[control.getAttribute('name'),control.value,control.checked===true,[...(control.files??[])].map(file=>[file.name,file.size,file.type,file.lastModified])]));
+  const isDirty=()=>!disposed && baseline!==null && values()!==baseline;
+  const isWritePending=()=>!disposed && state==='saving';
+  const isUncertain=()=>!disposed && state==='blocked';
+  function edited(){revision++;coordinator.invalidateCandidate();}
+  function searchEdited(){lookupRequest={};coordinator.invalidateCandidate();if(status && state==='editing'){wipe(status);status.innerHTML='';}}
+  const packetVersion = record => record?.packet.application.id ?? record?.packet.application.application_version_id;
+  const sameVersion = (record, saved) => uid(packetVersion(record))
+    && packetVersion(record).toLowerCase() === saved.application_version_id.toLowerCase();
+  function contextFor(selection,saved,result){
+    // The protected endpoint returns history for every version of this header.
+    // Only a matching packet proves a status for the selected saved version.
+    const matching = result.loans.filter(record => sameVersion(record,saved));
+    const selectedLoan = matching.find(record=>record.status!=='cancelled') ?? matching[0];
+    return {mode:'saved-case',intakeReference:selection.application_reference,clientId:saved.client_id,
+    applicationReference:saved.application_reference,applicationId:saved.application_id,applicationVersionId:saved.application_version_id,applicationSaved:true,
+    stageFacts:{application:{intakeReference:selection.application_reference,clientId:saved.client_id,applicationReference:saved.application_reference,applicationId:saved.application_id,applicationVersionId:saved.application_version_id,versionNumber:saved.version_number,status:'Saved application version'},
+      'first-loan':{intakeReference:selection.application_reference,clientId:saved.client_id,applicationReference:saved.application_reference,applicationId:saved.application_id,applicationVersionId:saved.application_version_id,
+        status:selectedLoan ? selectedLoan.status : result.loans.length ? 'Unavailable' : 'No recorded first loan'}}};}
+  function validRecords(result,saved){return object(result) && Array.isArray(result.loans) && result.loans.every(item=>validLoan(item,saved)
+    && (packetVersion(item)==null || uid(packetVersion(item))))
+    && (result.decisions===undefined || (Array.isArray(result.decisions) && result.decisions.every(item=>uid(item.id)&&uid(item.application_version_id)&&['rejected','approval_cancelled'].includes(item.decision)&&typeof item.reason==='string')))
+    && result.loans.every(item=>item.evidence===undefined || (object(item.evidence) && Object.entries(item.evidence).every(([purpose,value])=>['borrower_contract_signed','borrower_cash_received'].includes(purpose)&&object(value)&&/^office-evidence:[0-9a-f-]{36}$/i.test(value.evidence_reference))));}
+
 
   function on(element, event, callback, action = false) {
     element.addEventListener(event, callback);
@@ -63,7 +94,8 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   function clearActions() { for (const remove of actionListeners) remove(); actionListeners = []; }
   function invalidate() {
     token = {};
-    state = 'editing'; review = null; context = null; loan = null; evidence = {}; decisions = [];
+    selectedContext=null;baseline=null;
+    operation = null; state = 'editing'; review = null; context = null; loan = null; evidence = {}; decisions = [];
     disclosure = null; disclosureTerms = null;
     clearActions(); wipe(workspace); wipe(status); preserveStatus = false;
     if (workspace) workspace.innerHTML = '';
@@ -75,17 +107,18 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
     disposed = true; invalidate(); wipe(root);
     for (const remove of listeners) remove(); listeners = [];
     signal?.removeEventListener('abort', dispose);
+    if(ownsCoordinator)coordinator.dispose();
     if (mounts.get(root) === dispose) { mounts.delete(root); root.innerHTML = ''; }
   }
   function current(request) { return !disposed && request === token; }
   function showError(error, blocked = false) {
     wipe(status); preserveStatus = false;
-    status.innerHTML = `<div role="alert">${errorCard(error)}</div>${blocked ? '<p>Reload the authoritative record before trying another action.</p>' : ''}`;
+    status.innerHTML = `<div role="alert">${errorCard(error)}</div>${blocked ? '<p>Reload the authoritative record before trying another action. The original operation remains protected until its result is verified.</p>' : ''}${blocked && operation?.retryable && !operation.acknowledged ? '<button type="button" data-retry-office-action>Retry original action</button>' : ''}`;
+    const retained=operation;
+    status.querySelector('[data-retry-office-action]')?.addEventListener('click',()=>{if(state==='blocked' && operation===retained && retained)void perform(retained);});
   }
   function denyAccess(error) {
-    invalidate();
-    intake.value = ''; reference.value = '';
-    showError(error);
+    coordinator.dispose(); dispose(); root.innerHTML=errorCard(error);
   }
   function disableActions() {
     for (const control of [...workspace.querySelectorAll('button'), ...workspace.querySelectorAll('input'), ...workspace.querySelectorAll('select'), ...workspace.querySelectorAll('textarea')]) control.disabled = state !== 'editing';
@@ -101,7 +134,8 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   async function refresh(request = token) {
     const result = await api.request(`${BASE}/by-application/${encodeURIComponent(review.application_id)}`, { signal });
     if (!current(request)) return;
-    if (!object(result) || !Array.isArray(result.loans) || !result.loans.every((item) => validLoan(item, review))) throw new Error('The first-loan response is invalid or does not match this application.');
+    if (!validRecords(result,review)) throw new Error('The first-loan response is invalid or does not match this application.');
+    if (operation && !operation.acknowledged) { state='blocked'; disableActions(); showError(new Error('The current history does not prove the original command outcome. Use its exact retry where available.'),true); return false; }
     const next = result.loans.find((item) => item.status !== 'cancelled') || result.loans[0] || null;
     if (next?.packet_hash !== loan?.packet_hash) evidence = {};
     else if (next?.authorization?.id !== loan?.authorization?.id) delete evidence.borrower_cash_received;
@@ -111,54 +145,90 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
     }
     if (result.decisions !== undefined && (!Array.isArray(result.decisions) || !result.decisions.every((item) => uid(item.id) && uid(item.application_version_id) && ['rejected', 'approval_cancelled'].includes(item.decision) && typeof item.reason === 'string'))) throw new Error('The recorded Management decision response is invalid.');
     decisions = result.decisions || [];
-    loan = next; state = 'editing'; render();
+    loan = next; state = 'editing';
+    if(selectedContext){selectedContext=contextFor({application_reference:selectedContext.intakeReference},review,result);coordinator.acceptVerifiedContext(selectedContext,coordinator.getGeneration());onContextChange?.(coordinator.getContext());}
+    render();
   }
 
-  async function open(event) {
+  async function open(event,expected=null) {
     event?.preventDefault();
-    if (disposed) return;
-    invalidate();
-    const request = token;
-    const intakeRef = intake.value.trim(); const applicationRef = reference.value.trim();
-    if (!intakeRef || !applicationRef) { showError(new Error('Enter both office references.')); return; }
-    status.innerHTML = loadingPanel('Loading first-loan records…');
-    try {
-      const selection = await api.request(`/api/v1/management/onboarding/applicants/by-reference/${encodeURIComponent(intakeRef)}/cif-client`, { signal });
-      if (!current(request)) return;
-      if (!uid(selection?.client_id) || selection.application_reference?.trim().toLowerCase() !== intakeRef.toLowerCase()) throw new Error('The intake response does not match the selected reference.');
-      const saved = await api.request(`/api/v1/management/clients/${selection.client_id}/loan-applications/by-reference/${encodeURIComponent(applicationRef)}/review-summary`, { signal });
-      if (!current(request)) return;
-      if (!object(saved) || saved.client_id !== selection.client_id || saved.application_reference !== applicationRef || !uid(saved.application_id) || !uid(saved.application_version_id) || !object(saved.information) || !Array.isArray(saved.missing_fields)) throw new Error('The application response is invalid or does not match the selected Client.');
-      review = saved;
-      const options = await api.request(`${BASE}/context`, { signal });
-      if (!current(request)) return;
-      if (!object(options) || !Array.isArray(options.products) || !Array.isArray(options.templates)
-        || !options.products.every((p) => uid(p.id) && typeof p.name === 'string' && ['fixed_daily', 'fixed_total', 'seven_by_seven'].includes(p.calculation_mode) && money(p.daily_interest_per_1000))
-        || !options.templates.every((t) => typeof t.version === 'string' && HASH.test(t.content_sha256) && typeof t.approved_for_execution === 'boolean')) throw new Error('Approved product and template configuration is unavailable.');
-      context = options;
-      await refresh(request);
-      if (current(request)) status.innerHTML = '';
-    } catch (error) { if (current(request)) { if ([401, 403].includes(error?.status)) { denyAccess(error); return; } wipe(workspace); workspace.innerHTML = ''; showError(error); } }
+    if(disposed || isWritePending() || isUncertain())return false;
+    const request={};lookupRequest=request;
+    const intakeRef=intake.value.trim(),applicationRef=reference.value.trim();
+    if(!intakeRef || !applicationRef){showError(new Error('Enter both office references.'));return false;}
+    status.innerHTML=loadingPanel('Loading first-loan records…');
+    try{
+      let selection,saved,options,result;
+      const accepted=await coordinator.requestTransition({kind:'open',targetStage:'first-loan',candidate:async()=>{
+        selection=await api.request(`/api/v1/management/onboarding/applicants/by-reference/${encodeURIComponent(intakeRef)}/cif-client`,{signal});
+        if(disposed || lookupRequest!==request)return null;
+        if(!uid(selection?.client_id) || selection.application_reference?.trim().toLowerCase()!==intakeRef.toLowerCase()
+          || (expected?.clientId && selection.client_id.toLowerCase()!==expected.clientId.toLowerCase()))throw new Error('The intake response does not match the selected reference and Client.');
+        saved=await api.request(`/api/v1/management/clients/${selection.client_id}/loan-applications/by-reference/${encodeURIComponent(applicationRef)}/review-summary`,{signal});
+        if(disposed || lookupRequest!==request)return null;
+        if(!object(saved) || saved.client_id!==selection.client_id || saved.application_reference!==applicationRef || !uid(saved.application_id) || !uid(saved.application_version_id) || !object(saved.information) || !Array.isArray(saved.missing_fields)
+          || (expected && Object.hasOwn(expected,'applicationId') && (typeof expected.applicationId!=='string' || saved.application_id.toLowerCase()!==expected.applicationId.toLowerCase()))
+          || (expected && Object.hasOwn(expected,'applicationVersionId') && (typeof expected.applicationVersionId!=='string' || saved.application_version_id.toLowerCase()!==expected.applicationVersionId.toLowerCase()))
+          || (expected && Object.hasOwn(expected,'versionNumber') && saved.version_number!==expected.versionNumber))throw new Error('The application response does not match the selected application or saved version; it may have changed. Refresh and select it again.');
+        options=await api.request(`${BASE}/context`,{signal});
+        if(disposed || lookupRequest!==request)return null;
+        if(!object(options) || !Array.isArray(options.products) || !Array.isArray(options.templates)
+          || !options.products.every(p=>uid(p.id)&&typeof p.name==='string'&&['fixed_daily','fixed_total','seven_by_seven'].includes(p.calculation_mode)&&money(p.daily_interest_per_1000))
+          || !options.templates.every(t=>typeof t.version==='string'&&HASH.test(t.content_sha256)&&typeof t.approved_for_execution==='boolean'))throw new Error('Approved product and template configuration is unavailable.');
+        result=await api.request(`${BASE}/by-application/${encodeURIComponent(saved.application_id)}`,{signal});
+        if(disposed || lookupRequest!==request)return null;
+        if(!validRecords(result,saved))throw new Error('The first-loan response is invalid or does not match this application.');
+        return contextFor(selection,saved,result);
+      }});
+      if(!accepted || disposed){if(!disposed && lookupRequest===request){status.textContent='Your existing work has been kept.';form.querySelector('button[type="submit"]').focus();}return false;}
+      token=request;review=saved;context=options;loan=result.loans.find(item=>item.status!=='cancelled')??result.loans[0]??null;decisions=result.decisions??[];
+      evidence=Object.fromEntries(Object.entries(loan?.evidence??{}).map(([purpose,value])=>[purpose,value.evidence_reference]));
+      selectedContext=contextFor(selection,saved,result);intake.value=selection.application_reference;reference.value=saved.application_reference;
+      onContextChange?.(coordinator.getContext());render();status.innerHTML='';return true;
+    }catch(error){if([401,403].includes(error?.status)){denyAccess(error);return false;}if(!disposed && lookupRequest===request)showError(error);return false;}
   }
 
   async function mutate(path, buildBody, validate = object, after) {
-    if (disposed || state !== 'editing') return;
+    if (disposed || state !== 'editing' || operation) return;
     const request = token;
-    state = 'saving'; disableActions(); wipe(status); preserveStatus = false; status.innerHTML = loadingPanel('Recording the office action…');
+    state='saving';disableActions();
     try {
-      const body = typeof buildBody === 'function' ? await buildBody() : buildBody;
-      if (!current(request)) return;
-      const result = await api.request(path, { method: 'POST', body, signal, financial: true });
-      if (!current(request)) return;
-      if (!validate(result)) throw new Error('The result could not be verified.');
-      if (after) await after(result, request); else await refresh(request);
-      if (current(request)) { state = 'editing'; disableActions(); if (!preserveStatus) status.innerHTML = ''; }
-    } catch (error) {
-      if (!current(request)) return;
-      if ([401, 403].includes(error?.status)) { denyAccess(error); return; }
-      state = [400, 422].includes(error?.status) || error?.beforeWrite ? 'editing' : 'blocked';
-      disableActions(); showError(error, state === 'blocked');
+      const body=typeof buildBody==='function' ? await buildBody() : buildBody;
+      if(!current(request))return;
+      operation={path,body,validate,after,request,acknowledged:false,result:null,
+        retryable:/\/(approve|reject|cancel-approval|authorize-release|revoke-release|evidence|release)$/.test(path) && uid(body?.request_id) || /\/first-loans\/[^/]+\/documents$/.test(path)};
+      await perform(operation);
+    }catch(error){if(current(request)){state='editing';disableActions();showError(error);}}
+  }
+  async function perform(original) {
+    if(disposed || operation!==original)return;
+    const request=original.request;
+    const previouslyAttempted=original.attempted===true;original.attempted=true;
+    state='saving';disableActions();wipe(status);preserveStatus=false;status.innerHTML=loadingPanel('Recording the office action...');
+    try {
+      const result=await api.request(original.path,{method:'POST',body:original.body,signal,financial:true});
+      if(!current(request))return;
+      if(!original.validate(result))throw new Error('The result could not be verified.');
+      original.acknowledged=true;original.result=result;
+      if(original.after)await original.after(result,request);else await refresh(request);
+      if(current(request)){operation=null;state='editing';disableActions();if(!preserveStatus)status.innerHTML='';}
+    }catch(error){
+      if(!current(request))return;
+      if([401,403].includes(error?.status)){denyAccess(error);return;}
+      // A rejected follow-up GET cannot undo a validated command acknowledgment.
+      const rejected=!previouslyAttempted && !original.acknowledged && (error?.beforeWrite || [400,422].includes(error?.status));
+      state=rejected?'editing':'blocked';if(rejected)operation=null;
+      disableActions();showError(error,!rejected);
     }
+  }
+  async function recover() {
+    if(disposed || state==='saving' || !operation)return false;
+    try {
+      if(operation.acknowledged && operation.after)await operation.after(operation.result,token);else await refresh(token);
+      if(disposed)return false;
+      if(state==='editing'){operation=null;if(!preserveStatus)status.innerHTML='';return true;}
+      return false;
+    }catch(error){if([401,403].includes(error?.status)){denyAccess(error);return false;}if(!disposed){state='blocked';disableActions();showError(error,true);}return false;}
   }
 
   function approvalMarkup() {
@@ -300,10 +370,14 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
     disclosure = null; disclosureTerms = null;
     clearActions(); wipe(workspace);
     workspace.innerHTML = `<h3>First loan · ${esc(review.application_reference)}</h3><p>Saved application version ${esc(review.version_number)}. CIF/application confirmation, loan signing and cash acknowledgment remain separate.</p>${button('reload', 'Reload saved record')}
-      ${loan ? loanMarkup() : emptyState('No first-loan approval has been recorded for this application.')}
+      ${loan ? `<p>Recorded packet application version: ${esc(loan.packet.application.version_number ?? 'Not loaded')}. ${packetVersion(loan)
+        ? sameVersion(loan,review) ? 'This packet belongs to the selected saved version.' : 'This packet belongs to a different saved version from the selected application.'
+        : 'This packet source version is unavailable.'}</p>${loanMarkup()}` : emptyState('No first-loan approval has been recorded for this application.')}
       ${decisions.length ? `<details><summary>Recorded Management decisions</summary>${decisions.map((decision) => `<p>${esc(decision.decision.replaceAll('_', ' '))}: ${esc(decision.reason)} · ${esc(decision.recorded_at || '')}</p>`).join('')}</details>` : ''}
       ${manager && (!loan || loan.status === 'cancelled') ? approvalMarkup() : ''}`;
-    action('reload', () => { if (state === 'saving') return; open(); });
+    baseline=values();
+    for(const control of [...workspace.querySelectorAll('input'),...workspace.querySelectorAll('textarea'),...workspace.querySelectorAll('select')]){on(control,'input',edited,true);on(control,'change',edited,true);}
+    action('reload', async () => { if(state==='saving')return;if(state==='blocked')return recover();await open(null,selectedContext); });
     const approval = workspace.querySelector('[data-approval]');
     if (approval) on(approval, 'submit', (event) => {
       event.preventDefault();
@@ -375,7 +449,12 @@ export function mountOfficeFirstLoan({ root, api, session, signal }) {
   form = root.querySelector('form'); intake = root.querySelector('[name="intakeReference"]'); reference = root.querySelector('[name="applicationReference"]');
   clearButton = form.querySelector('button[type="button"]'); workspace = root.querySelector('[data-first-loan-workspace]'); status = root.querySelector('[data-first-loan-status]');
   on(form, 'submit', open);
-  for (const control of [intake, reference]) { on(control, 'input', invalidate); on(control, 'change', invalidate); }
-  on(clearButton, 'click', () => { invalidate(); intake.value = ''; reference.value = ''; intake.focus(); });
+  for (const control of [intake, reference]) { on(control, 'input', searchEdited); on(control, 'change', searchEdited); }
+  on(clearButton, 'click', () => { const password=root.querySelector('[name="issuedPassword"]');if(password){password.value='';wipe(status);status.innerHTML='';} searchEdited(); intake.value = ''; reference.value = ''; intake.focus(); });
+  const handle={getContext:()=>!disposed?selectedContext:null,isDirty,isWritePending,isUncertain,getRevision:()=>revision,
+    openCase:selection=>{if(disposed || !selection || typeof selection!=='object')return false;intake.value=selection.intakeReference??'';reference.value=selection.applicationReference??'';return open(null,selection);},
+    resetCase:()=>{if(disposed || isWritePending() || isUncertain())return false;invalidate();intake.value='';reference.value='';return true;},
+    refreshReadOnly:()=>{if(isWritePending())return false;if(isUncertain())return recover();if(!selectedContext || isDirty())return false;return handle.openCase(selectedContext);},dispose};
+  Object.assign(dispose,handle);registerHandle?.(handle);if(ownsCoordinator)coordinator.registerStage('first-loan',handle);
   return dispose;
 }

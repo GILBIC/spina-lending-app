@@ -337,7 +337,7 @@ for (const status of [400, 422]) {
 }
 
 for (const status of [409, 500, 'network']) {
-  test(`${status} locks Save and reload explicitly closes without another write`, async () => {
+  test(`${status} locks Save and reload retains original edits when protected read cannot prove the save`, async () => {
     const mount = await loadMount();
     const h = harness();
     h.fetch = (_, init) => init.method === 'GET' ? Promise.resolve(response(h.context))
@@ -354,10 +354,12 @@ for (const status of [409, 500, 'network']) {
     submit(h);
     assert.equal(h.calls.length, 2);
     fire(button(h, 'Reload application'), 'click');
-    assert.deepEqual(h.cancelled, [{ reload: true }]);
-    assert.equal(h.root.innerHTML, '');
-    assert.equal(purpose.value, '');
-    assert.equal(h.calls.length, 2);
+    await setImmediate();
+    assert.deepEqual(h.cancelled, []);
+    assert.equal(field(h,'purpose'),purpose);
+    assert.equal(purpose.value, 'Private draft purpose');
+    assert.equal(button(h,'Save application').disabled,true);
+    assert.equal(h.calls.length, 3);
   });
 }
 
@@ -390,7 +392,7 @@ for (const [label, change] of [
   });
 }
 
-test('pending Save sends only once and Cancel clears detached inputs and suppresses late success', async () => {
+test('pending Save sends only once and Cancel retains original controls and acknowledged success', async () => {
   const mount = await loadMount();
   const h = harness({ append: true });
   const pending = deferred();
@@ -405,13 +407,13 @@ test('pending Save sends only once and Cancel clears detached inputs and suppres
   assert.equal(h.calls.length, 2);
   assert.equal(button(h, 'Save application').disabled, true);
   fire(button(h, 'Cancel'), 'click');
-  assert.deepEqual(h.cancelled, [{ reload: true }]);
-  assert.equal(purpose.value, '');
+  assert.deepEqual(h.cancelled, []);
+  assert.equal(field(h,'purpose'),purpose);
   fire(form, 'submit');
   pending.resolve(response({ ...review(), version_number: 10, application_version_id: NEXT_VERSION }));
   await setImmediate();
   assert.equal(h.root.innerHTML, '');
-  assert.equal(h.saved.length, 0);
+  assert.equal(h.saved.length, 1);
   assert.equal(h.calls.length, 2);
 });
 
@@ -424,9 +426,8 @@ for (const attempted of [false, true]) {
     enter(h, 'purpose', 'Private draft');
     if (attempted) { submit(h); await setImmediate(); }
     fire(button(h, 'Cancel'), 'click');
-    assert.deepEqual(h.cancelled, [{ reload: attempted }]);
-    assert.equal(h.root.innerHTML, '');
-    assert.equal(h.calls.length, attempted ? 2 : 1);
+    if(attempted){assert.deepEqual(h.cancelled,[]);assert.equal(field(h,'purpose').value,'Private draft');fire(button(h,'Reload application'),'click');await setImmediate();assert.deepEqual(h.cancelled,[]);assert.equal(field(h,'purpose').value,'Private draft');}else {assert.deepEqual(h.cancelled,[{reload:false}]);assert.equal(h.root.innerHTML,'');}
+    assert.equal(h.calls.length, attempted ? 3 : 1);
   });
 }
 
@@ -498,4 +499,14 @@ test('reference, product labels and prefill text cannot inject markup', async ()
   assert.equal(field(h, 'purpose').value, '<script>alert(2)</script>');
   assert.match(h.root.innerHTML, /&lt;img/);
   assert.match(h.root.innerHTML, /&lt;svg/);
+});
+
+test('application recovery retains editor until original submitted facts and version are established',async()=>{
+ const h=harness({append:true}),mount=await loadMount();let handle;const dispose=mount({...h,registerHandle:value=>handle=value});await setImmediate();
+ enter(h,'purpose','Original submitted purpose');const purpose=field(h,'purpose');let submitted;
+ h.fetch=(path,init)=>{if(init.method==='POST'){submitted=JSON.parse(init.body);return Promise.reject(Error('Lost application save'));}return Promise.resolve(response(review()));};
+ submit(h);await setImmediate();assert.equal(handle.isUncertain(),true);
+ purpose.value='Later programmatic edit';await handle.refreshReadOnly();assert.equal(handle.isUncertain(),true);assert.equal(field(h,'purpose'),purpose);assert.equal(h.saved.length,0);
+ h.fetch=()=>Promise.resolve(response({...review(),application_version_id:NEXT_VERSION,version_number:10,information:submitted.information}));
+ await handle.refreshReadOnly();assert.equal(h.saved.length,1);assert.equal(h.saved[0].information.request.purpose,'Original submitted purpose');assert.equal(h.calls.filter(c=>c.init.method==='POST').length,1);assert.equal(purpose.value,'');dispose();
 });

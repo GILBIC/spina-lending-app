@@ -57,7 +57,7 @@ test('review remains two GETs until staff prepares exact signed evidence, then o
   click(h, 'confirm-application'); click(h, 'confirm-application'); await setImmediate();
   assert.equal(h.calls.length, 5); assert.equal(h.calls[4].path, `${BASE}/loan-applications/${APP}/review-confirmations`);
   assert.deepEqual(h.calls[4].body, { application_version_id: VERSION, applicant_confirmation_evidence_reference: `office-evidence:${EVIDENCE}` });
-  assert.match(h.root.textContent, /Applicant application review confirmed/);
+  assert.match(h.root.textContent, /Applicant application review confirmed/);assert.equal(h.dispose.isDirty(),false);
   assert.match(h.root.textContent, /Approval, final loan signing, and release remain separate/);
   click(h, 'confirm-application'); assert.equal(h.calls.length, 5); h.dispose();
 });
@@ -68,7 +68,7 @@ test('incomplete request or repayment facts cannot prepare applicant confirmatio
   click(h, 'prepare-application-confirmation'); await setImmediate(); assert.equal(h.calls.length, 2); h.dispose();
 });
 
-for (const action of ['input', 'clear', 'edit', 'abort', 'dispose', 'remount']) test(`${action} invalidates a pending signed capture and detached confirmation button`, async () => {
+for (const action of ['input', 'clear', 'edit', 'abort', 'dispose', 'remount']) test(`${action} retains or disposes the original pending signed capture according to owner protection`, async () => {
   const h = harness(); await open(h); await prepare(h); let resolve;
   h.response = (path) => path.endsWith('/entry-context') ? {} : new Promise(done => { resolve = done; });
   await captureSigned(h); const confirmButton = button(h, 'confirm-application'); const scan = field(h, 'signedScan');
@@ -78,22 +78,23 @@ for (const action of ['input', 'clear', 'edit', 'abort', 'dispose', 'remount']) 
   if (action === 'abort') h.controller.abort();
   if (action === 'dispose') h.dispose();
   if (action === 'remount') mountOfficeApplicationReview(h);
+  if(['input','clear','edit'].includes(action))assert.equal(field(h,'signedScan'),scan);
   resolve(capture()); await setImmediate(); fire(confirmButton, 'click'); await setImmediate();
-  assert.equal(scan.value, '');
-  assert.equal(h.calls.some(call => call.path.endsWith('/review-confirmations')), false); h.dispose();
+  if(['input','clear','edit'].includes(action)){assert.equal(scan.value,'');assert.equal(h.calls.filter(call=>call.path.endsWith('/review-confirmations')).length,1);}else{assert.equal(scan.value,'');assert.equal(h.calls.some(call => call.path.endsWith('/review-confirmations')), false);} h.dispose();
 });
 
-for (const failure of [409, 503, 'network_uncertain', 'mismatched-success']) test(`${failure} confirmation requires reload and never retries blindly`, async () => {
+for (const failure of [409, 503, 'network_uncertain', 'mismatched-success']) test(`${failure} confirmation retains exact evidence for a deliberate identical retry`, async () => {
   const h = harness(); await open(h); await prepare(h); await captureSigned(h);
   h.response = () => {
     if (failure === 'mismatched-success') return { ...confirmation(), application_version_id: CIF };
     throw Object.assign(new Error('Synthetic confirmation error'), typeof failure === 'number' ? { status: failure } : { code: failure });
   };
   click(h, 'confirm-application'); await setImmediate(); click(h, 'confirm-application'); await setImmediate();
-  assert.equal(h.calls.filter(call => call.path.endsWith('/review-confirmations')).length, 1);
-  assert.match(h.root.textContent, /Open the application review again/);
+  const attempts=h.calls.filter(call=>call.path.endsWith('/review-confirmations'));
+  assert.equal(attempts.length,2);assert.deepEqual(attempts[1].body,attempts[0].body);
+  assert.match(h.root.textContent,/original confirmation evidence/);
   assert.doesNotMatch(h.root.textContent, /Applicant application review confirmed/);
-  assert.equal(button(h, 'application-signed-evidence').innerHTML, ''); h.dispose();
+  assert.match(button(h,'application-signed-evidence').textContent,/Signed review evidence saved/); h.dispose();
 });
 
 test('validation error keeps captured exact evidence for an intentional retry', async () => {
@@ -110,11 +111,11 @@ test('denied confirmation clears all selected facts and references', async () =>
   click(h, 'confirm-application'); await setImmediate(); assert.equal(h.root.innerHTML, ''); assert.equal(input.value, '');
 });
 
-test('late confirmation after selection changes cannot restore a success or private information', async () => {
+test('lookup edits during pending confirmation retain original operation and acknowledged outcome', async () => {
   const h = harness(); await open(h); await prepare(h); await captureSigned(h); let resolve;
   h.response = () => new Promise(done => { resolve = done; }); click(h, 'confirm-application');
   fire(field(h, 'intakeReference'), 'input'); resolve(confirmation()); await setImmediate();
-  assert.doesNotMatch(h.root.textContent, /Synthetic loan|Applicant application review confirmed/); h.dispose();
+  assert.match(h.root.textContent,/Applicant application review confirmed/);assert.equal(h.calls.filter(call=>call.path.endsWith('/review-confirmations')).length,1); h.dispose();
 });
 
 function printContext(saved = review()) { return { ...context(), review_snapshot: {
@@ -154,12 +155,12 @@ for (const mismatch of ['application', 'CIF', 'facts']) test(`print fails closed
   assert.equal(document.frames.length, 0); assert.match(h.root.textContent, /does not match/); h.dispose();
 });
 
-test('selection changes invalidate late print context and clear an unprinted detached copy', async (t) => {
+test('lookup edits retain the selected print context while abort clears an unprinted detached copy', async (t) => {
   const document = printDocument(t), h = harness(); await open(h); let resolve;
   h.response = () => new Promise(done => { resolve = done; }); click(h, 'print-application');
   fire(field(h, 'intakeReference'), 'input'); resolve(printContext()); await setImmediate();
-  assert.equal(document.frames.length, 0);
+  assert.equal(document.frames.length, 1);
   h.response = null; await open(h); h.response = () => printContext(); click(h, 'print-application'); await setImmediate();
-  const frame = document.frames[0], load = frame.onload; h.controller.abort(); load();
+  const frame = document.frames.at(-1), load = frame.onload; h.controller.abort(); load();
   assert.equal(frame.removed, true); assert.equal(frame.srcdoc, ''); assert.deepEqual(document.printed, []);
 });

@@ -164,3 +164,63 @@ test('7x7 compliance uses existing endpoint and immutable packet terms',async()=
  fire(h.root.querySelector('[data-compliance]'),'submit');await setImmediate();
  const post=h.calls.find(x=>x.options.method==='POST');assert.ok(post.path.endsWith('/contract-schedules/7x7-pricing-compliance/review'));assert.equal(post.options.body.contract_reference,VERSION);assert.equal(post.options.body.first_due_date,'2026-09-25');assert.equal(post.options.body.agreed_daily_payment,'100.00');assert.equal(post.options.body.penalty_rate_ceiling,'0.050000');assert.equal(button(h,'Generate locked PDF packet').disabled,false);
 });
+test('authoritative refresh retains older cancelled history after current packet document issuance', async () => {
+  const h = harness();
+  const historical = approved('cancelled');
+  historical.loan_id = CLIENT;
+  historical.packet.loan_id = CLIENT;
+  historical.packet.application = { application_id: APP, id: CLIENT, version_number: 1 };
+  const current = approved();
+  current.packet.application = { application_id: APP, id: VERSION, version_number: 2 };
+  h.review.version_number = 2;
+  h.loans = [historical, current];
+  h.request = (path, options) => {
+    if (options.method === 'POST') {
+      current.document = { id: VERSION, content_sha256: 'b'.repeat(64) };
+      return { ...current.document, byte_count: 50 };
+    }
+    return h.defaultRequest(path);
+  };
+  const handle = (await mount())(h);
+  await open(h);
+  assert.equal(handle.getContext().stageFacts['first-loan'].status, 'approved_pending_release');
+  assert.equal(handle.isDirty(), false);
+  fire(button(h, 'Generate locked PDF packet'), 'click');
+  await setImmediate();
+  assert.equal(h.calls.filter(call => call.options.method === 'POST').length, 1);
+  assert.equal(handle.isWritePending(), false);
+  assert.equal(handle.isUncertain(), false);
+  assert.equal(handle.getContext().stageFacts['first-loan'].status, 'approved_pending_release');
+  assert.ok(button(h, 'Download locked PDF packet'));
+  assert.match(h.root.textContent, /Recorded packet application version: 2/);
+  handle();
+});
+
+for (const status of [400,422]) test(`acknowledged financial write followed by ${status} read stays locked until protected read succeeds`,async()=>{
+ const h=harness();h.loans=[approved()];let handle;const dispose=(await mount())({...h,registerHandle:value=>handle=value});await open(h);
+ h.request=(path,options)=>options.method==='POST'?{id:CLIENT,content_sha256:'b'.repeat(64),byte_count:100}:Promise.reject(Object.assign(Error('Read unavailable'),{status}));
+ fire(button(h,'Generate locked PDF packet'),'click');await setImmediate();
+ assert.equal(handle.isUncertain(),true);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);
+ h.request=h.defaultRequest;fire(button(h,'Reload saved record'),'click');await setImmediate();
+ assert.equal(handle.isUncertain(),false);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);dispose();
+});
+
+test('generic first-loan history does not resolve an unacknowledged financial command',async()=>{
+ const h=harness();h.loans=[approved()];let handle;const dispose=(await mount())({...h,registerHandle:value=>handle=value});await open(h);
+ h.request=(path,options)=>options.method==='POST'?Promise.reject(Error('Lost response')):h.defaultRequest(path);
+ fire(button(h,'Generate locked PDF packet'),'click');await setImmediate();assert.equal(handle.isUncertain(),true);
+ field(h,'applicationReference').value='EDITED-CANDIDATE';
+ fire(button(h,'Reload saved record'),'click');await setImmediate();
+ assert.equal(handle.isUncertain(),true);assert.equal(handle.getContext().applicationReference,'Loan-Mixed');
+ assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);dispose();
+});
+
+test('uncertain release exact retry preserves original body identity despite lookup and form edits',async()=>{
+ const h=harness('employee');h.loans=[{...approved(),document:{id:PRODUCT,content_sha256:'b'.repeat(64),byte_count:8},authorization:{id:APP,revoked:false},evidence:{borrower_contract_signed:{evidence_reference:`office-evidence:${CLIENT}`},borrower_cash_received:{evidence_reference:`office-evidence:${VERSION}`}}}];
+ h.request=(path,options)=>options.method==='POST'?Promise.reject(Error('Lost release')):h.defaultRequest(path);
+ const dispose=(await mount())(h);await open(h);field(h,'cashAmount').value='1000.00';field(h,'borrowerConfirmed').checked=true;fire(h.root.querySelector('[data-release]'),'submit');await setImmediate();
+ const first=h.calls.find(c=>c.options.method==='POST');const original=structuredClone(first.options.body);
+ field(h,'cashAmount').value='9999.99';field(h,'borrowerConfirmed').checked=false;field(h,'applicationReference').value='DIFFERENT';
+ fire(h.root.querySelector('[data-retry-office-action]'),'click');await setImmediate();
+ const writes=h.calls.filter(c=>c.options.method==='POST');assert.equal(writes.length,2);assert.equal(writes[1].path,first.path);assert.deepEqual(writes[1].options.body,original);assert.equal(writes[1].options.body,first.options.body);dispose();
+});

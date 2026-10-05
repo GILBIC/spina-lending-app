@@ -103,6 +103,13 @@ async function workspace(t, {action, failReadback = false}) {
       if (path.startsWith('/api/v1/management/support?')) return {requests: structuredClone(support)};
       if (path.startsWith('/api/v1/management/renewal-workflow?')) return {requests: [structuredClone(renewal)]};
       if (path === '/api/v1/management/accounts?staff_only=true') return {accounts: []};
+      if (path === '/api/v1/management/onboarding/applicants?limit=25') {
+        return {items: [], next_cursor: null, has_more: false, as_of: '2026-10-05T00:00:00Z'};
+      }
+      if (path === `/api/v1/management/onboarding/applicants/by-reference/${INTAKE}/applications?limit=25`) {
+        return {items: [], next_cursor: null, has_more: false, as_of: '2026-10-05T00:00:00Z',
+          intake: {applicant_id: id(906), intake_reference: INTAKE, client_id: CLIENT, intake_status: 'eligible_for_cif'}};
+      }
       if (path === '/api/v1/notifications') return [{...notice}];
       if (path === '/api/v1/remittances') return [structuredClone(remittance)];
       if (path === `/api/v1/treasury/collector-surplus/remittances/${REMITTANCE}/receiving-contract`) {
@@ -143,11 +150,16 @@ async function retainDrafts(h) {
   const workflow = h.root.querySelector('[data-office-workflow]');
   const intake = h.root.querySelector('[data-office-onboarding]').querySelector('[name="applicationReference"]');
   intake.value = INTAKE; fire(intake, 'input');
-  fire(workflow.querySelector('[data-office-step-target="application"]'), 'click');
+  fire(workflow.querySelector('[data-office-step-target="application"]'), 'click');await setImmediate();
   const application = h.root.querySelector('[data-office-application-review]');
+  // Each stage verifies its candidate; editable intake text is not a case handoff.
+  application.querySelector('[name="intakeReference"]').value = INTAKE;
   application.querySelector('[name="applicationReference"]').value = APPLICATION_REFERENCE;
   fire(application.querySelector('form'), 'submit'); await setImmediate();
   assert.ok(application.querySelector('[data-prepare-application-confirmation]'), 'Open the actual authorized application review');
+  // Return to intake through actual navigation; only the verified case can refill its cleared candidate lookup.
+  fire(workflow.querySelector('[data-office-step-target="intake"]'),'click');await setImmediate();assert.equal(intake.value,INTAKE);
+  fire(workflow.querySelector('[data-office-step-target="application"]'),'click');await setImmediate();assert.equal(application.querySelector('[name="applicationReference"]').value,APPLICATION_REFERENCE);
   fire(application.querySelector('[data-prepare-application-confirmation]'), 'click'); await setImmediate();
   const scan = application.querySelector('[name="signedScan"]');
   assert.ok(scan, 'Use the actual Office evidence input, not an injected stand-in file field');

@@ -61,11 +61,10 @@ for(const role of ['employee','management'])test(`${role}: account setup needs e
 
 for(const deniedStatus of [401,403])test(`document download ${deniedStatus} clears borrower facts, references and detached credentials`,async()=>{
  const {root,controller}=await opened({deniedStatus});
- const password=root.querySelector('[name="issuedPassword"]');
+ const password=root.querySelector('[name="issuedPassword"]'),intake=root.querySelector('[name="intakeReference"]'),application=root.querySelector('[name="applicationReference"]'),oldForm=root.querySelector('form');
  fire(button(root,'Download locked PDF packet'),'click');await setImmediate();
  assert.equal(password.value,'');assert.doesNotMatch(root.textContent,/Synthetic borrower|synthetic-user/);
- assert.equal(root.querySelector('[name="intakeReference"]').value,'');
- assert.equal(root.querySelector('[name="applicationReference"]').value,'');
+ assert.equal(intake.value,'');assert.equal(application.value,'');assert.equal(root.querySelector('form'),null);assert.equal(root.querySelector('[name="issuedPassword"]'),null);fire(oldForm,'submit');await setImmediate();assert.equal(root.querySelector('form'),null);
  assert.equal(button(root,'Retry account setup'),undefined);controller.abort();
 });
 
