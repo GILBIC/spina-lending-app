@@ -38,3 +38,14 @@ test('Collector-primary combined Employee membership can capture office evidence
  mountOfficeEvidenceCapture({root,api:{request:async()=>{lookups++;return {client_id:clientId,cif_version_id:cifVersionId,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)};}},session:combined,clientId,cifVersionId,purpose:'cif_review'});
  await setImmediate();assert.equal(lookups,1);assert.ok(root.querySelector('[name="signedScan"]'));
 });
+
+test('CIF signing offers a screen signature pad alongside the existing scan',async()=>{
+ const {mountOfficeEvidenceCapture}=await import('../assets/office-evidence-capture.js');
+ const root=new Element();
+ const dispose=mountOfficeEvidenceCapture({root,api:{request:async()=>({client_id:clientId,cif_version_id:cifVersionId,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)})},session,clientId,cifVersionId,purpose:'cif_review'});
+ await setImmediate();
+ assert.ok(root.querySelector('[data-signature-screen]'),'Applicant needs a Sign on screen control');
+ assert.ok(root.querySelector('[data-signature-canvas]'),'Applicant needs a drawing surface');
+ assert.ok(root.querySelector('[name="signedScan"]'),'Existing paper evidence is still available');
+ dispose();
+});

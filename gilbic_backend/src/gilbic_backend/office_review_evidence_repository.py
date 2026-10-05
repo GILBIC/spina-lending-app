@@ -1,4 +1,4 @@
-"""Immutable wet-sign evidence bound to a server-derived exact review snapshot."""
+"""Immutable witnessed signatures bound to a server-derived exact review snapshot."""
 
 from __future__ import annotations
 
@@ -42,6 +42,7 @@ class OfficeReviewEvidence:
     byte_count: int
     captured_by_user_id: UUID
     captured_at: datetime
+    capture_method: str
 
     @property
     def evidence_reference(self) -> str:
@@ -124,12 +125,19 @@ def capture_evidence(
     request_id: UUID,
     application_id: UUID | None = None,
     application_version_id: UUID | None = None,
+    capture_method: str = "paper_scan",
 ) -> OfficeReviewEvidence:
     """Caller authorizes and locks its domain source; this runs in that transaction.
 
     Private files are addressed by the retry UUID. A rollback can leave a private
     unreferenced file; an exact retry safely reuses it, never overwrites it.
     """
+    if capture_method not in ("paper_scan", "screen_signature") or (
+        capture_method == "screen_signature"
+        and purpose
+        not in ("cif_review", "application_review", "privacy_acknowledgment")
+    ):
+        raise OfficeReviewEvidenceConflict("Invalid signature method for this review.")
     digest = snapshot_digest(review_snapshot)
     content_hash = hashlib.sha256(content).hexdigest()
     values = {
@@ -146,6 +154,7 @@ def capture_evidence(
         "media_type": media_type,
         "byte_count": len(content),
         "captured_by_user_id": actor_user_id,
+        "capture_method": capture_method,
     }
     # Serialize retries before touching the file, including concurrent first uploads.
     cursor.execute(
@@ -172,12 +181,12 @@ def capture_evidence(
         insert into lending.office_review_evidence (
             request_id, client_id, cif_version_id, application_id, application_version_id,
             purpose, subject_id, review_snapshot, snapshot_sha256, content_sha256,
-            media_type, byte_count, captured_by_user_id
+            media_type, byte_count, captured_by_user_id, capture_method
         ) values (
             %(request_id)s, %(client_id)s, %(cif_version_id)s, %(application_id)s,
             %(application_version_id)s, %(purpose)s, %(subject_id)s, %(review_snapshot)s,
             %(snapshot_sha256)s, %(content_sha256)s, %(media_type)s, %(byte_count)s,
-            %(captured_by_user_id)s
+            %(captured_by_user_id)s, %(capture_method)s
         ) returning *
         """,
         values,
@@ -401,6 +410,7 @@ class PostgresOfficeReviewEvidenceRepository:
         request_id: UUID,
         content: bytes,
         media_type: str,
+        capture_method: str = "paper_scan",
         **source,
     ) -> OfficeReviewEvidence:
         with open_connection() as connection:
@@ -433,6 +443,7 @@ class PostgresOfficeReviewEvidenceRepository:
                     content=content,
                     media_type=media_type,
                     request_id=request_id,
+                    capture_method=capture_method,
                 )
 
     def get_content(self, *, actor_user_id: UUID, client_id: UUID, record_id: UUID):

@@ -376,6 +376,7 @@ export function mountOfficeApplicationReview({ root, api, session, signal, onCon
       root: container.querySelector('[data-application-signed-evidence]'), api, session,
       clientId: review.client_id, cifVersionId: review.cif_version_id, purpose: 'application_review',
       applicationId: review.application_id, applicationVersionId: review.application_version_id, signal,
+      verifiedContextMarkup: context => printableCif(context, review),
       onDraftChange:edited,
       onCaptured(record) { if (active()) { evidence = record; edited();confirm.disabled = false; } },
       onAccessDenied() { if (active()) {coordinator.dispose();dispose();} },

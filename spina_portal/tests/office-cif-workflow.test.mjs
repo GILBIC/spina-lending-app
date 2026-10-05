@@ -9,13 +9,13 @@ const evidenceId='33333333-3333-4333-8333-333333333333';
 const identity={birth_date:'1990-01-02',birth_place:'Synthetic town',civil_status:null,citizenship:null};
 const information={full_name:'Synthetic applicant',phone_number:'09171111111',email:null,present_address:'Synthetic address',identity_information:identity};
 const summary={client_id:clientId,cif_version_id:cifVersionId,version_number:3,status:'draft',review_scope:'cif_information_only',...information};
-function harness(role='employee') {
+function harness(role='employee', snapshot={schema_version:1,scope:'cif_information_review',client_id:clientId,cif_version_id:cifVersionId,information}) {
  const root=new Element();const calls=[];const controller=new AbortController();
  const options={root,clientId,signal:controller.signal,session:{user:{role},permissions:['client_onboarding.requirement.review']},api:{async request(path,options={}){
   calls.push({path,options});
   if(path.includes('review-summary'))return summary;
   if(path.includes('privacy'))return {issuance_ready:false};
-  if(path.includes('/context'))return {client_id:clientId,cif_version_id:cifVersionId,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)};
+  if(path.includes('/context'))return {client_id:clientId,cif_version_id:cifVersionId,purpose:'cif_review',snapshot_sha256:'a'.repeat(64),review_snapshot:snapshot};
   if(path.includes('/review-evidence?'))return {evidence_id:evidenceId,evidence_reference:`office-evidence:${evidenceId}`,client_id:clientId,cif_version_id:cifVersionId,purpose:'cif_review',snapshot_sha256:'a'.repeat(64)};
   if(path.includes('review-confirmations'))return {review_confirmation_id:evidenceId,client_id:clientId,cif_version_id:cifVersionId};
   return {client_id:clientId,version_number:3,liveness_status:'passed',status:'active'};
@@ -48,4 +48,16 @@ test('Management activation and provider result explicitly bind the selected ver
 });
 test('nonoffice mount exposes no actions or source requests',()=>{
  const h=harness('collector');mountOfficeCifWorkflow(h.options);assert.equal(h.root.querySelector('button'),null);assert.equal(h.calls.length,0);
+});
+for(const mismatch of ['changed facts','missing identity','wrong scope','missing snapshot'])test(`CIF signing fails closed when context has ${mismatch}`,async()=>{
+ const snapshot={schema_version:1,scope:'cif_information_review',client_id:clientId,cif_version_id:cifVersionId,information:structuredClone(information)};
+ if(mismatch==='changed facts')snapshot.information.phone_number='09999999999';
+ if(mismatch==='missing identity')delete snapshot.information.identity_information;
+ if(mismatch==='wrong scope')snapshot.scope='application_information_review';
+ const h=harness('employee',mismatch==='missing snapshot'?null:snapshot);const dispose=mountOfficeCifWorkflow(h.options);
+ fire(h.root.querySelector('[data-open-cif-workflow]'),'click');await setImmediate();
+ assert.equal(h.root.querySelector('[data-signed-cif]').querySelector('form'),null);
+ assert.equal(h.root.querySelector('[data-confirm-cif]').disabled,true);
+ assert.match(h.root.textContent,/Reload current review before signing/);
+ assert.equal(h.calls.some(call=>call.options.method==='POST'),false);dispose();
 });

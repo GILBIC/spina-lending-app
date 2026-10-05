@@ -125,7 +125,8 @@ async function workspace(t, {action, failReadback = false}) {
       }
       if (path.startsWith(`/api/v1/management/clients/${CLIENT}/review-evidence/context?`)) {
         return {client_id: CLIENT, cif_version_id: CIF, application_id: APPLICATION,
-          application_version_id: VERSION, purpose: 'application_review', snapshot_sha256: 'a'.repeat(64), issuance_ready: true};
+          application_version_id: VERSION, purpose: 'application_review', snapshot_sha256: 'a'.repeat(64), issuance_ready: true,
+          review_snapshot:{schema_version:1,scope:'application_information_review',client_id:CLIENT,cif_version_id:CIF,application_id:APPLICATION,application_version_id:VERSION,information:applicationReview().information,cif_information:{full_name:'Synthetic applicant',phone_number:'00000000000',email:null,present_address:'Synthetic address'}}};
       }
     }
     unexpected.push({path, method: options.method || 'GET'});

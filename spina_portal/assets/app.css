@@ -2426,3 +2426,10 @@ button.management-audit-row { min-height: 48px; }
  .office-intake-start { align-items:flex-start; }
  .office-finder-search label { flex-basis:100%; }
 }
+/* A fixed private bitmap keeps the signature intact through layout changes. */
+.entry-form.office-signing-form { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.office-signature-input { display: grid; gap: 0.65rem; width: 100%; max-width: 48rem; }
+.office-signature-input canvas { display: block; width: 100%; aspect-ratio: 2 / 1; height: auto; border: 2px solid #665c66; border-radius: 0.5rem; background: white; touch-action: none; }
+.office-signature-input canvas[aria-disabled="true"] { opacity: 0.65; cursor: wait; }
+.office-signature-input button { min-height: 2.75rem; white-space: normal; }
+.office-signature-input [data-signature-drawing] { min-width: 0; }

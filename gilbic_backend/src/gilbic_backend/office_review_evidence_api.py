@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import timezone
-from typing import Literal
+from typing import Literal, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
@@ -16,15 +16,14 @@ from .office_review_evidence_repository import (
     OfficeReviewEvidenceConflict,
     PostgresOfficeReviewEvidenceRepository,
 )
+from .office_review_evidence_route import PrivateOfficeRoute
 from .office_review_evidence_storage import (
     EVIDENCE_MEDIA_TYPES,
     MAX_EVIDENCE_BYTES,
     EvidenceFileError,
     validate_evidence_content,
+    validate_screen_signature,
 )
-
-
-from .office_review_evidence_route import PrivateOfficeRoute
 
 # Compatibility for protected route modules integrated before the shared class
 # was extracted to avoid the CIF/evidence router import cycle.
@@ -67,7 +66,7 @@ def _actor(
     )
 
 
-def _translate(error: Exception):
+def _translate(error: Exception) -> NoReturn:
     if isinstance(error, OfficeReviewEvidenceAccessDenied):
         raise HTTPException(
             status_code=403, detail="An active authorized office account is required."
@@ -107,11 +106,32 @@ def create_office_review_evidence_router() -> APIRouter:
         request: Request,
         request_id: UUID,
         expected_snapshot_sha256: str = Query(pattern="^[0-9a-f]{64}$"),
-        witnessed_wet_signature: Literal["true"] = Query(),
+        witnessed_wet_signature: Literal["true"] | None = Query(default=None),
+        witnessed_screen_signature: Literal["true"] | None = Query(default=None),
+        capture_method: Literal["paper_scan", "screen_signature"] = Query(
+            default="paper_scan"
+        ),
         source: dict = Depends(_source),
         actor=Depends(_actor),
         repository=Depends(office_review_evidence_repository_dependency),
     ) -> dict:
+        if (
+            capture_method == "paper_scan"
+            and (
+                witnessed_wet_signature != "true"
+                or witnessed_screen_signature is not None
+            )
+        ) or (
+            capture_method == "screen_signature"
+            and (
+                witnessed_screen_signature != "true"
+                or witnessed_wet_signature is not None
+            )
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="Witness the selected signature method before saving.",
+            )
         media_type = (
             request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
         )
@@ -136,6 +156,8 @@ def create_office_review_evidence_router() -> APIRouter:
             content.extend(chunk)
         try:
             validate_evidence_content(bytes(content), media_type)
+            if capture_method == "screen_signature":
+                validate_screen_signature(bytes(content), media_type)
         except EvidenceFileError as error:
             raise HTTPException(status_code=415, detail=str(error)) from error
         try:
@@ -147,6 +169,7 @@ def create_office_review_evidence_router() -> APIRouter:
                 expected_snapshot_sha256=expected_snapshot_sha256,
                 content=bytes(content),
                 media_type=media_type,
+                capture_method=capture_method,
                 **source,
             )
         except (
@@ -167,6 +190,7 @@ def create_office_review_evidence_router() -> APIRouter:
             if record.application_version_id is None
             else str(record.application_version_id),
             "purpose": record.purpose,
+            "capture_method": record.capture_method,
             "snapshot_sha256": record.snapshot_sha256,
             "content_sha256": record.content_sha256,
             "media_type": record.media_type,

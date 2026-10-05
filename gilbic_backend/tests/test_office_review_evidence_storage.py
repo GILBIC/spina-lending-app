@@ -1,11 +1,72 @@
 from importlib import import_module
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from pathlib import Path
-
 
 PDF = b"%PDF-1.4\nSynthetic signed review scan\n%%EOF\n"
+
+
+@pytest.mark.parametrize("default_image", [False, True])
+def test_screen_signature_rejects_unvalidated_animation_frames(default_image):
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw
+
+    module = import_module("gilbic_backend.office_review_evidence_storage")
+    signature = Image.new("RGBA", (640, 240), "white")
+    ImageDraw.Draw(signature).line(
+        [(50, 130), (100, 60), (200, 170)], fill="black", width=4
+    )
+    blank = Image.new("RGBA", signature.size, "white")
+    output = BytesIO()
+    signature.save(
+        output,
+        format="PNG",
+        save_all=True,
+        append_images=[blank],
+        default_image=default_image,
+        duration=100,
+        loop=0,
+    )
+    content = output.getvalue()
+    with Image.open(BytesIO(content)) as image:
+        assert image.is_animated and image.n_frames == 2
+    with pytest.raises(module.EvidenceFileError):
+        module.validate_screen_signature(content, "image/png")
+
+
+@pytest.mark.parametrize(
+    "kind", ["transparent", "opaque-black", "single-dot", "oversized", "truncated"]
+)
+def test_screen_signature_requires_bounded_visible_strokes(kind):
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw
+
+    module = import_module("gilbic_backend.office_review_evidence_storage")
+    size = (2049, 128) if kind == "oversized" else (640, 240)
+    color = (
+        (0, 0, 0, 0)
+        if kind == "transparent"
+        else "black"
+        if kind == "opaque-black"
+        else "white"
+    )
+    drawing = Image.new("RGBA", size, color)
+    if kind == "single-dot":
+        ImageDraw.Draw(drawing).point((50, 50), fill="black")
+    if kind in ("oversized", "truncated"):
+        ImageDraw.Draw(drawing).line(
+            [(50, 130), (100, 60), (200, 170)], fill="black", width=4
+        )
+    output = BytesIO()
+    drawing.save(output, format="PNG")
+    content = output.getvalue()
+    if kind == "truncated":
+        content = content[:40]
+    with pytest.raises(module.EvidenceFileError):
+        module.validate_screen_signature(content, "image/png")
 
 
 def test_private_evidence_is_immutable_and_detects_tampering(tmp_path):

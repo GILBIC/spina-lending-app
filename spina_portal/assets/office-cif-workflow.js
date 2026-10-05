@@ -8,6 +8,21 @@ const mounts = new WeakMap();
 const FIELDS = ['full_name', 'phone_number', 'email', 'present_address'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function reviewInformation(review) {
+  const information = Object.fromEntries(FIELDS.map(key => [key, review[key]]));
+  if (review.identity_information != null) information.identity_information = { ...review.identity_information };
+  return information;
+}
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  return value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+}
+function verifiedCifContext(context, review) {
+  const expected = {schema_version:1,scope:'cif_information_review',client_id:review.client_id,
+    cif_version_id:review.cif_version_id,information:reviewInformation(review)};
+  return JSON.stringify(canonical(context.review_snapshot)) === JSON.stringify(canonical(expected)) ? '' : null;
+}
+
 export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, onChanged, onAccessDenied, onDraftChange }) {
   mounts.get(root)?.();
   let disposed = false; let busy = false; let review; let captured; let captureCleanup; let privacyCleanup;
@@ -57,8 +72,7 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
   async function confirm() {
     if (disposed || busy || !captured || !review || (uncertain && originalAction?.kind!=='confirm')) return;
     busy = true; writing = true; const button = root.querySelector('[data-confirm-cif]'); button.disabled = true;
-    const information = Object.fromEntries(FIELDS.map(key => [key, review[key]]));
-    if (review.identity_information != null) information.identity_information = { ...review.identity_information };
+    const information = reviewInformation(review);
     originalAction ??= {kind:'confirm',body:{cif_version_id:review.cif_version_id,expected_information:information,applicant_confirmation_evidence_reference:captured.evidence_reference}};
     try {
       const result = await api.request(`${base}/review-confirmations`, { method: 'POST', signal: controller.signal,
@@ -127,6 +141,7 @@ export function mountOfficeCifWorkflow({ root, api, session, clientId, signal, o
         <div data-cif-workflow-status role="status" aria-live="polite"></div>`;
       captureCleanup = mountOfficeEvidenceCapture({ root: root.querySelector('[data-signed-cif]'), api, session, clientId,
         cifVersionId: review.cif_version_id, purpose: 'cif_review', signal: controller.signal,
+        verifiedContextMarkup: context => verifiedCifContext(context, review),
         onCaptured: record => { captured = record; edited(); root.querySelector('[data-confirm-cif]').disabled = false; }, onAccessDenied, onDraftChange:edited });
       privacyCleanup = mountOfficePrivacy({ root: root.querySelector('[data-privacy-cif]'), api, session, clientId,
         cifVersionId: review.cif_version_id, signal: controller.signal, onDraftChange:edited, onAccessDenied });
