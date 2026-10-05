@@ -27,7 +27,7 @@ def main() -> int:
         raise SystemExit("The configured database cannot use the reserved test prefix.")
     disposable._clear_endpoint_environment()
     disposable.TEST_DATABASE_PREFIX = DATABASE_PREFIX
-    disposable.BOOTSTRAP_THROUGH = 139
+    disposable.BOOTSTRAP_THROUGH = 140
     name = DATABASE_PREFIX + uuid4().hex[:24]
     admin_url = disposable._conninfo_for_database(params, "postgres")
     test_url = disposable._conninfo_for_database(params, name)
@@ -73,7 +73,7 @@ def main() -> int:
             raise SystemExit(
                 "Treasury disposable acceptance failed; inspect the synthetic test report."
             )
-        print("Treasury disposable validation passed on fresh schema 0139.")
+        print("Treasury disposable validation passed on fresh schema 0140.")
         return 0
     except psycopg.Error:
         raise SystemExit("Treasury disposable database validation failed.") from None

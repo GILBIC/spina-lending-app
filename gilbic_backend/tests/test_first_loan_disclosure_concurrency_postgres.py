@@ -37,10 +37,10 @@ SESSION_NAME = ContextVar("r1_proof_session", default="r1-proof-readback")
 @pytest.fixture(scope="module")
 def isolated_r1_url(isolated_database_url):
     # The reused fixture owns a separate DB through128. Current first-loan
-    # consumers require the source-aware schema139, even with entry disabled.
+    # consumers require the source-aware schema140, including signature metadata.
     with psycopg.connect(isolated_database_url, autocommit=True) as connection:
         for migration in sorted(register_proof.MIGRATION.parent.glob("*.sql")):
-            if 129 <= int(migration.name[:4]) <= 139:
+            if 129 <= int(migration.name[:4]) <= 140:
                 connection.execute(migration.read_text(encoding="utf-8"))
     return isolated_database_url
 
