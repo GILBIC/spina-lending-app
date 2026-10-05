@@ -154,12 +154,12 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   }
 
   async function loadCase(reference, {refresh=false, confirmedSave=false} = {}) {
-    if (disposed) return;
-    if (!collector && !refresh && (state === 'saving' || intakeUncertain || writeUncertain)) return;
+    if (disposed) return false;
+    if (!collector && !refresh && (state === 'saving' || intakeUncertain || writeUncertain)) return false;
     if (collector) invalidate(); else token = {};
     const request = token;
     const selected = reference.trim();
-    if (!selected) { fail(new Error('Enter the office intake reference.')); return; }
+    if (!selected) { fail(new Error('Enter the office intake reference.')); return false; }
     if (collector) state = 'loading';
     statusRoot.innerHTML = loadingPanel('Loading office intake record…');
     try {
@@ -172,9 +172,9 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
       };
       if (!collector && !refresh) {
         const accepted = await coordinator.requestTransition({kind:'open',targetStage:'intake',candidate:read});
-        if (!accepted || disposed) { if (current(request)) statusRoot.textContent = 'Your existing work has been kept.'; return; }
+        if (!accepted || disposed) { if (current(request)) statusRoot.textContent = 'Your existing work has been kept.'; return false; }
         token = request;
-      } else { await read(); if (!current(request)) return; }
+      } else { await read(); if (!current(request)) return false; }
       if(writeUncertain && originalWrite && !originalWrite.acknowledged) {
         const saved=originalWrite.eligibility ? result.status==='eligible_for_cif' && uuid(result.client_id)
           && (!originalWrite.body || (result.bypass_reason===originalWrite.body.reason && JSON.stringify([...result.bypassed_requirements].sort())===JSON.stringify([...originalWrite.body.bypassed_requirements].sort())))
@@ -190,6 +190,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
       renderCase();
       if (!collector && refresh) coordinator.acceptVerifiedContext(contextFor(result),coordinator.getGeneration());
       publish();
+      return true;
     } catch (error) {
       if (current(request) || [401,403].includes(error?.status)) {
         if (collector) state = 'blocked';
@@ -199,6 +200,7 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
           referenceInput.value=selected;
         }
       }
+      return false;
     }
   }
 

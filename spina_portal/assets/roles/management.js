@@ -16,6 +16,7 @@ import { mountOfficeApplicationReview } from '../office-application-review.js';
 import { mountOfficeFirstLoan } from '../office-first-loan.js';
 import { mountOfficeOnboarding } from '../office-onboarding.js';
 import { officeCaseBanner } from '../employee-office-case.js';
+import {mountOfficeApplicationFinder} from '../office-application-finder.js';
 import { createOfficeCaseContext } from '../office-case-context.js';
 import { mountPaymentProofs } from '../payment-proofs.js';
 import { mountEmployeeOperations } from '../employee-operations.js';
@@ -200,7 +201,7 @@ function bindManagementOfficeWorkflow(root, {beforeTaskChange=()=>{}, afterTaskC
   });
 
   show('intake');
-  return () => {disposed = true; removers.forEach((remove) => remove());};
+  return Object.assign(() => {disposed = true; removers.forEach((remove) => remove());},{activate:show});
 }
 
 function staffRows(accounts, canManageDevices) {
@@ -452,6 +453,7 @@ export async function mountManagementWorkspace(context) {
     </div>
     <p class="meta">Enter the intake reference once, then continue through these steps. New applications receive an automatic reference.</p>
     <aside class="notice-card" data-office-context-banner></aside>
+    <div data-office-finder></div>
     <div data-office-case-feedback role="status" aria-live="polite"></div>
     <div data-office-step="intake">
       <section id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>
@@ -521,12 +523,15 @@ export async function mountManagementWorkspace(context) {
   add('management-overview','management-overview','Today',()=>({refresh:()=>Promise.all([refreshOverview(),refreshAccount()])}));
   add('management-loans','management-clients-loans','Portfolio',async()=>{const h=mountManagementPortfolio({...options('[data-management-portfolio]')});await h.refresh();return h;});
   add('management-office','management-clients-loans','Office applications',()=>{
-    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard,onChange:(value,lifecycle)=>{const banner=root.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=lifecycle?.disposed?(lifecycle.accessDenied?'<p role="alert">Office access is unavailable. Sign in again before continuing.</p>':''):officeCaseBanner(value,value.activeStage);}});
+    let finder; const handles=new Map();
+    const coordinator=createOfficeCaseContext({getSession,confirmDiscard:context.confirmDiscard,onChange:(value,lifecycle)=>{if(!lifecycle?.disposed)finder?.setContext(value);const banner=root.querySelector('[data-office-context-banner]');if(banner)banner.innerHTML=lifecycle?.disposed?(lifecycle.accessDenied?'<p role="alert">Office access is unavailable. Sign in again before continuing.</p>':''):officeCaseBanner(value,value.activeStage);}});
     officeCoordinator=coordinator;
-    const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,registerHandle:handle=>coordinator.registerStage(stage,handle),onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
+    const stageOptions=(selector,stage)=>({...options(selector),officeCaseContext:coordinator,registerHandle:handle=>{handles.set(stage,handle);coordinator.registerStage(stage,handle);},onContextChange:value=>coordinator.acceptVerifiedContext(value,coordinator.getGeneration())});
     const handlers=[mountOfficeFirstLoan(stageOptions('[data-office-first-loan]','first-loan')),mountOfficeOnboarding(stageOptions('[data-office-onboarding]','intake')),mountOfficeCifSelection(stageOptions('[data-office-cif-selection]','cif')),mountOfficeApplicationReview(stageOptions('[data-office-application-review]','application')),bindManagementOfficeWorkflow(root,context,coordinator)];
+    finder=mountOfficeApplicationFinder({...options('[data-office-finder]'),api:coordinator.bindReadOnlyApi(api),onDenied:()=>coordinator.dispose({accessDenied:true}),onChooseCase:async selection=>{const accepted=await handles.get('intake')?.openCase(selection);if(accepted===true)handlers.at(-1).activate('intake');return accepted;},onChooseApplication:async selection=>{const accepted=await handles.get('application')?.openCase(selection);if(accepted===true)handlers.at(-1).activate('application');return accepted;}});
+    coordinator.registerPrivateDisposer(finder);
     const dispose=()=>{coordinator.dispose();handlers.forEach(cleanup=>cleanup?.());};
-    return {dispose,refresh:()=>coordinator.refreshReadOnly(),isWritePending:()=>coordinator.isWritePending()};
+    return {dispose,refresh:()=>finder.isFinderVisible()?finder.refreshReadOnly():coordinator.refreshReadOnly(),isWritePending:()=>coordinator.isWritePending()};
   },'client_onboarding.requirement.review');
   add('management-renewals','management-clients-loans','Renewals',async()=>{
     const h=mountManagementRenewals({...options('[data-management-renewal-workflow]'),onSaved:refreshOverview});await h.refresh();return h;

@@ -58,6 +58,7 @@ const SHELL_ASSETS = [
   '/assets/office-cif-workflow.js',
   '/assets/office-onboarding.js',
   '/assets/office-case-context.js',
+  '/assets/office-application-finder.js',
   '/assets/office-privacy.js',
   '/assets/office-evidence-capture.js',
   '/assets/office-first-loan.js',

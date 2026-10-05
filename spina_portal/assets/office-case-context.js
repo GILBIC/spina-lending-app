@@ -37,6 +37,7 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
   const writers = new Set();
   const stores = new Map();
   const requests = new Set();
+  const privateDisposers = new Set();
   let disposed = false, generation = 0, activeStage = 'intake', context = empty();
   const snapshot = () => ({...context,stageFacts:Object.fromEntries(Object.entries(context.stageFacts).map(([key,value])=>[key,{...value}])),activeStage,generation});
   function dispose({accessDenied=false} = {}) {
@@ -47,7 +48,9 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
     for (const handle of stages.values()) handle.dispose?.();
     stages.clear();
     for (const writer of writers) writer.dispose?.();
-    writers.clear(); onChange(snapshot(),{disposed:true,accessDenied});
+    writers.clear();
+    for (const cleanup of privateDisposers) cleanup({accessDenied});
+    privateDisposers.clear(); onChange(snapshot(),{disposed:true,accessDenied});
   }
   function alive() {
     if (!disposed && (owner(getSession?.()) !== mountedOwner || [...stores].some(([store,value])=>owner(store.load())!==value.owner || store.deviceId?.()!==value.device))) dispose({accessDenied:true});
@@ -108,21 +111,7 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
     for (const handle of replacing) if(handle.resetCase?.() === false)return false;
     context = next; activeStage = targetStage; onChange(snapshot()); return true;
   }
-  return {
-    registerStage(stage,handle) { if (alive()) stages.set(stage,handle); else handle.dispose?.(); },
-    getContext() { alive(); return snapshot(); },
-    getGeneration() { alive(); return generation; },
-    // Lookup or owner-held draft edits revoke an in-flight replacement decision.
-    invalidateCandidate() { if (alive()) generation++; },
-    requestTransition, acceptVerifiedContext, dispose,
-    detachReleaseFact(saved) {
-      if(!alive() || saved.clientId!==context.clientId || saved.applicationId!==context.applicationId || saved.applicationVersionId===context.applicationVersionId)return false;
-      const {['first-loan']:removed,...facts}=context.stageFacts;
-      context={...context,stageFacts:facts};onChange(snapshot());return true;
-    },
-    isWritePending() { return alive() && locked(); },
-    refreshReadOnly(stage = activeStage) { if (!alive()) return false; return stages.get(stage)?.refreshReadOnly?.() ?? false; },
-    bindWriteOwner(api, handle) {
+  function bindApi(api,handle,coordinator) {
       const device = api.sessionStore?.deviceId?.();
       const storeOwner = api.sessionStore ? owner(api.sessionStore.load()) : mountedOwner;
       if(api.sessionStore && !stores.has(api.sessionStore))stores.set(api.sessionStore,{owner:storeOwner,device});
@@ -130,7 +119,7 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
         if (api.sessionStore && (owner(api.sessionStore.load()) !== storeOwner || api.sessionStore.deviceId?.() !== device)) dispose({accessDenied:true});
         return alive();
       };
-      writers.add(handle);
+      if(handle)writers.add(handle);
       const bound = Object.create(api);
       bound.isOfficeCurrent = current;
       bound.request = async (path, options = {}) => {
@@ -156,8 +145,25 @@ export function createOfficeCaseContext({getSession, confirmDiscard = message =>
           options.signal?.removeEventListener('abort',abort);
         }
       };
-      officeApis.set(bound,{api,coordinator:this});
+      officeApis.set(bound,{api,coordinator});
       return bound;
+  }
+  return {
+    registerStage(stage,handle) { if (alive()) stages.set(stage,handle); else handle.dispose?.(); },
+    getContext() { alive(); return snapshot(); },
+    getGeneration() { alive(); return generation; },
+    // Lookup or owner-held draft edits revoke an in-flight replacement decision.
+    invalidateCandidate() { if (alive()) generation++; },
+    requestTransition, acceptVerifiedContext, dispose,
+    detachReleaseFact(saved) {
+      if(!alive() || saved.clientId!==context.clientId || saved.applicationId!==context.applicationId || saved.applicationVersionId===context.applicationVersionId)return false;
+      const {['first-loan']:removed,...facts}=context.stageFacts;
+      context={...context,stageFacts:facts};onChange(snapshot());return true;
     },
+    isWritePending() { return alive() && locked(); },
+    refreshReadOnly(stage = activeStage) { if (!alive()) return false; return stages.get(stage)?.refreshReadOnly?.() ?? false; },
+    registerPrivateDisposer(cleanup) { if(alive())privateDisposers.add(cleanup);else cleanup({accessDenied:true});return ()=>privateDisposers.delete(cleanup); },
+    bindReadOnlyApi(api) { return bindApi(api,null,this); },
+    bindWriteOwner(api, handle) { return bindApi(api,handle,this); },
   };
 }

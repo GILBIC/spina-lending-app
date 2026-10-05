@@ -8,16 +8,17 @@ export function officeCaseBanner(context,stage) {
  return `<strong>Office case</strong><p>${context.mode==='new-intake'?'New intake — not yet saved':context.intakeReference?`Intake: ${esc(context.intakeReference)}`:'No intake selected'} · Applicant: ${esc(context.applicantName || 'Not loaded')} · Loan application: ${esc(context.applicationReference ? `${context.applicationReference}${context.applicationSaved?'':' · Draft reference — not saved'}` : 'Not loaded')}</p><p>${facts}</p><p>Viewing ${esc(officeStageLabels[stage])}. Open this stage to verify its current record. Intake eligibility, applicant confirmation, Management approval, signing and cash receipt remain separate.</p>`;
 }
 
-export function bindEmployeeOfficeCase({root,navigate,signal,getSession=()=>null,confirmDiscard}) {
+export function bindEmployeeOfficeCase({root,navigate,signal,getSession=()=>null,confirmDiscard,onContextChange=()=>{},onChangeCase=()=>{}}) {
  let disposed=false,lastStep='intake';const strips=new Map();
- const coordinator=createOfficeCaseContext({getSession,confirmDiscard,onChange:(_value,lifecycle)=>{if(lifecycle?.disposed){for(const strip of strips.values()){strip.textContent='';if(lifecycle.accessDenied){strip.textContent='Office access is unavailable. Sign in again before continuing.';strip.setAttribute('role','alert');}else strip.remove();}if(!lifecycle.accessDenied)strips.clear();return;}if(!disposed)render(lastStep);}});
+ const coordinator=createOfficeCaseContext({getSession,confirmDiscard,onChange:(_value,lifecycle)=>{onContextChange(_value,lifecycle);if(lifecycle?.disposed){for(const strip of strips.values()){strip.textContent='';if(lifecycle.accessDenied){strip.textContent='Office access is unavailable. Sign in again before continuing.';strip.setAttribute('role','alert');}else strip.remove();}if(!lifecycle.accessDenied)strips.clear();return;}if(!disposed)render(lastStep);}});
  const section=step=>root.querySelector(`#${steps.find(item=>item[0]===step)?.[1]}`);
  function render(step) {
   const node=section(step);if(!node)return;
   let strip=strips.get(step);if(!strip){strip=root.ownerDocument.createElement('aside');strip.setAttribute('data-office-case-strip','');strip.className='notice-card';(node.prepend?node.prepend(strip):node.appendChild(strip));strips.set(step,strip);}
   const context=coordinator.getContext(),index=steps.findIndex(item=>item[0]===step);
-  strip.innerHTML=officeCaseBanner(context,step)+`<div class="inline-actions">${index>0?`<button class="button button-outline" type="button" data-office-case-back>Back: ${steps[index-1][2]}</button>`:''}${index<steps.length-1?`<button class="button button-outline" type="button" data-office-case-next>Next: ${steps[index+1][2]}</button>`:''}</div>`;
+  strip.innerHTML=officeCaseBanner(context,step)+`<div class="inline-actions"><button type="button" class="button button-outline" data-office-change-case>Find an intake or application</button>${index>0?`<button class="button button-outline" type="button" data-office-case-back>Back: ${steps[index-1][2]}</button>`:''}${index<steps.length-1?`<button class="button button-outline" type="button" data-office-case-next>Next: ${steps[index+1][2]}</button>`:''}</div>`;
   const go=async target=>{if(await coordinator.requestTransition({kind:'navigate',targetStage:target[0]}))navigate(target[1]);};
+  strip.querySelector('[data-office-change-case]')?.addEventListener('click',onChangeCase);
   strip.querySelector('[data-office-case-back]')?.addEventListener('click',()=>void go(steps[index-1]));
   strip.querySelector('[data-office-case-next]')?.addEventListener('click',()=>void go(steps[index+1]));
  }
