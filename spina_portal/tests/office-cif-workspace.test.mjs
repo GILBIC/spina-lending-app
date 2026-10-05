@@ -65,7 +65,7 @@ function harness(role, permissions = [PERMISSION]) {
 function officeSelection(h, role) {
   const section = h.context.root.querySelector(`#${role}-cif-review`);
   assert.ok(section, `${role} office CIF review section is not connected`);
-  assert.match(section.querySelector('h2').textContent, /CIF information review/);
+  assert.equal(section.querySelector('h2').textContent, role === 'employee' ? 'Client information (CIF)' : 'CIF information review');
   const selectionRoot = section.querySelector('[data-office-cif-selection]');
   assert.ok(selectionRoot?.querySelector('form'), `${role} office reference form is not connected`);
   return selectionRoot;
@@ -91,7 +91,7 @@ for (const role of ['employee', 'management']) {
     const navigationId = role === 'management' ? 'management-clients-loans' : `${role}-cif-review`;
     assert.deepEqual(h.navigation.find(({ id }) => id === navigationId), role === 'management'
       ? {id: navigationId, label: 'Clients & loans'}
-      : {id: navigationId, label: 'CIF review', group: 'Office work'}, `${role} CIF review navigation is not connected`);
+      : {id: navigationId, label: 'Client information (CIF)', group: 'Office work'}, `${role} CIF review navigation is not connected`);
     if (role === 'management') assert.ok(h.context.root.querySelector('[data-office-step-target="cif"]'));
     const root = officeSelection(h, role);
     assert.match(root.querySelector('label').textContent, /Office intake reference/);

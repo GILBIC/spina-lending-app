@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v28-loan-payout-destinations';
+const CACHE_NAME = 'spina-company-shell-v29-office-applications';
 const SHELL_ASSETS = [
   '/',
   '/index.html',

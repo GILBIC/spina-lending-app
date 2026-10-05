@@ -2,8 +2,31 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const source = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+
+test('Office release replaces the old cache and precaches its complete imported module graph', () => {
+  assert.match(source, /spina-company-shell-v29-office-applications/);
+  const assets = vm.runInNewContext(source.match(/const SHELL_ASSETS = (\[[\s\S]*?\]);/)[1]);
+  assert.equal(new Set(assets).size, assets.length);
+  const portal = fileURLToPath(new URL('../', import.meta.url));
+  const visited = new Set();
+  function visit(asset) {
+    if (visited.has(asset)) return;
+    visited.add(asset);
+    assert.ok(assets.includes(asset), `missing cached dependency: ${asset}`);
+    const file = path.join(portal, asset.slice(1));
+    assert.ok(existsSync(file), `missing public asset: ${asset}`);
+    const module = readFileSync(file, 'utf8');
+    for (const match of module.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)['"](\.[^'"]+\.js)['"]/g)) {
+      visit(path.posix.resolve(path.posix.dirname(asset), match[1]));
+    }
+  }
+  for (const asset of ['/assets/roles/management.js', '/assets/employee-workspace.js', '/assets/collector-onboarding-visit.js', '/assets/office-case-context.js', '/assets/office-application-finder.js']) visit(asset);
+});
 
 function loadWorker({ cachedIndex = { source: 'cache' }, cachedAsset = null, networkIndex } = {}) {
   networkIndex ??= { source: 'network', ok: true };

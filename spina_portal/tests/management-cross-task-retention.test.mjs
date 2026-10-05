@@ -103,6 +103,13 @@ async function workspace(t, {action, failReadback = false}) {
       if (path.startsWith('/api/v1/management/support?')) return {requests: structuredClone(support)};
       if (path.startsWith('/api/v1/management/renewal-workflow?')) return {requests: [structuredClone(renewal)]};
       if (path === '/api/v1/management/accounts?staff_only=true') return {accounts: []};
+      if (path === '/api/v1/management/onboarding/applicants?limit=25') {
+        return {items: [], next_cursor: null, has_more: false, as_of: '2026-10-05T00:00:00Z'};
+      }
+      if (path === `/api/v1/management/onboarding/applicants/by-reference/${INTAKE}/applications?limit=25`) {
+        return {items: [], next_cursor: null, has_more: false, as_of: '2026-10-05T00:00:00Z',
+          intake: {applicant_id: id(906), intake_reference: INTAKE, client_id: CLIENT, intake_status: 'eligible_for_cif'}};
+      }
       if (path === '/api/v1/notifications') return [{...notice}];
       if (path === '/api/v1/remittances') return [structuredClone(remittance)];
       if (path === `/api/v1/treasury/collector-surplus/remittances/${REMITTANCE}/receiving-contract`) {
