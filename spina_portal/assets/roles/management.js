@@ -451,13 +451,13 @@ export async function mountManagementWorkspace(context) {
       <button class="office-workflow-step" type="button" data-office-step-target="application">3. Loan application</button>
       <button class="office-workflow-step" type="button" data-office-step-target="first-loan">4. Approval &amp; release</button>
     </div>
-    <p class="meta">Enter the intake reference once, then continue through these steps. New applications receive an automatic reference.</p>
+    <p class="meta">Choose a saved intake below or enter its reference to continue through these steps.</p>
     <aside class="notice-card" data-office-context-banner></aside>
-    <div data-office-finder></div>
     <div data-office-case-feedback role="status" aria-live="polite"></div>
     <div data-office-step="intake">
       <section id="management-onboarding"><h2>Office intake and requirements</h2><div data-office-onboarding></div></section>
     </div>
+    <div data-office-finder></div>
     <div data-office-step="cif" hidden>
       <section id="management-cif-review"><div class="section-heading"><div><h2>CIF information review</h2><p>Continue the selected office intake. SPINA rechecks the reference before showing Client information.</p></div></div><div data-office-cif-selection></div></section>
     </div>

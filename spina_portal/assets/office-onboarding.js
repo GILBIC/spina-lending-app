@@ -265,8 +265,8 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
       ${INTAKE_FIELDS.map(([name, title, minimum, maximum]) => `<label>${escapeHtml(title)}${name === 'present_address'
         ? `<textarea name="${name}" minlength="${minimum}" maxlength="${maximum}" required></textarea>`
         : `<input type="${name === 'phone_number' ? 'tel' : 'text'}" name="${name}" maxlength="${maximum}"${minimum ? ` minlength="${minimum}" required` : ''} autocomplete="off" />`}</label>`).join('')}
-      <label><input type="checkbox" name="privacy_consent" required />Applicant's required privacy consent has been recorded.</label>
-      <label><input type="checkbox" name="accuracy_declaration" required />Applicant has declared the intake information accurate.</label>
+      <label class="office-intake-consent"><input type="checkbox" name="privacy_consent" required />Applicant's required privacy consent has been recorded.</label>
+      <label class="office-intake-consent"><input type="checkbox" name="accuracy_declaration" required />Applicant has declared the intake information accurate.</label>
       <button class="button button-primary" type="submit">Record office intake</button></form>`);
     listen(caseRoot.querySelector('form'), 'submit', (event) => {
       event.preventDefault();
@@ -355,9 +355,9 @@ export function mountOnboardingCase({ root, api, session, getSession = () => ses
   if (!(collector ? sessionHasRole(session, 'collector') : sessionHasRole(session, 'employee', 'management')) || !hasPermission(session, permission)) {
     root.innerHTML = emptyState('The required role and onboarding permission are needed.'); return dispose;
   }
-  root.innerHTML = `<form class="entry-form" data-case-lookup><label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>
+  root.innerHTML = `${collector?'':`<div class="office-intake-start"><button class="button button-primary" type="button" data-new-intake>New office intake</button><p>Start an intake for an applicant visiting the office. SPINA assigns the intake reference after the record is saved.</p></div>`}<form class="entry-form" data-case-lookup>${collector?'':'<h3>Continue existing intake</h3><p>Enter a saved office intake reference to continue this case.</p>'}<label>Office intake reference<input name="applicationReference" autocomplete="off" required /></label>
     <div class="action-row"><button class="button button-primary" type="submit">${collector ? 'Open residence visit' : 'Open intake case'}</button><button class="button button-outline" type="button" data-clear-case>${collector ? 'Clear' : 'Close case'}</button>
-    ${collector ? '' : '<button class="button button-outline" type="button" data-new-intake>New office intake</button><button class="button button-outline" type="button" data-clear-intake-search>Clear search</button>'}</div></form>
+    ${collector ? '' : '<button class="button button-outline" type="button" data-clear-intake-search>Clear search</button>'}</div></form>
     <div data-onboarding-status role="status" aria-live="polite"></div><div data-onboarding-case></div>`;
   caseRoot = root.querySelector('[data-onboarding-case]');
   statusRoot = root.querySelector('[data-onboarding-status]');

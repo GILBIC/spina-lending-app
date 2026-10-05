@@ -2369,11 +2369,60 @@ button.management-audit-row { min-height: 48px; }
 @media(max-width:600px){.collector-surplus .surplus-form,.collector-surplus [data-surplus-upload]{grid-template-columns:1fr;padding:12px}}
 
 /* Office finder: private read panels keep identity and explicit controls together. */
-.office-finder {margin-block: 1rem;}
-.office-finder-search {display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;}
-.office-finder-search label {display:grid;gap:.3rem;flex:1 1 15rem;min-width:0;}
-.office-finder-search input,.office-finder-search select {width:100%;min-width:0;}
-.office-finder-rows {list-style:none;padding:0;display:grid;gap:.75rem;}
-.office-finder-rows li {border:1px solid var(--border,#eadce3);border-radius:.75rem;padding:1rem;overflow-wrap:anywhere;}
-.office-finder-rows p {margin-block:.4rem;}
-.office-finder [hidden] {display:none;}
+/* Office uses the existing shell and real form owners at every width. */
+#management-clients-loans .management-task-navigation { gap:.35rem; margin-bottom:.75rem; }
+#management-clients-loans .management-task-navigation button { padding:.5rem .7rem; min-height:44px; }
+.office-workflow-card { padding:clamp(.75rem,1.5vw,1.15rem); box-shadow:none; }
+.office-workflow-card h2 { margin-block:.6rem; }
+.office-workflow-nav { gap:.4rem; margin-bottom:.75rem; }
+.office-workflow-step { min-height:44px; padding:.55rem .65rem; }
+[data-office-context-banner], [data-office-case-strip] { margin-block:0 .75rem; padding:.65rem .75rem; color:var(--ink-800); background:var(--pink-50); border:1px solid var(--pink-200); border-radius:var(--radius-sm); line-height:1.45; }
+.office-case-heading, .office-case-empty { display:flex; flex-wrap:wrap; align-items:baseline; gap:.25rem .75rem; }
+.office-case-viewing { color:var(--pink-900); font-weight:650; }
+.office-case-identity, .office-case-statuses { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .75rem; margin-top:.4rem; }
+.office-case-identity span, .office-case-statuses span { min-width:0; overflow-wrap:anywhere; }
+.office-case-identity span:first-child { grid-column:1 / -1; font-weight:650; }
+.office-case-statuses { padding-top:.4rem; border-top:1px solid var(--pink-200); font-size:.875rem; }
+.office-case-guidance { margin-top:.35rem; font-size:.875rem; }
+.office-case-guidance summary { cursor:pointer; padding-block:.3rem; }
+.office-case-guidance p { margin-block:.25rem; }
+[data-office-case-strip] .inline-actions { margin-top:.5rem; gap:.4rem; }
+.office-intake-start { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem 1rem; margin-block:.5rem .75rem; }
+.office-intake-start p { flex:1 1 20rem; margin:0; font-size:.875rem; line-height:1.45; }
+.office-workflow-card .entry-form { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; margin-block:.5rem; background:white; border-color:var(--line); }
+.office-workflow-card .entry-form > h3, .office-workflow-card .entry-form > h4, .office-workflow-card .entry-form > p, .office-workflow-card .entry-form > .action-row { grid-column:1 / -1; margin-block:0; }
+.office-workflow-card .entry-form > label { min-width:0; }
+.office-workflow-card .detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+.office-workflow-card [data-case-lookup] { grid-template-columns:minmax(0,1fr) auto; }
+.office-workflow-card [data-case-lookup] > .action-row { grid-column:auto; gap:.4rem; }
+.office-workflow-card [data-case-lookup] > h3 { font-size:1rem; }
+.office-workflow-card [data-case-lookup] > p { font-size:.875rem; }
+.office-workflow-card input:not([type="checkbox"]), .office-workflow-card select, .office-workflow-card textarea { min-width:0; width:100%; }
+.office-workflow-card .button { min-height:44px; }
+.office-workflow-card [data-intake-form] > .office-intake-consent { display:flex; grid-column:1 / -1; align-items:center; min-height:44px; gap:.6rem; line-height:1.45; }
+.office-intake-consent input { flex:0 0 1.1rem; width:1.1rem; height:1.1rem; min-height:0; padding:0; margin:0; }
+.office-workflow-card [data-intake-form] > button { justify-self:start; grid-column:1 / -1; }
+[data-office-onboarding]:not(:has([data-onboarding-case] > *)) [data-clear-case] { display:none; }
+.office-finder { margin-block:.75rem; }
+.office-finder h2 { margin-block:0 .25rem; }
+.office-finder h3 { margin-block:.5rem; font-size:1rem; }
+.office-finder p { margin-block:.3rem; }
+.office-finder-search { display:flex; flex-wrap:wrap; gap:.5rem; align-items:end; margin-top:.5rem; }
+.office-finder-search label { display:grid; gap:.3rem; flex:1 1 15rem; min-width:0; }
+.office-finder-search input,.office-finder-search select { width:100%; min-width:0; }
+.office-finder-rows { list-style:none; padding:0; display:grid; gap:.5rem; margin-block:.5rem; }
+.office-finder-rows li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.2rem .75rem; align-items:center; border:1px solid var(--line); border-radius:var(--radius-sm); padding:.65rem .75rem; overflow-wrap:anywhere; }
+.office-finder-rows li > strong,.office-finder-rows li > p { grid-column:1; min-width:0; }
+.office-finder-rows li > button { grid-column:2; grid-row:1 / span 3; }
+.office-finder-rows p { margin:0; font-size:.875rem; line-height:1.45; }
+.office-finder [hidden] { display:none; }
+.office-finder [role="status"]:empty { display:none; }
+@media (max-width:1180px) { .office-workflow-nav { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:900px) { .office-workflow-card [data-case-lookup] { grid-template-columns:minmax(0,1fr); } .office-workflow-card [data-case-lookup] > .action-row { grid-column:1; } }
+@media (max-width:680px) {
+ .office-case-identity,.office-case-statuses,.office-workflow-card .entry-form,.office-workflow-card .detail-grid { grid-template-columns:minmax(0,1fr); }
+ .office-finder-rows li { grid-template-columns:minmax(0,1fr); }
+ .office-finder-rows li > button { grid-column:1; grid-row:auto; justify-self:start; margin-top:.35rem; }
+ .office-intake-start { align-items:flex-start; }
+ .office-finder-search label { flex-basis:100%; }
+}
