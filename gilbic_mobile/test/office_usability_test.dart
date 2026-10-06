@@ -79,8 +79,9 @@ void main() {
                   enabled: true,
                   onChanged: (value) {
                     selected = value;
-                    if (value != null && !ready.isCompleted)
+                    if (value != null && !ready.isCompleted) {
                       ready.complete(value);
+                    }
                   },
                 ),
                 const SizedBox(height: 2000),
