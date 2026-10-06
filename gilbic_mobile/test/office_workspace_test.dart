@@ -123,13 +123,21 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Open by reference'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('office-intake-reference')),
-        'INT-1',
+        'int-1',
+      );
+      await tester.scrollUntilVisible(
+        find.text('CIF review'),
+        180,
+        scrollable: find.byType(Scrollable).first,
       );
       await tester.tap(find.text('CIF review'));
       await tester.pumpAndSettle();
-      expect(find.text('Named Borrower'), findsOneWidget);
+      expect(find.text('Named Borrower'), findsWidgets);
+      expect(find.text('Intake: INT-1'), findsOneWidget);
       expect(find.text('Activate verified CIF'), findsNothing);
       expect(find.text('Correct information'), findsOneWidget);
     },
@@ -179,11 +187,25 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Open by reference'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('office-intake-reference')),
         'INT-1',
       );
+      await tester.scrollUntilVisible(
+        find.text('CIF review'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('CIF review'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('2. Applicant signature'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('2. Applicant signature'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('Capture signed CIF review'),

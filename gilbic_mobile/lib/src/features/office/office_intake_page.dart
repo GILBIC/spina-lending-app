@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
+import 'package:gilbic_mobile/src/features/office/office_cif_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_finder_page.dart';
 
 class OfficeIntakePage extends StatefulWidget {
   const OfficeIntakePage({
@@ -105,6 +107,38 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
     if (mounted && value != null) await _load();
   }
 
+  Future<void> _continue({bool applications = false}) async {
+    final saved = record;
+    if (saved == null ||
+        saved['status'] != 'eligible_for_cif' ||
+        !operation.canWrite) {
+      return;
+    }
+    final reference = saved['application_reference'] as String;
+    final selected = await operation.run(
+      () => widget.repository.selectClient(widget.actor, reference),
+    );
+    if (!mounted || !identical(saved, record) || selected == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => applications
+            ? OfficeFinderPage(
+                actor: widget.actor,
+                repository: widget.repository,
+                intakeReference: reference,
+                clientId: selected['client_id'],
+              )
+            : OfficeCifPage(
+                actor: widget.actor,
+                repository: widget.repository,
+                clientId: selected['client_id'],
+                intakeReference: reference,
+              ),
+      ),
+    );
+    if (mounted && widget.actor.accessDenied) denyAccess();
+  }
+
   @override
   Widget build(BuildContext context) {
     final saved = record;
@@ -113,21 +147,46 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
         .where((key) => stringMap(requirements[key])['status'] != 'passed')
         .toList();
     return screen('Office intake', [
-      officeField(
-        fields,
-        'reference',
-        'Existing office intake reference',
-        enabled: !operation.busy,
-        onChanged: (_) {
-          setState(() {
-            operation.invalidate();
-            record = null;
-          });
-        },
+      ExpansionTile(
+        key: ValueKey(saved?['applicant_id']),
+        title: const Text('Find by intake reference'),
+        initiallyExpanded: saved == null && widget.reference != null,
+        maintainState: true,
+        children: [
+          officeField(
+            fields,
+            'reference',
+            'Existing office intake reference',
+            enabled: !operation.busy,
+            onChanged: (_) {
+              setState(() {
+                operation.invalidate();
+                record = null;
+              });
+            },
+          ),
+          officeButton('Open office intake', operation.busy ? null : _load),
+        ],
       ),
-      officeButton('Open office intake', operation.busy ? null : _load),
       if (saved != null) ...[
-        OfficeFacts(saved),
+        officeHeading(saved['full_name']?.toString() ?? 'Selected intake'),
+        Text('Intake: ${saved['application_reference']}'),
+        Text(officeIntakeStatuses[saved['status']] ?? 'Review saved intake'),
+        if (saved['status'] == 'eligible_for_cif') ...[
+          officeButton(
+            'Continue to CIF',
+            operation.canWrite ? _continue : null,
+            primary: true,
+          ),
+          officeButton(
+            'Applications for this client',
+            operation.canWrite ? () => _continue(applications: true) : null,
+          ),
+        ],
+        ExpansionTile(
+          title: const Text('Saved intake details'),
+          children: [OfficeFacts(saved)],
+        ),
         if (saved['status'] != 'eligible_for_cif') ...[
           officeHeading('Review document requirements'),
           for (final name in ['national_id', 'tin_id', 'meralco_bill'])
@@ -223,7 +282,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
           ],
         ] else
           const Text(
-            'Eligible for CIF. Use the office intake reference to continue CIF review. Eligibility does not create a loan or credentials.',
+            'Ready for CIF review. Continue using the selected intake above.',
           ),
       ] else ...[
         officeHeading('New office intake'),

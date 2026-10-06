@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_application_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_cif_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_first_loan_page.dart';
+import 'package:gilbic_mobile/src/features/office/office_finder_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_intake_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
 
@@ -77,6 +78,7 @@ class _OfficeWorkspacePageState extends OfficeScreenState<OfficeWorkspacePage> {
     if (!mounted || result == null) return;
     final (identity, selected) = result;
     final page = switch (stage) {
+      'find' => OfficeFinderPage(actor: identity, repository: repository),
       'new' => OfficeIntakePage(actor: identity, repository: repository),
       'intake' => OfficeIntakePage(
         actor: identity,
@@ -87,6 +89,7 @@ class _OfficeWorkspacePageState extends OfficeScreenState<OfficeWorkspacePage> {
         actor: identity,
         repository: repository,
         clientId: selected!['client_id'],
+        intakeReference: selected['application_reference'],
       ),
       'application' => OfficeApplicationPage(
         actor: identity,
@@ -124,37 +127,47 @@ class _OfficeWorkspacePageState extends OfficeScreenState<OfficeWorkspacePage> {
               ),
               const SizedBox(height: 16),
               officeButton(
-                'New office intake',
-                operation.busy ? null : () => _open('new'),
+                'Find an intake or application',
+                operation.busy ? null : () => _open('find'),
                 primary: true,
               ),
-              officeField(
-                fields,
-                'intake-reference',
-                'Office intake reference',
-                enabled: !operation.busy,
-              ),
-              officeField(
-                fields,
-                'application-reference',
-                'Loan application reference',
-                enabled: !operation.busy,
-              ),
               officeButton(
-                'Office intake and requirements',
-                operation.busy ? null : () => _open('intake'),
+                'New office intake',
+                operation.busy ? null : () => _open('new'),
               ),
-              officeButton(
-                'CIF review',
-                operation.busy ? null : () => _open('cif'),
-              ),
-              officeButton(
-                'Application entry and review',
-                operation.busy ? null : () => _open('application'),
-              ),
-              officeButton(
-                'First-loan approval and release',
-                operation.busy ? null : () => _open('loan'),
+              ExpansionTile(
+                title: const Text('Open by reference'),
+                maintainState: true,
+                children: [
+                  officeField(
+                    fields,
+                    'intake-reference',
+                    'Office intake reference',
+                    enabled: !operation.busy,
+                  ),
+                  officeField(
+                    fields,
+                    'application-reference',
+                    'Loan application reference',
+                    enabled: !operation.busy,
+                  ),
+                  officeButton(
+                    'Office intake and requirements',
+                    operation.busy ? null : () => _open('intake'),
+                  ),
+                  officeButton(
+                    'CIF review',
+                    operation.busy ? null : () => _open('cif'),
+                  ),
+                  officeButton(
+                    'Application entry and review',
+                    operation.busy ? null : () => _open('application'),
+                  ),
+                  officeButton(
+                    'First-loan approval and release',
+                    operation.busy ? null : () => _open('loan'),
+                  ),
+                ],
               ),
             ],
     );

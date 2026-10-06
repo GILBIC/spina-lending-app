@@ -44,12 +44,14 @@ class OfficeApplicationPage extends StatefulWidget {
     required this.repository,
     required this.clientId,
     this.applicationReference = '',
+    this.startNew = false,
     super.key,
   });
   final OfficeIdentity actor;
   final OfficeRepository repository;
   final String clientId;
   final String applicationReference;
+  final bool startNew;
   @override
   State<OfficeApplicationPage> createState() => _OfficeApplicationPageState();
 }
@@ -71,7 +73,11 @@ class _OfficeApplicationPageState
   void initState() {
     super.initState();
     fields.controller('application_reference', widget.applicationReference);
-    if (widget.applicationReference.isNotEmpty) _load();
+    if (widget.startNew) {
+      _new();
+    } else if (widget.applicationReference.isNotEmpty) {
+      _load();
+    }
   }
 
   void _clearRows() {
@@ -133,6 +139,16 @@ class _OfficeApplicationPageState
       entry = stringMap(result['entry']);
       review = result['review'] == null ? null : stringMap(result['review']);
     });
+  }
+
+  Future<void> _new() async {
+    if (!operation.canWrite || editing) return;
+    fields.controller('application_reference').text =
+        'LOAN-${officeRequestId()}';
+    await _load();
+    if (mounted && entry != null && review == null && operation.canWrite) {
+      _edit();
+    }
   }
 
   void _edit() {
@@ -315,6 +331,12 @@ class _OfficeApplicationPageState
         ? <OfficeRecord>[]
         : officeRecords(entry!['loan_types']);
     return screen('Loan application', [
+      if (!editing)
+        officeButton(
+          'New application',
+          operation.canWrite ? _new : null,
+          primary: true,
+        ),
       officeField(
         fields,
         'application_reference',
