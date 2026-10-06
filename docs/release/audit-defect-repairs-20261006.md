@@ -40,4 +40,3 @@ If migration fails before commit, verify rollback and retain the error before re
 ## Remaining accounting program
 
 Separate owner/company deployments, real opening balances and entity/tax facts, broad source adapters and liability reconciliation, the complete reporting package and remaining loan/correction lifecycles are outside this focused repair release. Their prior work remains on the separate accounting branch, unactivated.
-

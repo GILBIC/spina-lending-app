@@ -71,4 +71,3 @@ Files: new0141 migration; source status repository/API/client presentation; test
 - [ ] Run full Portal, Flutter and backend commands plus bounded fresh-schema real-money/recovery validations. Report all actual failures/skips accurately.
 - [ ] Run scoped static/security regression gates and independent standards/spec review.
 - [ ] Save repair evidence, remaining business-readiness work and deployment/migration instructions. Commit the reviewed implementation.
-
