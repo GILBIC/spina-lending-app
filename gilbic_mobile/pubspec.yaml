@@ -1,7 +1,7 @@
 name: gilbic_mobile
 description: Role-based mobile application for the SPINA lending platform.
 publish_to: "none"
-version: 0.5.1+8
+version: 0.5.2+9
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
