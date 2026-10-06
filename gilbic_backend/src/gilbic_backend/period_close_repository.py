@@ -10,7 +10,6 @@ from psycopg.rows import dict_row
 
 from .database import open_connection
 
-
 POLICY = "period_close_retained_earnings_v1"
 
 
@@ -64,7 +63,7 @@ class PostgresPeriodCloseRepository:
     def list_items(
         self, *, status: str = "all", limit: int = 100, offset: int = 0
     ) -> tuple[PeriodCloseItem, ...]:
-        where = self._status_where(status)
+        where, params = self._status_where(status)
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
@@ -75,7 +74,7 @@ class PostgresPeriodCloseRepository:
                     ORDER BY start_date DESC, fiscal_period_id
                     LIMIT %s OFFSET %s
                     """,
-                    (limit, offset),
+                    (*params, limit, offset),
                 )
                 return tuple(PeriodCloseItem(**dict(row)) for row in cursor.fetchall())
 
@@ -92,7 +91,9 @@ class PostgresPeriodCloseRepository:
                 )
                 row = cursor.fetchone()
                 if row is None:
-                    raise PeriodCloseBlocked("Accounting period close item was not found.")
+                    raise PeriodCloseBlocked(
+                        "Accounting period close item was not found."
+                    )
                 return PeriodCloseItem(**dict(row))
 
     def summary(self) -> dict[str, object]:
@@ -101,7 +102,9 @@ class PostgresPeriodCloseRepository:
                 cursor.execute("SELECT * FROM accounting.period_close_summary")
                 row = cursor.fetchone()
                 if row is None:
-                    raise PeriodCloseError("Formal period-close summary is unavailable.")
+                    raise PeriodCloseError(
+                        "Formal period-close summary is unavailable."
+                    )
                 return dict(row)
 
     def prepare(self, *, fiscal_period_id: UUID, actor_user_id: UUID) -> UUID:
@@ -141,14 +144,20 @@ class PostgresPeriodCloseRepository:
         )
 
     @staticmethod
-    def _status_where(status: str) -> str:
+    def _status_where(status: str) -> tuple[str, tuple[str, ...]]:
         clauses = {
-            "all": "true",
-            "ready_for_review": "close_status = 'ready_for_review'",
-            "ready_to_prepare": "close_status = 'ready_to_prepare'",
-            "prepared": "close_status = 'prepared_confirmation_required'",
-            "closed": "close_status = 'closed_protected'",
-            "blocked": "close_status LIKE 'blocked_%' OR close_status = 'closed_legacy_without_protected_close_audit'",
+            "all": ("true", ()),
+            "ready_for_review": ("close_status = 'ready_for_review'", ()),
+            "ready_to_prepare": ("close_status = 'ready_to_prepare'", ()),
+            "prepared": ("close_status = 'prepared_confirmation_required'", ()),
+            "closed": (
+                "close_status IN ('closed_protected', 'blocked_closed_source_review_required')",
+                (),
+            ),
+            "blocked": (
+                "close_status LIKE %s OR close_status = 'closed_legacy_without_protected_close_audit'",
+                ("blocked_%",),
+            ),
         }
         clause = clauses.get(status)
         if clause is None:

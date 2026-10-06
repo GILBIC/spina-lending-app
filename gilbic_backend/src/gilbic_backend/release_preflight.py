@@ -78,6 +78,7 @@ def probe_database(settings: Settings) -> dict[str, bool]:
         "private_grants": False,
         "disclosure_guards": False,
         "treasury_guards": False,
+        "accounting_source_guards": False,
     }
     try:
         with _connect(settings) as connection, connection.cursor() as cursor:
@@ -172,6 +173,39 @@ def probe_database(settings: Settings) -> dict[str, bool]:
             )
             row = cursor.fetchone()
             checks["treasury_guards"] = bool(row and row[0])
+            # The repaired close must never activate against the old schema.
+            cursor.execute(
+                """WITH required(relation, trigger_name, trigger_type, deferred) AS (
+                    VALUES
+                    ('accounting.fiscal_periods',
+                     'accounting_period_source_transition_guard', 19, false),
+                    ('accounting.fiscal_periods',
+                     'accounting_period_source_transition_commit_guard', 17, true),
+                    ('accounting.period_close_preparations',
+                     'accounting_period_source_preparation_guard', 7, false),
+                    ('accounting.period_close_preparations',
+                     'accounting_period_source_preparation_commit_guard', 5, true)
+                )
+                SELECT to_regclass('accounting.period_source_close_state') IS NOT NULL
+                    AND to_regprocedure('accounting.period_source_blockers(uuid)') IS NOT NULL
+                    AND to_regprocedure('accounting.prepare_period_close_ledger_snapshot(uuid,uuid)') IS NOT NULL
+                    AND bool_and(EXISTS (
+                        SELECT 1 FROM pg_trigger t
+                        WHERE t.tgrelid = to_regclass(required.relation)
+                          AND t.tgname = required.trigger_name
+                          AND t.tgfoid = to_regprocedure('accounting.guard_period_source_completeness()')
+                          AND t.tgtype = required.trigger_type
+                          AND t.tgenabled IN ('O', 'A')
+                          AND NOT t.tgisinternal
+                          AND t.tgqual IS NULL
+                          AND t.tgattr = ''::int2vector
+                          AND t.tgnargs = 0
+                          AND t.tgdeferrable = required.deferred
+                          AND t.tginitdeferred = required.deferred
+                    )) FROM required"""
+            )
+            row = cursor.fetchone()
+            checks["accounting_source_guards"] = bool(row and row[0])
     except (psycopg.Error, ValueError):
         # Driver errors may contain credentials, addresses or SQL; never serialize them.
         pass
@@ -276,6 +310,7 @@ def check_runtime(settings: Settings) -> PreflightReport:
                 "private_grants": False,
                 "disclosure_guards": False,
                 "treasury_guards": False,
+                "accounting_source_guards": False,
             }
         )
     return _report("runtime_configuration", checks)

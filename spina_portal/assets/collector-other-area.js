@@ -15,7 +15,7 @@ export function mountCollectorOtherArea({root,api,session,getSession=()=>session
     root.textContent='Refresh today’s route before searching or collecting other-area payments.';
     return ()=>{};
   }
-  let disposed=false;let searchVersion=0;let previewVersion=0;let reviewedTarget=null;let stale=false;
+  let disposed=false;let searchVersion=0;let previewVersion=0;let reviewedTarget=null;let reviewedDigest=null;let stale=false;
   const savedEntries=new Set();let savedRemittance=false;
   const current=()=>!disposed && guard.current && !signal?.aborted && Boolean(getSession());
   root.innerHTML=`<h2>${mode==='management'?'Direct payment':'Other-area collection'}</h2><p>${mode==='management'?'Record a payment for a client outside the assigned route. The client’s assigned Collector remains unchanged.':'You remain the recorder. Assigned ownership and cash custody are preserved by SPINA.'}</p><form data-other-search class="entry-form"><label>Client name, code, phone or area<input name="query" minlength="2" maxlength="120" required /></label><button class="button button-outline" type="submit">${mode==='management'?'Find client':'Search other-area clients'}</button></form><div data-other-results></div><div data-cross-remittance></div><div data-other-status role="status"></div>`;
@@ -62,27 +62,28 @@ export function mountCollectorOtherArea({root,api,session,getSession=()=>session
       if(!current())return;
       container.innerHTML=`<h3>Other-area cash and remittance</h3>${targets.length ? `<form data-cross-form class="entry-form"><label>Recipient<select name="recipient">${targets.map((item,index)=>`<option value="${index}">${h(item.recipient_name)} · ${h(item.role_name)} · ${formatMoney(item.total_amount)}</option>`).join('')}</select></label><button type="button" class="button button-outline" data-cross-preview>Review remittance</button><div data-cross-summary></div><label>Note<textarea name="note" maxlength="500"></textarea></label><button type="submit" class="button button-primary" data-cross-save disabled>Submit reviewed remittance</button></form>`:'<p>No other-area cash is awaiting remittance.</p>'}${history.map(item=>`<p>${h(item.client_name)} · ${h(item.receipt_number)} · ${formatMoney(item.amount)} · ${h(item.custody_status === 'wallet_applied' ? 'Recipient funds applied - no Collector cash' : item.custody_status || item.status || '')} · Assigned: ${h(item.assigned_collector_name || '')}${item.remittance_recipient_name ? ` · Recipient: ${h(item.remittance_recipient_name)}` : ''}</p>`).join('')}`;
       const form=container.querySelector('[data-cross-form]');if(!form)return;
-      const invalidate=()=>{previewVersion+=1;reviewedTarget=null;form.querySelector('[data-cross-save]').disabled=true;form.querySelector('[data-cross-summary]').innerHTML='';};
+      const invalidate=()=>{previewVersion+=1;reviewedTarget=null;reviewedDigest=null;form.querySelector('[data-cross-save]').disabled=true;form.querySelector('[data-cross-summary]').innerHTML='';};
       form.querySelector('[name="recipient"]').addEventListener('change',invalidate);
       form.querySelector('[data-cross-preview]').addEventListener('click',()=>run(async()=>{
         invalidate();const version=previewVersion;const target=targets[Number(val(form,'recipient')) || 0];
         const query=new URLSearchParams({collection_date:routeDate,recipient_user_id:target.recipient_user_id,recipient_capacity:target.recipient_capacity});
         const preview=await api.request(`/api/v1/collector/cross-remittances/preview?${query}`);
         if(!current() || version!==previewVersion)return;
-        reviewedTarget=target;
+        if(!/^[0-9a-f]{64}$/.test(preview.review_digest || ''))throw new Error('Refresh and review the remittance. Update the app if this message continues.');
+        reviewedTarget=target;reviewedDigest=preview.review_digest;
         form.querySelector('[data-cross-summary]').innerHTML=`<p>Total ${formatMoney(preview.total_amount)} · ${h(preview.transaction_count)} transactions · ${h(preview.client_count)} clients</p>${(preview.items || []).map(item=>`<p>${h(item.client_name)} · ${h(item.loan_type)} · ${formatMoney(item.amount)}</p>`).join('')}`;
         form.querySelector('[data-cross-save]').disabled=guard.locked || !preview.transaction_count;
       }));
       form.addEventListener('submit',event=>{event.preventDefault();run(async()=>{
         const target=targets[Number(val(form,'recipient')) || 0];if(savedRemittance)throw new Error('This remittance was saved. Review its authoritative status before a new submission.');if(!reviewedTarget || reviewedTarget!==target)throw new Error('Review this recipient’s remittance first.');
-        const result=await collectorMutation({api,guard,path:'/api/v1/collector/cross-remittances',options:{method:'POST',body:{recipient_user_id:target.recipient_user_id,recipient_capacity:target.recipient_capacity,collection_date:routeDate,note:val(form,'note').trim()}},verify:result=>typeof result.remittance_id==='string' && result.remittance_id.length>0 && result.recipient_user_id===target.recipient_user_id && result.recipient_capacity===target.recipient_capacity && result.collection_date===routeDate});
-        if(current()){savedRemittance=true;reviewedTarget=null;form.querySelector('[data-cross-save]').disabled=true;await onSaved(result,{source:'remittance'});}
+        const result=await collectorMutation({api,guard,path:'/api/v1/collector/cross-remittances',options:{method:'POST',body:{recipient_user_id:target.recipient_user_id,recipient_capacity:target.recipient_capacity,collection_date:routeDate,note:val(form,'note').trim(),expected_review_digest:reviewedDigest}},verify:result=>typeof result.remittance_id==='string' && result.remittance_id.length>0 && result.recipient_user_id===target.recipient_user_id && result.recipient_capacity===target.recipient_capacity && result.collection_date===routeDate});
+        if(current()){savedRemittance=true;reviewedTarget=null;reviewedDigest=null;form.querySelector('[data-cross-save]').disabled=true;await onSaved(result,{source:'remittance'});}
       });});
       guard.sync();
     }catch(error){if(current())container.textContent=error.message;}
   };
   if(mode!=='management' && routeDate && (hasPermission(session,'remittance.create') || hasPermission(session,'remittance.view')))loadRemittance();
-  const unsubscribe=registerRouteConsumer(route=>{previewVersion++;reviewedTarget=null;const confirm=root.querySelector('[data-cross-save]');if(confirm)confirm.disabled=true;if(!route || route.route_date!==routeDate){stale=true;searchVersion++;status('Route changed — review again. Retained other-area notes cannot be submitted for the old date.');for(const button of root.querySelectorAll('button'))button.disabled=true;}});
+  const unsubscribe=registerRouteConsumer(route=>{previewVersion++;reviewedTarget=null;reviewedDigest=null;const confirm=root.querySelector('[data-cross-save]');if(confirm)confirm.disabled=true;if(!route || route.route_date!==routeDate){stale=true;searchVersion++;status('Route changed — review again. Retained other-area notes cannot be submitted for the old date.');for(const button of root.querySelectorAll('button'))button.disabled=true;}});
   function dispose(){disposed=true;searchVersion+=1;previewVersion+=1;savedEntries.clear();unsubscribe();signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();
   return dispose;

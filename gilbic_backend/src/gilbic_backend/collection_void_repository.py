@@ -376,107 +376,28 @@ class PostgresCollectionVoidRepository:
                         row["covered_date"] for row in cursor.fetchall()
                     )
 
-                    cursor.execute(
-                        """
-                        select
-                            coalesce((
-                                select previous.pass_count_after
-                                from lending.collection_transactions previous
-                                where previous.loan_id = %s
-                                  and previous.is_voided = false
-                                  and (previous.accepted_at, previous.id) < (%s, %s)
-                                order by previous.accepted_at desc, previous.id desc
-                                limit 1
-                            ), 0) as pass_count_before,
-                            (
-                                select previous.advance_until_after
-                                from lending.collection_transactions previous
-                                where previous.loan_id = %s
-                                  and previous.id <> %s
-                                  and previous.is_voided = false
-                                order by previous.accepted_at desc, previous.id desc
-                                limit 1
-                            ) as advance_until_before,
-                            (
-                                select previous.collection_date
-                                from lending.collection_transactions previous
-                                where previous.loan_id = %s
-                                  and previous.is_voided = false
-                                  and previous.entry_type <> 'pass'
-                                  and (previous.accepted_at, previous.id) < (%s, %s)
-                                order by previous.accepted_at desc, previous.id desc
-                                limit 1
-                            ) as last_payment_date_before,
-                            coalesce((
-                                select previous.note
-                                from lending.collection_transactions previous
-                                where previous.loan_id = %s
-                                  and previous.is_voided = false
-                                  and (previous.accepted_at, previous.id) < (%s, %s)
-                                order by previous.accepted_at desc, previous.id desc
-                                limit 1
-                            ), '') as note_before
-                        """,
-                        (
-                            transaction["loan_id"],
-                            transaction["accepted_at"],
-                            transaction_id,
-                            transaction["loan_id"],
-                            transaction_id,
-                            transaction["loan_id"],
-                            transaction["accepted_at"],
-                            transaction_id,
-                            transaction["loan_id"],
-                            transaction["accepted_at"],
-                            transaction_id,
-                        ),
-                    )
-                    restored = cursor.fetchone()
-                    if restored is None:
-                        raise CollectionVoidConflict(
-                            "The prior collection state could not be reconstructed."
-                        )
-
                     restored_balance = self._money(transaction["previous_balance"])
-                    restored_pass_count = int(restored["pass_count_before"])
-                    restored_advance_until = restored["advance_until_before"]
-                    restored_last_payment_date = restored["last_payment_date_before"]
-                    restored_note = str(restored["note_before"] or "")
                     before = details.get("collection_state_before")
                     if isinstance(before, dict):
-                        try:
-                            if Decimal(
-                                before["remaining_balance"]
-                            ) != restored_balance or int(
-                                before["state_version"]
-                            ) != int(details["state_version_before"]):
-                                raise ValueError("Inconsistent prior state")
-                            restored_pass_count = int(before["pass_count"])
-                            if restored_pass_count < 0:
-                                raise ValueError("Invalid missed-payment count")
-                            restored_advance_until = (
-                                date.fromisoformat(before["advance_until"])
-                                if before["advance_until"]
-                                else None
-                            )
-                            restored_last_payment_date = (
-                                date.fromisoformat(before["last_payment_date"])
-                                if before["last_payment_date"]
-                                else None
-                            )
-                            restored_note = str(before["note"])
-                        except (
-                            KeyError,
-                            TypeError,
-                            ValueError,
-                            ArithmeticError,
-                        ) as error:
-                            raise CollectionVoidConflict(
-                                "The saved prior state needs Management review."
-                            ) from error
-                    elif collector_expected_route_revision is not None:
+                        (
+                            restored_pass_count,
+                            restored_advance_until,
+                            restored_last_payment_date,
+                            restored_note,
+                        ) = self._saved_prior_state(
+                            before,
+                            previous_balance=restored_balance,
+                            expected_state_version=details.get("state_version_before"),
+                        )
+                    else:
+                        # A legacy receipt may use its immediate predecessor only
+                        # when that receipt proves the exact state it replaced.
+                        # This protection applies to Management and Collector alike.
                         prior = cursor.execute(
-                            """select details ->> 'state_version_after' as version
+                            """select previous_balance, official_balance,
+                                      pass_count_after, advance_until_after,
+                                      entry_type, applied_amount, collection_date,
+                                      note, edit_version, details
                                from lending.collection_transactions
                                where loan_id=%s and is_voided=false
                                  and (accepted_at,id) < (%s,%s)
@@ -487,12 +408,57 @@ class PostgresCollectionVoidRepository:
                                 transaction_id,
                             ),
                         ).fetchone()
-                        if not prior or prior["version"] != str(
-                            details.get("state_version_before")
+                        prior_details = (
+                            prior["details"]
+                            if prior and isinstance(prior["details"], dict)
+                            else {}
+                        )
+                        if (
+                            not prior
+                            or type(details.get("state_version_before")) is not int
+                            or type(prior_details.get("state_version_after")) is not int
+                            or prior_details["state_version_after"]
+                            != details["state_version_before"]
+                            or prior["official_balance"] != restored_balance
                         ):
                             raise CollectionVoidConflict(
-                                "This older receipt has no verified prior state. Ask Management to review the correction."
+                                "This older receipt has no verified prior state. "
+                                "Review the original collection evidence before correction."
                             )
+                        restored_pass_count = int(prior["pass_count_after"])
+                        restored_advance_until = prior["advance_until_after"]
+                        restored_note = str(prior["note"] or "").strip()
+                        inherited_note_required = (
+                            not restored_note and int(prior["edit_version"]) == 0
+                        )
+                        payment_changed_date = prior["entry_type"] != "pass" and prior[
+                            "applied_amount"
+                        ] > Decimal("0.00")
+                        restored_last_payment_date = prior["collection_date"]
+                        # PASS/unapplied cash retains the earlier payment date;
+                        # a new receipt's empty note retains the earlier route
+                        # note, while a correction can explicitly clear it.
+                        # Neither can be recovered from receipt defaults.
+                        if not payment_changed_date or inherited_note_required:
+                            prior_before = prior_details.get("collection_state_before")
+                            if not isinstance(prior_before, dict):
+                                raise CollectionVoidConflict(
+                                    "This older receipt has no verified prior state. "
+                                    "Review the original collection evidence before correction."
+                                )
+                            _, _, inherited_date, inherited_note = (
+                                self._saved_prior_state(
+                                    prior_before,
+                                    previous_balance=prior["previous_balance"],
+                                    expected_state_version=prior_details.get(
+                                        "state_version_before"
+                                    ),
+                                )
+                            )
+                            if inherited_note_required:
+                                restored_note = inherited_note
+                            if not payment_changed_date:
+                                restored_last_payment_date = inherited_date
                     voided_at = datetime.now(UTC)
                     next_state_version = int(transaction["state_version"]) + 1
 
@@ -800,6 +766,44 @@ class PostgresCollectionVoidRepository:
             reason=reason,
             voided_at=row["voided_at"],
         )
+
+    @staticmethod
+    def _saved_prior_state(
+        before: dict[str, Any],
+        *,
+        previous_balance: Decimal,
+        expected_state_version: object,
+    ) -> tuple[int, date | None, date | None, str]:
+        try:
+            if (
+                Decimal(before["remaining_balance"]) != previous_balance
+                or type(before["state_version"]) is not int
+                or type(expected_state_version) is not int
+                or before["state_version"] != expected_state_version
+            ):
+                raise ValueError("Inconsistent prior state")
+            pass_count = before["pass_count"]
+            if (
+                type(pass_count) is not int
+                or pass_count < 0
+                or not isinstance(before["note"], str)
+            ):
+                raise ValueError("Invalid prior route state")
+            advance_until = (
+                date.fromisoformat(before["advance_until"])
+                if before["advance_until"]
+                else None
+            )
+            last_payment_date = (
+                date.fromisoformat(before["last_payment_date"])
+                if before["last_payment_date"]
+                else None
+            )
+            return pass_count, advance_until, last_payment_date, before["note"]
+        except (KeyError, TypeError, ValueError, ArithmeticError) as error:
+            raise CollectionVoidConflict(
+                "The saved prior state needs Management review."
+            ) from error
 
     @staticmethod
     def _money(value: Decimal | int | str) -> Decimal:

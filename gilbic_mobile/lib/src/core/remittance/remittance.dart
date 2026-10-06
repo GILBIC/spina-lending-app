@@ -91,7 +91,12 @@ class RemittanceSummary {
     required this.clientCount,
     required this.totalAmount,
     required this.items,
+    this.reviewDigest,
   });
+
+  final String? reviewDigest;
+  bool get hasReviewDigest =>
+      RegExp(r'^[0-9a-f]{64}$').hasMatch(reviewDigest ?? '');
 
   final DateTime? collectionDate;
   final String collectorName;
@@ -120,6 +125,9 @@ class RemittanceSummary {
         firstNumber(<Object?>[data['covered_payment_count']])?.toInt() ?? 0;
 
     return RemittanceSummary(
+      reviewDigest: data['review_digest'] is String
+          ? data['review_digest'] as String
+          : null,
       collectionDate: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['collection_date']]) ?? '',
       ),

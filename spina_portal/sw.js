@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v31-office-usability';
+const CACHE_NAME = 'spina-company-shell-v32-remittance-review-binding';
 const SHELL_ASSETS = [
   '/',
   '/index.html',

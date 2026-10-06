@@ -260,6 +260,7 @@ class _HistoryRepository
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     required DateTime collectionDate,
     String note = '',

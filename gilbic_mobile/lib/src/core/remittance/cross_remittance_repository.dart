@@ -32,6 +32,7 @@ abstract interface class CrossRemittanceRepository {
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     CrossRemittanceRecipientCapacity recipientCapacity =
         CrossRemittanceRecipientCapacity.assignedCollector,
@@ -42,7 +43,7 @@ abstract interface class CrossRemittanceRepository {
 
 class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
   SpinaCrossRemittanceRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -127,13 +128,21 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
         },
       ),
     );
-    return RemittanceSummary.fromPayload(data);
+    final summary = RemittanceSummary.fromPayload(data);
+    if (!summary.hasReviewDigest) {
+      throw const SpinaApiException(
+        'Refresh and review the remittance. Update the app if this message continues.',
+        code: 'remittance_review_changed',
+      );
+    }
+    return summary;
   }
 
   @override
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     CrossRemittanceRecipientCapacity recipientCapacity =
         CrossRemittanceRecipientCapacity.assignedCollector,
@@ -144,14 +153,13 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
       session,
       deviceId: deviceId,
       method: 'POST',
-      uri: ApiConfig.endpoint(
-        '/api/mobile/v1/collector/cross-remittances',
-      ),
+      uri: ApiConfig.endpoint('/api/mobile/v1/collector/cross-remittances'),
       body: <String, Object?>{
         'recipient_user_id': recipientUserId,
         'recipient_capacity': recipientCapacity.apiValue,
         'collection_date': _date(collectionDate),
         'note': note.trim(),
+        'expected_review_digest': expectedReviewDigest,
       },
     );
     final record = RemittanceRecord.fromPayload(data);

@@ -219,6 +219,7 @@ def test_preflight_accepts_complete_origin_or_always_enabled_guards(catalog, mod
         "private_grants": True,
         "disclosure_guards": True,
         "treasury_guards": False,
+        "accounting_source_guards": False,
     }
 
 
