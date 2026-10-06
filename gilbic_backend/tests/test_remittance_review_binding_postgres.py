@@ -203,6 +203,82 @@ def test_inflight_correction_yields_without_blocking_actual_money(reviewed_batch
         ).fetchone() == (False, None)
 
 
+@pytest.mark.parametrize("cross_remittance", [False, True], ids=["normal", "cross"])
+def test_row_locked_correction_can_finish_while_remittance_fails_fast(
+    reviewed_batch, monkeypatch, cross_remittance
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from gilbic_backend import cross_remittance_repository as cross
+
+    f = reviewed_batch
+    args = {"collector_user_id": f["collector"], "collection_date": f["day"]}
+    repository = f["repository"]
+    if cross_remittance:
+        monkeypatch.setattr(cross, "open_connection", lambda: psycopg.connect(f["url"]))
+        with psycopg.connect(f["url"]) as setup:
+            setup.execute(
+                "UPDATE lending.collection_transactions SET collection_origin='cross_collector',assigned_collector_user_id=%s WHERE id=%s",
+                (f["recipient"], f["transaction"]),
+            )
+        repository = cross.PostgresCrossRemittanceRepository()
+        args.update(recipient_user_id=f["recipient"], recipient_capacity="management")
+    preview = repository.preview(**args)
+    assert [item.transaction_id for item in preview.items] == [f["transaction"]]
+    submit_args = {**args, "recipient_user_id": f["recipient"], "note": "Reviewed cash"}
+
+    admission_started = Event()
+    original_admission = module.PostgresRemittanceRepository._lock_review_sources
+
+    def observe_admission(cursor):
+        admission_started.set()
+        original_admission(cursor)
+
+    monkeypatch.setattr(
+        module.PostgresRemittanceRepository,
+        "_lock_review_sources",
+        staticmethod(observe_admission),
+    )
+    with psycopg.connect(f["url"]) as editor, ThreadPoolExecutor(max_workers=1) as pool:
+        editor.execute("SET LOCAL statement_timeout = '2s'")
+        # The real correction locks the receipt before its first DELETE/UPDATE.
+        # At this point it holds ROW SHARE, not an UPDATE's ROW EXCLUSIVE.
+        assert editor.execute(
+            "SELECT id FROM lending.collection_transactions WHERE id=%s FOR UPDATE",
+            (f["transaction"],),
+        ).fetchone() == (f["transaction"],)
+        pending = pool.submit(
+            repository.submit,
+            **submit_args,
+            expected_review_digest=preview.review_digest,
+        )
+        try:
+            assert admission_started.wait(5)
+            with pytest.raises(module.RemittanceReviewChanged, match="Refresh|refresh"):
+                pending.result(timeout=2)
+            # These are the correction's next write targets. They must remain
+            # writable in the same transaction while remittance asks for retry.
+            editor.execute(
+                "DELETE FROM lending.collection_covered_dates WHERE transaction_id=%s",
+                (f["transaction"],),
+            )
+            editor.execute(
+                "UPDATE lending.collection_transactions SET edit_version=edit_version+1 WHERE id=%s",
+                (f["transaction"],),
+            )
+            editor.commit()
+        finally:
+            editor.rollback()
+    with pytest.raises(module.RemittanceReviewChanged):
+        repository.submit(**submit_args, expected_review_digest=preview.review_digest)
+    current = repository.preview(**args)
+    saved = repository.submit(
+        **submit_args, expected_review_digest=current.review_digest
+    )
+    assert saved.items == current.items
+
+
 def test_new_receipt_waits_until_exact_reviewed_batch_is_saved(
     reviewed_batch, monkeypatch
 ):

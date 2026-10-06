@@ -77,6 +77,42 @@ void main() {
         expect(jsonDecode(calls.last.body)['note'], 'Reviewed command');
       },
     );
+    for (final status in [200, 201]) {
+      test(
+        '${cross ? 'Cross' : 'Normal'} malformed $status is not a confirmed financial result',
+        () async {
+          var calls = 0;
+          final client = MockClient((_) async {
+            calls++;
+            return http.Response('{broken', status);
+          });
+          final write = cross
+              ? SpinaCrossRemittanceRepository(client: client).submit(
+                  _session,
+                  deviceId: 'device',
+                  recipientUserId: 'recipient',
+                  collectionDate: DateTime(2026, 10, 6),
+                  expectedReviewDigest: _digest,
+                )
+              : SpinaRemittanceRepository(client: client).submit(
+                  _session,
+                  deviceId: 'device',
+                  recipientUserId: 'recipient',
+                  collectionDate: DateTime(2026, 10, 6),
+                  expectedReviewDigest: _digest,
+                );
+          await expectLater(
+            write,
+            throwsA(
+              isA<SpinaApiException>()
+                  .having((e) => e.statusCode, 'status', status)
+                  .having((e) => e.code, 'code', 'invalid_server_response'),
+            ),
+          );
+          expect(calls, 1);
+        },
+      );
+    }
     test(
       '${cross ? 'Cross' : 'Normal'} missing review digest is an explicit refresh error',
       () async {

@@ -431,10 +431,9 @@ class PostgresCollectionVoidRepository:
                         inherited_note_required = (
                             not restored_note and int(prior["edit_version"]) == 0
                         )
-                        payment_changed_date = (
-                            prior["entry_type"] != "pass"
-                            and prior["applied_amount"] > Decimal("0.00")
-                        )
+                        payment_changed_date = prior["entry_type"] != "pass" and prior[
+                            "applied_amount"
+                        ] > Decimal("0.00")
                         restored_last_payment_date = prior["collection_date"]
                         # PASS/unapplied cash retains the earlier payment date;
                         # a new receipt's empty note retains the earlier route
@@ -447,10 +446,14 @@ class PostgresCollectionVoidRepository:
                                     "This older receipt has no verified prior state. "
                                     "Review the original collection evidence before correction."
                                 )
-                            _, _, inherited_date, inherited_note = self._saved_prior_state(
-                                prior_before,
-                                previous_balance=prior["previous_balance"],
-                                expected_state_version=prior_details.get("state_version_before"),
+                            _, _, inherited_date, inherited_note = (
+                                self._saved_prior_state(
+                                    prior_before,
+                                    previous_balance=prior["previous_balance"],
+                                    expected_state_version=prior_details.get(
+                                        "state_version_before"
+                                    ),
+                                )
                             )
                             if inherited_note_required:
                                 restored_note = inherited_note
@@ -788,11 +791,13 @@ class PostgresCollectionVoidRepository:
                 raise ValueError("Invalid prior route state")
             advance_until = (
                 date.fromisoformat(before["advance_until"])
-                if before["advance_until"] else None
+                if before["advance_until"]
+                else None
             )
             last_payment_date = (
                 date.fromisoformat(before["last_payment_date"])
-                if before["last_payment_date"] else None
+                if before["last_payment_date"]
+                else None
             )
             return pass_count, advance_until, last_payment_date, before["note"]
         except (KeyError, TypeError, ValueError, ArithmeticError) as error:

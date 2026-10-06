@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/core/remittance/cross_remittance.dart';
 import 'package:gilbic_mobile/src/core/remittance/cross_remittance_repository.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
@@ -27,9 +29,9 @@ class CrossCollectorRemittancePage extends StatefulWidget {
 
 class _CrossCollectorRemittancePageState
     extends State<CrossCollectorRemittancePage> {
-  late final CrossRemittanceRepository _repository;
+  late CrossRemittanceRepository _repository;
   late final TextEditingController _noteController;
-  late final DateTime _collectionDate;
+  late DateTime _collectionDate;
 
   List<CrossRemittanceTarget> _targets = const <CrossRemittanceTarget>[];
   RemittanceSummary? _summary;
@@ -42,6 +44,8 @@ class _CrossCollectorRemittancePageState
   bool _submitting = false;
   bool _confirming = false;
   bool _submissionUnconfirmed = false;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -51,6 +55,62 @@ class _CrossCollectorRemittancePageState
     final source = widget.collectionDate ?? DateTime.now();
     _collectionDate = DateTime(source.year, source.month, source.day);
     _loadTargets();
+  }
+
+  @override
+  void didUpdateWidget(CrossCollectorRemittancePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository ||
+        oldWidget.collectionDate != widget.collectionDate) {
+      _readEpoch++;
+      _clearPrivateState();
+      _repository = widget.repository ?? SpinaCrossRemittanceRepository();
+      final source = widget.collectionDate ?? DateTime.now();
+      _collectionDate = DateTime(source.year, source.month, source.day);
+      _dismissPrivateRoutes();
+      _loadTargets();
+    }
+  }
+
+  bool _sameContext(int epoch) => mounted && epoch == _readEpoch;
+  bool _current(int epoch, int requestId) =>
+      _sameContext(epoch) && requestId == _requestId;
+
+  void _clearPrivateState() {
+    _summary = null;
+    _submitted = null;
+    _targets = const [];
+    _selectedTargetKey = null;
+    _deviceId = null;
+    _noteController.clear();
+    _errorMessage = null;
+    _submitting = false;
+    _confirming = false;
+    _submissionUnconfirmed = false;
+    _submittedTarget = null;
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  void _denyAccess(SpinaApiException error, int epoch) {
+    if (!_sameContext(epoch)) return;
+    _readEpoch++;
+    setState(() {
+      _clearPrivateState();
+      _loading = false;
+      _errorMessage = error.message;
+    });
+    _dismissPrivateRoutes();
   }
 
   @override
@@ -72,20 +132,25 @@ class _CrossCollectorRemittancePageState
   }
 
   Future<void> _loadTargets() async {
+    if (_submitting || _confirming || _submissionUnconfirmed) return;
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
+    final repository = _repository;
+    final collectionDate = _collectionDate;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final targets = await _repository.loadTargets(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final targets = await repository.loadTargets(
+        session,
         deviceId: identity.installationId,
-        collectionDate: _collectionDate,
+        collectionDate: collectionDate,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!_current(epoch, requestId)) return;
       CrossRemittanceTarget? selected;
       for (final target in targets) {
         if (target.selectionKey == _selectedTargetKey) {
@@ -93,9 +158,7 @@ class _CrossCollectorRemittancePageState
           break;
         }
       }
-      if (selected == null && targets.isNotEmpty) {
-        selected = targets.first;
-      }
+      if (selected == null && targets.isNotEmpty) selected = targets.first;
       setState(() {
         _deviceId = identity.installationId;
         _targets = targets;
@@ -103,31 +166,42 @@ class _CrossCollectorRemittancePageState
         _summary = null;
       });
       if (selected != null) {
-        await _loadPreview(selected);
+        final summary = await repository.loadPreview(
+          session,
+          deviceId: identity.installationId,
+          recipientUserId: selected.recipientUserId,
+          recipientCapacity: selected.recipientCapacity,
+          collectionDate: collectionDate,
+        );
+        if (_current(epoch, requestId)) setState(() => _summary = summary);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (staffAccessRejected(error)) {
+        _denyAccess(error, epoch);
+      } else if (_current(epoch, requestId)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              'Other-area remittance recipients could not be loaded.';
-        });
+      if (_current(epoch, requestId)) {
+        setState(
+          () => _errorMessage =
+              'Other-area remittance recipients could not be loaded.',
+        );
       }
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (_current(epoch, requestId)) setState(() => _loading = false);
     }
   }
 
   Future<void> _loadPreview(CrossRemittanceTarget target) async {
+    if (_submitting || _confirming || _submissionUnconfirmed) return;
     final deviceId = _deviceId;
-    if (deviceId == null) {
-      return;
-    }
+    if (deviceId == null) return;
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
+    final repository = _repository;
+    final collectionDate = _collectionDate;
     setState(() {
       _loading = true;
       _errorMessage = null;
@@ -135,28 +209,35 @@ class _CrossCollectorRemittancePageState
       _summary = null;
     });
     try {
-      final summary = await _repository.loadPreview(
-        widget.session,
+      final summary = await repository.loadPreview(
+        session,
         deviceId: deviceId,
         recipientUserId: target.recipientUserId,
         recipientCapacity: target.recipientCapacity,
-        collectionDate: _collectionDate,
+        collectionDate: collectionDate,
       );
-      if (mounted) {
-        setState(() => _summary = summary);
-      }
+      if (_current(epoch, requestId)) setState(() => _summary = summary);
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (staffAccessRejected(error)) {
+        _denyAccess(error, epoch);
+      } else if (_current(epoch, requestId)) {
         setState(() => _errorMessage = error.message);
       }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
+    } on Object {
+      if (_current(epoch, requestId)) {
+        setState(
+          () => _errorMessage = 'The remittance preview could not be loaded.',
+        );
       }
+    } finally {
+      if (_current(epoch, requestId)) setState(() => _loading = false);
     }
   }
 
   Future<void> _submit() async {
+    final epoch = _readEpoch;
+    final repository = _repository;
+    final collectionDate = _collectionDate;
     final summary = _summary;
     final deviceId = _deviceId;
     final target = _targetByKey(_selectedTargetKey);
@@ -207,7 +288,7 @@ class _CrossCollectorRemittancePageState
         ],
       ),
     );
-    if (!mounted) return;
+    if (!_sameContext(epoch)) return;
     setState(() => _confirming = false);
     if (confirmed != true || widget.session != reviewedSession) {
       setState(() => _submitting = false);
@@ -219,49 +300,56 @@ class _CrossCollectorRemittancePageState
       _errorMessage = null;
     });
     try {
-      final record = await _repository.submit(
-        widget.session,
+      final record = await repository.submit(
+        reviewedSession,
         deviceId: deviceId,
         recipientUserId: target.recipientUserId,
         recipientCapacity: target.recipientCapacity,
-        collectionDate: _collectionDate,
+        collectionDate: collectionDate,
         note: reviewedNote,
         expectedReviewDigest: summary.reviewDigest!,
       );
-      if (mounted) {
+      if (_sameContext(epoch)) {
         setState(() {
           _submitted = record;
           _submittedTarget = target;
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (staffAccessRejected(error)) {
+        _denyAccess(error, epoch);
+        return;
+      }
+      if (_sameContext(epoch)) {
         setState(() {
-          if (error.statusCode == null || error.statusCode! >= 500) {
+          if (error.statusCode == null ||
+              error.statusCode! < 400 ||
+              error.statusCode! >= 500 ||
+              (error.code?.startsWith('invalid_') ?? false)) {
             _submissionUnconfirmed = true;
           } else {
             _summary = null;
           }
         });
       }
-      if (mounted) {
+      if (_sameContext(epoch)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) setState(() => _submissionUnconfirmed = true);
-      if (mounted) {
+      if (_sameContext(epoch)) setState(() => _submissionUnconfirmed = true);
+      if (_sameContext(epoch)) {
         setState(() {
           _errorMessage = 'The other-area remittance could not be submitted.';
         });
       }
     } finally {
-      if (mounted && _submissionUnconfirmed) {
+      if (_sameContext(epoch) && _submissionUnconfirmed) {
         setState(
           () => _errorMessage =
               'Submission could not be confirmed. Keep this reviewed command and check remittance history with the recipient before trying again.',
         );
       }
-      if (mounted) {
+      if (_sameContext(epoch)) {
         setState(() => _submitting = false);
       }
     }

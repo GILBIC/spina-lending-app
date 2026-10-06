@@ -644,7 +644,10 @@ class PostgresRemittanceRepository:
     def _lock_review_sources(cursor) -> None:
         # Row locks alone cannot freeze new eligible receipts/releases or changes
         # to refund allocations. Acquire one stable table order before row locks.
-        # SRE also serializes submitters without SHARE-to-write upgrade deadlocks.
+        # EXCLUSIVE also conflicts with ROW SHARE: a correction may already hold
+        # SELECT FOR UPDATE before its first write. Yield instead of acquiring
+        # table locks and then waiting on that correction's receipt/release row.
+        # Ordinary SELECT remains compatible; submitters cannot upgrade-deadlock.
         try:
             cursor.execute("""
                 lock table lending.collection_transactions,
@@ -652,7 +655,7 @@ class PostgresRemittanceRepository:
                     lending.loan_unused_advance_refund_due_releases,
                     lending.collection_remittance_refund_due_release_items,
                     lending.collection_remittance_rejections
-                in share row exclusive mode nowait
+                in exclusive mode nowait
             """)
         except LockNotAvailable as error:
             # Reject this attempt, not the in-flight money/correction transaction.

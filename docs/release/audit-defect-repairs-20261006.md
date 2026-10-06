@@ -7,8 +7,8 @@ This candidate repairs the six findings in the SPINA code audit. It does not act
 - Receipt void requires provable prior state. Management cannot substitute zero missed payments or empty history when an older receipt has no such evidence.
 - Accounting exception filters use bound patterns with the real PostgreSQL driver.
 - Financial statements read period and cumulative balances from one read-only repeatable-read snapshot.
-- Android private payment, loan, statement and schedule pages clear private state on access/update denials and discard late responses from the denied or previous session. Transport failures preserve only the permitted cached state.
-- Remittance submission binds the current source facts to the preview the sender reviewed. A stale or absent review identity is rejected before receipts are locked.
+- Android private payment, loan, statement, schedule and Collector remittance pages clear private state on access/update denials and discard late responses from the denied or previous session. Transport failures preserve only the permitted cached state.
+- Remittance submission binds the current source facts to the preview the sender reviewed. A stale or absent review identity is rejected before receipts are locked. Active corrections cause submission to yield. Malformed success responses retain the uncertain reviewed command and disable automatic retry or fresh preview.
 - New migration 0141 makes initial Treasury/Collector source coverage a prerequisite for review, preparation and close. Existing unsupported source families remain explicit blockers; manual journals do not manufacture protected source proof.
 
 ## Migration and compatibility
@@ -25,7 +25,7 @@ The close inventory is intentionally conservative: Treasury/Collector facts lack
 
 ## Verification
 
-Retained local evidence is in `../checkpoints/audit-fixes-20261006`. Local integration passed 205 checks on the complete schema through 0141 (zero skips), 101 Collector recovery checks, and 1,839 Portal tests. The legacy repair selection passed 161 checks on schema 0140; two controlled 7x7 tests passed on their intended schema 0066. These selections overlap and must not be summed. Full CI, Android results and independent review are recorded in the pull request before readiness is claimed.
+Retained local evidence is in `../checkpoints/audit-fixes-20261006`. Local integration passed 207 checks on the complete schema through 0141 (zero skips), 101 Collector recovery checks, and 1,839 Portal tests. The legacy repair selection passed 161 checks on schema 0140; two controlled 7x7 tests passed on their intended schema 0066. These selections overlap and must not be summed. Focused Android checks passed 72 privacy checks and 43 remittance checks, with no scoped analyzer issues. Independent standards/spec review identified additional concurrency and private-state cases, each reproduced before repair; its final results and full CI are recorded in the pull request before readiness is claimed.
 
 The validator creates its own unique loopback PostgreSQL database, installs the full candidate schema through 0141, runs the audit regressions with zero skipped/failed tests allowed, and removes only its own database. Existing bounded financial validators remain distinct historical/current workflow checks.
 
@@ -39,4 +39,4 @@ If migration fails before commit, verify rollback and retain the error before re
 
 ## Remaining accounting program
 
-Separate owner/company deployments, real opening balances and entity/tax facts, broad source adapters and liability reconciliation, the complete reporting package and remaining loan/correction lifecycles are outside this focused repair release. Their prior work remains on the separate accounting branch, unactivated.
+Separate owner/company books, verified opening balances and entity/tax facts, broad source adapters and liability reconciliation, the complete reporting package and remaining loan/correction lifecycles are outside this focused repair release. Their prior work remains on the separate accounting branch, unactivated.
