@@ -11,7 +11,10 @@ from gilbic_backend.account_repository import (
     DeviceRequired,
     DeviceRevoked,
 )
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.collector_route_api import (
     PHILIPPINES_TIMEZONE,
@@ -34,7 +37,9 @@ LOAN_ID = UUID("44444444-4444-4444-8444-444444444444")
 TRANSACTION_ID = UUID("55555555-5555-4555-8555-555555555555")
 
 
-def collector_context(*, permissions: tuple[str, ...] = ("route.view",)) -> AccountContext:
+def collector_context(
+    *, permissions: tuple[str, ...] = ("route.view",)
+) -> AccountContext:
     return AccountContext(
         user_id=COLLECTOR_USER_ID,
         auth_user_id=AUTH_USER_ID,
@@ -198,11 +203,11 @@ def client_with_fakes() -> tuple[TestClient, FakeAccounts, FakeRoutes]:
     app.dependency_overrides[auth_client_dependency] = lambda: auth
     app.dependency_overrides[account_repository_dependency] = lambda: accounts
     app.dependency_overrides[collector_route_repository_dependency] = lambda: routes
-    app.dependency_overrides[borrower_schedule_finalizer_dependency] = (
-        lambda: routes.finalizer
+    app.dependency_overrides[borrower_schedule_finalizer_dependency] = lambda: (
+        routes.finalizer
     )
-    app.dependency_overrides[collector_route_renewal_repository_dependency] = (
-        lambda: renewals
+    app.dependency_overrides[collector_route_renewal_repository_dependency] = lambda: (
+        renewals
     )
     return TestClient(app), accounts, routes
 
@@ -276,6 +281,7 @@ def test_collector_receives_only_server_assigned_route() -> None:
             "today_transaction_id": str(TRANSACTION_ID),
             "today_is_locked": False,
             "can_edit_today": True,
+            "can_undo_today": False,
             "today_amount": "600.00",
             "today_note": "Paid three selected dates",
             "today_covered_dates": [

@@ -29,7 +29,6 @@ from .seven_by_seven_collector_route import (
     SevenBySevenGatedPostgresCollectorRouteRepository,
 )
 
-
 PHILIPPINES_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Manila")
 
 
@@ -41,13 +40,15 @@ def borrower_schedule_finalizer_dependency() -> PostgresBorrowerScheduleFinalize
     return PostgresBorrowerScheduleFinalizer()
 
 
-def collector_route_cross_status_repository_dependency(
-) -> PostgresCollectorRouteCrossStatusRepository:
+def collector_route_cross_status_repository_dependency() -> (
+    PostgresCollectorRouteCrossStatusRepository
+):
     return PostgresCollectorRouteCrossStatusRepository()
 
 
-def collector_route_renewal_repository_dependency(
-) -> PostgresCollectorRouteRenewalRepository:
+def collector_route_renewal_repository_dependency() -> (
+    PostgresCollectorRouteRenewalRepository
+):
     return PostgresCollectorRouteRenewalRepository()
 
 
@@ -66,8 +67,12 @@ def _receipt_payload(receipt: CollectorRouteReceiptRecord) -> dict[str, object]:
         "collector_name": receipt.collector_name,
         "is_locked": receipt.is_locked,
         "funding_source": receipt.funding_source,
-        "funding_receipt_id": str(receipt.funding_receipt_id) if receipt.funding_receipt_id else None,
-        "funding_account_id": str(receipt.funding_account_id) if receipt.funding_account_id else None,
+        "funding_receipt_id": str(receipt.funding_receipt_id)
+        if receipt.funding_receipt_id
+        else None,
+        "funding_account_id": str(receipt.funding_account_id)
+        if receipt.funding_account_id
+        else None,
         "note": receipt.note,
         "covered_dates": [value.isoformat() for value in receipt.covered_dates],
         "accepted_at": receipt.accepted_at.isoformat() if receipt.accepted_at else None,
@@ -231,7 +236,9 @@ def _entry_payload(
         "last_payment_date": (
             entry.last_payment_date.isoformat() if entry.last_payment_date else None
         ),
-        "advance_until": entry.advance_until.isoformat() if entry.advance_until else None,
+        "advance_until": entry.advance_until.isoformat()
+        if entry.advance_until
+        else None,
         "covered_dates": [value.isoformat() for value in entry.covered_dates],
         "status": display_status,
         "note": entry.note,
@@ -268,6 +275,13 @@ def _entry_payload(
             str(entry.today_transaction_id) if entry.today_transaction_id else None
         ),
         "today_is_locked": entry.today_is_locked,
+        "can_undo_today": (
+            entry.can_undo_today
+            and (
+                route_owner_user_id is None
+                or entry.today_collector_user_id == route_owner_user_id
+            )
+        ),
         "can_edit_today": (
             entry.can_edit_today
             if route_owner_user_id is None

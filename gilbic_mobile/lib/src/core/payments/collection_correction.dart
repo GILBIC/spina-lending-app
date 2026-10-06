@@ -100,7 +100,30 @@ class CollectionCorrectionResult {
       data['transaction_id'],
       data['id'],
     ]);
-    if (transactionId == null) {
+    final amount = requestMoneyCents(data['amount']);
+    final balance = requestMoneyCents(data['official_balance']);
+    final type = data['entry_type'];
+    final dates = data['covered_dates'];
+    final version = data['edit_version'];
+    if (transactionId == null ||
+        !const {'payment', 'advance', 'pass'}.contains(type) ||
+        amount == null ||
+        amount < BigInt.zero ||
+        balance == null ||
+        balance < BigInt.zero ||
+        version is! int ||
+        version < 1 ||
+        data['receipt_number'] is! String ||
+        (data['receipt_number'] as String).trim().isEmpty ||
+        data['route_revision'] is! String ||
+        (data['route_revision'] as String).trim().isEmpty ||
+        DateTime.tryParse(data['edited_at']?.toString() ?? '') == null ||
+        dates is! List ||
+        dates.any(
+          (item) => item is! String || DateTime.tryParse(item) == null,
+        ) ||
+        (type == 'pass' && (amount != BigInt.zero || dates.isNotEmpty)) ||
+        (type != 'pass' && (amount <= BigInt.zero || dates.isEmpty))) {
       throw const SpinaApiException(
         'The SPINA server returned an incomplete correction result.',
         code: 'invalid_correction_response',

@@ -89,6 +89,11 @@ class FakeConnection:
                     "today_is_locked": False,
                     "today_funding_source": "collector_cash",
                     "today_contract_controlled": False,
+                    "today_is_latest": True,
+                    "today_remittance_id": None,
+                    "today_has_extra_principal": False,
+                    "today_has_undo_state": True,
+                    "today_has_linked_followup": False,
                     "today_amount": Decimal("600.00"),
                     "today_note": "Selected dates only",
                     "today_covered_dates": (
@@ -199,15 +204,19 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
         COLLECTOR_USER_ID,
     )
     entry_query = connection.entry_cursor.executions[0][0]
-    assert "contract_next.effective_due_date as contract_next_unpaid_date" in entry_query
+    assert (
+        "contract_next.effective_due_date as contract_next_unpaid_date" in entry_query
+    )
     assert "contract_next.due_date as contract_next_unpaid_date" not in entry_query
     assert "lending.area_path_contains(" in entry_query
     assert "lending.collector_area_owner(coalesce(c.area, '')) = %s" in entry_query
-    assert "char_length(lending.normalize_area_path(assignment.area)) desc" in entry_query
+    assert (
+        "char_length(lending.normalize_area_path(assignment.area)) desc" in entry_query
+    )
     assert "lower(btrim(c.area)) = lower(btrim(a.area))" not in entry_query
 
 
-def test_assigned_owner_can_edit_latest_unlocked_cross_collector_receipt(monkeypatch) -> None:
+def test_assigned_owner_cannot_edit_another_collectors_receipt(monkeypatch) -> None:
     connection = FakeConnection()
     row = connection.entry_cursor.rows[0]
     assert isinstance(row, dict)
@@ -219,7 +228,8 @@ def test_assigned_owner_can_edit_latest_unlocked_cross_collector_receipt(monkeyp
 
     route = _load_route(monkeypatch, connection)
 
-    assert route.entries[0].can_edit_today is True
+    assert route.entries[0].can_edit_today is False
+    assert route.entries[0].can_undo_today is False
     assert route.entries[0].today_collector_name == "Collector Two"
 
 
@@ -244,8 +254,8 @@ def test_contract_controlled_receipt_is_not_offered_for_edit(monkeypatch) -> Non
     entry = _load_route(monkeypatch, connection).entries[0]
 
     assert entry.can_edit_today is False
-    assert "cannot be edited" in entry.collection_message
-    assert "Management" in entry.collection_message
+    assert entry.can_undo_today is True
+    assert "Correction" in entry.collection_message
 
 
 def test_contract_setting_blocks_pay_until_verified_gate_is_ready() -> None:

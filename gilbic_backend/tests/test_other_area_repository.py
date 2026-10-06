@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from gilbic_backend import other_area_repository as module
+from psycopg.sql import Composable
+
 from gilbic_backend.other_area_repository import PostgresOtherAreaRepository
 
+from gilbic_backend import other_area_repository as module
 
 COLLECTOR_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 RECORDER_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -26,8 +29,10 @@ class FakeCursor:
     def __exit__(self, exc_type, exc, traceback) -> None:
         return None
 
-    def execute(self, query: str, parameters: tuple[object, ...]) -> None:
-        self.executions.append((query, parameters))
+    def execute(self, query: str | Composable, parameters: tuple[object, ...]) -> None:
+        self.executions.append(
+            (query.as_string() if isinstance(query, Composable) else query, parameters)
+        )
 
     def fetchall(self):
         return self.rows
@@ -111,11 +116,12 @@ def test_search_returns_latest_same_day_collection_status(monkeypatch) -> None:
     query, parameters = connection.cursor_instance.executions[0]
     assert "left join lateral (" in query
     assert "from lending.collection_transactions transaction" in query
-    assert "(current_timestamp at time zone 'Asia/Manila')::date" in query
+    assert "and transaction.collection_date =" in query
     assert "and transaction.is_voided = false" in query
     assert "order by transaction.accepted_at desc, transaction.id desc" in query
     assert "today.entry_type is not null as processed_today" in query
     assert parameters == (
+        datetime.now(module._MANILA_TZ).date(),
         COLLECTOR_USER_ID,
         "%Ana%",
         "%Ana%",

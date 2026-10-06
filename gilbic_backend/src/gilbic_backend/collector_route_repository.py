@@ -10,7 +10,6 @@ from psycopg.rows import dict_row
 from .area_management_repository import apply_due_client_area_transfers
 from .database import open_connection
 
-
 MONEY = Decimal("0.01")
 CONTRACT_ALLOCATION_SETTING = "mobile_contract_schedule_allocation_enabled"
 
@@ -87,6 +86,7 @@ class CollectorRouteEntryRecord:
     today_is_locked: bool = False
     today_contract_controlled: bool = False
     can_edit_today: bool = False
+    can_undo_today: bool = False
     today_amount: Decimal = Decimal("0.00")
     today_note: str = ""
     today_covered_dates: tuple[date, ...] = ()
@@ -109,6 +109,7 @@ class CollectorRouteEntryRecord:
         base_ready = (
             self.can_collect_mobile
             and self.mobile_balance_mode == "direct_remaining_balance"
+            and self.remaining_balance > Decimal("0.00")
         )
         if not base_ready:
             return False
@@ -120,7 +121,9 @@ class CollectorRouteEntryRecord:
     def active_promise_message(self) -> str:
         if self.active_promise_date is None:
             return ""
-        status = self.active_promise_status.strip().replace("_", " ").title() or "Pending"
+        status = (
+            self.active_promise_status.strip().replace("_", " ").title() or "Pending"
+        )
         return (
             f"Promise: {self.active_promise_date.isoformat()} · "
             f"₱{self.active_promise_remaining_amount:,.2f} remaining · {status}."
@@ -160,8 +163,7 @@ class CollectorRouteEntryRecord:
                 context.append("Today is already covered by advance.")
             elif self.contract_today_unpaid_amount > Decimal("0.00"):
                 context.append(
-                    "Still unpaid today: "
-                    f"₱{self.contract_today_unpaid_amount:,.2f}."
+                    f"Still unpaid today: ₱{self.contract_today_unpaid_amount:,.2f}."
                 )
         else:
             context.append("No contractual installment is due today.")
@@ -192,15 +194,25 @@ class CollectorRouteEntryRecord:
                     "Today's collection is already included in a remittance and is locked."
                 )
             if self.today_contract_controlled:
+                if self.can_undo_today:
+                    return self._with_active_promise(
+                        "Payment recorded. Use Correction to undo a mistaken Pay before remittance."
+                    )
                 return self._with_active_promise(
                     "This collection is tied to a repayment schedule and cannot be edited here. "
                     "Ask Management to review the correction."
                 )
-            return self._with_active_promise("Today's collection has already been recorded.")
+            return self._with_active_promise(
+                "Today's collection has already been recorded."
+            )
         if not self.is_reconciled:
-            return self._with_active_promise("Checking this loan against SPINA records.")
+            return self._with_active_promise(
+                "Checking this loan against SPINA records."
+            )
         if not self.mobile_collections_enabled:
-            return self._with_active_promise("Use the SPINA desktop app for this loan type.")
+            return self._with_active_promise(
+                "Use the SPINA desktop app for this loan type."
+            )
         if self.mobile_balance_mode != "direct_remaining_balance":
             return self._with_active_promise(
                 "Unable-to-pay is available, but payments still use SPINA desktop."
@@ -254,9 +266,11 @@ def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
         if transaction_id is None or collector_user_id is None or not receipt_number:
             continue
         covered_raw = raw.get("covered_dates")
-        covered_dates = tuple(_date_value(item) for item in covered_raw) if isinstance(
-            covered_raw, (list, tuple)
-        ) else ()
+        covered_dates = (
+            tuple(_date_value(item) for item in covered_raw)
+            if isinstance(covered_raw, (list, tuple))
+            else ()
+        )
         receipts.append(
             CollectorRouteReceiptRecord(
                 transaction_id=UUID(str(transaction_id)),
@@ -267,8 +281,12 @@ def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
                 collector_name=str(raw.get("collector_name") or "Collector"),
                 is_locked=bool(raw.get("is_locked")),
                 funding_source=str(raw.get("funding_source", "collector_cash")),
-                funding_receipt_id=UUID(raw["funding_receipt_id"]) if raw.get("funding_receipt_id") else None,
-                funding_account_id=UUID(raw["funding_account_id"]) if raw.get("funding_account_id") else None,
+                funding_receipt_id=UUID(raw["funding_receipt_id"])
+                if raw.get("funding_receipt_id")
+                else None,
+                funding_account_id=UUID(raw["funding_account_id"])
+                if raw.get("funding_account_id")
+                else None,
                 note=str(raw.get("note") or ""),
                 covered_dates=covered_dates,
                 accepted_at=_datetime_value(raw.get("accepted_at")),
@@ -519,6 +537,11 @@ class PostgresCollectorRouteRepository:
                         coalesce(today.is_locked, false) as today_is_locked,
                         today.funding_source as today_funding_source,
                         coalesce(today.contract_controlled, false) as today_contract_controlled,
+                        coalesce(today.state_version_after = s.state_version::text, false) as today_is_latest,
+                        today.remittance_id as today_remittance_id,
+                        coalesce(today.has_extra_principal, false) as today_has_extra_principal,
+                        coalesce(today.has_undo_state, false) as today_has_undo_state,
+                        coalesce(today.has_linked_followup, false) as today_has_linked_followup,
                         coalesce(today.amount, 0) as today_amount,
                         coalesce(today.note, '') as today_note,
                         coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
@@ -546,7 +569,7 @@ class PostgresCollectorRouteRepository:
                     ) route_assignment on true
                     join lending.loans l
                       on l.client_id = c.id
-                     and l.status = 'active'
+                     and l.status in ('active', 'paid')
                     join lending.loan_types lt
                       on lt.id = l.loan_type_id
                      and lt.is_active = true
@@ -578,6 +601,28 @@ class PostgresCollectorRouteRepository:
                             t.collection_origin,
                             t.is_locked,
                             t.funding_source,
+                            t.remittance_id,
+                            t.details ->> 'state_version_after' as state_version_after,
+                            (t.details ? 'past_due_followup' or t.details ? 'past_due_promise_progress' or exists (
+                                select 1 from lending.loan_installment_payment_allocations linked
+                                where linked.transaction_id=t.id and linked.allocation_basis='borrower_catch_up_oldest_first'
+                            ) or exists (
+                                select 1 from lending.seven_by_seven_penalty_assessments penalty
+                                where penalty.source_transaction_id=t.id
+                            ) or exists (
+                                select 1 from lending.seven_by_seven_penalty_payment_allocations penalty
+                                where penalty.transaction_id=t.id
+                            )) as has_linked_followup,
+                            (t.details ? 'collection_state_before' or exists (
+                                select 1 from lending.collection_transactions prior
+                                where prior.loan_id = t.loan_id and prior.is_voided = false
+                                  and (prior.accepted_at, prior.id) < (t.accepted_at, t.id)
+                                  and prior.details ->> 'state_version_after' = t.details ->> 'state_version_before'
+                            )) as has_undo_state,
+                            exists (
+                                select 1 from lending.seven_by_seven_extra_principal_adjustments adjustment
+                                where adjustment.transaction_id = t.id
+                            ) as has_extra_principal,
                             (
                                 exists (
                                     select 1
@@ -706,7 +751,10 @@ class PostgresCollectorRouteRepository:
                     ) contract_next on true
                     where c.status = 'active'
                       and lending.collector_area_owner(coalesce(c.area, '')) = %s
-                      and coalesce(s.remaining_balance, l.principal) > 0
+                      and (
+                          (l.status = 'active' and coalesce(s.remaining_balance, l.principal) > 0)
+                          or today.transaction_id is not null
+                      )
                     order by
                         route_assignment.sort_order,
                         lower(lending.normalize_area_path(route_assignment.assignment_area)),
@@ -739,8 +787,12 @@ class PostgresCollectorRouteRepository:
         entries: list[CollectorRouteEntryRecord] = []
         for row in rows:
             remaining_balance = Decimal(row["remaining_balance"]).quantize(MONEY)
-            contract_schedule_total = Decimal(row["contract_schedule_total"]).quantize(MONEY)
-            contract_allocated_total = Decimal(row["contract_allocated_total"]).quantize(MONEY)
+            contract_schedule_total = Decimal(row["contract_schedule_total"]).quantize(
+                MONEY
+            )
+            contract_allocated_total = Decimal(
+                row["contract_allocated_total"]
+            ).quantize(MONEY)
             contract_unpaid_total = (
                 contract_schedule_total - contract_allocated_total
             ).quantize(MONEY)
@@ -839,15 +891,23 @@ class PostgresCollectorRouteRepository:
                         and row["today_funding_source"] == "collector_cash"
                         and not bool(row["today_is_locked"])
                         and not bool(row["today_contract_controlled"])
-                        and (
-                            row["today_collector_user_id"] == collector_user_id
-                            or (
-                                str(row["today_collection_origin"] or "")
-                                == "cross_collector"
-                                and row["today_assigned_collector_user_id"]
-                                == collector_user_id
-                            )
-                        )
+                        and not bool(row["today_has_linked_followup"])
+                        and bool(row["today_has_undo_state"])
+                        and bool(row["today_is_latest"])
+                        and row["today_remittance_id"] is None
+                        and row["today_collector_user_id"] == collector_user_id
+                    ),
+                    can_undo_today=(
+                        row["today_transaction_id"] is not None
+                        and row["today_funding_source"] == "collector_cash"
+                        and row["today_entry_type"] in {"payment", "advance"}
+                        and not bool(row["today_is_locked"])
+                        and row["today_remittance_id"] is None
+                        and bool(row["today_is_latest"])
+                        and not bool(row["today_has_extra_principal"])
+                        and bool(row["today_has_undo_state"])
+                        and not bool(row["today_has_linked_followup"])
+                        and row["today_collector_user_id"] == collector_user_id
                     ),
                     today_amount=Decimal(row["today_amount"]),
                     today_note=str(row["today_note"] or ""),
