@@ -1,20 +1,24 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_review_capture_page.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
+import 'package:gilbic_mobile/src/features/office/office_finder_page.dart';
 
 class OfficeCifPage extends StatefulWidget {
   const OfficeCifPage({
     required this.actor,
     required this.repository,
     required this.clientId,
+    this.intakeReference,
     super.key,
   });
   final OfficeIdentity actor;
   final OfficeRepository repository;
   final String clientId;
+  final String? intakeReference;
   @override
   State<OfficeCifPage> createState() => _OfficeCifPageState();
 }
@@ -27,6 +31,9 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
   bool missing = false;
   bool editing = false;
   bool baselinePassed = false;
+  int task = 1;
+  bool confirmed = false;
+  bool privacyRecorded = false;
   String? success;
   @override
   void initState() {
@@ -43,6 +50,9 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
     editing = false;
     baselinePassed = false;
     success = null;
+    task = 1;
+    confirmed = false;
+    privacyRecorded = false;
   }
 
   @override
@@ -51,14 +61,23 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool preserveDraft = false}) async {
+    final previousVersion = review?['cif_version_id'];
+    final previousInformation = review == null
+        ? null
+        : jsonEncode(cifInformation(review!));
     setState(() {
       review = null;
       evidence = null;
       missing = false;
       editing = false;
-      fields.clear();
-      baselinePassed = false;
+      if (!preserveDraft) {
+        fields.clear();
+        baselinePassed = false;
+        task = 1;
+        confirmed = false;
+        privacyRecorded = false;
+      }
     });
     final value = await operation.run(() async {
       try {
@@ -77,6 +96,15 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
       setState(() {
         missing = value['unavailable'] == true;
         review = missing ? null : value;
+        if (preserveDraft &&
+            (value['cif_version_id'] != previousVersion ||
+                jsonEncode(cifInformation(value)) != previousInformation)) {
+          fields.clear();
+          baselinePassed = false;
+          task = 1;
+          confirmed = false;
+          privacyRecorded = false;
+        }
         if (missing) success = value['detail'];
       });
     }
@@ -84,13 +112,24 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
 
   Future<void> _write(
     Future<OfficeRecord> Function() action,
-    String message,
-  ) async {
+    String message, {
+    int? nextTask,
+  }) async {
+    final version = review?['cif_version_id'];
     evidence = null;
     final result = await operation.run(action, mutation: true);
     if (mounted && result != null) {
       setState(() => success = message);
-      await _load();
+      await _load(preserveDraft: true);
+      if (mounted &&
+          review != null &&
+          review!['cif_version_id'] == version &&
+          nextTask != null) {
+        setState(() {
+          task = nextTask;
+          if (nextTask == 3) confirmed = true;
+        });
+      }
     }
   }
 
@@ -175,16 +214,64 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
     setState(() {
       if (privacy) {
         success = 'Privacy acknowledgment recorded.';
+        privacyRecorded = true;
+        task = 4;
       } else {
         evidence = result;
       }
     });
   }
 
+  Widget _task(
+    int number,
+    String title,
+    List<Widget> children, {
+    bool complete = false,
+  }) => Card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          expanded: task == number,
+          child: ListTile(
+            title: Text('$number. $title'),
+            leading: Icon(
+              complete
+                  ? Icons.check_circle_outline
+                  : task == number
+                  ? Icons.expand_more
+                  : Icons.chevron_right,
+            ),
+            onTap: operation.busy ? null : () => setState(() => task = number),
+          ),
+        ),
+        Offstage(
+          offstage: task != number,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final current = review;
-    return screen('CIF review', [
+    return screen('Client information (CIF)', [
+      if (current != null) ...[
+        officeHeading(current['full_name']),
+        if (widget.intakeReference != null)
+          Text('Intake: ${widget.intakeReference}'),
+        ExpansionTile(
+          title: const Text('Saved CIF status and details'),
+          children: [OfficeFacts(current)],
+        ),
+      ],
       if (success != null)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -249,73 +336,100 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
           ),
         ),
       ] else if (current != null) ...[
-        OfficeFacts(current),
         officeButton('Correct information', operation.canWrite ? _edit : null),
-        officeHeading('Applicant information confirmation'),
-        const Text(
-          'Confirm only this saved version with the applicant. This is separate from privacy consent and loan signing.',
+        Text(
+          'Complete these steps for CIF version ${current['version_number']}.',
         ),
-        officeButton(
-          'Capture signed CIF review',
-          operation.canWrite ? _capture : null,
-        ),
-        if (evidence != null) ...[
-          const Text('Exact-version signed evidence is ready.'),
+        _task(1, 'Review details', [
+          OfficeFacts(cifInformation(current)),
           officeButton(
-            'Confirm this CIF information',
-            operation.canWrite
-                ? () {
-                    final reference = evidence!['evidence_reference'] as String;
-                    _write(
-                      () => widget.repository.confirmCif(
-                        widget.actor,
-                        current,
-                        reference,
-                      ),
-                      'CIF information confirmation recorded.',
-                    );
-                  }
-                : null,
+            'Continue to applicant signature',
+            operation.busy ? null : () => setState(() => task = 2),
             primary: true,
           ),
-        ],
-        officeButton(
-          'Privacy notice and consent',
-          operation.canWrite ? () => _capture(privacy: true) : null,
-        ),
-        if (current['status'] == 'draft') ...[
-          officeHeading('Controlled baseline verification'),
+        ]),
+        _task(2, 'Applicant signature', [
           const Text(
-            'Record the approved face and liveness provider result. This form does not perform a face scan.',
-          ),
-          officeField(
-            fields,
-            'baseline_reference',
-            'Provider evidence reference',
-            enabled: operation.canWrite,
-          ),
-          CheckboxListTile(
-            title: const Text(
-              'Baseline face and liveness verification passed.',
-            ),
-            value: baselinePassed,
-            onChanged: operation.canWrite
-                ? (value) => setState(() => baselinePassed = value == true)
-                : null,
+            'Confirm only this saved version with the applicant. This is separate from privacy consent and loan signing.',
           ),
           officeButton(
-            'Record verified baseline',
-            operation.canWrite && baselinePassed
-                ? () => _write(
-                    () => widget.repository.recordBaseline(
-                      widget.actor,
-                      current,
-                      fields.text('baseline_reference'),
-                    ),
-                    'Verified baseline recorded.',
-                  )
-                : null,
+            'Capture signed CIF review',
+            operation.canWrite ? _capture : null,
           ),
+          if (evidence != null) ...[
+            const Text('Exact-version signed evidence is ready.'),
+            officeButton(
+              'Confirm this CIF information',
+              operation.canWrite
+                  ? () {
+                      final reference =
+                          evidence!['evidence_reference'] as String;
+                      _write(
+                        () => widget.repository.confirmCif(
+                          widget.actor,
+                          current,
+                          reference,
+                        ),
+                        'CIF information confirmation recorded.',
+                        nextTask: 3,
+                      );
+                    }
+                  : null,
+              primary: true,
+            ),
+          ],
+        ], complete: confirmed),
+        _task(3, 'Privacy acknowledgment', [
+          officeButton(
+            'Privacy notice and consent',
+            operation.canWrite ? () => _capture(privacy: true) : null,
+          ),
+          if (privacyRecorded) const Text('Privacy acknowledgment recorded.'),
+        ], complete: privacyRecorded),
+        _task(
+          4,
+          'Identity verification',
+          [
+            if (current['status'] == 'draft') ...[
+              const Text(
+                'Record the approved face and liveness provider result. This form does not perform a face scan.',
+              ),
+              officeField(
+                fields,
+                'baseline_reference',
+                'Provider evidence reference',
+                enabled: operation.canWrite,
+              ),
+              CheckboxListTile(
+                title: const Text(
+                  'Baseline face and liveness verification passed.',
+                ),
+                value: baselinePassed,
+                onChanged: operation.canWrite
+                    ? (value) => setState(() => baselinePassed = value == true)
+                    : null,
+              ),
+              officeButton(
+                'Save verification result',
+                operation.canWrite && baselinePassed
+                    ? () => _write(
+                        () => widget.repository.recordBaseline(
+                          widget.actor,
+                          current,
+                          fields.text('baseline_reference'),
+                        ),
+                        'Verified baseline recorded.',
+                      )
+                    : null,
+              ),
+            ] else
+              const Text(
+                'Review the recorded identity verification in saved CIF details.',
+              ),
+          ],
+          complete: current['liveness_status'] == 'passed',
+        ),
+        if (current['status'] == 'draft') ...[
           if (widget.actor.session.role == AppRole.management)
             officeButton(
               'Activate verified CIF',
@@ -333,6 +447,25 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
               'Management activates the CIF after the required review and verification.',
             ),
         ],
+        if (widget.intakeReference != null)
+          officeButton(
+            'Continue to loan applications',
+            operation.busy
+                ? null
+                : () async {
+                    await Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => OfficeFinderPage(
+                          actor: widget.actor,
+                          repository: widget.repository,
+                          intakeReference: widget.intakeReference,
+                          clientId: widget.clientId,
+                        ),
+                      ),
+                    );
+                    if (mounted && widget.actor.accessDenied) denyAccess();
+                  },
+          ),
       ],
     ], reload: _load);
   }

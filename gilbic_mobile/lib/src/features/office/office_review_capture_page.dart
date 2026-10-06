@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
+import 'package:gilbic_mobile/src/features/office/office_signature_input.dart';
 
 class OfficeReviewCapturePage extends StatefulWidget {
   const OfficeReviewCapturePage({
@@ -34,11 +35,14 @@ class _OfficeReviewCapturePageState
   OfficePhoto? photo;
   bool optional = false;
   bool witnessed = false;
+  bool screenSignature = false;
   String requestId = officeRequestId();
   int selection = 0;
   _CaptureAttempt? attempt;
   bool get recovering =>
-      attempt != null && operation.blocked && operation.lastStatus != 409;
+      attempt != null &&
+      operation.blocked &&
+      (operation.lastStatus != 409 || attempt!.uncertain);
   @override
   void initState() {
     super.initState();
@@ -103,6 +107,7 @@ class _OfficeReviewCapturePageState
       context: stringMap(jsonDecode(jsonEncode(context))),
       requestId: requestId,
       photo: OfficePhoto(Uint8List.fromList(image.bytes), image.mediaType),
+      method: screenSignature ? 'screen_signature' : 'paper_scan',
     );
     await _recover();
   }
@@ -122,6 +127,7 @@ class _OfficeReviewCapturePageState
               requestId: pending.requestId,
               bytes: pending.photo.bytes,
               mediaType: pending.photo.mediaType,
+              captureMethod: pending.method,
             );
         pending.evidence = evidence;
         if (!mounted || !identical(pending, attempt)) return evidence;
@@ -147,6 +153,19 @@ class _OfficeReviewCapturePageState
         witnessed = false;
         selection++;
       });
+    } else if (mounted &&
+        identical(pending, attempt) &&
+        pending.evidence == null &&
+        !pending.uncertain &&
+        [400, 415, 422].contains(operation.lastStatus)) {
+      // Validation rejected the upload before storage; let the applicant redraw.
+      setState(() {
+        attempt = null;
+        operation.blocked = false;
+      });
+    } else if (mounted && identical(pending, attempt)) {
+      // A later rejection cannot disprove an earlier upload's uncertain result.
+      pending.uncertain = pending.uncertain || operation.lastStatus != 409;
     }
   }
 
@@ -228,34 +247,78 @@ class _OfficeReviewCapturePageState
           if (!widget.privacy || current['issuable'] == true)
             if (evidence == null) ...[
               const Text(
-                'Review the saved facts with the applicant, witness the wet signature, then attach the signed paper copy.',
+                'Review the saved facts with the applicant and witness their signature.',
               ),
-              OfficeEvidencePicker(
-                key: ValueKey(selection),
-                enabled: operation.canWrite,
-                recoveryContext: ImagePickContext(
-                  purpose: widget.source['purpose'] as String,
-                  target: jsonEncode({
-                    'client_id': widget.clientId,
-                    'cif_version_id': widget.source['cif_version_id'],
-                    'application_id': widget.source['application_id'],
-                    'application_version_id':
-                        widget.source['application_version_id'],
-                    'snapshot_sha256': current['snapshot_sha256'],
-                    if (widget.privacy)
-                      'optional_service_communications': optional,
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Sign on screen'),
+                    selected: screenSignature,
+                    onSelected: operation.canWrite
+                        ? (_) => setState(() {
+                            if (screenSignature) return;
+                            screenSignature = true;
+                            photo = null;
+                            witnessed = false;
+                            selection++;
+                            requestId = officeRequestId();
+                          })
+                        : null,
+                  ),
+                  ChoiceChip(
+                    label: const Text('Upload signed paper'),
+                    selected: !screenSignature,
+                    onSelected: operation.canWrite
+                        ? (_) => setState(() {
+                            if (!screenSignature) return;
+                            screenSignature = false;
+                            photo = null;
+                            witnessed = false;
+                            selection++;
+                            requestId = officeRequestId();
+                          })
+                        : null,
+                  ),
+                ],
+              ),
+              if (screenSignature)
+                OfficeSignatureInput(
+                  key: ValueKey(selection),
+                  enabled: operation.canWrite,
+                  onChanged: (value) => setState(() {
+                    photo = value;
+                    witnessed = false;
+                    requestId = officeRequestId();
                   }),
-                  label: widget.privacy
-                      ? 'Signed privacy acknowledgment'
-                      : 'Signed information review',
+                )
+              else
+                OfficeEvidencePicker(
+                  key: ValueKey(selection),
+                  enabled: operation.canWrite,
+                  recoveryContext: ImagePickContext(
+                    purpose: widget.source['purpose'] as String,
+                    target: jsonEncode({
+                      'client_id': widget.clientId,
+                      'cif_version_id': widget.source['cif_version_id'],
+                      'application_id': widget.source['application_id'],
+                      'application_version_id':
+                          widget.source['application_version_id'],
+                      'snapshot_sha256': current['snapshot_sha256'],
+                      if (widget.privacy)
+                        'optional_service_communications': optional,
+                    }),
+                    label: widget.privacy
+                        ? 'Signed privacy acknowledgment'
+                        : 'Signed information review',
+                  ),
+                  picker: widget.picker,
+                  onChanged: (value) => setState(() {
+                    photo = value;
+                    requestId = officeRequestId();
+                    witnessed = false;
+                  }),
                 ),
-                picker: widget.picker,
-                onChanged: (value) => setState(() {
-                  photo = value;
-                  requestId = officeRequestId();
-                  witnessed = false;
-                }),
-              ),
               CheckboxListTile(
                 title: Text(
                   widget.privacy
@@ -268,7 +331,9 @@ class _OfficeReviewCapturePageState
                     : null,
               ),
               officeButton(
-                widget.privacy
+                screenSignature
+                    ? 'Save signature'
+                    : widget.privacy
                     ? 'Record privacy acknowledgment'
                     : 'Save signed review evidence',
                 operation.canWrite && photo != null && witnessed
@@ -315,10 +380,13 @@ class _CaptureAttempt {
     required this.context,
     required this.requestId,
     required this.photo,
+    required this.method,
   });
   final OfficeRecord source;
   final OfficeRecord context;
   final String requestId;
   final OfficePhoto photo;
+  final String method;
   OfficeRecord? evidence;
+  bool uncertain = false;
 }

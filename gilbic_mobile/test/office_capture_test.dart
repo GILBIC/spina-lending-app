@@ -445,6 +445,7 @@ void main() {
       await tester.tap(find.text('Gallery'));
       await tester.pumpAndSettle();
       final saveText = find.text('Save signed review evidence');
+      await reveal(tester, saveText);
       expect(
         tester
             .widget<FilledButton>(

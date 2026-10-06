@@ -16,6 +16,12 @@ const officeReviewPermission = 'client_onboarding.requirement.review';
 const _clients = '/api/v1/management/clients';
 const _intake = '/api/v1/management/onboarding/applicants';
 const _loans = '/api/v1/management/first-loans';
+const officeIntakeStatuses = {
+  'requirements_incomplete': 'Requirements incomplete',
+  'under_verification': 'Under verification',
+  'eligible_for_cif': 'Eligible for CIF',
+  'requirements_rejected': 'Requirements rejected',
+};
 final _uuid = RegExp(
   r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
 );
@@ -313,6 +319,94 @@ class OfficeRepository {
     return value;
   }
 
+  Future<OfficeRecord> findIntakes(
+    OfficeIdentity actor, {
+    String query = '',
+    String status = '',
+    String? cursor,
+  }) async {
+    query = query.trim();
+    officeCheck(
+      query.isEmpty || query.length >= 3 && query.length <= 200,
+      'Enter at least 3 characters to search.',
+    );
+    officeCheck(status.isEmpty || officeIntakeStatuses.containsKey(status));
+    final value = await _json(
+      actor,
+      '$_intake?${_query({'limit': 25, if (query.isNotEmpty) 'q': query, if (status.isNotEmpty) 'status': status, if (cursor != null) 'cursor': cursor})}',
+    );
+    _finderPage(value);
+    final ids = <String>{};
+    for (final item in officeRecords(value['items'])) {
+      officeCheck(
+        officeUuid(item['applicant_id']) &&
+            ids.add(item['applicant_id'].toString().toLowerCase()) &&
+            _finderText(item['intake_reference']) &&
+            _finderText(item['full_name']) &&
+            _finderText(item['phone_number']) &&
+            (item['client_id'] == null || officeUuid(item['client_id'])) &&
+            officeIntakeStatuses.containsKey(item['intake_status']) &&
+            _finderDate(item['created_at']) &&
+            _finderDate(item['updated_at']),
+      );
+    }
+    return value;
+  }
+
+  Future<OfficeRecord> findApplications(
+    OfficeIdentity actor,
+    String reference,
+    String clientId, {
+    String? cursor,
+  }) async {
+    final value = await _json(
+      actor,
+      '$_intake/by-reference/${Uri.encodeComponent(reference)}/applications?${_query({'limit': 25, if (cursor != null) 'cursor': cursor})}',
+    );
+    _finderPage(value);
+    final intake = stringMap(value['intake']);
+    officeCheck(
+      officeUuid(intake['applicant_id']) &&
+          intake['intake_reference'] == reference &&
+          officeSame(intake['client_id'], clientId) &&
+          officeIntakeStatuses.containsKey(intake['intake_status']),
+    );
+    final ids = <String>{};
+    for (final item in officeRecords(value['items'])) {
+      officeCheck(
+        officeUuid(item['application_id']) &&
+            ids.add(item['application_id'].toString().toLowerCase()) &&
+            officeSame(item['client_id'], clientId) &&
+            _finderText(item['application_reference']) &&
+            _finderDate(item['created_at']) &&
+            (item['application_version_id'] == null &&
+                    item['version_number'] == null &&
+                    item['recorded_at'] == null ||
+                officeUuid(item['application_version_id']) &&
+                    item['version_number'] is int &&
+                    item['version_number'] > 0 &&
+                    _finderDate(item['recorded_at'])),
+      );
+    }
+    return value;
+  }
+
+  bool _finderText(Object? value) => value is String && value.trim().isNotEmpty;
+  bool _finderDate(Object? value) =>
+      value is String && DateTime.tryParse(value) != null;
+  void _finderPage(OfficeRecord value) {
+    officeCheck(
+      value['items'] is List &&
+          (value['items'] as List).length <= 25 &&
+          value['has_more'] is bool &&
+          _finderDate(value['as_of']) &&
+          (value['next_cursor'] == null ||
+              _finderText(value['next_cursor']) &&
+                  value['next_cursor'].length <= 2048) &&
+          value['has_more'] == (value['next_cursor'] != null),
+    );
+  }
+
   Future<OfficeRecord> submitIntake(
     OfficeIdentity actor,
     OfficeRecord information,
@@ -562,12 +656,14 @@ class OfficeRepository {
     required String requestId,
     required Uint8List bytes,
     required String mediaType,
+    String captureMethod = 'paper_scan',
   }) async {
     validateOfficeEvidence(bytes, mediaType);
+    officeCheck(['paper_scan', 'screen_signature'].contains(captureMethod));
     officeCheck(officeHash(snapshotHash) && officeUuid(requestId));
     final value = await _json(
       actor,
-      '$_clients/${_id(clientId)}/review-evidence?${_query({...source, 'request_id': requestId, 'expected_snapshot_sha256': snapshotHash, 'witnessed_wet_signature': 'true'})}',
+      '$_clients/${_id(clientId)}/review-evidence?${_query({...source, 'request_id': requestId, 'expected_snapshot_sha256': snapshotHash, 'capture_method': captureMethod, if (captureMethod == 'screen_signature') 'witnessed_screen_signature': 'true' else 'witnessed_wet_signature': 'true'})}',
       method: 'POST',
       bytes: bytes,
       mediaType: mediaType,
@@ -578,6 +674,7 @@ class OfficeRepository {
           value['content_sha256'] == sha256.convert(bytes).toString() &&
           value['media_type'] == mediaType &&
           value['byte_count'] == bytes.length &&
+          (value['capture_method'] ?? 'paper_scan') == captureMethod &&
           officeUuid(value['evidence_id']) &&
           value['evidence_reference'] ==
               'office-evidence:${value['evidence_id']}',
