@@ -15,7 +15,10 @@ class OfficeSignatureInput extends StatefulWidget {
   State<OfficeSignatureInput> createState() => _OfficeSignatureInputState();
 }
 
-class _OfficeSignatureInputState extends State<OfficeSignatureInput> {
+class _OfficeSignatureInputState extends State<OfficeSignatureInput>
+    with AutomaticKeepAliveClientMixin<OfficeSignatureInput> {
+  @override
+  bool get wantKeepAlive => true;
   final strokes = <List<Offset>>[];
   List<Offset>? active;
   int revision = 0;
@@ -118,46 +121,49 @@ class _OfficeSignatureInputState extends State<OfficeSignatureInput> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const Text(
-        'Applicant: review the saved information above, then sign in the box.',
-      ),
-      const SizedBox(height: 8),
-      LayoutBuilder(
-        builder: (context, constraints) => Semantics(
-          label:
-              'Applicant signature drawing area. Use Upload signed paper if drawing is unavailable.',
-          child: AspectRatio(
-            aspectRatio: 2,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black87, width: 2),
-              ),
-              child: GestureDetector(
-                key: const Key('office-signature-pad'),
-                behavior: HitTestBehavior.opaque,
-                onPanStart: widget.enabled
-                    ? (event) =>
-                          _start(event.localPosition, constraints.maxWidth)
-                    : null,
-                onPanUpdate: widget.enabled
-                    ? (event) =>
-                          _move(event.localPosition, constraints.maxWidth)
-                    : null,
-                onPanEnd: widget.enabled ? (_) => _finish() : null,
-                onPanCancel: widget.enabled ? _cancel : null,
-                child: CustomPaint(painter: _SignaturePainter(strokes)),
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Applicant: review the saved information above, then sign in the box.',
+        ),
+        const SizedBox(height: 8),
+        LayoutBuilder(
+          builder: (context, constraints) => Semantics(
+            label:
+                'Applicant signature drawing area. Use Upload signed paper if drawing is unavailable.',
+            child: AspectRatio(
+              aspectRatio: 2,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.black87, width: 2),
+                ),
+                child: GestureDetector(
+                  key: const Key('office-signature-pad'),
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: widget.enabled
+                      ? (event) =>
+                            _start(event.localPosition, constraints.maxWidth)
+                      : null,
+                  onPanUpdate: widget.enabled
+                      ? (event) =>
+                            _move(event.localPosition, constraints.maxWidth)
+                      : null,
+                  onPanEnd: widget.enabled ? (_) => _finish() : null,
+                  onPanCancel: widget.enabled ? _cancel : null,
+                  child: CustomPaint(painter: _SignaturePainter(strokes)),
+                ),
               ),
             ),
           ),
         ),
-      ),
-      Text(status),
-      officeButton('Clear signature', widget.enabled ? _clear : null),
-    ],
-  );
+        Text(status),
+        officeButton('Clear signature', widget.enabled ? _clear : null),
+      ],
+    );
+  }
 }
 
 class _SignaturePainter extends CustomPainter {

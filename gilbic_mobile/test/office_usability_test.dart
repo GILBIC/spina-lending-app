@@ -66,19 +66,25 @@ void main() {
   );
 
   testWidgets(
-    'finger strokes export visible PNG and clear invalidates prepared image',
+    'finger strokes persist across scrolling, export PNG, and clear safely',
     (tester) async {
       final ready = Completer<OfficePhoto>();
       OfficePhoto? selected;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfficeSignatureInput(
-              enabled: true,
-              onChanged: (value) {
-                selected = value;
-                if (value != null && !ready.isCompleted) ready.complete(value);
-              },
+            body: ListView(
+              children: [
+                OfficeSignatureInput(
+                  enabled: true,
+                  onChanged: (value) {
+                    selected = value;
+                    if (value != null && !ready.isCompleted)
+                      ready.complete(value);
+                  },
+                ),
+                const SizedBox(height: 2000),
+              ],
             ),
           ),
         ),
@@ -123,6 +129,17 @@ void main() {
         await tester.runAsync(() => File(output).writeAsBytes(image!.bytes));
       }
       await tester.pumpAndSettle();
+      final scrolling = tester
+          .state<ScrollableState>(find.byType(Scrollable))
+          .position;
+      scrolling.jumpTo(scrolling.maxScrollExtent);
+      await tester.pumpAndSettle();
+      scrolling.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Signature ready. Check it before saving.'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Clear signature'));
       await tester.pumpAndSettle();
       expect(selected, isNull);
