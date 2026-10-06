@@ -28,7 +28,6 @@ from uuid import uuid4
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import psycopg
-import run_client_onboarding_disposable_postgres_validation as onboarding
 import run_stage5d17_disposable_postgres_validation as disposable
 from gilbic_backend.office_review_evidence_storage import PrivateEvidenceStore
 from psycopg import sql
@@ -36,6 +35,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[1]
+BOOTSTRAP_THROUGH = 141
 DATABASE_NAME = re.compile(r"spina_recovery_(source|restore)_[0-9a-f]{24}")
 PDF = b"%PDF-1.4\nSYNTHETIC RECOVERY DRILL - NO REAL PAYMENT\n%%EOF"
 ALLOWED_PARAMS = frozenset(
@@ -218,8 +218,8 @@ def verify_files(root: Path, expected: dict[str, dict[str, str | int]]) -> None:
 def bootstrap(dsn: str) -> list[dict[str, str]]:
     original_limit = disposable.BOOTSTRAP_THROUGH
     try:
-        disposable.BOOTSTRAP_THROUGH = onboarding.BOOTSTRAP_THROUGH
-        paths = [*disposable._migration_paths(), *onboarding.CIF_MIGRATIONS]
+        disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
+        paths = disposable._migration_paths()
         current = sorted(disposable.SQL_ROOT.glob("[0-9][0-9][0-9][0-9]_*.sql"))
         if paths != current:
             raise DrillError(
@@ -227,9 +227,6 @@ def bootstrap(dsn: str) -> list[dict[str, str]]:
             )
         disposable._install_supabase_auth_prerequisite(dsn)
         disposable._bootstrap_database(dsn)
-        with psycopg.connect(dsn, autocommit=True) as connection:
-            for path in onboarding.CIF_MIGRATIONS:
-                connection.execute(path.read_bytes())
         return [
             {"file": path.name, "sha256": sha256(path.read_bytes())} for path in paths
         ]
