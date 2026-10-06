@@ -6,13 +6,49 @@ from decimal import Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 from .area_management_repository import apply_due_client_area_transfers
 from .database import open_connection
 
-
 _MANILA_TZ = ZoneInfo("Asia/Manila")
+
+
+# Shared by search and delegated work; the write endpoint rechecks under locks.
+_UNDO_ELIGIBILITY_SQL = """
+    transaction.id as transaction_id,
+    (
+        transaction.entry_type in ('payment', 'advance')
+        and transaction.funding_source = 'collector_cash'
+        and not transaction.is_locked and transaction.remittance_id is null
+        and transaction.details ->> 'state_version_after' = state.state_version::text
+        and (transaction.details ? 'collection_state_before' or exists (
+            select 1 from lending.collection_transactions prior
+            where prior.loan_id=transaction.loan_id and not prior.is_voided
+              and (prior.accepted_at, prior.id) < (transaction.accepted_at, transaction.id)
+              and prior.details ->> 'state_version_after' = transaction.details ->> 'state_version_before'
+        ))
+        and not (transaction.details ? 'past_due_followup')
+        and not (transaction.details ? 'past_due_promise_progress')
+        and not exists (
+            select 1 from lending.seven_by_seven_extra_principal_adjustments a
+            where a.transaction_id=transaction.id
+        )
+        and not exists (
+            select 1 from lending.loan_installment_payment_allocations a
+            where a.transaction_id=transaction.id and a.allocation_basis='borrower_catch_up_oldest_first'
+        )
+        and not exists (
+            select 1 from lending.seven_by_seven_penalty_assessments a
+            where a.source_transaction_id=transaction.id
+        )
+        and not exists (
+            select 1 from lending.seven_by_seven_penalty_payment_allocations a
+            where a.transaction_id=transaction.id
+        )
+    ) as undo_eligible,
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +77,8 @@ class OtherAreaLoanRecord:
     today_collector_name: str = ""
     today_amount: Decimal = Decimal("0.00")
     today_is_locked: bool = False
+    today_transaction_id: UUID | None = None
+    can_undo_today: bool = False
 
 
 class PostgresOtherAreaRepository:
@@ -100,18 +138,18 @@ class PostgresOtherAreaRepository:
             if exclude_actor_owned
             else ""
         )
-        params: list[object] = []
+        business_date = datetime.now(_MANILA_TZ).date()
+        params: list[object] = [business_date]
         if exclude_actor_owned:
             params.append(actor_user_id)
         params.extend((pattern, pattern, pattern, pattern, safe_limit))
-        business_date = datetime.now(_MANILA_TZ).date()
 
         with open_connection() as connection:
             apply_due_client_area_transfers(connection, as_of_date=business_date)
 
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id as route_entry_id,
                         client.id as client_id,
@@ -156,11 +194,13 @@ class PostgresOtherAreaRepository:
                         today.collector_user_id as today_collector_user_id,
                         coalesce(today.collector_name, '') as today_collector_name,
                         coalesce(today.amount, 0)::numeric(18,2) as today_amount,
-                        coalesce(today.is_locked, false) as today_is_locked
+                        coalesce(today.is_locked, false) as today_is_locked,
+                        today.transaction_id as today_transaction_id,
+                        coalesce(today.undo_eligible, false) as today_undo_eligible
                     from lending.clients client
                     join lending.loans loan
                       on loan.client_id = client.id
-                     and loan.status = 'active'
+                     and loan.status in ('active', 'paid')
                     join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
                      and loan_type.is_active = true
@@ -172,6 +212,7 @@ class PostgresOtherAreaRepository:
                       )
                     left join lateral (
                         select
+                            {undo_eligibility}
                             transaction.entry_type,
                             transaction.amount,
                             transaction.collector_user_id,
@@ -186,13 +227,13 @@ class PostgresOtherAreaRepository:
                           on recorder.id = transaction.collector_user_id
                         where transaction.loan_id = loan.id
                           and transaction.collection_date =
-                              (current_timestamp at time zone 'Asia/Manila')::date
+                              %s
                           and transaction.is_voided = false
                         order by transaction.accepted_at desc, transaction.id desc
                         limit 1
                     ) today on true
                     where client.status = 'active'
-                      and coalesce(state.remaining_balance, loan.principal) > 0
+                      and ((loan.status = 'active' and coalesce(state.remaining_balance, loan.principal) > 0) or today.transaction_id is not null)
                       {actor_scope_clause}
                       and (
                           client.full_name ilike %s
@@ -205,12 +246,20 @@ class PostgresOtherAreaRepository:
                         loan.date_released desc,
                         loan.id
                     limit %s
-                    """,
+                    """).format(
+                        undo_eligibility=sql.SQL(_UNDO_ELIGIBILITY_SQL),
+                        actor_scope_clause=sql.SQL(actor_scope_clause),
+                    ),
                     tuple(params),
                 )
                 rows = cursor.fetchall()
 
-        return tuple(self._from_row(row) for row in rows)
+        return tuple(
+            self._from_row(
+                row, actor_user_id=actor_user_id if exclude_actor_owned else None
+            )
+            for row in rows
+        )
 
     def list_work(
         self,
@@ -234,7 +283,7 @@ class PostgresOtherAreaRepository:
 
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
-                    """
+                    sql.SQL("""
                     select
                         loan.id as route_entry_id,
                         client.id as client_id,
@@ -279,11 +328,13 @@ class PostgresOtherAreaRepository:
                         today.collector_user_id as today_collector_user_id,
                         coalesce(today.collector_name, '') as today_collector_name,
                         coalesce(today.amount, 0)::numeric(18,2) as today_amount,
-                        coalesce(today.is_locked, false) as today_is_locked
+                        coalesce(today.is_locked, false) as today_is_locked,
+                        today.transaction_id as today_transaction_id,
+                        coalesce(today.undo_eligible, false) as today_undo_eligible
                     from lending.clients client
                     join lending.loans loan
                       on loan.client_id = client.id
-                     and loan.status = 'active'
+                     and loan.status in ('active', 'paid')
                     join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
                      and loan_type.is_active = true
@@ -295,6 +346,7 @@ class PostgresOtherAreaRepository:
                       )
                     left join lateral (
                         select
+                            {undo_eligibility}
                             transaction.entry_type,
                             transaction.amount,
                             transaction.collector_user_id,
@@ -314,7 +366,7 @@ class PostgresOtherAreaRepository:
                         limit 1
                     ) today on true
                     where client.status = 'active'
-                      and coalesce(state.remaining_balance, loan.principal) > 0
+                      and ((loan.status = 'active' and coalesce(state.remaining_balance, loan.principal) > 0) or today.transaction_id is not null)
                       and lending.collector_area_owner(coalesce(client.area, ''))
                           is distinct from %s
                       and lending.collector_has_active_delegated_area_access(
@@ -333,7 +385,7 @@ class PostgresOtherAreaRepository:
                         loan.date_released,
                         loan.id
                     limit %s
-                    """,
+                    """).format(undo_eligibility=sql.SQL(_UNDO_ELIGIBILITY_SQL)),
                     (
                         collection_date,
                         collector_user_id,
@@ -345,10 +397,12 @@ class PostgresOtherAreaRepository:
                 )
                 rows = cursor.fetchall()
 
-        return tuple(self._from_row(row) for row in rows)
+        return tuple(
+            self._from_row(row, actor_user_id=collector_user_id) for row in rows
+        )
 
     @staticmethod
-    def _from_row(row) -> OtherAreaLoanRecord:
+    def _from_row(row, *, actor_user_id: UUID | None = None) -> OtherAreaLoanRecord:
         is_reconciled = bool(row["is_reconciled"])
         mobile_enabled = bool(row["mobile_collections_enabled"])
         is_seven_by_seven = str(row["calculation_mode"] or "") == "seven_by_seven"
@@ -359,7 +413,9 @@ class PostgresOtherAreaRepository:
             is_reconciled and mobile_enabled and protected_loan_type_enabled
         )
         can_enter_payment = (
-            can_collect_mobile and balance_mode == "direct_remaining_balance"
+            can_collect_mobile
+            and balance_mode == "direct_remaining_balance"
+            and Decimal(row["remaining_balance"]) > 0
         )
         processed_today = bool(row.get("processed_today", False))
         if processed_today:
@@ -406,4 +462,10 @@ class PostgresOtherAreaRepository:
             today_collector_name=str(row.get("today_collector_name") or ""),
             today_amount=Decimal(row.get("today_amount") or 0),
             today_is_locked=bool(row.get("today_is_locked", False)),
+            today_transaction_id=row.get("today_transaction_id"),
+            can_undo_today=(
+                actor_user_id is not None
+                and row.get("today_collector_user_id") == actor_user_id
+                and bool(row.get("today_undo_eligible", False))
+            ),
         )

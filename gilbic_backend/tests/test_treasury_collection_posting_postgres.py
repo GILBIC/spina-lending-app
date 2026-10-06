@@ -132,6 +132,20 @@ def test_combined_preview_uses_server_split_and_apply_keeps_actual_wallet_receip
         and r["collector_user_id"] == actor.user_id
         for r in rows
     )
+    from gilbic_backend.collection_void_repository import (
+        CollectionVoidForbidden,
+        PostgresCollectionVoidRepository,
+    )
+
+    with pytest.raises(CollectionVoidForbidden, match="Treasury"):
+        PostgresCollectionVoidRepository().void_unremitted(
+            connection=conn,
+            actor_user_id=actor.user_id,
+            transaction_id=__import__("uuid").UUID(result["transaction_ids"][0]),
+            reason="Mistaken Collector Pay",
+            collector_business_date=date(2097, 8, 2),
+            collector_expected_route_revision=f"loan:{case.regular_loan_id}:v1",
+        )
     assert (
         conn.execute(
             "select count(*) n from treasury.events where id=%s", (receipt["event_id"],)

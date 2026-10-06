@@ -17,7 +17,7 @@ from spina_mobile_collections.contracts import (
 )
 from spina_mobile_collections.service import CollectionConflict, CollectionRejected
 
-from .collection_posting import DIRECT_BALANCE_MODE
+from .collection_posting import DIRECT_BALANCE_MODE, collection_state_snapshot
 from .per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
 )
@@ -323,7 +323,10 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     allocation_details["seven_by_seven_schedule_allocation_state"] = (
                         "advance_integration_pending"
                     )
-                elif command.entry_type is CollectionEntryType.PAYMENT and is_extra_principal:
+                elif (
+                    command.entry_type is CollectionEntryType.PAYMENT
+                    and is_extra_principal
+                ):
                     allocation_details.update(
                         {
                             "payment_allocation_intent": (
@@ -565,6 +568,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             )
 
             details = {
+                "collection_state_before": collection_state_snapshot(loan),
                 "source": "gilbic_mobile",
                 "loan_type_code": str(loan["loan_type_code"]),
                 "loan_type_name": str(loan["loan_type_name"]),
@@ -672,11 +676,13 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             if penalty_post_maturity:
                 try:
                     with connection.cursor() as penalty_cursor:
-                        frozen_penalty = freeze_verified_seven_by_seven_penalty_assessment(
-                            penalty_cursor,
-                            loan_id=loan_id,
-                            through_date=command.collection_date,
-                            source_transaction_id=transaction_id,
+                        frozen_penalty = (
+                            freeze_verified_seven_by_seven_penalty_assessment(
+                                penalty_cursor,
+                                loan_id=loan_id,
+                                through_date=command.collection_date,
+                                source_transaction_id=transaction_id,
+                            )
                         )
                         if frozen_penalty.status == "management_review_required":
                             raise CollectionRejected(

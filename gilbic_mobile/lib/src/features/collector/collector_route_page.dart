@@ -15,6 +15,8 @@ import 'package:gilbic_mobile/src/core/payments/combined_payment_submission_repo
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collection_payment_undo_page.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_payment_undo_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_collection_location_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
@@ -31,6 +33,7 @@ class CollectorRoutePage extends StatefulWidget {
     this.paymentRepository,
     this.combinedPaymentRepository,
     this.correctionRepository,
+    this.paymentUndoRepository,
     this.collectionLocationRepository,
     this.deviceIdentityProvider,
     this.deviceSequence,
@@ -42,6 +45,7 @@ class CollectorRoutePage extends StatefulWidget {
   final PaymentSubmissionRepository? paymentRepository;
   final CombinedPaymentSubmissionRepository? combinedPaymentRepository;
   final CollectionCorrectionRepository? correctionRepository;
+  final CollectionPaymentUndoRepository? paymentUndoRepository;
   final CollectorCollectionLocationRepository? collectionLocationRepository;
   final DeviceIdentityProvider? deviceIdentityProvider;
   final CollectionDeviceSequence? deviceSequence;
@@ -546,16 +550,25 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
 
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (context) => CollectionCorrectionPage(
-          session: widget.session,
-          entry: entry,
-          collectionDate: loaded.route.routeDate ?? DateTime.now(),
-          repository: _correctionRepository,
-          deviceIdentityProvider: _deviceIdentityProvider,
-        ),
+        builder: (context) => entry.canUndoToday
+            ? CollectionPaymentUndoPage(
+                session: widget.session,
+                entry: entry,
+                repository:
+                    widget.paymentUndoRepository ??
+                    SpinaCollectionPaymentUndoRepository(),
+                deviceIdentityProvider: _deviceIdentityProvider,
+              )
+            : CollectionCorrectionPage(
+                session: widget.session,
+                entry: entry,
+                collectionDate: loaded.route.routeDate ?? DateTime.now(),
+                repository: _correctionRepository,
+                deviceIdentityProvider: _deviceIdentityProvider,
+              ),
       ),
     );
-    if (saved == true && mounted) {
+    if ((saved == true || entry.canUndoToday) && mounted) {
       await _loadRoute();
     }
   }
@@ -585,7 +598,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     if (entry.todayIsLocked) {
       return 'This collection is already remitted and permanently locked.';
     }
-    if (!entry.canEditToday) {
+    if (!entry.canEditToday && !entry.canUndoToday) {
       return 'This unremitted receipt is not available for correction from this route yet.';
     }
     return null;

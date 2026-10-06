@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
 from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
@@ -25,9 +24,24 @@ from .receipt_application import (
     plan_receipt_application,
 )
 
-
 MONEY = Decimal("0.01")
 DIRECT_BALANCE_MODE = "direct_remaining_balance"
+
+
+def collection_state_snapshot(loan: dict[str, Any]) -> dict[str, object]:
+    """Retain imported/opening state that cannot be rebuilt from receipts alone."""
+    return {
+        "remaining_balance": str(loan["remaining_balance"]),
+        "pass_count": int(loan["pass_count"]),
+        "last_payment_date": loan["last_payment_date"].isoformat()
+        if loan["last_payment_date"]
+        else None,
+        "advance_until": loan["advance_until"].isoformat()
+        if loan["advance_until"]
+        else None,
+        "note": str(loan["note"] or ""),
+        "state_version": int(loan["state_version"]),
+    }
 
 
 class PostgresCollectionPostingBridge:
@@ -220,11 +234,15 @@ class PostgresCollectionPostingBridge:
                     )
                     scheduled_target = min(previous_balance, scheduled_remaining)
                     intent = command.payment_allocation_intent
-                    explicit_advance = intent is PaymentAllocationIntent.EXTRA_AS_ADVANCE
+                    explicit_advance = (
+                        intent is PaymentAllocationIntent.EXTRA_AS_ADVANCE
+                    )
                     explicit_principal_reduction = (
                         intent is PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
                     )
-                    explicit_extra_choice = explicit_advance or explicit_principal_reduction
+                    explicit_extra_choice = (
+                        explicit_advance or explicit_principal_reduction
+                    )
                     genuine_extra = self._money(
                         max(Decimal("0.00"), cash_amount - scheduled_target)
                     )
@@ -344,6 +362,7 @@ class PostgresCollectionPostingBridge:
                 )
 
             details = {
+                "collection_state_before": collection_state_snapshot(loan),
                 "source": "gilbic_mobile",
                 "loan_type_code": str(loan["loan_type_code"]),
                 "loan_type_name": str(loan["loan_type_name"]),
@@ -707,7 +726,10 @@ class PostgresCollectionPostingBridge:
                 code="route_not_assigned",
             )
         last_payment_date: date | None = loan["last_payment_date"]
-        if last_payment_date is not None and command.collection_date < last_payment_date:
+        if (
+            last_payment_date is not None
+            and command.collection_date < last_payment_date
+        ):
             raise CollectionRejected(
                 "This date is earlier than the latest recorded payment. Refresh the "
                 "route and review the entry.",
@@ -794,9 +816,7 @@ class PostgresCollectionPostingBridge:
         unallocated_amount: Decimal = Decimal("0.00"),
     ) -> str:
         if unallocated_amount > Decimal("0.00"):
-            return (
-                f"Payment saved. {unallocated_amount:.2f} is unallocated and needs review."
-            )
+            return f"Payment saved. {unallocated_amount:.2f} is unallocated and needs review."
         if entry_type is CollectionEntryType.ADVANCE:
             return "Covered-date payment saved."
         if entry_type is CollectionEntryType.PASS:
