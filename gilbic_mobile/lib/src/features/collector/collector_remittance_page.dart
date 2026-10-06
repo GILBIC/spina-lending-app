@@ -39,6 +39,8 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
   String? _errorMessage;
   bool _loading = true;
   bool _submitting = false;
+  bool _confirming = false;
+  bool _submissionUnconfirmed = false;
 
   @override
   void initState() {
@@ -117,7 +119,12 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
     final summary = _summary;
     final deviceId = _deviceId;
     final recipientId = _selectedRecipientId;
-    if (_submitting || summary == null || deviceId == null) {
+    if (_submitting ||
+        _confirming ||
+        _submissionUnconfirmed ||
+        _loading ||
+        summary == null ||
+        deviceId == null) {
       return;
     }
     if (summary.items.isEmpty) {
@@ -136,6 +143,16 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
       (item) => item.userId == recipientId,
     );
 
+    if (!summary.hasReviewDigest) {
+      setState(
+        () => _errorMessage =
+            'Refresh and review the remittance. Update the app if needed.',
+      );
+      return;
+    }
+    final reviewedNote = _noteController.text;
+    final reviewedSession = widget.session;
+    setState(() => _confirming = true);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -160,7 +177,10 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (!mounted) return;
+    setState(() => _confirming = false);
+    if (confirmed != true || widget.session != reviewedSession) {
+      setState(() => _submitting = false);
       return;
     }
 
@@ -174,12 +194,22 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         deviceId: deviceId,
         recipientUserId: recipientId,
         collectionDate: _collectionDate,
-        note: _noteController.text,
+        note: reviewedNote,
+        expectedReviewDigest: summary.reviewDigest!,
       );
       if (mounted) {
         setState(() => _submitted = record);
       }
     } on SpinaApiException catch (error) {
+      if (mounted) {
+        setState(() {
+          if (error.statusCode == null || error.statusCode! >= 500) {
+            _submissionUnconfirmed = true;
+          } else {
+            _summary = null;
+          }
+        });
+      }
       if (mounted) {
         setState(() {
           _errorMessage = collectorFailureMessage(
@@ -189,6 +219,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         });
       }
     } on Object catch (error) {
+      if (mounted) setState(() => _submissionUnconfirmed = true);
       if (mounted) {
         setState(() {
           _errorMessage = collectorFailureMessage(
@@ -198,6 +229,12 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         });
       }
     } finally {
+      if (mounted && _submissionUnconfirmed) {
+        setState(
+          () => _errorMessage =
+              'Submission could not be confirmed. Keep this reviewed command and check remittance history with the recipient before trying again.',
+        );
+      }
       if (mounted) {
         setState(() => _submitting = false);
       }
@@ -212,7 +249,14 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         actions: [
           IconButton(
             tooltip: 'Refresh summary',
-            onPressed: _loading || _submitted != null ? null : _load,
+            onPressed:
+                _loading ||
+                    _submitting ||
+                    _confirming ||
+                    _submissionUnconfirmed ||
+                    _submitted != null
+                ? null
+                : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -255,7 +299,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
                 child: Text('${recipient.fullName} • ${recipient.roleName}'),
               ),
           ],
-          onChanged: _submitting
+          onChanged: (_submitting || _confirming || _submissionUnconfirmed)
               ? null
               : (value) => setState(() => _selectedRecipientId = value),
         ),
@@ -269,7 +313,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         TextField(
           key: const Key('remittance-note'),
           controller: _noteController,
-          enabled: !_submitting,
+          enabled: !_submitting && !_confirming && !_submissionUnconfirmed,
           maxLines: 2,
           decoration: const InputDecoration(
             labelText: 'Remittance note (optional)',
@@ -307,6 +351,8 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
           key: const Key('submit-remittance'),
           onPressed:
               _submitting ||
+                  _confirming ||
+                  _submissionUnconfirmed ||
                   summary.items.isEmpty ||
                   _selectedRecipientId == null
               ? null

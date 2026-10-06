@@ -40,6 +40,8 @@ class _CrossCollectorRemittancePageState
   String? _errorMessage;
   bool _loading = true;
   bool _submitting = false;
+  bool _confirming = false;
+  bool _submissionUnconfirmed = false;
 
   @override
   void initState() {
@@ -110,7 +112,8 @@ class _CrossCollectorRemittancePageState
     } on Object {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Other-area remittance recipients could not be loaded.';
+          _errorMessage =
+              'Other-area remittance recipients could not be loaded.';
         });
       }
     } finally {
@@ -129,6 +132,7 @@ class _CrossCollectorRemittancePageState
       _loading = true;
       _errorMessage = null;
       _selectedTargetKey = target.selectionKey;
+      _summary = null;
     });
     try {
       final summary = await _repository.loadPreview(
@@ -157,6 +161,9 @@ class _CrossCollectorRemittancePageState
     final deviceId = _deviceId;
     final target = _targetByKey(_selectedTargetKey);
     if (_submitting ||
+        _confirming ||
+        _submissionUnconfirmed ||
+        _loading ||
         summary == null ||
         summary.items.isEmpty ||
         deviceId == null ||
@@ -164,6 +171,16 @@ class _CrossCollectorRemittancePageState
       return;
     }
 
+    if (!summary.hasReviewDigest) {
+      setState(
+        () => _errorMessage =
+            'Refresh and review the remittance. Update the app if needed.',
+      );
+      return;
+    }
+    final reviewedNote = _noteController.text;
+    final reviewedSession = widget.session;
+    setState(() => _confirming = true);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -190,7 +207,10 @@ class _CrossCollectorRemittancePageState
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (!mounted) return;
+    setState(() => _confirming = false);
+    if (confirmed != true || widget.session != reviewedSession) {
+      setState(() => _submitting = false);
       return;
     }
 
@@ -205,7 +225,8 @@ class _CrossCollectorRemittancePageState
         recipientUserId: target.recipientUserId,
         recipientCapacity: target.recipientCapacity,
         collectionDate: _collectionDate,
-        note: _noteController.text,
+        note: reviewedNote,
+        expectedReviewDigest: summary.reviewDigest!,
       );
       if (mounted) {
         setState(() {
@@ -215,15 +236,31 @@ class _CrossCollectorRemittancePageState
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
+        setState(() {
+          if (error.statusCode == null || error.statusCode! >= 500) {
+            _submissionUnconfirmed = true;
+          } else {
+            _summary = null;
+          }
+        });
+      }
+      if (mounted) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
+      if (mounted) setState(() => _submissionUnconfirmed = true);
       if (mounted) {
         setState(() {
           _errorMessage = 'The other-area remittance could not be submitted.';
         });
       }
     } finally {
+      if (mounted && _submissionUnconfirmed) {
+        setState(
+          () => _errorMessage =
+              'Submission could not be confirmed. Keep this reviewed command and check remittance history with the recipient before trying again.',
+        );
+      }
       if (mounted) {
         setState(() => _submitting = false);
       }
@@ -238,7 +275,14 @@ class _CrossCollectorRemittancePageState
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            onPressed: _loading || _submitted != null ? null : _loadTargets,
+            onPressed:
+                _loading ||
+                    _submitting ||
+                    _confirming ||
+                    _submissionUnconfirmed ||
+                    _submitted != null
+                ? null
+                : _loadTargets,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -260,7 +304,8 @@ class _CrossCollectorRemittancePageState
     }
     if (_targets.isEmpty) {
       return _EmptyCrossRemittance(
-        message: _errorMessage ??
+        message:
+            _errorMessage ??
             'No unlocked other-area payment is waiting to be remitted for this date.',
         onRetry: _loadTargets,
       );
@@ -296,7 +341,7 @@ class _CrossCollectorRemittancePageState
                 ),
               ),
           ],
-          onChanged: _submitting
+          onChanged: (_submitting || _confirming || _submissionUnconfirmed)
               ? null
               : (value) {
                   final target = _targetByKey(value);
@@ -314,7 +359,7 @@ class _CrossCollectorRemittancePageState
           TextField(
             key: const Key('cross-remittance-note'),
             controller: _noteController,
-            enabled: !_submitting,
+            enabled: !_submitting && !_confirming && !_submissionUnconfirmed,
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: 'Handover note (optional)',
@@ -352,7 +397,9 @@ class _CrossCollectorRemittancePageState
           FilledButton.icon(
             key: const Key('submit-cross-remittance'),
             onPressed:
-                _submitting || summary.items.isEmpty ? null : _submit,
+                _submitting || _submissionUnconfirmed || summary.items.isEmpty
+                ? null
+                : _submit,
             icon: _submitting
                 ? const SizedBox(
                     width: 18,

@@ -5,7 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -36,6 +36,22 @@ class RemittanceSubmissionBody(BaseModel):
     recipient_user_id: UUID
     collection_date: date
     note: str = Field(default="", max_length=500)
+    expected_review_digest: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def require_review(cls, value):
+        if isinstance(value, dict) and not value.get("expected_review_digest"):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "remittance_review_changed",
+                    "message": "Refresh and review the remittance before submitting. Update the app if needed.",
+                },
+            )
+        return value
 
 
 class RemittanceReviewBody(BaseModel):
@@ -96,6 +112,7 @@ def _refund_due_release_payload(
 
 def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
     return {
+        "review_digest": summary.review_digest,
         "collection_date": summary.collection_date.isoformat(),
         "collector_user_id": str(summary.collector_user_id),
         "collector_name": summary.collector_name,
@@ -282,6 +299,7 @@ def create_remittance_router() -> APIRouter:
                 recipient_user_id=body.recipient_user_id,
                 collection_date=body.collection_date,
                 note=body.note,
+                expected_review_digest=body.expected_review_digest,
             )
         except RemittanceError as error:
             _raise_remittance_error(error)

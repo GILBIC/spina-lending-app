@@ -192,9 +192,9 @@ def create_period_close_router() -> APIRouter:
                     "close_post": CLOSE_POST_PERMISSION in actor.permissions,
                 },
                 "notice": (
-                    "A formal V1 period close requires the accounting period to be placed in review after all drafts are resolved. "
+                    "A formal V1 period close requires all drafts to be resolved and supported reconciliation of Treasury and Collector sources before the period enters review. "
                     "Review freezes ordinary journal activity. The protected close snapshots exact posted income/expense balances, transfers exact period profit or loss to 3100 Retained Earnings, then atomically closes the period. "
-                    "Closed periods cannot reopen in V1 and automatic source posting remains disabled."
+                    "Late source evidence remains visible for review without reopening a closed period. Automatic source posting remains disabled; a clear initial source gate does not certify complete company accounting."
                 ),
             },
         }

@@ -21,6 +21,7 @@ abstract interface class RemittanceRepository {
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     required DateTime collectionDate,
     String note,
@@ -127,13 +128,21 @@ class SpinaRemittanceRepository
       method: 'GET',
       uri: uri,
     );
-    return RemittanceSummary.fromPayload(data);
+    final summary = RemittanceSummary.fromPayload(data);
+    if (!summary.hasReviewDigest) {
+      throw const SpinaApiException(
+        'Refresh and review the remittance. Update the app if this message continues.',
+        code: 'remittance_review_changed',
+      );
+    }
+    return summary;
   }
 
   @override
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     required DateTime collectionDate,
     String note = '',
@@ -147,6 +156,7 @@ class SpinaRemittanceRepository
         'recipient_user_id': recipientUserId,
         'collection_date': _date(collectionDate),
         'note': note.trim(),
+        'expected_review_digest': expectedReviewDigest,
       },
     );
     return _recordOrThrow(data, 'remittance result');

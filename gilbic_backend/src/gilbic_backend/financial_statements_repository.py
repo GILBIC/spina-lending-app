@@ -9,8 +9,7 @@ from psycopg.rows import dict_row
 
 from .database import open_connection
 
-
-ZERO = Decimal("0")
+ZERO = Decimal(0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,10 +117,9 @@ def build_financial_statement_pack(
     total_assets = sum((line.amount for line in asset_lines), ZERO)
     total_liabilities = sum((line.amount for line in liability_lines), ZERO)
     recorded_equity = sum((line.amount for line in equity_lines), ZERO)
-    unclosed_earnings_to_date = (
-        sum((line.amount for line in cumulative_income), ZERO)
-        - sum((line.amount for line in cumulative_expenses), ZERO)
-    )
+    unclosed_earnings_to_date = sum(
+        (line.amount for line in cumulative_income), ZERO
+    ) - sum((line.amount for line in cumulative_expenses), ZERO)
     total_equity = recorded_equity + unclosed_earnings_to_date
     total_liabilities_and_equity = total_liabilities + total_equity
 
@@ -153,6 +151,9 @@ class PostgresFinancialStatementsRepository:
     ) -> FinancialStatementPack:
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"
+                )
                 period = self._load_period(cursor, period_id)
                 period_movements = self._load_movements(
                     cursor,

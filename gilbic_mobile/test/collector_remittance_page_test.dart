@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -8,8 +9,9 @@ import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 
 void main() {
-  testWidgets('shows server-calculated remittance summary and recipient',
-      (tester) async {
+  testWidgets('shows server-calculated remittance summary and recipient', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CollectorRemittancePage(
@@ -30,8 +32,9 @@ void main() {
     expect(find.byKey(const Key('submit-remittance')), findsOneWidget);
   });
 
-  testWidgets('submission locks entries while custody remains with collector',
-      (tester) async {
+  testWidgets('submission locks entries while custody remains with collector', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
@@ -57,7 +60,10 @@ void main() {
 
     expect(find.text('Submit remittance?'), findsOneWidget);
     expect(find.textContaining('permanently locked'), findsOneWidget);
-    expect(find.textContaining('cash remains under your custody'), findsOneWidget);
+    expect(
+      find.textContaining('cash remains under your custody'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('confirm-remittance-submission')));
     await tester.pumpAndSettle();
@@ -65,14 +71,96 @@ void main() {
     expect(repository.submitCount, 1);
     expect(repository.lastRecipient, 'office-1');
     expect(repository.lastNote, 'Route cash handover');
+    expect(repository.lastReviewDigest, _summary().reviewDigest);
     expect(find.text('Remittance notification sent'), findsOneWidget);
     expect(find.text('REM-RC-1'), findsOneWidget);
-    expect(find.textContaining('Waiting for Office Staff to accept'), findsOneWidget);
+    expect(
+      find.textContaining('Waiting for Office Staff to accept'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('cash is still under your custody'),
       findsOneWidget,
     );
   });
+  testWidgets('missing preview digest requires refresh before any write', (
+    tester,
+  ) async {
+    final repository = _FakeRemittanceRepository()..missingDigest = true;
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectorRemittancePage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          collectionDate: DateTime(2026, 8, 2),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('submit-remittance')));
+    await tester.pumpAndSettle();
+    expect(repository.submitCount, 0);
+    expect(find.textContaining('Refresh and review'), findsOneWidget);
+    expect(
+      find.byKey(const Key('confirm-remittance-submission')),
+      findsNothing,
+    );
+  });
+  testWidgets(
+    'uncertain submission retains reviewed note and cannot retry or refresh',
+    (tester) async {
+      final repository = _FakeRemittanceRepository()
+        ..submitFailure = const SpinaApiException(
+          'Lost response',
+          code: 'network_unavailable',
+        );
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectorRemittancePage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: repository,
+            collectionDate: DateTime(2026, 8, 2),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('remittance-note')),
+        'Exact handover command',
+      );
+      await tester.tap(find.byKey(const Key('submit-remittance')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-remittance-submission')));
+      await tester.pumpAndSettle();
+      expect(repository.submitCount, 1);
+      expect(repository.lastNote, 'Exact handover command');
+      expect(repository.lastReviewDigest, _summary().reviewDigest);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('submit-remittance')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton && widget.tooltip == 'Refresh summary',
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.textContaining('check remittance history'), findsOneWidget);
+    },
+  );
 }
 
 const UserSession _session = UserSession(
@@ -94,8 +182,11 @@ DeviceIdentityProvider _deviceIdentityProvider() {
   );
 }
 
-RemittanceSummary _summary() {
+RemittanceSummary _summary({bool missingDigest = false}) {
   return RemittanceSummary(
+    reviewDigest: missingDigest
+        ? null
+        : 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     collectionDate: DateTime(2026, 8, 2),
     collectorName: 'Test Collector',
     transactionCount: 1,
@@ -112,10 +203,7 @@ RemittanceSummary _summary() {
         entryType: 'advance',
         amount: 100,
         receiptNumber: 'GBC-1',
-        coveredDates: <DateTime>[
-          DateTime(2026, 8, 2),
-          DateTime(2026, 8, 4),
-        ],
+        coveredDates: <DateTime>[DateTime(2026, 8, 2), DateTime(2026, 8, 4)],
         note: 'Selected dates',
       ),
     ],
@@ -124,8 +212,11 @@ RemittanceSummary _summary() {
 
 class _FakeRemittanceRepository implements RemittanceRepository {
   int submitCount = 0;
+  bool missingDigest = false;
+  SpinaApiException? submitFailure;
   String? lastRecipient;
   String? lastNote;
+  String? lastReviewDigest;
 
   @override
   Future<List<RemittanceRecipient>> loadRecipients(
@@ -147,13 +238,14 @@ class _FakeRemittanceRepository implements RemittanceRepository {
     required String deviceId,
     required DateTime collectionDate,
   }) async {
-    return _summary();
+    return _summary(missingDigest: missingDigest);
   }
 
   @override
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     required DateTime collectionDate,
     String note = '',
@@ -161,6 +253,8 @@ class _FakeRemittanceRepository implements RemittanceRepository {
     submitCount += 1;
     lastRecipient = recipientUserId;
     lastNote = note;
+    lastReviewDigest = expectedReviewDigest;
+    if (submitFailure != null) throw submitFailure!;
     return RemittanceRecord(
       remittanceId: 'remittance-rc-1',
       remittanceNumber: 'REM-RC-1',

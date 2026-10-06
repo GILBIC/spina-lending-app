@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+import hashlib
+import hmac
+import json
+import re
+from dataclasses import asdict, dataclass, replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+from psycopg.errors import LockNotAvailable
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -31,6 +36,25 @@ class RemittanceAlreadyReceived(RemittanceError):
     code = "remittance_already_received"
 
 
+class RemittanceReviewChanged(RemittanceError):
+    code = "remittance_review_changed"
+
+
+def require_review_digest(value: str | None) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+        raise RemittanceReviewChanged(
+            "Refresh and review the remittance before submitting. Update the app if this message continues."
+        )
+    return value
+
+
+def assert_review_digest(summary: RemittanceSummaryRecord, expected: str) -> None:
+    if not hmac.compare_digest(summary.review_digest, expected):
+        raise RemittanceReviewChanged(
+            "The remittance changed after your review. Refresh and review the receipts and Refund Due releases again."
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class RemittanceRecipientRecord:
     user_id: UUID
@@ -52,6 +76,7 @@ class RemittanceItemRecord:
     accepted_at: datetime
     note: str
     covered_dates: tuple[date, ...]
+    review_source: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +92,7 @@ class RefundDueRemittanceItemRecord:
     amount: Decimal
     evidence_reference: str
     evidence_digest: str
+    review_source: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +108,23 @@ class RemittanceSummaryRecord:
     total_amount: Decimal
     items: tuple[RemittanceItemRecord, ...]
     refund_due_releases: tuple[RefundDueRemittanceItemRecord, ...] = ()
+    review_scope: tuple[str, ...] = ("collector",)
+    review_refund_pool: tuple[RefundDueRemittanceItemRecord, ...] = ()
+
+    @property
+    def review_digest(self) -> str:
+        # Source JSON is retained as PostgreSQL text so NUMERIC precision is never
+        # lost through a JSON floating-point decoder. Only this hash leaves the repo.
+        payload = {"policy": "remittance_review_v1", **asdict(self)}
+        encoded = json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+            default=str,
+        )
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     @property
     def refund_due_release_count(self) -> int:
@@ -175,6 +218,9 @@ class PostgresRemittanceRepository:
     ) -> RemittanceSummaryRecord:
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    "set transaction isolation level repeatable read, read only"
+                )
                 items = self._eligible_items(
                     cursor,
                     collector_user_id=collector_user_id,
@@ -202,7 +248,9 @@ class PostgresRemittanceRepository:
         recipient_user_id: UUID,
         collection_date: date,
         note: str,
+        expected_review_digest: str | None = None,
     ) -> RemittanceRecord:
+        expected_review_digest = require_review_digest(expected_review_digest)
         if collector_user_id == recipient_user_id:
             raise RemittanceRecipientInvalid(
                 "Choose another person to receive the remittance."
@@ -211,6 +259,7 @@ class PostgresRemittanceRepository:
         with open_connection() as connection:
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
+                    self._lock_review_sources(cursor)
                     cursor.execute(
                         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
                         (f"gilbic-remittance:{collector_user_id}:{collection_date}",),
@@ -238,6 +287,7 @@ class PostgresRemittanceRepository:
                         items=items,
                         refund_due_releases=refund_due_releases,
                     )
+                    assert_review_digest(summary, expected_review_digest)
                     if not summary.items:
                         raise RemittanceEmpty(
                             "There are no unlocked collections available to remit."
@@ -396,6 +446,7 @@ class PostgresRemittanceRepository:
                             Jsonb(
                                 {
                                     "remittance_number": remittance_number,
+                                    "review_digest": summary.review_digest,
                                     "recipient_user_id": str(recipient_user_id),
                                     "transaction_count": summary.transaction_count,
                                     "client_count": summary.client_count,
@@ -590,6 +641,26 @@ class PostgresRemittanceRepository:
         return str(row["full_name"])
 
     @staticmethod
+    def _lock_review_sources(cursor) -> None:
+        # Row locks alone cannot freeze new eligible receipts/releases or changes
+        # to refund allocations. Acquire one stable table order before row locks.
+        # SRE also serializes submitters without SHARE-to-write upgrade deadlocks.
+        try:
+            cursor.execute("""
+                lock table lending.collection_transactions,
+                    lending.collection_covered_dates,
+                    lending.loan_unused_advance_refund_due_releases,
+                    lending.collection_remittance_refund_due_release_items,
+                    lending.collection_remittance_rejections
+                in share row exclusive mode nowait
+            """)
+        except LockNotAvailable as error:
+            # Reject this attempt, not the in-flight money/correction transaction.
+            raise RemittanceReviewChanged(
+                "Collection or refund records are being updated. Refresh and review the remittance when that update finishes."
+            ) from error
+
+    @staticmethod
     def _eligible_items(
         cursor,
         *,
@@ -602,6 +673,7 @@ class PostgresRemittanceRepository:
             f"""
             select
                 t.id as transaction_id,
+                to_jsonb(t)::text as review_source,
                 t.client_id,
                 client.full_name as client_name,
                 t.loan_id,
@@ -650,6 +722,13 @@ class PostgresRemittanceRepository:
             f"""
             select
                 release.id as release_id,
+                jsonb_build_object('release', to_jsonb(release), 'allocations', (
+                    select coalesce(jsonb_agg(to_jsonb(custody) order by custody.remittance_id), '[]'::jsonb)
+                    from lending.collection_remittance_refund_due_release_items custody
+                    where custody.release_id = release.id
+                      and not exists (select 1 from lending.collection_remittance_rejections rejection
+                                      where rejection.remittance_id = custody.remittance_id)
+                ))::text as review_source,
                 release.approval_id,
                 approval.adjustment_id,
                 release.client_id,
@@ -711,6 +790,7 @@ class PostgresRemittanceRepository:
         collection_date: date,
         items: tuple[RemittanceItemRecord, ...],
         refund_due_releases: tuple[RefundDueRemittanceItemRecord, ...] = (),
+        review_scope: tuple[str, ...] = ("collector",),
     ) -> RemittanceSummaryRecord:
         payment_items = tuple(item for item in items if item.entry_type != "pass")
         unable_items = tuple(item for item in items if item.entry_type == "pass")
@@ -751,6 +831,8 @@ class PostgresRemittanceRepository:
             ),
             items=items,
             refund_due_releases=selected_releases,
+            review_refund_pool=refund_due_releases,
+            review_scope=review_scope,
         )
 
     @staticmethod
@@ -768,6 +850,7 @@ class PostgresRemittanceRepository:
             accepted_at=row["accepted_at"],
             note=str(row["note"] or ""),
             covered_dates=tuple(row["covered_dates"] or ()),
+            review_source=str(row.get("review_source") or ""),
         )
 
     @staticmethod
@@ -801,6 +884,7 @@ class PostgresRemittanceRepository:
             amount=Decimal(row["amount"]),
             evidence_reference=str(row["evidence_reference"]),
             evidence_digest=str(row["evidence_digest"]),
+            review_source=str(row.get("review_source") or ""),
         )
 
     @staticmethod

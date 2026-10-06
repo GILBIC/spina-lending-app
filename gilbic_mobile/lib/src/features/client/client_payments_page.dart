@@ -5,6 +5,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
@@ -34,10 +36,12 @@ class ClientPaymentsPage extends StatefulWidget {
 }
 
 class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
-  late final ClientPaymentRepository _repository;
+  late ClientPaymentRepository _repository;
   ClientPaymentTimeline? _timeline;
   String? _errorMessage;
   bool _loading = true;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -46,31 +50,71 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(ClientPaymentsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _readEpoch++;
+      _timeline = null;
+      _repository = widget.repository ?? SpinaClientPaymentRepository();
+      _dismissPrivateRoutes();
+      _load();
+    }
+  }
+
+  bool _current(int epoch, int requestId) =>
+      mounted && epoch == _readEpoch && requestId == _requestId;
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    // Widget updates can happen while Navigator is building its routes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
   Future<void> _load() async {
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final timeline = await _repository.loadTimeline(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final result = await _repository.loadTimeline(
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) {
-        return;
+      if (_current(epoch, requestId)) {
+        setState(() => _timeline = result);
       }
-      setState(() => _timeline = timeline);
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (mounted && epoch == _readEpoch && staffAccessRejected(error)) {
+        // A denial also invalidates newer requests already in flight.
+        _readEpoch++;
+        setState(() {
+          _timeline = null;
+          _errorMessage = error.message;
+          _loading = false;
+        });
+        _dismissPrivateRoutes();
+      } else if (_current(epoch, requestId)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _errorMessage = 'Payments could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _loading = false);
       }
     }

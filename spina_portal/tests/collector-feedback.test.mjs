@@ -18,7 +18,7 @@ async function harness(t, kind) {
    if(options.method){writes.push({path,options});return new Promise((_,no)=>{reject=no;});}
    if(path==='/api/v1/collector/routes/today')return {route_date:'2026-10-01',entries:[{route_entry_id:'route-1',client_id:'client-1',loan_id:'loan-1',loan_type:'Regular',route_revision:'v1',can_enter_payment:true,daily_amount:'250.00'}]};
    if(path.endsWith('/remittances/recipients'))return [{user_id:'recipient',full_name:'Synthetic recipient',role_name:'Management'}];
-   if(path.includes('/remittances/preview'))return {collector_user_id:'collector',collection_date:'2026-10-01',total_amount:'250.01',transaction_count:1,payment_count:1,unable_to_pay_count:0,covered_payment_count:0,client_count:1,refund_due_release_count:0,refund_due_release_total:'0.00',refund_due_releases:[],items:[{transaction_id:'txn',client_id:'client-1',loan_id:'loan-1',collection_date:'2026-10-01',entry_type:'payment',amount:'250.01',receipt_number:'R',covered_dates:[]}]};
+   if(path.includes('/remittances/preview'))return {review_digest:'a'.repeat(64),collector_user_id:'collector',collection_date:'2026-10-01',total_amount:'250.01',transaction_count:1,payment_count:1,unable_to_pay_count:0,covered_payment_count:0,client_count:1,refund_due_release_count:0,refund_due_release_total:'0.00',refund_due_releases:[],items:[{transaction_id:'txn',client_id:'client-1',loan_id:'loan-1',collection_date:'2026-10-01',entry_type:'payment',amount:'250.01',receipt_number:'R',covered_dates:[]}]};
    return {};
   }}});
  if(kind==='remittance')await handle.activate('collector-remittance');
