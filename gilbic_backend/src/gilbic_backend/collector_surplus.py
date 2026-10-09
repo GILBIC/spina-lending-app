@@ -1001,6 +1001,8 @@ def settle(service, conn, actor, account, command):
 
 
 def reverse_return(service, conn, actor, account, command):
+    from .treasury_disbursements import consuming_source
+
     row = load(conn, "actions", command.action_id, command.action_version)
     independent(actor, row)
     check_account(account, row)
@@ -1039,6 +1041,7 @@ def reverse_return(service, conn, actor, account, command):
             "reason": command.reason,
         },
     )
+    consuming_source(conn, event, "collector_surplus_return_reversal", UUID(row["id"]))
     if conn.execute(
         "select 1 from treasury.source_links where event_id=%s", (event["id"],)
     ).fetchone():

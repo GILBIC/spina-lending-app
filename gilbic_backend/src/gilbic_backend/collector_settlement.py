@@ -13,6 +13,7 @@ from .treasury_authorization import (
     require_account,
     require_live_permission,
 )
+from .treasury_disbursements import consuming_source
 from .treasury_repository import identity, json_value
 
 
@@ -250,6 +251,7 @@ def settlement_action(service, conn, actor, account, command):
                 "reason": command.reason,
             },
         )
+        consuming_source(conn, event, "collector_custody_exception", UUID(count["id"]))
         row = save(
             conn,
             "exceptions",
@@ -302,6 +304,11 @@ def settlement_action(service, conn, actor, account, command):
                 "classification": "collector_counted_receipt",
                 "reason": "Counted cash settlement; excess remains pending identification.",
             },
+        )
+        # A legitimate new count can fund both remittance and excess portions.
+        # Establish exclusive custody before writing either of those portions.
+        consuming_source(
+            conn, event, "collector_cash_settlement", UUID(count["remittance_id"])
         )
     now = service.clock()
     conn.execute(

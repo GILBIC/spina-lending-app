@@ -200,6 +200,41 @@ class PostgresClientAccountRepository(PostgresManagementRepository):
                 "Username, email, or authentication identity is already in use."
             ) from exc
 
+    def find_created_client_account(
+        self,
+        *,
+        client_id: UUID,
+        auth_user_id: UUID,
+        username: str,
+        email: str,
+    ) -> AccountAdminRecord | None:
+        """Read back the exact attempted link after an unknown commit outcome."""
+        with open_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    select client.user_id
+                    from lending.clients client
+                    join core.users account on account.id = client.user_id
+                    where client.id = %s and account.external_auth_id = %s
+                      and account.username = %s and lower(account.email) = lower(%s)
+                    """,
+                    (client_id, auth_user_id, username.strip(), email.strip().lower()),
+                )
+                row = cursor.fetchone()
+            if row is None:
+                return None
+            record = self._load_account(connection, row[0])
+            if (
+                record.auth_user_id != auth_user_id
+                or record.username != username.strip()
+                or (record.email or "").lower() != email.strip().lower()
+                or record.status != "active"
+                or "client" not in record.roles
+            ):
+                return None
+            return record
+
     def get_account(self, *, target_user_id: UUID) -> AccountAdminRecord:
         with open_connection() as connection:
             return self._load_account(connection, target_user_id)

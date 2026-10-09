@@ -10,6 +10,146 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  final canonical = <String, Object?>{
+    'status': 'accepted', 'duplicate': false,
+    'client_transaction_id': 'transaction-1', 'transaction_id': 'server-1',
+    'receipt_number': 'OR-000001', 'official_balance': '4600.00',
+    'accepted_at': '2026-07-31T05:20:00Z', 'route_revision': 'route-v4',
+    // PostedCollection.response_payload includes structured result metadata.
+    'result': <String, Object?>{'allocation': 'scheduled'},
+  };
+  for (final entry in <String, Map<String, Object?>>{
+    'empty': {},
+    'processing': {...canonical, 'status': 'processing'},
+    'missing status': {...canonical}..remove('status'),
+    'foreign command': {...canonical, 'client_transaction_id': 'foreign'},
+    'missing command': {...canonical}..remove('client_transaction_id'),
+    'missing receipt': {...canonical}..remove('receipt_number'),
+    'missing transaction': {...canonical}..remove('transaction_id'),
+    'missing balance': {...canonical}..remove('official_balance'),
+    'invalid balance': {...canonical, 'official_balance': 'NaN'},
+    'missing accepted time': {...canonical}..remove('accepted_at'),
+    'invalid accepted time': {...canonical, 'accepted_at': 'yesterday'},
+    'duplicate flag without final status': {
+      ...canonical,
+      'status': 'processing',
+      'duplicate': true,
+    },
+  }.entries) {
+    test('uncertain success ${entry.key} cannot confirm the payment', () async {
+      final repository = SpinaPaymentSubmissionRepository(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({'success': true, 'data': entry.value}),
+            202,
+          ),
+        ),
+      );
+      await expectLater(
+        repository.submit(_session, _paymentDraft),
+        throwsA(
+          isA<SpinaApiException>()
+              .having((e) => e.code, 'code', 'invalid_server_response')
+              .having((e) => e.statusCode, 'retry uncertainty', isNull),
+        ),
+      );
+    });
+  }
+  for (final body in [
+    'not json',
+    '{"success":false,"message":"Unknown result"}',
+    '{"success":true,"data":[]}',
+  ]) {
+    test('malformed 2xx envelope retains uncertainty: $body', () async {
+      final repository = SpinaPaymentSubmissionRepository(
+        client: MockClient((_) async => http.Response(body, 201)),
+      );
+      await expectLater(
+        repository.submit(_session, _paymentDraft),
+        throwsA(
+          isA<SpinaApiException>().having(
+            (e) => e.statusCode,
+            'uncertain status',
+            isNull,
+          ),
+        ),
+      );
+    });
+  }
+  test(
+    'confirmation displays canonical facts rather than unrelated nested aliases',
+    () async {
+      final repository = SpinaPaymentSubmissionRepository(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'data': {
+                ...canonical,
+                'transaction': {
+                  'transaction_id': 'unrelated',
+                  'receipt_number': 'unrelated',
+                  'official_balance': '1.00',
+                },
+              },
+            }),
+            201,
+          ),
+        ),
+      );
+      final result = await repository.submit(_session, _paymentDraft);
+      expect(result.serverTransactionId, 'server-1');
+      expect(result.receiptNumber, 'OR-000001');
+      expect(result.officialBalance, 4600);
+    },
+  );
+  for (final duplicate in [false, true]) {
+    for (final pass in [false, true]) {
+      test(
+        'canonical ${duplicate ? "replay" : "accepted"} ${pass ? "PASS" : "PAY"} confirms',
+        () async {
+          final data = {
+            ...canonical,
+            'status': duplicate ? 'duplicate' : 'accepted',
+            'duplicate': duplicate,
+            if (pass) 'receipt_number': '',
+          };
+          final draft = pass
+              ? PaymentSubmissionDraft(
+                  idempotencyKey: 'transaction-1',
+                  routeEntryId: 'route-entry-1',
+                  clientId: 'client-1',
+                  loanId: 'loan-1',
+                  collectionDate: DateTime(2026, 7, 31),
+                  entryType: CollectionEntryType.pass,
+                  recordedAt: DateTime.utc(2026, 7, 31, 5, 15),
+                  deviceId: 'device-1',
+                  deviceSequence: 7,
+                  pastDueFollowup: const PastDueFollowupDraft(
+                    reasonCode: PastDueReasonCode.noCash,
+                  ),
+                )
+              : _paymentDraft;
+          final repository = SpinaPaymentSubmissionRepository(
+            client: MockClient(
+              (_) async => http.Response(
+                jsonEncode({'success': true, 'data': data}),
+                duplicate ? 200 : 201,
+              ),
+            ),
+          );
+          final result = await repository.submit(_session, draft);
+          expect(result.isFinalSuccess, isTrue);
+          expect(result.idempotencyKey, draft.idempotencyKey);
+          expect(
+            result.disposition,
+            duplicate
+                ? PaymentSubmissionDisposition.duplicate
+                : PaymentSubmissionDisposition.accepted,
+          );
+        },
+      );
+    }
+  }
   test('sends bearer authentication and the same idempotency key', () async {
     late http.Request captured;
     final repository = SpinaPaymentSubmissionRepository(
@@ -21,6 +161,7 @@ void main() {
             'success': true,
             'data': <String, Object?>{
               'status': 'accepted',
+              'client_transaction_id': 'transaction-1',
               'message': 'Collection accepted',
               'transaction_id': 'server-1',
               'receipt_number': 'OR-000001',
@@ -29,9 +170,7 @@ void main() {
             },
           }),
           201,
-          headers: const <String, String>{
-            'content-type': 'application/json',
-          },
+          headers: const <String, String>{'content-type': 'application/json'},
         );
       }),
     );
@@ -59,6 +198,9 @@ void main() {
             'success': true,
             'data': <String, Object?>{
               'duplicate': true,
+              'status': 'duplicate',
+              'client_transaction_id': 'transaction-1',
+              'accepted_at': '2026-07-31T05:20:00Z',
               'message': 'Previously accepted',
               'transaction_id': 'server-1',
               'receipt_number': 'OR-000001',

@@ -229,6 +229,66 @@ def debit(f, prepared, **changes):
     return command, f["service"].execute(f["owner"], command)
 
 
+@pytest.mark.parametrize("first", ["loan", "refund"])
+def test_loan_payout_and_refund_cannot_consume_same_actual_debit(payout_case, first):
+    from test_treasury_postgres import receipt
+
+    f = payout_case
+    _, prepared = prepare(f)
+    received = f["service"].execute(f["owner"], receipt(f, amount="1000.00"))
+    reference = "loan-refund-" + uuid4().hex
+    effective_at = datetime.now(timezone.utc) - timedelta(seconds=2)
+
+    def refund_command():
+        return DisbursementRecord(
+            action="disbursement_record",
+            request_id=uuid4(),
+            account_id=f["account_id"],
+            expected_version=version(f),
+            amount="1000.00",
+            provider="gcash",
+            reference=reference,
+            effective_at=effective_at,
+            evidence_id=evidence(f),
+            recipient_attestation="Synthetic independently verified debit",
+            purpose="refund",
+            receipt_id=received["target_id"],
+            reason="Synthetic actual refund",
+        )
+
+    if first == "loan":
+        command, saved = debit(
+            f, prepared, reference=reference, effective_at=effective_at
+        )
+        rejected = f["service"].execute(f["owner"], refund_command())
+    else:
+        command = refund_command()
+        saved = f["service"].execute(f["owner"], command)
+        _, rejected = debit(f, prepared, reference=reference, effective_at=effective_at)
+    assert f["service"].execute(f["owner"], command) == saved
+    assert rejected["result"]["source_link"]["status"] == "blocked", rejected
+    assert rejected["result"]["new_movement"] is False
+    with connect() as conn:
+        payout = conn.execute(
+            "select status,event_id from treasury.loan_payouts where id=%s",
+            (prepared["target_id"],),
+        ).fetchone()
+        stored_receipt = conn.execute(
+            "select refunded_amount from treasury.receipts where id=%s",
+            (received["target_id"],),
+        ).fetchone()
+        assert payout["status"] == ("debited" if first == "loan" else "prepared")
+        assert (payout["event_id"] is not None) == (first == "loan")
+        assert stored_receipt["refunded_amount"] == (0 if first == "loan" else 1000)
+        assert (
+            conn.execute(
+                "select count(*) as n from treasury.source_links l join treasury.events e on e.id=l.event_id where e.account_id=%s",
+                (f["account_id"],),
+            ).fetchone()["n"]
+            == 1
+        )
+
+
 def confirm(f, payout_id, payout_version=2, **changes):
     values = {
         "action": "loan_payout_recipient_confirm",

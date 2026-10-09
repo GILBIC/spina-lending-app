@@ -60,7 +60,9 @@ def real_service(monkeypatch, tmp_path):
     monkeypatch.setenv("SPINA_TREASURY_ENABLED", "true")
     monkeypatch.setenv("SPINA_EMPLOYEE_OWNER_USER_ID", str(actor.user_id))
     monkeypatch.setattr(
-        adapter.combined, "_current_business_date", lambda: date(2097, 8, 2)
+        adapter.combined.collection_posting,
+        "current_collection_business_date",
+        lambda: date(2097, 8, 2),
     )
     service = TreasuryService(
         connect,

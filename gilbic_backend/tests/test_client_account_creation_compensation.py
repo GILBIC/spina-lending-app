@@ -96,7 +96,7 @@ class UnusedMailer:
         raise AssertionError("mail must not run when local account linking fails")
 
 
-def test_unexpected_local_link_failure_compensates_created_auth_user() -> None:
+def test_unknown_local_link_outcome_preserves_created_auth_user() -> None:
     auth = FakeAuthClient()
     accounts = FakeAccounts()
     admin = FakeAuthAdmin()
@@ -119,8 +119,8 @@ def test_unexpected_local_link_failure_compensates_created_auth_user() -> None:
     )
 
     assert admin.created is True
-    assert admin.deleted_user == TARGET_AUTH_ID
+    assert admin.deleted_user is None
     assert response.status_code == 503
-    assert response.json()["detail"] == (
-        "Client account could not be saved. No active SPINA account was created."
-    )
+    assert "unknown" in response.json()["detail"].lower()
+    assert "password reset" in response.json()["detail"].lower()
+    assert "No active SPINA account was created" not in response.text

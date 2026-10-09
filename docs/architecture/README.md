@@ -2,6 +2,8 @@
 
 Use the [29 September implementation state](../release/2026-09-29-implementation-state.md) for audit fixes, configuration and acceptance. The [whole-system map](system-map.md) identifies code owners; the [debugging playbook](debugging-playbook.md) follows an action from interface to authoritative record.
 
+The [October review repairs](../release/review-findings-repairs-20261006.md) record the repair branch's financial-source guards, collection-date admission, account recovery, and session/cache/retry boundaries, with validation evidence and deployment limits.
+
 The original standalone Tkinter desktop and its generated source maps are retired. Windows now refers to the shared company portal installed by `spina_pc/`. Historical wave/progress documents describe the old implementation and remain historical evidence only; they are not current run or deployment instructions.
 
 ## Source and evidence

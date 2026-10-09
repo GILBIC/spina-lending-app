@@ -37,6 +37,8 @@ from spina_mobile_collections.service import (
     SubmissionHeaders,
 )
 
+from gilbic_backend import collection_posting
+
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL,
@@ -266,11 +268,18 @@ def _headers(case: Case, command: CollectionCommand) -> SubmissionHeaders:
 
 
 def _submit(case: Case, command: CollectionCommand):
-    return _service().submit(
-        actor=case.actor,
-        headers=_headers(case, command),
-        command=command,
-    )
+    # These synthetic cases explicitly occur on their receipt's business day.
+    with pytest.MonkeyPatch.context() as test_clock:
+        test_clock.setattr(
+            collection_posting,
+            "current_collection_business_date",
+            lambda: command.collection_date,
+        )
+        return _service().submit(
+            actor=case.actor,
+            headers=_headers(case, command),
+            command=command,
+        )
 
 
 def test_mobile_payment_uses_fixed_interest_first_allocator_and_exact_receipt_balance() -> (

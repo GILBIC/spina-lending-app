@@ -175,17 +175,28 @@ def create_client_account_router() -> APIRouter:
                 pass
             raise _repository_exception(exc) from exc
         except Exception as exc:
+            # Transaction exit can fail after COMMIT succeeded. Never delete the
+            # identity unless the repository reported a definite domain rollback.
             try:
-                auth_admin.delete_user(auth_user_id=auth_user_id)
-            except SupabaseAuthError:
-                pass
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "Client account could not be saved. "
-                    "No active SPINA account was created."
-                ),
-            ) from exc
+                record = repository.find_created_client_account(
+                    client_id=request.client_id,
+                    auth_user_id=auth_user_id,
+                    username=username,
+                    email=request.email,
+                )
+            except Exception:  # noqa: BLE001 - Readback failure keeps the outcome unknown.
+                record = None
+            if record is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Client account creation outcome is unknown. "
+                        "Check the existing Client accounts and use password reset "
+                        "if this borrower is already linked. Do not create another "
+                        "authentication identity; ask Management to reconcile the "
+                        "existing identity if no linked account is visible."
+                    ),
+                ) from exc
 
         try:
             delivery = mailer.send_client_credentials(

@@ -52,16 +52,20 @@ from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
     CollectionEntryType,
+    CollectionStatus,
     PastDueFollowupInput,
     PastDueReasonCode,
 )
+from spina_mobile_collections.postgres import PostgresCollectionExecutor
 from spina_mobile_collections.service import (
     CONTRACT_VERSION,
     CollectionConflict,
     CollectionRejected,
+    CollectionSubmissionService,
+    SubmissionHeaders,
 )
 
-from gilbic_backend import combined_collection_api
+from gilbic_backend import collection_posting
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -73,8 +77,8 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(autouse=True)
 def _fixed_business_date(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        combined_collection_api,
-        "_current_business_date",
+        collection_posting,
+        "current_collection_business_date",
         lambda: date(2097, 8, 2),
     )
 
@@ -110,6 +114,110 @@ class CombinedCase:
 def _connect() -> psycopg.Connection:
     assert DATABASE_URL is not None
     return psycopg.connect(DATABASE_URL)
+
+
+@pytest.mark.parametrize("loan_kind", ["regular", "seven_by_seven"])
+def test_new_single_collection_future_date_cannot_write_official_state(loan_kind):
+    case = _setup_combined_case()
+    loan_id = case.regular_loan_id if loan_kind == "regular" else case.seven_loan_id
+    value = CollectionCommand(
+        idempotency_key=uuid4(),
+        route_entry_id=str(loan_id),
+        client_id=str(case.client_id),
+        loan_id=str(loan_id),
+        collection_date=date(2099, 1, 1),
+        entry_type=CollectionEntryType.PAYMENT,
+        amount=Decimal("50.00"),
+        recorded_at=datetime(2099, 1, 1, tzinfo=UTC),
+        device_id=case.installation_id,
+        device_sequence=1,
+        route_revision=f"loan:{loan_id}:v0",
+    )
+    service = CollectionSubmissionService(
+        PostgresCollectionExecutor(
+            connection_factory=_connect,
+            posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge(),
+        )
+    )
+    with _connect() as conn:
+        before = conn.execute(
+            "select remaining_balance,last_payment_date,state_version from lending.loan_collection_state where loan_id=%s",
+            (loan_id,),
+        ).fetchone()
+    result = service.submit(
+        actor=case.actor,
+        command=value,
+        headers=SubmissionHeaders(
+            idempotency_key=value.idempotency_key,
+            client_transaction_id=value.idempotency_key,
+            device_id=case.installation_id,
+            contract_version=CONTRACT_VERSION,
+        ),
+    )
+    assert result.status is CollectionStatus.REJECTED
+    assert result.code == "collection_date_in_future"
+    with _connect() as conn:
+        assert (
+            conn.execute(
+                "select remaining_balance,last_payment_date,state_version from lending.loan_collection_state where loan_id=%s",
+                (loan_id,),
+            ).fetchone()
+            == before
+        )
+        assert (
+            conn.execute(
+                "select count(*) from lending.collection_transactions where loan_id=%s",
+                (loan_id,),
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            conn.execute(
+                "select count(*) from mobile.gilbic_collection_idempotency where idempotency_key=%s",
+                (value.idempotency_key,),
+            ).fetchone()[0]
+            == 0
+        )
+
+
+def test_single_committed_receipt_replays_even_when_server_date_moves_back(monkeypatch):
+    case = _setup_combined_case()
+    value = CollectionCommand(
+        idempotency_key=uuid4(),
+        route_entry_id=str(case.regular_loan_id),
+        client_id=str(case.client_id),
+        loan_id=str(case.regular_loan_id),
+        collection_date=date(2097, 8, 2),
+        entry_type=CollectionEntryType.PAYMENT,
+        amount=Decimal("50.00"),
+        recorded_at=datetime(2097, 8, 2, tzinfo=UTC),
+        device_id=case.installation_id,
+        device_sequence=1,
+        route_revision=f"loan:{case.regular_loan_id}:v0",
+    )
+    service = CollectionSubmissionService(
+        PostgresCollectionExecutor(
+            connection_factory=_connect,
+            posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge(),
+        )
+    )
+    headers = SubmissionHeaders(
+        idempotency_key=value.idempotency_key,
+        client_transaction_id=value.idempotency_key,
+        device_id=case.installation_id,
+        contract_version=CONTRACT_VERSION,
+    )
+    first = service.submit(actor=case.actor, headers=headers, command=value)
+    assert first.status is CollectionStatus.ACCEPTED
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: date(2097, 8, 1)
+    )
+    replay = service.submit(actor=case.actor, headers=headers, command=value)
+    assert replay.status is CollectionStatus.DUPLICATE
+    assert replay.posted.server_transaction_id == first.posted.server_transaction_id
+    assert replay.posted.receipt_number == first.posted.receipt_number
+    assert replay.posted.official_balance == first.posted.official_balance
+    assert replay.posted.accepted_at == first.posted.accepted_at
 
 
 def _setup_combined_case(

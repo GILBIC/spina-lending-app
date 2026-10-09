@@ -14,13 +14,10 @@ abstract interface class PaymentSubmissionRepository {
   );
 }
 
-class SpinaPaymentSubmissionRepository
-    implements PaymentSubmissionRepository {
-  SpinaPaymentSubmissionRepository({
-    http.Client? client,
-    Uri? submissionUri,
-  })  : _client = client ?? http.Client(),
-        _submissionUri = submissionUri ?? ApiConfig.paymentSubmissionEndpoint;
+class SpinaPaymentSubmissionRepository implements PaymentSubmissionRepository {
+  SpinaPaymentSubmissionRepository({http.Client? client, Uri? submissionUri})
+    : _client = client ?? http.Client(),
+      _submissionUri = submissionUri ?? ApiConfig.paymentSubmissionEndpoint;
 
   final http.Client _client;
   final Uri _submissionUri;
@@ -32,10 +29,7 @@ class SpinaPaymentSubmissionRepository
   ) async {
     final validationError = draft.validate();
     if (validationError != null) {
-      throw SpinaApiException(
-        validationError,
-        code: 'invalid_payment_draft',
-      );
+      throw SpinaApiException(validationError, code: 'invalid_payment_draft');
     }
 
     late final http.Response response;
@@ -63,14 +57,13 @@ class SpinaPaymentSubmissionRepository
 
     final payload = _decodeResponse(response);
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      final data = unwrapSpinaData(
-        payload,
-        statusCode: response.statusCode,
-      );
+      // A contradictory 2xx envelope is also uncertain, never a final rejection.
+      final data = unwrapSpinaData(payload);
       return PaymentSubmissionResult.fromPayload(
         data,
         idempotencyKey: draft.idempotencyKey,
         fallbackDisposition: PaymentSubmissionDisposition.accepted,
+        entryType: draft.entryType,
       );
     }
 
@@ -79,6 +72,7 @@ class SpinaPaymentSubmissionRepository
         payload.containsKey('data') ? payload['data'] : payload,
         idempotencyKey: draft.idempotencyKey,
         fallbackDisposition: PaymentSubmissionDisposition.conflict,
+        entryType: draft.entryType,
       );
     }
 
@@ -110,10 +104,7 @@ class SpinaPaymentSubmissionRepository
     throw SpinaApiException(
       apiErrorMessage(payload, statusCode: response.statusCode),
       statusCode: response.statusCode,
-      code: firstNonEmptyString(<Object?>[
-        error['code'],
-        payload['code'],
-      ]),
+      code: firstNonEmptyString(<Object?>[error['code'], payload['code']]),
     );
   }
 
@@ -123,7 +114,9 @@ class SpinaPaymentSubmissionRepository
     } on Object {
       throw SpinaApiException(
         'The SPINA server returned unreadable collection data.',
-        statusCode: response.statusCode,
+        statusCode: response.statusCode >= 200 && response.statusCode < 300
+            ? null
+            : response.statusCode,
         code: 'invalid_server_response',
       );
     }
@@ -139,7 +132,10 @@ String? _validationDetailMessage(Object? detail) {
   }
 
   final first = stringMap(detail.first);
-  final message = firstNonEmptyString(<Object?>[first['msg'], first['message']]);
+  final message = firstNonEmptyString(<Object?>[
+    first['msg'],
+    first['message'],
+  ]);
   if (message == null) {
     return null;
   }

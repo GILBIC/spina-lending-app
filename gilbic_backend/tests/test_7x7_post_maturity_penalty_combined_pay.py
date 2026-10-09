@@ -10,9 +10,6 @@ import psycopg
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from psycopg.types.json import Jsonb
-
-from gilbic_backend import combined_collection_api
 from gilbic_backend.collection_api import collection_actor_dependency
 from gilbic_backend.combined_collection_api import create_combined_collection_router
 from gilbic_backend.contract_schedule_registration_service import (
@@ -27,9 +24,11 @@ from gilbic_backend.seven_by_seven_penalty_coordinator import (
 from gilbic_backend.seven_by_seven_signed_schedule import (
     generate_signed_seven_by_seven_schedule,
 )
+from psycopg.types.json import Jsonb
 from spina_mobile_collections.contracts import ActorContext
 from spina_mobile_collections.service import CONTRACT_VERSION
 
+from gilbic_backend import combined_collection_api
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -377,8 +376,8 @@ def test_combined_preview_counts_projected_penalty_inside_7x7_before_regular(
     case = _setup_case()
     collection_date = _maturity(case) + timedelta(days=1)
     monkeypatch.setattr(
-        combined_collection_api,
-        "_current_business_date",
+        combined_collection_api.collection_posting,
+        "current_collection_business_date",
         lambda: collection_date,
     )
     contractual = _contractual_collectible(case, collection_date)
@@ -412,8 +411,8 @@ def test_combined_exact_post_maturity_cash_freezes_and_pays_penalty_before_regul
     case = _setup_case()
     collection_date = _maturity(case) + timedelta(days=1)
     monkeypatch.setattr(
-        combined_collection_api,
-        "_current_business_date",
+        combined_collection_api.collection_posting,
+        "current_collection_business_date",
         lambda: collection_date,
     )
     contractual = _contractual_collectible(case, collection_date)

@@ -203,14 +203,14 @@ void main() {
   test('parses duplicate server receipts as a final success', () {
     final result = PaymentSubmissionResult.fromPayload(
       <String, Object?>{
+        'status': 'duplicate',
+        'client_transaction_id': 'transaction-1',
         'duplicate': true,
         'message': 'Previously accepted',
-        'transaction': <String, Object?>{
-          'transaction_id': 'server-55',
-          'receipt_number': 'OR-000055',
-          'official_balance': 4600,
-          'accepted_at': '2026-07-31T05:20:00Z',
-        },
+        'transaction_id': 'server-55',
+        'receipt_number': 'OR-000055',
+        'official_balance': 4600,
+        'accepted_at': '2026-07-31T05:20:00Z',
       },
       idempotencyKey: 'transaction-1',
       fallbackDisposition: PaymentSubmissionDisposition.accepted,

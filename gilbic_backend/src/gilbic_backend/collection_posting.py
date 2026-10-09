@@ -26,6 +26,23 @@ from .receipt_application import (
 
 MONEY = Decimal("0.01")
 DIRECT_BALANCE_MODE = "direct_remaining_balance"
+PHILIPPINES_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Manila")
+
+
+def current_collection_business_date() -> date:
+    """Use the server clock for the shared single/combined collection date rule."""
+    return datetime.now(PHILIPPINES_TIMEZONE).date()
+
+
+def validate_collection_business_date(collection_date: date) -> None:
+    # Called only for a new posting, after the executor checks committed replay.
+    # Historical dates still pass the existing route/chronological safeguards.
+    if collection_date > current_collection_business_date():
+        raise CollectionRejected(
+            "The collection date is after the current Philippine business date. "
+            "Refresh the route and review the entry.",
+            code="collection_date_in_future",
+        )
 
 
 def collection_state_snapshot(loan: dict[str, Any]) -> dict[str, object]:
@@ -67,6 +84,7 @@ class PostgresCollectionPostingBridge:
         actor: ActorContext,
         command: CollectionCommand,
     ) -> PostedCollection:
+        validate_collection_business_date(command.collection_date)
         collector_user_id = self._uuid(actor.account_id, "authenticated collector")
         registered_device_id = self._uuid(
             actor.storage_device_id,

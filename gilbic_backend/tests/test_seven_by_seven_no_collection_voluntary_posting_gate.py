@@ -6,7 +6,6 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-
 from gilbic_backend.seven_by_seven_multi_receipt_posting import (
     MultiReceiptSevenBySevenCollectionPostingBridge,
 )
@@ -21,6 +20,17 @@ from spina_mobile_collections.contracts import (
     PostedCollection,
 )
 from spina_mobile_collections.service import CollectionRejected
+
+from gilbic_backend import collection_posting
+
+
+@pytest.fixture(autouse=True)
+def _fixed_collection_clock(monkeypatch):
+    monkeypatch.setattr(
+        collection_posting,
+        "current_collection_business_date",
+        lambda: date(2097, 8, 10),
+    )
 
 
 def _actor() -> ActorContext:

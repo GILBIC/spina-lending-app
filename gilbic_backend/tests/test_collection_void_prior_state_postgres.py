@@ -28,9 +28,18 @@ from test_combined_collection_renewal_workflow_postgres import (
     _setup_combined_case,
 )
 
+from gilbic_backend import collection_posting
+
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="Disposable PostgreSQL required"
 )
+
+
+@pytest.fixture(autouse=True)
+def _fixed_collection_clock(monkeypatch):
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: DAY
+    )
 
 
 def _void(case, receipt, caller, version=1, business_date=DAY):
@@ -253,6 +262,9 @@ def test_previous_correction_that_cleared_note_stays_cleared(monkeypatch, caller
         expected_route_revision=f"loan:{case.regular_loan_id}:v1",
     )
     next_day = DAY + timedelta(days=1)
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: next_day
+    )
     with _connect() as conn:
         result = ConcurrentReceiptSafeCollectionPostingBridge().post_collection(
             conn,

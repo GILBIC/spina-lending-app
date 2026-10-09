@@ -17,7 +17,11 @@ from spina_mobile_collections.contracts import (
 )
 from spina_mobile_collections.service import CollectionConflict, CollectionRejected
 
-from .collection_posting import DIRECT_BALANCE_MODE, collection_state_snapshot
+from .collection_posting import (
+    DIRECT_BALANCE_MODE,
+    collection_state_snapshot,
+    validate_collection_business_date,
+)
 from .per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
 )
@@ -80,6 +84,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
         actor: ActorContext,
         command: CollectionCommand,
     ) -> PostedCollection:
+        validate_collection_business_date(command.collection_date)
         if not self._requires_seven_by_seven_path(connection, command=command):
             return super().post_collection(connection, actor, command)
         return self._post_seven_by_seven_collection(connection, actor, command)

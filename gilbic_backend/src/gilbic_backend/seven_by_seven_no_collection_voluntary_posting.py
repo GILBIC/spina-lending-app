@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
@@ -18,7 +17,7 @@ from spina_mobile_collections.contracts import (
 )
 from spina_mobile_collections.service import CollectionConflict, CollectionRejected
 
-from .collection_posting import DIRECT_BALANCE_MODE
+from .collection_posting import DIRECT_BALANCE_MODE, validate_collection_business_date
 from .seven_by_seven_advance_activation import (
     SevenBySevenAdvanceActivationError,
     replay_verified_seven_by_seven_financial_state,
@@ -45,7 +44,10 @@ from .seven_by_seven_no_collection_voluntary_financial import (
     SevenBySevenNoCollectionVoluntaryFinancialError,
     project_no_collection_voluntary_financial_state,
 )
-from .seven_by_seven_operational_allocator import SEVEN_BY_SEVEN_OPERATIONAL_POLICY, ZERO
+from .seven_by_seven_operational_allocator import (
+    SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
+    ZERO,
+)
 from .seven_by_seven_schedule_allocation import money
 
 
@@ -77,6 +79,7 @@ class NoCollectionVoluntarySevenBySevenCollectionPostingBridge(
         actor: ActorContext,
         command: CollectionCommand,
     ) -> PostedCollection:
+        validate_collection_business_date(command.collection_date)
         if (
             command.payment_allocation_intent
             is not PaymentAllocationIntent.NO_COLLECTION_VOLUNTARY

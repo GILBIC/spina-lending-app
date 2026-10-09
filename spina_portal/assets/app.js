@@ -5,6 +5,7 @@ import { SessionStore } from './session.js';
 import { SessionRefreshController } from './session-refresh.js';
 import { ScreenSharingController } from './screen-sharing.js';
 import { clearCashDisbursementRecovery, syncCashDisbursementRecovery } from './cash-disbursement.js';
+import { clearEmployeeOperationsRecovery, syncEmployeeOperationsRecovery } from './employee-operations.js';
 import {
   bindNavigation,
   escapeHtml,
@@ -74,6 +75,7 @@ const refreshController = new SessionRefreshController({
   api, sessionStore,
   onRefreshed: async (session) => {
     syncCashDisbursementRecovery(api, session);
+    syncEmployeeOperationsRecovery(api, session);
     if (!currentContext) return;
     if (currentContext.session.user.id !== session.user?.id) {
       sessionStore.clear();showAuthentication();return;
@@ -122,6 +124,7 @@ function clearWorkspace() {
 
 function showAuthentication() {
   clearCashDisbursementRecovery(api);
+  clearEmployeeOperationsRecovery(api);
   refreshController.stop();
   clearWorkspace();
   authenticatedApp.hidden = true;
@@ -194,6 +197,7 @@ async function refreshCurrentWorkspace() {
 
 async function showAuthenticated(session, requestedRole) {
   syncCashDisbursementRecovery(api, session);
+  syncEmployeeOperationsRecovery(api, session);
   const roles = sessionWorkspaceRoles(session);
   const hasManagementWorkspace = roles.includes('management');
   const role = hasManagementWorkspace
@@ -276,6 +280,11 @@ workspaceChoice?.addEventListener('change', () => {
   const session = currentContext?.session;
   if (!session || sessionWorkspaceRoles(session).includes('management')) return;
   if (sessionWorkspaceRoles(session).includes(workspaceChoice.value)) {
+    if (currentWorkspaceHandle?.isWritePending?.()) {
+      workspaceChoice.value = currentContext.role;
+      showToast('Finish or reconcile the current action before changing workspace.', 'error');
+      return;
+    }
     if (accountMenu) accountMenu.open = false;
     workspaceNavigation.reset();
     void showAuthenticated(session, workspaceChoice.value);

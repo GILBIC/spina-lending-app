@@ -55,7 +55,7 @@ function json(payload) {
   });
 }
 
-async function harness(t, role, roles = [role]) {
+async function harness(t, role, roles = [role], extra = {}) {
   const elements = new Map();
   for (const id of [
     'auth-view', 'authenticated-app', 'role-content', 'role-navigation',
@@ -84,7 +84,9 @@ async function harness(t, role, roles = [role]) {
     navigator: { onLine: true }, sessionStorage, localStorage,
     addEventListener: events.addEventListener.bind(events),
     dispatchEvent: events.dispatchEvent.bind(events),
-    fetch: async (url) => {
+    fetch: async (url,options) => {
+      const custom=extra.request?.(url,options,session);
+      if(custom)return custom;
       if (url.endsWith('/auth/me')) return json({ user: session.user });
       if (url.endsWith('/auth/logout')) return logoutResponse.promise;
       if(role==='employee'&&url.endsWith('/employee-operations/workspace'))return json(workspace());
@@ -116,8 +118,19 @@ async function harness(t, role, roles = [role]) {
   }
   for (let count = 0; count < 30 && accounts.length === 0; count += 1) await tick();
   assert.equal(accounts.length, 1, 'boot must reach the real office workspace');
-  return { elements, events, accounts, logoutResponse };
+  return { elements, events, accounts, logoutResponse, session };
 }
+
+test('workspace chooser retains Employee recovery and refuses a pending-command workspace switch',async t=>{
+ let posts=0;const h=await harness(t,'employee',['employee','collector'],{request(url,options){
+  if(url.endsWith('/employee-operations/actions')){posts++;return Promise.reject(Error('Synthetic uncertain transport'));}
+  if(url.includes('/employee-operations/workspace'))return Promise.resolve(json(workspace()));
+ }});
+ const root=h.elements.get('role-content');root.querySelector('[data-employee-attendance="clock_in"]').dispatchEvent(new Event('click'));
+ await tick();await tick();assert.equal(posts,1);assert.ok(root.querySelector('[data-employee-retry]'));
+ const picker=h.elements.get('workspace-choice');picker.value='collector';picker.emit('change');await tick();
+ assert.equal(h.elements.get('workspace-title').textContent,'Employee workspace');assert.equal(picker.value,'employee');assert.ok(root.querySelector('[data-employee-retry]'));assert.equal(posts,1);
+});
 
 test('combined employee can switch workspace while old private response remains pending', async (t) => {
   const h = await harness(t, 'employee', ['employee', 'collector', 'employee_manager']);
