@@ -8,7 +8,51 @@ import 'package:gilbic_mobile/src/core/management/management_loan_repository.dar
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 
 void main() {
-  testWidgets('Management sees read-only portfolio and can search', (tester) async {
+  test('portfolio accepts unknown paid percent and retains actual cash', () {
+    final loan = ManagementLoanItem.fromPayload(_loanPayload(null));
+    expect(loan.paidPercent, isNull);
+    expect(loan.paidAmount, 100.00);
+  });
+  for (final percent in [null, 1.7]) {
+    testWidgets('portfolio renders paid cash with percentage $percent', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementLoanPortfolioPage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: _PayloadRepository(percent),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('management-loan-loan-1')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('TEST CLIENT REGULAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
+      expect(find.text('₱100.00'), findsOneWidget);
+      if (percent == null) {
+        expect(find.text('Paid percentage unavailable'), findsOneWidget);
+        expect(find.text('0.0% paid'), findsNothing);
+        expect(find.byType(LinearProgressIndicator), findsNothing);
+      } else {
+        expect(find.text('1.7% paid'), findsOneWidget);
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      }
+    });
+  }
+
+  testWidgets('Management sees read-only portfolio and can search', (
+    tester,
+  ) async {
     final repository = _FakeManagementLoanRepository();
 
     await tester.pumpWidget(
@@ -135,6 +179,50 @@ class _FakeManagementLoanRepository implements ManagementLoanRepository {
           isOverdue: false,
         ),
       ],
+    );
+  }
+}
+
+Map<String, dynamic> _loanPayload(double? percent) => {
+  'loan_id': 'loan-1',
+  'loan_number': 'TEST-REG-20260802',
+  'client_id': 'client-1',
+  'client_code': 'TEST-REG-001',
+  'client_name': 'TEST CLIENT REGULAR',
+  'client_status': 'active',
+  'loan_type_name': 'Regular',
+  'calculation_mode': 'fixed_daily',
+  'principal': '5000.00',
+  'daily_amount': '50.00',
+  'remaining_balance': '4900.00',
+  'paid_amount': '100.00',
+  'paid_percent': percent,
+  'loan_status': 'active',
+  'pass_count': 0,
+  'payment_count': 2,
+  'state_version': 3,
+};
+
+class _PayloadRepository extends _FakeManagementLoanRepository {
+  _PayloadRepository(this.percent);
+  final double? percent;
+  @override
+  Future<ManagementLoanPortfolio> loadPortfolio(
+    UserSession session, {
+    required String deviceId,
+    required String query,
+    required String status,
+  }) async {
+    final portfolio = await super.loadPortfolio(
+      session,
+      deviceId: deviceId,
+      query: query,
+      status: status,
+    );
+    return ManagementLoanPortfolio(
+      summary: portfolio.summary,
+      notice: portfolio.notice,
+      loans: [ManagementLoanItem.fromPayload(_loanPayload(percent))],
     );
   }
 }

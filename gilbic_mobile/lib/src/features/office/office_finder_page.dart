@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/office/office_operation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
 import 'package:gilbic_mobile/src/features/office/office_application_page.dart';
@@ -11,12 +12,14 @@ class OfficeFinderPage extends StatefulWidget {
     required this.actor,
     required this.repository,
     this.intakeReference,
+    this.createOperation,
     this.clientId,
     super.key,
   });
   final OfficeIdentity actor;
   final OfficeRepository repository;
   final String? intakeReference;
+  final OfficeOperation? createOperation;
   final String? clientId;
   @override
   State<OfficeFinderPage> createState() => _OfficeFinderPageState();
@@ -225,6 +228,7 @@ class _OfficeFinderPageState extends OfficeScreenState<OfficeFinderPage> {
                                 actor: widget.actor,
                                 repository: widget.repository,
                                 reference: item['intake_reference'],
+                                createOperation: widget.createOperation,
                               ),
                             ),
                       primary: true,

@@ -188,7 +188,10 @@ class _ManagementLoanPortfolioPageState
           const SizedBox(height: 18),
           Row(
             children: [
-              Text('Loan records', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Loan records',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const Spacer(),
               Text('${portfolio.loans.length} shown'),
             ],
@@ -224,8 +227,16 @@ class _SummaryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_MetricData>[
-      _MetricData('Active loans', '${summary.activeLoanCount}', Icons.receipt_long),
-      _MetricData('Active clients', '${summary.activeClientCount}', Icons.people),
+      _MetricData(
+        'Active loans',
+        '${summary.activeLoanCount}',
+        Icons.receipt_long,
+      ),
+      _MetricData(
+        'Active clients',
+        '${summary.activeClientCount}',
+        Icons.people,
+      ),
       _MetricData(
         'Outstanding',
         _money(summary.activeRemainingTotal),
@@ -236,7 +247,11 @@ class _SummaryGrid extends StatelessWidget {
         _money(summary.activePrincipalTotal),
         Icons.payments_outlined,
       ),
-      _MetricData('Overdue', '${summary.overdueActiveCount}', Icons.warning_amber),
+      _MetricData(
+        'Overdue',
+        '${summary.overdueActiveCount}',
+        Icons.warning_amber,
+      ),
       _MetricData(
         '7x7 active',
         '${summary.activeSevenBySevenCount}',
@@ -344,7 +359,10 @@ class _ManagementLoanCard extends StatelessWidget {
             emphasized: true,
           ),
           _ValueRow(label: 'Principal', value: _money(loan.principal)),
-          _ValueRow(label: 'Paid toward balance', value: _money(loan.paidAmount)),
+          _ValueRow(
+            label: 'Paid toward balance',
+            value: _money(loan.paidAmount),
+          ),
           _ValueRow(label: 'Daily amount', value: _money(loan.dailyAmount)),
           if (loan.interestRate != null)
             _ValueRow(
@@ -352,14 +370,20 @@ class _ManagementLoanCard extends StatelessWidget {
               value: '${_trimNumber(loan.interestRate!)}%',
             ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: (loan.paidPercent / 100).clamp(0.0, 1.0),
-          ),
-          const SizedBox(height: 5),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('${loan.paidPercent.toStringAsFixed(1)}% paid'),
-          ),
+          if (loan.paidPercent != null) ...[
+            LinearProgressIndicator(
+              value: (loan.paidPercent! / 100).clamp(0.0, 1.0),
+            ),
+            const SizedBox(height: 5),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text('${loan.paidPercent!.toStringAsFixed(1)}% paid'),
+            ),
+          ] else
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text('Paid percentage unavailable'),
+            ),
           const Divider(height: 24),
           _DetailRow(label: 'Area', value: loan.clientArea ?? 'Not assigned'),
           _DetailRow(label: 'Released', value: _date(loan.dateReleased)),

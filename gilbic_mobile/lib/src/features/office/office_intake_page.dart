@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/core/office/office_operation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
@@ -10,17 +11,33 @@ class OfficeIntakePage extends StatefulWidget {
     required this.actor,
     required this.repository,
     this.reference,
+    this.createOperation,
     super.key,
   });
   final OfficeIdentity actor;
   final OfficeRepository repository;
   final String? reference;
+
+  /// The authorized workspace owns create uncertainty across form navigation.
+  final OfficeOperation? createOperation;
   @override
   State<OfficeIntakePage> createState() => _OfficeIntakePageState();
 }
 
 class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
   final fields = OfficeFields();
+  final _ownedCreate = OfficeOperation();
+  OfficeOperation get _create => widget.createOperation ?? _ownedCreate;
+  bool get _canWrite => operation.canWrite && _create.canWrite;
+  void _createChanged() {
+    if (!mounted) return;
+    if (_create.denied) {
+      denyAccess();
+    } else {
+      setState(() {});
+    }
+  }
+
   final form = GlobalKey<FormState>();
   OfficeRecord? record;
   bool privacy = false;
@@ -30,6 +47,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
   @override
   void initState() {
     super.initState();
+    _create.addListener(_createChanged);
     fields.controller('reference', widget.reference);
     if (widget.reference?.isNotEmpty == true) _load();
   }
@@ -46,6 +64,8 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
 
   @override
   void dispose() {
+    _create.removeListener(_createChanged);
+    _ownedCreate.dispose();
     fields.dispose();
     super.dispose();
   }
@@ -73,7 +93,9 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
   }
 
   Future<void> _submit() async {
-    if (!form.currentState!.validate() || !privacy || !accuracy) return;
+    if (!_canWrite || !form.currentState!.validate() || !privacy || !accuracy) {
+      return;
+    }
     final body = <String, dynamic>{
       for (final field in [
         'full_name',
@@ -88,7 +110,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
       'privacy_consent': true,
       'accuracy_declaration': true,
     };
-    final value = await operation.run(
+    final value = await _create.run(
       () => widget.repository.submitIntake(widget.actor, body),
       mutation: true,
     );
@@ -109,9 +131,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
 
   Future<void> _continue({bool applications = false}) async {
     final saved = record;
-    if (saved == null ||
-        saved['status'] != 'eligible_for_cif' ||
-        !operation.canWrite) {
+    if (saved == null || saved['status'] != 'eligible_for_cif' || !_canWrite) {
       return;
     }
     final reference = saved['application_reference'] as String;
@@ -126,6 +146,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
                 actor: widget.actor,
                 repository: widget.repository,
                 intakeReference: reference,
+                createOperation: _create,
                 clientId: selected['client_id'],
               )
             : OfficeCifPage(
@@ -147,6 +168,12 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
         .where((key) => stringMap(requirements[key])['status'] != 'passed')
         .toList();
     return screen('Office intake', [
+      if (_create.busy) const LinearProgressIndicator(),
+      if (_create.error != null) Text(_create.error!),
+      if (_create.busy || _create.blocked)
+        const Text(
+          'This intake attempt has no verified outcome. New intake stays locked for this authorized workspace. You can find and review saved records, but a record lookup cannot verify this original attempt. Do not resubmit the applicant.',
+        ),
       ExpansionTile(
         key: ValueKey(saved?['applicant_id']),
         title: const Text('Find by intake reference'),
@@ -175,12 +202,12 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
         if (saved['status'] == 'eligible_for_cif') ...[
           officeButton(
             'Continue to CIF',
-            operation.canWrite ? _continue : null,
+            _canWrite ? _continue : null,
             primary: true,
           ),
           officeButton(
             'Applications for this client',
-            operation.canWrite ? () => _continue(applications: true) : null,
+            _canWrite ? () => _continue(applications: true) : null,
           ),
         ],
         ExpansionTile(
@@ -207,8 +234,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
             ),
           officeButton(
             'Save document review',
-            operation.canWrite &&
-                    decisions.values.whereType<String>().length == 3
+            _canWrite && decisions.values.whereType<String>().length == 3
                 ? () => _write(
                     () => widget.repository.reviewRequirements(
                       widget.actor,
@@ -226,7 +252,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
           ),
           officeButton(
             'Approve CIF eligibility',
-            operation.canWrite && missing.isEmpty
+            _canWrite && missing.isEmpty
                 ? () => _write(
                     () => widget.repository.approveEligibility(
                       widget.actor,
@@ -361,7 +387,7 @@ class _OfficeIntakePageState extends OfficeScreenState<OfficeIntakePage> {
               ),
               officeButton(
                 'Record office intake',
-                operation.canWrite && privacy && accuracy ? _submit : null,
+                _canWrite && privacy && accuracy ? _submit : null,
                 primary: true,
               ),
             ],

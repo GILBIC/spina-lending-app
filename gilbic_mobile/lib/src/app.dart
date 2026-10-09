@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/office/office_intake_authority.dart';
 import 'package:gilbic_mobile/src/core/mirror/mirror_controller.dart';
 import 'package:gilbic_mobile/src/core/mirror/mirror_repository.dart';
 import 'package:gilbic_mobile/src/features/mirror/mirror_host.dart';
@@ -585,7 +586,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           deviceIdentityProvider: _deviceIdentityProvider,
           child: EmployeeOperationsScope(
             service: _employeeOperations,
-            child: child!,
+            child: OfficeIntakeAuthorityHost(session: _session, child: child!),
           ),
         ),
       ),

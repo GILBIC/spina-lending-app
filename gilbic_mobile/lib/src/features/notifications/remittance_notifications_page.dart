@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/core/treasury/treasury_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -32,7 +34,7 @@ class RemittanceNotificationsPage extends StatefulWidget {
 
 class _RemittanceNotificationsPageState
     extends State<RemittanceNotificationsPage> {
-  late final RemittanceNotificationRepository _repository;
+  late RemittanceNotificationRepository _repository;
   List<RemittanceNotification> _notifications =
       const <RemittanceNotification>[];
   String? _deviceId;
@@ -46,18 +48,78 @@ class _RemittanceNotificationsPageState
     _load();
   }
 
+  int _epoch = 0;
+  int _request = 0;
+  bool _denied = false;
+  bool _active(int epoch) => mounted && !_denied && epoch == _epoch;
+  bool _current(int epoch, int request) =>
+      _active(epoch) && request == _request;
+
+  void _clearPrivate() {
+    _notifications = const [];
+    _deviceId = null;
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  bool _deny(SpinaApiException error, int epoch) {
+    if (!_active(epoch) || !staffAccessRejected(error)) return false;
+    _epoch++;
+    setState(() {
+      _denied = true;
+      _clearPrivate();
+      _loading = false;
+      _errorMessage = '${error.message} Sign in again before continuing.';
+    });
+    _dismissPrivateRoutes();
+    return true;
+  }
+
+  @override
+  void didUpdateWidget(RemittanceNotificationsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final scopeChanged =
+        oldWidget.session.authorizationScopeKey !=
+        widget.session.authorizationScopeKey;
+    if (scopeChanged ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _epoch++;
+      if (scopeChanged) _denied = false;
+      _clearPrivate();
+      _repository =
+          widget.repository ?? SpinaRemittanceNotificationRepository();
+      _dismissPrivateRoutes();
+      if (!_denied) _load();
+    }
+  }
+
   Future<void> _load() async {
+    if (_denied) return;
+    final epoch = _epoch;
+    final request = ++_request;
+    final session = widget.session;
+    final repository = _repository;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final notifications = await _repository.loadNotifications(
-        widget.session,
+      if (!_current(epoch, request)) return;
+      final notifications = await repository.loadNotifications(
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) {
+      if (!_current(epoch, request)) {
         return;
       }
       setState(() {
@@ -65,36 +127,42 @@ class _RemittanceNotificationsPageState
         _notifications = notifications;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (_deny(error, epoch)) return;
+      if (_current(epoch, request)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() {
           _errorMessage = 'Remittance notifications could not be loaded.';
         });
       }
     } finally {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _markRead(RemittanceNotification notification) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     final deviceId = _deviceId;
     if (deviceId == null || notification.readAt != null) {
       return;
     }
     try {
       final updated = await _repository.markRead(
-        widget.session,
+        session,
         deviceId: deviceId,
         notificationId: notification.notificationId,
       );
-      if (mounted) {
+      if (_active(epoch)) {
         _replace(updated);
       }
+    } on SpinaApiException catch (error) {
+      _deny(error, epoch);
     } on Object {
       // Reading is best-effort. Full remittance review still performs fresh
       // server-side recipient and custody checks before any financial action.
@@ -102,10 +170,13 @@ class _RemittanceNotificationsPageState
   }
 
   Future<void> _openReview(RemittanceNotification notification) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => RemittanceHistoryPage(
-          session: widget.session,
+          session: session,
           deviceIdentityProvider: widget.deviceIdentityProvider,
           repository: widget.remittanceRepository,
           surplusRepository: widget.surplusRepository,
@@ -113,7 +184,7 @@ class _RemittanceNotificationsPageState
         ),
       ),
     );
-    if (mounted) {
+    if (_active(epoch)) {
       await _load();
     }
   }
@@ -159,7 +230,7 @@ class _RemittanceNotificationsPageState
         actions: [
           IconButton(
             tooltip: 'Refresh remittance requests',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],

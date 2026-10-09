@@ -24,7 +24,8 @@ class ManagementLoanPortfolio {
       loans: rawLoans
           .map((item) => ManagementLoanItem.fromPayload(stringMap(item)))
           .toList(growable: false),
-      notice: _optionalString(payload['notice']) ??
+      notice:
+          _optionalString(payload['notice']) ??
           'Loan Management is view-only in mobile.',
     );
   }
@@ -56,8 +57,10 @@ class ManagementLoanSummary {
       activePrincipalTotal: _requiredDouble(payload, 'active_principal_total'),
       activeRemainingTotal: _requiredDouble(payload, 'active_remaining_total'),
       overdueActiveCount: _requiredInt(payload, 'overdue_active_count'),
-      activeSevenBySevenCount:
-          _requiredInt(payload, 'active_seven_by_seven_count'),
+      activeSevenBySevenCount: _requiredInt(
+        payload,
+        'active_seven_by_seven_count',
+      ),
       approvedRenewalCount: _requiredInt(payload, 'approved_renewal_count'),
     );
   }
@@ -108,7 +111,7 @@ class ManagementLoanItem {
   final double? interestRate;
   final double remainingBalance;
   final double paidAmount;
-  final double paidPercent;
+  final double? paidPercent;
   final DateTime? dateReleased;
   final DateTime? dueDate;
   final String loanStatus;
@@ -139,7 +142,9 @@ class ManagementLoanItem {
       interestRate: _optionalDouble(payload['interest_rate']),
       remainingBalance: _requiredDouble(payload, 'remaining_balance'),
       paidAmount: _requiredDouble(payload, 'paid_amount'),
-      paidPercent: _requiredDouble(payload, 'paid_percent'),
+      paidPercent: payload['paid_percent'] == null
+          ? null
+          : _requiredDouble(payload, 'paid_percent'),
       dateReleased: _optionalDate(payload['date_released']),
       dueDate: _optionalDate(payload['due_date']),
       loanStatus: _requiredString(payload, 'loan_status'),
@@ -148,8 +153,7 @@ class ManagementLoanItem {
       passCount: _requiredInt(payload, 'pass_count'),
       paymentCount: _requiredInt(payload, 'payment_count'),
       stateVersion: _requiredInt(payload, 'state_version'),
-      renewalRequestStatus:
-          _optionalString(payload['renewal_request_status']),
+      renewalRequestStatus: _optionalString(payload['renewal_request_status']),
       isOverdue: payload['is_overdue'] == true,
     );
   }

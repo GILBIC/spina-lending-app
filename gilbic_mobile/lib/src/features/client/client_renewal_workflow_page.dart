@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -24,7 +26,7 @@ class ClientRenewalWorkflowPage extends StatefulWidget {
 }
 
 class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
-  late final ClientRenewalWorkflowRepository _repository;
+  late ClientRenewalWorkflowRepository _repository;
   List<CollectorRenewalRequest> _requests = const <CollectorRenewalRequest>[];
   String? _deviceId;
   String? _error;
@@ -38,30 +40,91 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     _load();
   }
 
+  int _epoch = 0;
+  int _request = 0;
+  bool _denied = false;
+  bool _active(int epoch) => mounted && !_denied && epoch == _epoch;
+  bool _current(int epoch, int request) =>
+      _active(epoch) && request == _request;
+
+  void _clearPrivate() {
+    _requests = const [];
+    _deviceId = null;
+    _busy.clear();
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  bool _deny(SpinaApiException error, int epoch) {
+    if (!_active(epoch) || !staffAccessRejected(error)) return false;
+    _epoch++;
+    setState(() {
+      _denied = true;
+      _clearPrivate();
+      _loading = false;
+      _error = '${error.message} Sign in again before continuing.';
+    });
+    _dismissPrivateRoutes();
+    return true;
+  }
+
+  @override
+  void didUpdateWidget(ClientRenewalWorkflowPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final scopeChanged =
+        oldWidget.session.authorizationScopeKey !=
+        widget.session.authorizationScopeKey;
+    if (scopeChanged ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _epoch++;
+      if (scopeChanged) _denied = false;
+      _clearPrivate();
+      _repository = widget.repository ?? SpinaClientRenewalWorkflowRepository();
+      _dismissPrivateRoutes();
+      if (!_denied) _load();
+    }
+  }
+
   Future<void> _load() async {
+    if (_denied) return;
+    final epoch = _epoch;
+    final request = ++_request;
+    final session = widget.session;
+    final repository = _repository;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final requests = await _repository.list(
-        widget.session,
+      if (!_current(epoch, request)) return;
+      final requests = await repository.list(
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) return;
+      if (!_current(epoch, request)) return;
       setState(() {
         _deviceId = identity.installationId;
         _requests = requests;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (_deny(error, epoch)) return;
+      if (_current(epoch, request)) setState(() => _error = error.message);
     } on Object {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() => _error = 'Renewal workflow could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (_current(epoch, request)) setState(() => _loading = false);
     }
   }
 
@@ -69,7 +132,12 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     CollectorRenewalRequest request,
     String decision,
   ) async {
-    final label = decision == 'accepted' ? 'Accept & Continue' : 'Decline Renewal';
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
+    final label = decision == 'accepted'
+        ? 'Accept & Continue'
+        : 'Decline Renewal';
     final confirmed = await _confirm(
       title: label,
       message: decision == 'accepted'
@@ -77,11 +145,11 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
           : 'Declining stops this approved renewal workflow. No new loan will be released from this approval.',
       action: label,
     );
-    if (!confirmed) return;
+    if (!confirmed || !_active(epoch)) return;
     await _run(
       request.requestId,
       () => _repository.decide(
-        widget.session,
+        session,
         deviceId: _deviceId!,
         requestId: request.requestId,
         decision: decision,
@@ -96,6 +164,9 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     CollectorRenewalRequest request,
     CollectorRenewalSigner signer,
   ) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     if (!signer.governmentIdVerified || !signer.selfieVerified) {
       _message(
         'Government ID and selfie/photo identity verification must be completed before signing.',
@@ -108,11 +179,11 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
           'You are signing this renewal from your own GILBIC account as ${_roleLabel(signer.partyRole)}. Never sign for another person.',
       action: 'Sign',
     );
-    if (!confirmed) return;
+    if (!confirmed || !_active(epoch)) return;
     await _run(
       request.requestId,
       () => _repository.sign(
-        widget.session,
+        session,
         deviceId: _deviceId!,
         requestId: request.requestId,
         signerId: signer.signerId,
@@ -122,17 +193,20 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
   }
 
   Future<void> _confirmCash(CollectorRenewalRequest request) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     final confirmed = await _confirm(
       title: 'Confirm Cash Received',
       message:
           'Confirm only if you personally received the locked ${_money(request.netReleaseAmount ?? 0)} from the Collector. The Collector cannot confirm this for you.',
       action: 'I Received the Cash',
     );
-    if (!confirmed) return;
+    if (!confirmed || !_active(epoch)) return;
     await _run(
       request.requestId,
       () => _repository.confirmCashReceived(
-        widget.session,
+        session,
         deviceId: _deviceId!,
         requestId: request.requestId,
       ),
@@ -145,20 +219,25 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     Future<Object> Function() action,
     String successMessage,
   ) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
     final deviceId = _deviceId;
     if (deviceId == null || _busy.contains(requestId)) return;
     setState(() => _busy.add(requestId));
     try {
       await action();
-      if (!mounted) return;
+      if (!_active(epoch)) return;
       _message(successMessage);
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      if (_deny(error, epoch)) return;
+      if (_active(epoch)) _message(error.message);
     } on Object {
-      if (mounted) _message('The renewal action could not be completed.');
+      if (_active(epoch)) {
+        _message('The renewal action could not be completed.');
+      }
     } finally {
-      if (mounted) setState(() => _busy.remove(requestId));
+      if (_active(epoch)) setState(() => _busy.remove(requestId));
     }
   }
 
@@ -167,7 +246,10 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
     required String message,
     required String action,
   }) async {
-    return await showDialog<bool>(
+    final epoch = _epoch;
+    if (!_active(epoch)) return false;
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: Text(title),
@@ -185,6 +267,7 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
           ),
         ) ??
         false;
+    return _active(epoch) && confirmed;
   }
 
   void _message(String value) {
@@ -199,7 +282,7 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
         actions: [
           IconButton(
             tooltip: 'Refresh renewal progress',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -226,7 +309,7 @@ class _ClientRenewalWorkflowPageState extends State<ClientRenewalWorkflowPage> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (_error != null && _requests.isEmpty)
-              _MessageCard(message: _error!, onRetry: _load)
+              _MessageCard(message: _error!, onRetry: _denied ? null : _load)
             else if (_requests.isEmpty)
               const _MessageCard(
                 message: 'You do not have an active renewal workflow.',
@@ -282,10 +365,9 @@ class _ClientRenewalCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '${request.isSevenBySeven ? '7x7' : request.loanTypeName} Renewal',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w900),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 _StatusPill(request.displayStatus),
@@ -304,14 +386,17 @@ class _ClientRenewalCard extends StatelessWidget {
               if (request.amountLockedAt == null)
                 const Text('Final net cash is not locked yet.')
               else ...[
-                Text('Old-loan settlement ${_money(request.renewalOffsetAmount ?? 0)}'),
+                Text(
+                  'Old-loan settlement ${_money(request.renewalOffsetAmount ?? 0)}',
+                ),
                 Text(
                   'Locked net cash ${_money(request.netReleaseAmount ?? 0)}',
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ],
             ],
-            if (request.status == 'approved' && request.clientDecision == null) ...[
+            if (request.status == 'approved' &&
+                request.clientDecision == null) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -345,13 +430,16 @@ class _ClientRenewalCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 )
               else if (borrowerSigner == null)
-                const Text('Waiting for Management to register your borrower signer requirement.')
+                const Text(
+                  'Waiting for Management to register your borrower signer requirement.',
+                )
               else ...[
                 _SignerState(signer: borrowerSigner),
                 if (!borrowerSigner.signed)
                   FilledButton.icon(
                     key: Key('client-renewal-sign-${request.requestId}'),
-                    onPressed: busy ||
+                    onPressed:
+                        busy ||
                             !borrowerSigner.governmentIdVerified ||
                             !borrowerSigner.selfieVerified
                         ? null
@@ -383,7 +471,9 @@ class _ClientRenewalCard extends StatelessWidget {
                 'Cash received: Confirmed by you',
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
-              Text('Handover proof: ${_proofLabel(request.handoverProofStatus)}'),
+              Text(
+                'Handover proof: ${_proofLabel(request.handoverProofStatus)}',
+              ),
               Text('Activation: ${_activationLabel(request.activationStatus)}'),
               if (request.activationStatus != 'active')
                 const Text(
@@ -439,9 +529,9 @@ class _StatusPill extends StatelessWidget {
         text,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SpinaTheme.brandPinkDark,
-              fontWeight: FontWeight.w900,
-            ),
+          color: SpinaTheme.brandPinkDark,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -480,22 +570,22 @@ CollectorRenewalSigner? _borrowerSigner(CollectorRenewalRequest request) {
 String _money(num value) => '₱${value.toStringAsFixed(2)}';
 
 String _roleLabel(String value) => switch (value) {
-      'guarantor' => 'Guarantor',
-      'surety' => 'Surety',
-      'solidary_co_maker' => 'Solidary co-maker',
-      _ => 'Borrower',
-    };
+  'guarantor' => 'Guarantor',
+  'surety' => 'Surety',
+  'solidary_co_maker' => 'Solidary co-maker',
+  _ => 'Borrower',
+};
 
 String _proofLabel(String value) => switch (value) {
-      'approved' => 'Approved',
-      'under_review' => 'Under Management Review',
-      'correction_required' => 'Proof Correction Required',
-      'flagged' => 'Flagged for Review',
-      _ => 'Not Submitted',
-    };
+  'approved' => 'Approved',
+  'under_review' => 'Under Management Review',
+  'correction_required' => 'Proof Correction Required',
+  'flagged' => 'Flagged for Review',
+  _ => 'Not Submitted',
+};
 
 String _activationLabel(String value) => switch (value) {
-      'active' => 'Active',
-      'released_pending_management' => 'Released — Pending Management Verification',
-      _ => 'Not Activated',
-    };
+  'active' => 'Active',
+  'released_pending_management' => 'Released — Pending Management Verification',
+  _ => 'Not Activated',
+};

@@ -645,7 +645,7 @@ void main() {
     );
   });
   testWidgets(
-    'uncertain intake is not resubmitted and preserves an explicit reconciliation path',
+    'uncertain intake is not resubmitted and preserves a safe record review path',
     (tester) async {
       var writes = 0;
       final repository = OfficeRepository(
@@ -704,9 +704,26 @@ void main() {
       await tester.drag(find.byType(Scrollable).first, const Offset(0, 10000));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('outcome may already be recorded'),
+        find.textContaining('This intake attempt has no verified outcome.'),
         findsOneWidget,
       );
+      expect(
+        find.textContaining(
+          'a record lookup cannot verify this original attempt',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Find by intake reference'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.widgetWithText(OutlinedButton, 'Open office intake'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(writes, 1);
     },
   );
   testWidgets('new application saves exact money without local approval', (
