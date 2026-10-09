@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:http/http.dart' as http;
 
 abstract interface class OpeningBalanceWorkbookRepository {
@@ -23,8 +24,8 @@ abstract interface class OpeningBalanceWorkbookRepository {
     required String deviceId,
     required String workbookId,
     required String accountCode,
-    required double? debit,
-    required double? credit,
+    required String? debit,
+    required String? credit,
     required String verificationStatus,
     required String? evidenceNote,
   });
@@ -48,7 +49,7 @@ abstract interface class OpeningBalanceWorkbookRepository {
 class SpinaOpeningBalanceWorkbookRepository
     implements OpeningBalanceWorkbookRepository {
   SpinaOpeningBalanceWorkbookRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -95,8 +96,8 @@ class SpinaOpeningBalanceWorkbookRepository
     required String deviceId,
     required String workbookId,
     required String accountCode,
-    required double? debit,
-    required double? credit,
+    required String? debit,
+    required String? credit,
     required String verificationStatus,
     required String? evidenceNote,
   }) async {
@@ -109,8 +110,8 @@ class SpinaOpeningBalanceWorkbookRepository
           endpoint,
           headers: _headers(session, deviceId, jsonBody: true),
           body: jsonEncode(<String, Object?>{
-            'debit': debit,
-            'credit': credit,
+            'debit': debit == null ? null : requestMoney(debit),
+            'credit': credit == null ? null : requestMoney(credit),
             'verification_status': verificationStatus,
             'evidence_note': evidenceNote,
           }),

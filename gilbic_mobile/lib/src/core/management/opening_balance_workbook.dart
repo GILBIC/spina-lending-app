@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 
 class OpeningBalanceWorkbookData {
   const OpeningBalanceWorkbookData({
@@ -28,7 +29,9 @@ class OpeningBalanceWorkbookData {
         stringMap(payload['summary']),
       ),
       lines: rawLines
-          .map((item) => OpeningBalanceWorkbookLine.fromPayload(stringMap(item)))
+          .map(
+            (item) => OpeningBalanceWorkbookLine.fromPayload(stringMap(item)),
+          )
           .toList(growable: false),
       measurement: AccountingMeasurementData.fromPayload(
         stringMap(payload['measurement']),
@@ -141,8 +144,8 @@ class OpeningBalanceWorkbookLine {
   final String sourceBasis;
   final String requirementType;
   final String guidance;
-  final double? proposedDebit;
-  final double? proposedCredit;
+  final String? proposedDebit;
+  final String? proposedCredit;
   final String verificationStatus;
   final String? evidenceNote;
   final double? measurementReferenceAmount;
@@ -159,16 +162,23 @@ class OpeningBalanceWorkbookLine {
       accountName: _requiredString(payload, 'account_name'),
       accountType: _requiredString(payload, 'account_type'),
       normalBalance: _requiredString(payload, 'normal_balance'),
-      sourceReferenceAmount: _optionalDouble(payload['source_reference_amount']),
+      sourceReferenceAmount: _optionalDouble(
+        payload['source_reference_amount'],
+      ),
       sourceBasis: _requiredString(payload, 'source_basis'),
       requirementType: _requiredString(payload, 'requirement_type'),
       guidance: _requiredString(payload, 'guidance'),
-      proposedDebit: _optionalDouble(payload['proposed_debit']),
-      proposedCredit: _optionalDouble(payload['proposed_credit']),
+      proposedDebit: payload['proposed_debit'] == null
+          ? null
+          : requestMoney(payload['proposed_debit']),
+      proposedCredit: payload['proposed_credit'] == null
+          ? null
+          : requestMoney(payload['proposed_credit']),
       verificationStatus: _requiredString(payload, 'verification_status'),
       evidenceNote: _optionalString(payload['evidence_note']),
-      measurementReferenceAmount:
-          _optionalDouble(payload['measurement_reference_amount']),
+      measurementReferenceAmount: _optionalDouble(
+        payload['measurement_reference_amount'],
+      ),
       measurementStatus: _optionalString(payload['measurement_status']),
       measurementNote: _optionalString(payload['measurement_note']),
     );
@@ -247,17 +257,25 @@ class AccountingMeasurementSummary {
       measuredLoanCount: _requiredInt(payload, 'measured_loan_count'),
       reviewRequiredCount: _requiredInt(payload, 'review_required_count'),
       actualCashReceived: _requiredDouble(payload, 'actual_cash_received'),
-      effectiveInterestIncome:
-          _requiredDouble(payload, 'effective_interest_income'),
+      effectiveInterestIncome: _requiredDouble(
+        payload,
+        'effective_interest_income',
+      ),
       regularLoanComponent: _requiredDouble(payload, 'regular_loan_component'),
-      sevenBySevenLoanComponent:
-          _requiredDouble(payload, 'seven_by_seven_loan_component'),
-      accruedInterestComponent:
-          _requiredDouble(payload, 'accrued_interest_component'),
+      sevenBySevenLoanComponent: _requiredDouble(
+        payload,
+        'seven_by_seven_loan_component',
+      ),
+      accruedInterestComponent: _requiredDouble(
+        payload,
+        'accrued_interest_component',
+      ),
       grossCarryingAmount: _requiredDouble(payload, 'gross_carrying_amount'),
       measurementStatus: _requiredString(payload, 'measurement_status'),
-      measurementPolicyVersion:
-          _requiredString(payload, 'measurement_policy_version'),
+      measurementPolicyVersion: _requiredString(
+        payload,
+        'measurement_policy_version',
+      ),
       eclIncluded: payload['ecl_included'] == true,
       readyToPost: payload['ready_to_post'] == true,
     );
@@ -316,9 +334,7 @@ class LoanAccountingMeasurement {
   bool get measured => measurementStatus == 'measured';
   bool get isSevenBySeven => calculationMode == 'seven_by_seven';
 
-  factory LoanAccountingMeasurement.fromPayload(
-    Map<String, dynamic> payload,
-  ) {
+  factory LoanAccountingMeasurement.fromPayload(Map<String, dynamic> payload) {
     return LoanAccountingMeasurement(
       loanId: _requiredString(payload, 'loan_id'),
       loanNumber: _requiredString(payload, 'loan_number'),
@@ -335,14 +351,17 @@ class LoanAccountingMeasurement {
       dailyEirPercent: _optionalDouble(payload['daily_eir_percent']),
       contractualCashDue: _optionalDouble(payload['contractual_cash_due']),
       actualCashReceived: _optionalDouble(payload['actual_cash_received']),
-      effectiveInterestIncome:
-          _optionalDouble(payload['effective_interest_income']),
+      effectiveInterestIncome: _optionalDouble(
+        payload['effective_interest_income'],
+      ),
       loanComponent: _optionalDouble(payload['loan_component']),
-      accruedInterestComponent:
-          _optionalDouble(payload['accrued_interest_component']),
+      accruedInterestComponent: _optionalDouble(
+        payload['accrued_interest_component'],
+      ),
       grossCarryingAmount: _optionalDouble(payload['gross_carrying_amount']),
-      contractualUnpaidInterest:
-          _optionalDouble(payload['contractual_unpaid_interest']),
+      contractualUnpaidInterest: _optionalDouble(
+        payload['contractual_unpaid_interest'],
+      ),
       measurementStatus: _requiredString(payload, 'measurement_status'),
       measurementNote: _requiredString(payload, 'measurement_note'),
     );
@@ -422,5 +441,7 @@ DateTime? _optionalDate(Object? value) {
   final normalized = value?.toString().trim() ?? '';
   if (normalized.isEmpty || normalized.toLowerCase() == 'null') return null;
   final parsed = DateTime.tryParse(normalized);
-  return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
+  return parsed == null
+      ? null
+      : DateTime(parsed.year, parsed.month, parsed.day);
 }

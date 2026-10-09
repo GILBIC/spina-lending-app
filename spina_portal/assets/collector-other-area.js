@@ -20,9 +20,15 @@ export function mountCollectorOtherArea({root,api,session,getSession=()=>session
   const current=()=>!disposed && guard.current && !signal?.aborted && Boolean(getSession());
   root.innerHTML=`<h2>${mode==='management'?'Direct payment':'Other-area collection'}</h2><p>${mode==='management'?'Record a payment for a client outside the assigned route. The client’s assigned Collector remains unchanged.':'You remain the recorder. Assigned ownership and cash custody are preserved by SPINA.'}</p><form data-other-search class="entry-form"><label>Client name, code, phone or area<input name="query" minlength="2" maxlength="120" required /></label><button class="button button-outline" type="submit">${mode==='management'?'Find client':'Search other-area clients'}</button></form><div data-other-results></div><div data-cross-remittance></div><div data-other-status role="status"></div>`;
   const status=message=>{if(current()) root.querySelector('[data-other-status]').textContent=message;};
+  const deny=error=>{
+    if(![401,403,426].includes(error?.status))return false;
+    dispose();
+    root.innerHTML=`<h2>${mode==='management'?'Direct payment':'Other-area collection'}</h2><p>Other-area access is unavailable. Reopen the workspace after your access is restored.</p>`;
+    return true;
+  };
   const run=async operation=>{
     if(!current() || stale || (getRouteDate && getRouteDate()!==routeDate) || !guard.begin()) return;
-    try {await operation();}catch(error){if(current())status(error.message);}finally{guard.finish();}
+    try {await operation();}catch(error){if(current() && !deny(error))status(error.message);}finally{guard.finish();}
   };
   const search=root.querySelector('[data-other-search]');
   search.addEventListener('submit',event=>{
@@ -50,7 +56,7 @@ export function mountCollectorOtherArea({root,api,session,getSession=()=>session
   });
   // Search text edits also invalidate old results; a late response cannot
   // replace the identity the Collector is currently looking for.
-  search.querySelector('[name="query"]').addEventListener('input',()=>{searchVersion+=1;root.querySelector('[data-other-results]').innerHTML='';});
+  search.querySelector('[name="query"]').addEventListener('input',()=>{if(!current())return;searchVersion+=1;root.querySelector('[data-other-results]').innerHTML='';});
   const loadRemittance=async()=>{
     const container=root.querySelector('[data-cross-remittance]');
     try {
@@ -80,11 +86,11 @@ export function mountCollectorOtherArea({root,api,session,getSession=()=>session
         if(current()){savedRemittance=true;reviewedTarget=null;reviewedDigest=null;form.querySelector('[data-cross-save]').disabled=true;await onSaved(result,{source:'remittance'});}
       });});
       guard.sync();
-    }catch(error){if(current())container.textContent=error.message;}
+    }catch(error){if(current() && !deny(error))container.textContent=error.message;}
   };
   if(mode!=='management' && routeDate && (hasPermission(session,'remittance.create') || hasPermission(session,'remittance.view')))loadRemittance();
-  const unsubscribe=registerRouteConsumer(route=>{previewVersion++;reviewedTarget=null;reviewedDigest=null;const confirm=root.querySelector('[data-cross-save]');if(confirm)confirm.disabled=true;if(!route || route.route_date!==routeDate){stale=true;searchVersion++;status('Route changed — review again. Retained other-area notes cannot be submitted for the old date.');for(const button of root.querySelectorAll('button'))button.disabled=true;}});
-  function dispose(){disposed=true;searchVersion+=1;previewVersion+=1;savedEntries.clear();unsubscribe();signal?.removeEventListener('abort',dispose);}
+  const unsubscribe=registerRouteConsumer(route=>{if(!current())return;previewVersion++;reviewedTarget=null;reviewedDigest=null;const confirm=root.querySelector('[data-cross-save]');if(confirm)confirm.disabled=true;if(!route || route.route_date!==routeDate){stale=true;searchVersion++;status('Route changed — review again. Retained other-area notes cannot be submitted for the old date.');for(const button of root.querySelectorAll('button'))button.disabled=true;}});
+  function dispose(){if(disposed)return;disposed=true;searchVersion+=1;previewVersion+=1;reviewedTarget=null;reviewedDigest=null;savedEntries.clear();unsubscribe();signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});if(signal?.aborted)dispose();
   return dispose;
 }

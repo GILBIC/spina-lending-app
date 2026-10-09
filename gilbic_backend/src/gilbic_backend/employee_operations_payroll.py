@@ -502,7 +502,12 @@ def _require_conversion_entitlement(tx, employee_id, payload, as_of):
             raise EmployeeConflict("The leave conversion request is no longer eligible")
     # Exclude this settlement's reservation before clamping available credits to
     # zero. Adding its minutes to a clamped balance would hide a later deficit.
-    balance = tx.leave_balance(employee_id, as_of, exclude_request_id=request_id)
+    balance = tx.leave_balance(
+        employee_id,
+        as_of,
+        exclude_request_id=request_id,
+        exclude_payroll_id=tx.command.id,
+    )
     if not balance["eligible"] or balance["available_minutes"] < minutes:
         raise EmployeeConflict(
             "Insufficient eligible unused credits at settlement; review the leave conversion"
@@ -622,7 +627,7 @@ def prepare(tx):
         amounts = {"thirteenth_month": thirteenth}
         profile = tx.effective_profile(c.employee_id, end)
         if c.payroll_kind == "separation":
-            balance = tx.leave_balance(c.employee_id, end)
+            balance = tx.leave_balance(c.employee_id, end, exclude_payroll_id=c.id)
             amounts["leave_conversion"] = (
                 Decimal(profile["daily_rate"]) * balance["available_minutes"] / 480
             )

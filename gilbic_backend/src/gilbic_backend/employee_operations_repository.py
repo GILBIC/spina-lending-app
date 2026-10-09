@@ -432,7 +432,9 @@ class EmployeeTransaction:
         result["employee_id"] = str(employee_id)
         return result
 
-    def leave_balance(self, employee_id, as_of, *, exclude_request_id=None):
+    def leave_balance(
+        self, employee_id, as_of, *, exclude_request_id=None, exclude_payroll_id=None
+    ):
         profile = self.profile(employee_id)
         hire = _day(profile["payload"]["hire_date"])
         ledger = self.all("leave_ledger", employee_id)
@@ -491,6 +493,15 @@ class EmployeeTransaction:
                 and r["payload"]["work_date"] > as_of.isoformat()
             )
             or r["payload"]["request_kind"] == "leave_conversion"
+        )
+        # Separation has no conversion request to hold its credits. Keep the
+        # full reservation through partial payment until the final ledger debit.
+        reserved += sum(
+            r["payload"].get("conversion_minutes", 0)
+            for r in self.all("payroll", employee_id)
+            if r["id"] != str(exclude_payroll_id)
+            and r["status"] in ("approved", "partially_paid")
+            and r["payload"].get("payroll_kind") == "separation"
         )
         eligible = (
             (as_of >= eligible_from)

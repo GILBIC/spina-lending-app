@@ -219,10 +219,12 @@ class AttendanceOutbox {
         );
       } on SpinaApiException catch (error) {
         if (const [401, 403, 426].contains(error.statusCode)) {
-          await vault.update(
-            binding.key,
-            (row) => row!..['authorized'] = false,
-          );
+          await vault.update(binding.key, (row) {
+            // The transaction can wait behind a renewed authorization. Check
+            // its lifetime here, immediately before changing durable authority.
+            if (epoch == _epoch) row!['authorized'] = false;
+            return row!;
+          });
         } else if (const [409, 422].contains(error.statusCode)) {
           await _mark(binding, entry, 'needs_attention', error.message);
         }

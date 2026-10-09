@@ -1,5 +1,7 @@
 import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook.dart';
@@ -150,9 +152,9 @@ class _ManagementOpeningBalanceWorkbookPageState
       return;
     }
     final amount = draft.debit != null
-        ? 'Debit ${_money(draft.debit!)}'
+        ? 'Debit ${formatSpinaMoney(draft.debit!)}'
         : draft.credit != null
-        ? 'Credit ${_money(draft.credit!)}'
+        ? 'Credit ${formatSpinaMoney(draft.credit!)}'
         : 'Explicit zero or blank amount';
     final confirmed = await showManagementReviewConfirmation(
       context,
@@ -717,9 +719,9 @@ class _WorkbookLineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final proposed = line.proposedDebit != null
-        ? 'Dr ${_money(line.proposedDebit!)}'
+        ? 'Dr ${formatSpinaMoney(line.proposedDebit!)}'
         : line.proposedCredit != null
-        ? 'Cr ${_money(line.proposedCredit!)}'
+        ? 'Cr ${formatSpinaMoney(line.proposedCredit!)}'
         : 'Not entered';
     return Card(
       key: Key('opening-workbook-line-${line.accountCode}'),
@@ -801,10 +803,10 @@ class _EditOpeningBalanceLineDialogState
   void initState() {
     super.initState();
     _debitController = TextEditingController(
-      text: widget.line.proposedDebit?.toStringAsFixed(2) ?? '',
+      text: widget.line.proposedDebit ?? '',
     );
     _creditController = TextEditingController(
-      text: widget.line.proposedCredit?.toStringAsFixed(2) ?? '',
+      text: widget.line.proposedCredit ?? '',
     );
     _noteController = TextEditingController(
       text: widget.line.evidenceNote ?? '',
@@ -820,9 +822,9 @@ class _EditOpeningBalanceLineDialogState
     super.dispose();
   }
 
-  double? _parse(TextEditingController controller) {
+  String? _parse(TextEditingController controller) {
     final text = controller.text.trim();
-    return text.isEmpty ? null : double.tryParse(text);
+    return text.isEmpty ? null : tryRequestMoney(text);
   }
 
   void _save() {
@@ -830,14 +832,14 @@ class _EditOpeningBalanceLineDialogState
     final credit = _parse(_creditController);
     if ((_debitController.text.trim().isNotEmpty && debit == null) ||
         (_creditController.text.trim().isNotEmpty && credit == null)) {
-      setState(() => _error = 'Debit and credit must be valid numbers.');
+      setState(
+        () => _error =
+            'Use nonnegative amounts with at most two decimal places and 16 whole digits.',
+      );
       return;
     }
-    if ((debit ?? 0) < 0 || (credit ?? 0) < 0) {
-      setState(() => _error = 'Amounts cannot be negative.');
-      return;
-    }
-    if ((debit ?? 0) > 0 && (credit ?? 0) > 0) {
+    if ((requestMoneyCents(debit) ?? BigInt.zero) > BigInt.zero &&
+        (requestMoneyCents(credit) ?? BigInt.zero) > BigInt.zero) {
       setState(() => _error = 'Use only one side: debit or credit.');
       return;
     }
@@ -1047,8 +1049,8 @@ class _LineEditDraft {
     required this.evidenceNote,
   });
 
-  final double? debit;
-  final double? credit;
+  final String? debit;
+  final String? credit;
   final String verificationStatus;
   final String? evidenceNote;
 }

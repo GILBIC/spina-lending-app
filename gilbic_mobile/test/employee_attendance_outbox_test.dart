@@ -9,6 +9,43 @@ const binding = AttendanceBinding(
   deviceId: 'device-a',
 );
 void main() {
+  for (final status in [401, 403, 426]) {
+    for (final renewed in [false, true]) {
+      test(
+        'attendance $status denial respects renewed=$renewed authority',
+        () async {
+          final queue = AttendanceOutbox(MemoryAttendanceVault());
+          await queue.authorize(binding);
+          final captured = await queue.capture(
+            binding,
+            'clock_in',
+            offline: true,
+          );
+          final started = Completer<void>();
+          final response = Completer<Map<String, dynamic>>();
+          final sending = queue.sync(binding, (_) {
+            started.complete();
+            return response.future;
+          });
+          await started.future;
+          if (renewed) {
+            queue.detach();
+            await queue.authorize(binding);
+          }
+          response.completeError(
+            SpinaApiException('Expired authority', statusCode: status),
+          );
+          await sending;
+          expect(await queue.isAuthorized(binding), renewed);
+          expect(
+            (await queue.entries(binding)).single.command,
+            captured.command,
+          );
+          expect((await queue.entries(binding)).single.state, 'pending');
+        },
+      );
+    }
+  }
   test(
     'Manila midnight resets sequence and predecessor after restart; another device hydrates the employee chain',
     () async {

@@ -44,11 +44,15 @@ class OtherAreaCollectionPage extends StatefulWidget {
 
 class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
     with PrivateAccessState<OtherAreaCollectionPage> {
-  final _pendingDrafts = <(String, String), PaymentSubmissionDraft>{};
+  final _pendingPayments =
+      <
+        (String, String),
+        ({OtherAreaClient client, PaymentSubmissionDraft draft})
+      >{};
   @override
   void clearPrivateData() {
     _results = const [];
-    _pendingDrafts.clear();
+    _pendingPayments.clear();
     _searchDebounce?.cancel();
     _searchController.clear();
     _loadGeneration++;
@@ -198,7 +202,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
 
   @override
   void dispose() {
-    _pendingDrafts.clear();
+    _pendingPayments.clear();
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -431,7 +435,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
 
   Future<void> _openPayment(OtherAreaClient client) async {
     if (!privateAccessActive) return;
-    final blocked = _blockedReason(client);
+    final pending =
+        _pendingPayments[(client.entry.clientId, client.entry.loanId)];
+    final blocked = pending == null ? _blockedReason(client) : null;
     if (blocked != null) {
       ScaffoldMessenger.of(
         context,
@@ -487,15 +493,18 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
           deviceSequence: widget.deviceSequence,
           collectionDate: DateTime.now(),
           pendingDraft:
-              _pendingDrafts[(client.entry.clientId, client.entry.loanId)],
+              _pendingPayments[(client.entry.clientId, client.entry.loanId)]
+                  ?.draft,
           onPendingDraftChanged: (draft) {
             if (!privateAccessActive) return;
             final key = (client.entry.clientId, client.entry.loanId);
-            if (draft == null) {
-              _pendingDrafts.remove(key);
-            } else {
-              _pendingDrafts[key] = draft;
-            }
+            setState(() {
+              if (draft == null) {
+                _pendingPayments.remove(key);
+              } else {
+                _pendingPayments[key] = (client: client, draft: draft);
+              }
+            });
           },
         ),
       ),
@@ -557,6 +566,24 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
   @override
   Widget build(BuildContext context) {
     if (privateAccessDenied) return privateAccessDeniedPage();
+    return PopScope(
+      canPop: _pendingPayments.isEmpty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _pendingPayments.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'A payment is awaiting confirmation. Reopen it and retry before leaving.',
+              ),
+            ),
+          );
+        }
+      },
+      child: _buildPage(context),
+    );
+  }
+
+  Widget _buildPage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -582,6 +609,15 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
       body: SafeArea(
         child: Column(
           children: [
+            for (final pending in _pendingPayments.values)
+              TextButton.icon(
+                key: Key('retry-other-area-${pending.client.entry.loanId}'),
+                onPressed: () => _openPayment(pending.client),
+                icon: const Icon(Icons.sync),
+                label: Text(
+                  'Retry unconfirmed payment for ${pending.client.entry.clientName}',
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Column(

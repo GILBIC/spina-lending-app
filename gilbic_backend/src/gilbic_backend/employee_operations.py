@@ -200,9 +200,16 @@ def attendance_day(
         payload = row["payload"]
         stamp = datetime.fromisoformat(payload["captured_at"])
         result["event_ids"].append(str(row["id"]))
-        if stamp.astimezone(MANILA).date() != work_date or stamp > now + timedelta(
-            minutes=5
-        ):
+        # The immutable server receipt keeps a device-clock anomaly pending even
+        # after wall time catches up. Missing offline chain events can still heal.
+        received_at = (
+            datetime.fromisoformat(payload["received_at"])
+            if payload.get("received_at")
+            else now
+        )
+        if stamp.astimezone(MANILA).date() != work_date or stamp > min(
+            now, received_at
+        ) + timedelta(minutes=5):
             result["issues"].append("Capture time needs review")
         if payload.get("previous_event_id") != previous:
             result["issues"].append("Missing, reordered or conflicting event chain")

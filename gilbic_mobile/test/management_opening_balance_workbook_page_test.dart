@@ -8,6 +8,47 @@ import 'package:gilbic_mobile/src/core/management/opening_balance_workbook_repos
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 
 void main() {
+  for (final amount in ['1000000000000000.01', '200.01']) {
+    testWidgets('workbook editor retains exact $amount through confirmation', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1600));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      final repository = _FakeWorkbookRepository(initialized: true);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementOpeningBalanceWorkbookPage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('edit-opening-workbook-line-1020')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('opening-line-debit')),
+        amount,
+      );
+      await tester.tap(find.byKey(const Key('save-opening-workbook-line')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          amount == '200.01'
+              ? 'Debit ₱200.01'
+              : 'Debit ₱1,000,000,000,000,000.01',
+        ),
+        findsOneWidget,
+      );
+      expect(repository.updatedAccountCode, isNull);
+      await tester.tap(find.byKey(const Key('confirm-opening-workbook')));
+      await tester.pumpAndSettle();
+      expect(repository.updatedDebit.toString(), amount);
+    });
+  }
   testWidgets('Management sees non-posting opening workbook source state', (
     tester,
   ) async {
@@ -187,7 +228,7 @@ void main() {
       await tester.tap(find.byKey(const Key('confirm-opening-workbook')));
       await tester.pumpAndSettle();
       expect(repository.updatedAccountCode, '1020');
-      expect(repository.updatedDebit, 200);
+      expect(repository.updatedDebit, '200.00');
       expect(repository.updatedCredit, isNull);
       expect(repository.updatedVerificationStatus, 'verified');
       expect(
@@ -293,8 +334,8 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
   String? deviceId;
   DateTime? createdCutoverDate;
   String? updatedAccountCode;
-  double? updatedDebit;
-  double? updatedCredit;
+  String? updatedDebit;
+  String? updatedCredit;
   String? updatedVerificationStatus;
   String? updatedEvidenceNote;
   bool? policyConfirmed;
@@ -397,8 +438,8 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
     required String deviceId,
     required String workbookId,
     required String accountCode,
-    required double? debit,
-    required double? credit,
+    required String? debit,
+    required String? credit,
     required String verificationStatus,
     required String? evidenceNote,
   }) async {
