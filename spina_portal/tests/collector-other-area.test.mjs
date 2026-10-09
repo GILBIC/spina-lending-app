@@ -13,7 +13,7 @@ test('other-area rows preserve owner and suppress unavailable/processed writes',
 
 test('Management direct payment reuses protected exact-money submission without cross-remittance controls',async()=>{
  const root=new Element();const calls=[];const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock:()=>{}});
- const dispose=module.mountCollectorOtherArea({root,mode:'management',session:{permissions:['collection.create','remittance.create','remittance.view']},routeDate:'2026-09-29',guard,identity:()=>({deviceId:'web',deviceSequence:4,clientTransactionId:'11111111-2222-4333-8444-555555555555'}),onSaved:async()=>{},api:{request:async(path,options)=>{calls.push({path,options});return options?.method==='POST'?{status:'accepted',client_transaction_id:options.body.client_transaction_id,receipt_number:'RCPT-2'}:[entry];}}});
+ const dispose=module.mountCollectorOtherArea({root,mode:'management',session:{permissions:['collection.create','remittance.create','remittance.view']},routeDate:'2026-09-29',guard,identity:()=>({deviceId:'web',deviceSequence:4,clientTransactionId:'11111111-2222-4333-8444-555555555555'}),onSaved:async()=>{},api:{request:async(path,options)=>{calls.push({path,options});return options?.method==='POST'?{status:'accepted',client_transaction_id:options.body.client_transaction_id,receipt_number:'RCPT-2',transaction_id:'synthetic-transaction',official_balance:'750.00',accepted_at:'2026-09-29T02:30:00Z'}:[entry];}}});
  assert.match(root.textContent,/Direct payment/);assert.equal(calls.length,0);
  root.querySelector('[name="query"]').value='Client';fire(root.querySelector('[data-other-search]'),'submit');await setImmediate();const form=root.querySelector('[data-other-payment]');form.querySelector('[name="amount"]').value='100.15';form.querySelector('[name="recorderConfirmation"]').checked=true;fire(form,'submit');await setImmediate();
  const post=calls.find(call=>call.options?.method==='POST');assert.equal(post.options.body.amount,'100.15');assert.equal(post.options.body.collection_date,'2026-09-29');assert.equal(post.options.body.loan_id,'loan');assert.equal(calls.some(call=>call.path.includes('cross-remittances')),false);dispose();guard.dispose();
@@ -21,7 +21,7 @@ test('Management direct payment reuses protected exact-money submission without 
 test('cross-area payment preserves route identity and needs recorder confirmation',async()=>{
   const root=new Element();const calls=[];let saved=0;
   const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock:()=>{}});
-  const dispose=module.mountCollectorOtherArea({root,session:{permissions:['collection.create']},routeDate:'2026-09-28',guard,identity:()=>({deviceId:'web',deviceSequence:3,clientTransactionId:'11111111-2222-4333-8444-555555555555'}),onSaved:async()=>{saved++;},api:{request:async(path,options)=>{calls.push({path,options});return options?.method==='POST' ? {status:'accepted',client_transaction_id:options.body.client_transaction_id,receipt_number:'receipt'} : [entry];}}});
+  const dispose=module.mountCollectorOtherArea({root,session:{permissions:['collection.create']},routeDate:'2026-09-28',guard,identity:()=>({deviceId:'web',deviceSequence:3,clientTransactionId:'11111111-2222-4333-8444-555555555555'}),onSaved:async()=>{saved++;},api:{request:async(path,options)=>{calls.push({path,options});return options?.method==='POST' ? {status:'accepted',client_transaction_id:options.body.client_transaction_id,receipt_number:'receipt',transaction_id:'synthetic-transaction',official_balance:'750.00',accepted_at:'2026-09-28T02:30:00Z'} : [entry];}}});
   root.querySelector('[name="query"]').value='Other client';fire(root.querySelector('[data-other-search]'),'submit');await setImmediate();
   assert.match(calls[0].path,/other-area-clients\/search\?q=Other%20client/);
   const form=root.querySelector('[data-other-payment]');form.querySelector('[name="amount"]').value='100.01';
@@ -49,4 +49,18 @@ test('missing authoritative route date and disposed searches cannot enable colle
   let resolve;
   const dispose=module.mountCollectorOtherArea({root,session:{permissions:['collection.create']},routeDate:'2026-09-28',guard,api:{request:()=>new Promise(done=>{resolve=done;})}});
   root.querySelector('[name="query"]').value='Client';fire(root.querySelector('[data-other-search]'),'submit');dispose();resolve([entry]);await setImmediate();assert.equal(root.querySelector('[data-other-payment]'),null);guard.dispose();
+});
+
+for(const mode of ['collector','management']) for(const changes of [{transaction_id:null},{official_balance:'invalid'},{accepted_at:undefined},{client_transaction_id:'foreign'}]) test(`${mode} other-area keeps note and exact pending command for malformed ${Object.keys(changes)[0]}`,async()=>{
+  const root=new Element(),calls=[];let saved=0,identities=0;
+  const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock(){}});
+  const dispose=module.mountCollectorOtherArea({root,mode,session:{permissions:['collection.create']},routeDate:'2026-09-28',guard,
+    identity:()=>{identities++;return {deviceId:'web',deviceSequence:3,clientTransactionId:'11111111-2222-4333-8444-555555555555'};},onSaved:async()=>{saved++;},
+    api:{request:async(path,options)=>{calls.push({path,options});return options?.method==='POST'?{status:'accepted',client_transaction_id:options.body.client_transaction_id,transaction_id:'synthetic-transaction',official_balance:'750.00',accepted_at:'2026-09-28T02:30:00Z',receipt_number:'receipt',...changes}:[entry];}}});
+  try {
+    root.querySelector('[name="query"]').value='Other client';fire(root.querySelector('[data-other-search]'),'submit');await setImmediate();
+    const form=root.querySelector('[data-other-payment]');form.querySelector('[name="amount"]').value='100.01';form.querySelector('[name="note"]').value='Retain cross-area note';form.querySelector('[name="recorderConfirmation"]').checked=true;
+    fire(form,'submit');await setImmediate();assert.equal(saved,0);assert.equal(guard.locked,true);assert.equal(form.querySelector('[name="note"]').value,'Retain cross-area note');
+    assert.deepEqual(guard.pendingCommand.options.body,calls[1].options.body);fire(form,'submit');fire(root.querySelector('[data-other-search]'),'submit');await setImmediate();assert.equal(calls.length,2);assert.equal(identities,1);
+  } finally {dispose();guard.dispose();}
 });
