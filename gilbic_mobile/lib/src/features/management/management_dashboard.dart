@@ -169,7 +169,7 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
         if (error is SpinaApiException &&
-            (error.statusCode == 401 || error.statusCode == 403)) {
+            const [401, 403, 426].contains(error.statusCode)) {
           _overview = null;
         }
         _overviewError = refresh
@@ -727,7 +727,7 @@ class _ManagementOverviewInitialError extends StatelessWidget {
                       icon: const Icon(Icons.login),
                       label: const Text('Sign in again'),
                     )
-                  : statusCode == 403
+                  : const [403, 426].contains(statusCode)
                   ? const Text(
                       'Access unavailable. Return to Profile & security or contact Management.',
                     )

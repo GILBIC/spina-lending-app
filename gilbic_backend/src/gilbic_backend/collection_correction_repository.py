@@ -91,6 +91,7 @@ class PostgresCollectionCorrectionRepository:
                         select
                             t.*,
                             l.status as loan_status,
+                            l.daily_amount,
                             lt.settings as loan_type_settings,
                             s.remaining_balance as state_remaining_balance,
                             s.pass_count as state_pass_count,
@@ -311,6 +312,38 @@ class PostgresCollectionCorrectionRepository:
 
                     previous_balance = self._money(transaction["previous_balance"])
                     corrected_amount = self._money(amount or Decimal("0"))
+                    if normalized_type == "payment":
+                        other_payments = cursor.execute(
+                            """select coalesce(sum(applied_amount), 0)::numeric(18,2)
+                                      as applied_amount
+                               from lending.collection_transactions
+                               where loan_id=%s and collection_date=%s
+                                 and entry_type='payment' and is_voided=false
+                                 and id<>%s""",
+                            (
+                                transaction["loan_id"],
+                                transaction["collection_date"],
+                                transaction_id,
+                            ),
+                        ).fetchone()
+                        assert other_payments is not None  # An aggregate always returns one row.
+                        applied_today = (
+                            self._money(other_payments["applied_amount"])
+                            + corrected_amount
+                        )
+                        if (
+                            corrected_amount < previous_balance
+                            and applied_today < self._money(transaction["daily_amount"])
+                        ):
+                            # This editor cannot collect the required borrower
+                            # reason/promise. Keep the original receipt intact so
+                            # Undo + normal posting can rebuild both coverage and
+                            # follow-up in one protected replacement transaction.
+                            raise CollectionCorrectionInvalid(
+                                "This correction leaves a Past Due remainder. "
+                                "Undo this receipt and record the replacement payment "
+                                "with its Past Due reason."
+                            )
                     if normalized_type == "pass":
                         corrected_amount = Decimal("0.00")
                         official_balance = previous_balance

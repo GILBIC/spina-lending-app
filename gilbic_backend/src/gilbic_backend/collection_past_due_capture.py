@@ -59,7 +59,9 @@ class CollectionPastDueCapture:
         actor_user_id = self._uuid(actor.account_id, "authenticated collector")
         loan_id = self._uuid(command.loan_id, "loan")
         client_id = self._uuid(command.client_id, "client")
-        transaction_id = self._uuid(posted.server_transaction_id, "collection transaction")
+        transaction_id = self._uuid(
+            posted.server_transaction_id, "collection transaction"
+        )
 
         with connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
@@ -180,7 +182,9 @@ class CollectionPastDueCapture:
                         actor_user_id,
                     ),
                 )
-                created.append((cursor.fetchone()["id"], obligation.amount, obligation.order))
+                created.append(
+                    (cursor.fetchone()["id"], obligation.amount, obligation.order)
+                )
 
             promise_id: UUID | None = None
             if followup.reason_code is PastDueReasonCode.PROMISED_TO_PAY_LATER:
@@ -320,7 +324,8 @@ class CollectionPastDueCapture:
             remaining = self._money(
                 max(
                     Decimal("0.00"),
-                    Decimal(row["contractual_amount"]) - Decimal(row["allocated_amount"]),
+                    Decimal(row["contractual_amount"])
+                    - Decimal(row["allocated_amount"]),
                 )
             )
             if remaining > Decimal("0.00"):
@@ -359,18 +364,30 @@ class CollectionPastDueCapture:
 
         cursor.execute(
             """
-            select coalesce(sum(applied_amount), 0)::numeric(18,2) as applied_amount
+            select coalesce(sum(applied_amount), 0)::numeric(18,2) as applied_amount,
+                   (select remaining_balance from lending.loan_collection_state
+                    where loan_id = %s) as remaining_balance
             from lending.collection_transactions
             where loan_id = %s
               and collection_date = %s
               and entry_type = 'payment'
               and is_voided = false
             """,
-            (loan_id, collection_date),
+            (loan_id, loan_id, collection_date),
         )
         row = cursor.fetchone()
-        applied = self._money(row["applied_amount"] if row else Decimal("0.00"))
-        remaining = self._money(max(Decimal("0.00"), daily_amount - applied))
+        if row is None or row["remaining_balance"] is None:
+            raise CollectionRejected(
+                "The loan balance changed before Past Due follow-up could be saved.",
+                code="past_due_followup_loan_changed",
+            )
+        applied = self._money(row["applied_amount"])
+        remaining = self._money(
+            max(
+                Decimal("0.00"),
+                min(daily_amount - applied, row["remaining_balance"]),
+            )
+        )
         if remaining <= Decimal("0.00"):
             return ()
         return (
@@ -469,7 +486,10 @@ class CollectionPastDueCapture:
         collection_date: date,
         total_past_due: Decimal,
     ) -> None:
-        if followup.reason_code is PastDueReasonCode.OTHER and not followup.note.strip():
+        if (
+            followup.reason_code is PastDueReasonCode.OTHER
+            and not followup.note.strip()
+        ):
             raise CollectionRejected(
                 "Other Past Due reason requires a short explanation.",
                 code="past_due_other_note_required",

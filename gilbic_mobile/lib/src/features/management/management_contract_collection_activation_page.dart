@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -24,7 +25,13 @@ class ManagementContractCollectionActivationPage extends StatefulWidget {
 }
 
 class _ManagementContractCollectionActivationPageState
-    extends State<ManagementContractCollectionActivationPage> {
+    extends State<ManagementContractCollectionActivationPage>
+    with PrivateAccessState<ManagementContractCollectionActivationPage> {
+  @override
+  void clearPrivateData() {
+    _data = null;
+  }
+
   late final ContractCollectionActivationRepository _repository;
   ContractCollectionActivationData? _data;
   bool _loading = true;
@@ -40,28 +47,33 @@ class _ManagementContractCollectionActivationPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final data = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() => _data = data);
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _error = 'Contract collection readiness could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
@@ -69,17 +81,19 @@ class _ManagementContractCollectionActivationPageState
     ContractCollectionActivationLoan loan, {
     required bool activate,
   }) async {
+    if (!mounted || !privateAccessActive) return;
     if (_submitting) return;
     final draft = await showDialog<_ActivationDraft>(
       context: context,
       barrierDismissible: false,
       builder: (context) => _ActivationDialog(loan: loan, activate: activate),
     );
-    if (draft == null) return;
+    if (draft == null || !mounted || !privateAccessActive) return;
 
     setState(() => _submitting = true);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       if (activate) {
         await _repository.activate(
           widget.session,
@@ -95,7 +109,7 @@ class _ManagementContractCollectionActivationPageState
           activationNote: draft.note,
         );
       }
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -107,13 +121,14 @@ class _ManagementContractCollectionActivationPageState
       );
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -125,12 +140,13 @@ class _ManagementContractCollectionActivationPageState
         );
       }
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted && privateAccessActive) setState(() => _submitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Contract Collection'),

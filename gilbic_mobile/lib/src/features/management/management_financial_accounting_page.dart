@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -48,7 +49,13 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
 }
 
 class _ManagementFinancialAccountingPageState
-    extends State<ManagementFinancialAccountingPage> {
+    extends State<ManagementFinancialAccountingPage>
+    with PrivateAccessState<ManagementFinancialAccountingPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+  }
+
   late final FinancialAccountingRepository _repository;
   FinancialAccountingOverview? _overview;
   String? _errorMessage;
@@ -63,42 +70,46 @@ class _ManagementFinancialAccountingPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.loadOverview(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _overview = overview);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _errorMessage = 'Financial Accounting could not be loaded.',
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _createFiscalPeriod() async {
+    if (!mounted || !privateAccessActive) return;
     final draft = await showDialog<_FiscalPeriodDraft>(
       context: context,
       builder: (context) => const _CreateFiscalPeriodDialog(),
     );
-    if (draft == null || !mounted) {
+    if (draft == null || (!mounted || !privateAccessActive)) {
       return;
     }
     final confirmed = await showManagementReviewConfirmation(
@@ -123,11 +134,12 @@ class _ManagementFinancialAccountingPageState
             'or change any account balance.',
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.createFiscalPeriod(
         widget.session,
         deviceId: identity.installationId,
@@ -135,7 +147,7 @@ class _ManagementFinancialAccountingPageState
         startDate: draft.startDate,
         endDate: draft.endDate,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${draft.label} accounting period created.')),
         );
@@ -147,6 +159,7 @@ class _ManagementFinancialAccountingPageState
     AccountingFiscalPeriod period,
     String targetStatus,
   ) async {
+    if (!mounted || !privateAccessActive) return;
     final targetLabel = _statusLabel(targetStatus);
     final consequence = switch (targetStatus) {
       'review' =>
@@ -191,18 +204,19 @@ class _ManagementFinancialAccountingPageState
         ],
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.changeFiscalPeriodStatus(
         widget.session,
         deviceId: identity.installationId,
         periodId: period.periodId,
         status: targetStatus,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -215,6 +229,7 @@ class _ManagementFinancialAccountingPageState
   }
 
   Future<void> _openFormalPeriodClose() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementPeriodClosePage(
@@ -224,10 +239,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openInitialEclAllowance() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementEclAllowancePostingPage(
@@ -237,10 +253,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openEclAdjustments() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementEclA5AccountingPage(
@@ -250,10 +267,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openInitialCapitalFunding() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementInitialCapitalFundingPage(
@@ -263,10 +281,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openTaxAccounting() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementTaxAccountingPage(
@@ -277,10 +296,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _runPeriodAction(Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_periodActionInProgress) {
       return;
     }
@@ -289,19 +309,20 @@ class _ManagementFinancialAccountingPageState
       await action();
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Accounting period action failed.')),
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _periodActionInProgress = false);
       }
     }
@@ -309,6 +330,7 @@ class _ManagementFinancialAccountingPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Financial Accounting'),

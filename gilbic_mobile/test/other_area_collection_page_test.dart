@@ -6,12 +6,51 @@ import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 
 void main() {
+  testWidgets('other-area uncertain draft survives Back and reopen', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    final payments = _UncertainPaymentRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtherAreaCollectionPage(
+          session: _collectorSession,
+          paymentRepository: payments,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          repository: _OtherAreaRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (var attempt = 0; attempt < 2; attempt++) {
+      await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-other-area-payment')));
+      await tester.pumpAndSettle();
+      if (attempt == 0) {
+        await tester.enterText(
+          find.byKey(const Key('collection-note')),
+          'Original cross-route payment',
+        );
+      }
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
+      if (attempt == 0) {
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+    }
+    expect(payments.drafts, hasLength(2));
+    expect(payments.drafts.last.toJson(), payments.drafts.first.toJson());
+  });
   testWidgets('7x7 other-area receipt requires Management correction', (
     tester,
   ) async {
@@ -425,6 +464,24 @@ class _PaymentRepository implements PaymentSubmissionRepository {
       receiptNumber: 'GBC-RC-1',
       officialBalance: 4600,
     );
+  }
+}
+
+class _UncertainPaymentRepository extends _PaymentRepository {
+  final drafts = <PaymentSubmissionDraft>[];
+  @override
+  Future<PaymentSubmissionResult> submit(
+    UserSession session,
+    PaymentSubmissionDraft draft,
+  ) async {
+    drafts.add(draft);
+    if (drafts.length == 1) {
+      throw const SpinaApiException(
+        'Uncertain result',
+        code: 'network_unavailable',
+      );
+    }
+    return super.submit(session, draft);
   }
 }
 

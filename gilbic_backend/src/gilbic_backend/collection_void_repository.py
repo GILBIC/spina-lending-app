@@ -158,6 +158,7 @@ class PostgresCollectionVoidRepository:
         connection=None,
         collector_expected_route_revision: str | None = None,
         collector_business_date: date | None = None,
+        treasury_previous_void_transaction_id: UUID | None = None,
     ) -> CollectionVoidRecord | ExtraPrincipalReversalRequestResult:
         normalized_reason = " ".join(reason.split())
         if len(normalized_reason) < 3:
@@ -300,6 +301,18 @@ class PostgresCollectionVoidRepository:
                         if isinstance(transaction["details"], dict)
                         else {}
                     )
+                    if any(
+                        details.get(key)
+                        for key in (
+                            "past_due_followup",
+                            "past_due_promise_progress",
+                        )
+                    ):
+                        raise CollectionVoidInvalid(
+                            "This receipt changed linked Past Due or promise records. "
+                            "A protected correction restoring all linked records is "
+                            "required before this receipt can be voided."
+                        )
                     if collector_expected_route_revision is not None:
                         if transaction["current_loan_status"] not in {"active", "paid"}:
                             raise CollectionVoidConflict(
@@ -339,9 +352,43 @@ class PostgresCollectionVoidRepository:
                                 "This receipt changed a promise, Past Due record, or catch-up schedule. Ask Management to review all linked records."
                             )
                     expected_state_version = details.get("state_version_after")
-                    if expected_state_version is None or int(
+                    version_matches = expected_state_version is not None and int(
                         expected_state_version
-                    ) != int(transaction["state_version"]):
+                    ) == int(transaction["state_version"])
+                    if (
+                        not version_matches
+                        and treasury_previous_void_transaction_id is not None
+                    ):
+                        # Only the same caller-owned Treasury transaction may
+                        # continue a proven reverse chain. Versions remain
+                        # monotonic; saved receipt versions are never rewritten.
+                        previous_void = cursor.execute(
+                            """select prior.loan_id, prior.funding_receipt_id,
+                                      prior.details, reversal.state_after
+                               from lending.collection_transactions prior
+                               join lending.collection_transaction_voids reversal
+                                 on reversal.transaction_id=prior.id
+                               where prior.id=%s and prior.is_voided=true
+                               for update of prior""",
+                            (treasury_previous_void_transaction_id,),
+                        ).fetchone()
+                        version_matches = bool(
+                            connection is not None
+                            and transaction["funding_source"] == "treasury_receipt"
+                            and previous_void is not None
+                            and previous_void["loan_id"] == transaction["loan_id"]
+                            and previous_void["funding_receipt_id"]
+                            == transaction["funding_receipt_id"]
+                            and previous_void["details"].get("state_version_before")
+                            == expected_state_version
+                            and previous_void["state_after"].get("state_version")
+                            == int(transaction["state_version"])
+                            and self._money(
+                                previous_void["state_after"]["remaining_balance"]
+                            )
+                            == self._money(transaction["official_balance"])
+                        )
+                    if not version_matches:
                         raise CollectionVoidConflict(
                             "The loan changed after this collection. Void only the latest loan entry."
                         )

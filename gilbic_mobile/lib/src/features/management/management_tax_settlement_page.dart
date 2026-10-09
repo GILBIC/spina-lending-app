@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -30,7 +31,15 @@ class ManagementTaxSettlementPage extends StatefulWidget {
 }
 
 class _ManagementTaxSettlementPageState
-    extends State<ManagementTaxSettlementPage> {
+    extends State<ManagementTaxSettlementPage>
+    with PrivateAccessState<ManagementTaxSettlementPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _selectedPostingIds.clear();
+    _postingTokens.clear();
+  }
+
   late final TaxSettlementRepository _repository;
   late final String Function() _tokenGenerator;
   late final String Function() _idempotencyGenerator;
@@ -52,17 +61,19 @@ class _ManagementTaxSettlementPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _overview = overview;
           _writeStateUncertain = false;
@@ -74,13 +85,16 @@ class _ManagementTaxSettlementPageState
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Tax settlements could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
@@ -113,6 +127,7 @@ class _ManagementTaxSettlementPageState
   }
 
   Future<void> _recordReturn() async {
+    if (!mounted || !privateAccessActive) return;
     final candidates = _selected;
     if (candidates.isEmpty ||
         !_hasPermission('return', 'accounting.tax.return_evidence.record')) {
@@ -122,7 +137,7 @@ class _ManagementTaxSettlementPageState
       context: context,
       builder: (_) => const _ReturnEvidenceDialog(),
     );
-    if (fields == null || !mounted) return;
+    if (fields == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
@@ -165,9 +180,10 @@ class _ManagementTaxSettlementPageState
             'Records retained return evidence only; no settlement journal is posted.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run('new-return', () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordReturn(
         widget.session,
         deviceId: identity.installationId,
@@ -187,6 +203,7 @@ class _ManagementTaxSettlementPageState
   }
 
   Future<void> _recordPayment(TaxSettlementItem item) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_hasPermission('payment', 'accounting.tax.payment_evidence.record')) {
       return;
     }
@@ -195,7 +212,7 @@ class _ManagementTaxSettlementPageState
       context: context,
       builder: (_) => _PaymentEvidenceDialog(minimumDate: item.filingDate),
     );
-    if (fields == null || !mounted) return;
+    if (fields == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await _confirmItem(
       item,
       status: 'Return recorded — exact payment evidence pending',
@@ -210,9 +227,10 @@ class _ManagementTaxSettlementPageState
         ),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run(item.taxReturnId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordPayment(
         widget.session,
         deviceId: identity.installationId,
@@ -230,6 +248,7 @@ class _ManagementTaxSettlementPageState
   }
 
   Future<void> _prepare(TaxSettlementItem item) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_hasPermission('prepare', 'accounting.tax.settlement.prepare')) return;
     item.requirePrepareCoordinates();
     final confirmed = await _confirmItem(
@@ -239,9 +258,10 @@ class _ManagementTaxSettlementPageState
       consequence:
           'Creates a protected draft only. No balance changes until separate posting confirmation.',
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run(item.taxReturnId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
@@ -252,6 +272,7 @@ class _ManagementTaxSettlementPageState
   }
 
   Future<void> _post(TaxSettlementItem item) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_hasPermission('post', 'accounting.tax.settlement.post')) return;
     item.requirePostCoordinates();
     final confirmed = await _confirmItem(
@@ -275,7 +296,7 @@ class _ManagementTaxSettlementPageState
         ),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final key = <String>[
       item.paymentEvidenceId!,
       item.returnEvidenceDigest,
@@ -289,6 +310,7 @@ class _ManagementTaxSettlementPageState
     final token = _postingTokens.putIfAbsent(key, _tokenGenerator);
     await _run(item.taxReturnId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.post(
         widget.session,
         deviceId: identity.installationId,
@@ -349,6 +371,7 @@ class _ManagementTaxSettlementPageState
   );
 
   Future<void> _run(String key, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busy != null) return;
     setState(() => _busy = key);
     var succeeded = false;
@@ -357,27 +380,30 @@ class _ManagementTaxSettlementPageState
       succeeded = true;
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted && error.code == 'network_unavailable') {
+      revokePrivateAccess(error);
+      if (mounted &&
+          privateAccessActive &&
+          error.code == 'network_unavailable') {
         setState(() => _writeStateUncertain = true);
         _message(
           'The result is uncertain. Refresh authoritative settlement state before retrying.',
         );
-      } else if (mounted) {
+      } else if (mounted && privateAccessActive) {
         _message(error.message);
       }
     } on ArgumentError catch (error) {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(error.message ?? 'Exact evidence fields are required.');
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The result is uncertain. Refresh authoritative settlement state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = null);
-      if (!succeeded && mounted) setState(() {});
+      if (mounted && privateAccessActive) setState(() => _busy = null);
+      if (!succeeded && privateAccessActive) setState(() {});
     }
   }
 
@@ -388,19 +414,21 @@ class _ManagementTaxSettlementPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Tax Returns & Settlements'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh settlements',
-          onPressed: _loading || _busy != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Tax Returns & Settlements'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh settlements',
+                onPressed: _loading || _busy != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final overview = _overview;

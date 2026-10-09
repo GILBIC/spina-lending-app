@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -39,7 +40,15 @@ class CollectorCashToClientPage extends StatefulWidget {
       _CollectorCashToClientPageState();
 }
 
-class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
+class _CollectorCashToClientPageState extends State<CollectorCashToClientPage>
+    with PrivateAccessState<CollectorCashToClientPage> {
+  @override
+  void clearPrivateData() {
+    _requests = const [];
+    _deviceId = null;
+    _busy.clear();
+  }
+
   late final CollectorRenewalWorkflowRepository _repository;
   late final CollectorRouteRepository _routeRepository;
   late final ImagePicker _imagePicker;
@@ -67,13 +76,15 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   }
 
   Future<void> _load() async {
-    if (!mounted) return;
+    if (!mounted || !privateAccessActive) return;
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final requests = await _repository.list(
         widget.session,
         deviceId: identity.installationId,
@@ -112,24 +123,29 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
             originalIndexByRequest[right.requestId] ?? 0,
           );
         });
+      } on SpinaApiException catch (error) {
+        if (error.statusCode == 401 || error.statusCode == 426) rethrow;
       } on Object {
         // Ordering is secondary; never block a physical-cash handover because
         // the route endpoint is unavailable.
       }
 
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _deviceId = identity.installationId;
         _requests = List<CollectorRenewalRequest>.unmodifiable(queue);
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Client cash handovers could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
@@ -139,6 +155,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   }
 
   Future<void> _confirmCashGiven(CollectorRenewalRequest request) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_canHandleCash) return;
     final confirmed =
         await showDialog<bool>(
@@ -163,7 +180,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
           ),
         ) ??
         false;
-    if (!confirmed) return;
+    if (!confirmed || !mounted || !privateAccessActive) return;
 
     final deviceId = _deviceId;
     if (deviceId == null || _busy.contains(request.requestId)) return;
@@ -174,7 +191,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
         deviceId: deviceId,
         requestId: request.requestId,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -192,15 +209,21 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
         ];
       });
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) _message('The cash handover could not be recorded.');
+      if (mounted && privateAccessActive) {
+        _message('The cash handover could not be recorded.');
+      }
     } finally {
-      if (mounted) setState(() => _busy.remove(request.requestId));
+      if (mounted && privateAccessActive) {
+        setState(() => _busy.remove(request.requestId));
+      }
     }
   }
 
   Future<void> _captureProof(CollectorRenewalRequest request) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_canHandleCash) return;
     final deviceId = _deviceId;
     if (deviceId == null || _busy.contains(request.requestId)) return;
@@ -223,7 +246,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
         ),
       ),
     );
-    if (source == null || !mounted) return;
+    if (source == null || (!mounted || !privateAccessActive)) return;
 
     try {
       final image = await pickRecoverableImage(
@@ -238,8 +261,9 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
           requestFullMetadata: false,
         ),
       );
-      if (image == null || !mounted) return;
+      if (image == null || (!mounted || !privateAccessActive)) return;
       final bytes = await image.readAsBytes();
+      requirePrivateAccess();
       final draft = RenewalHandoverPhotoDraft.fromBytes(
         filename: image.name,
         bytes: Uint8List.fromList(bytes),
@@ -258,15 +282,20 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
         requestId: request.requestId,
         draft: draft,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _message('Handover proof submitted for Management review.');
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) _message('The handover photo could not be saved.');
+      if (mounted && privateAccessActive) {
+        _message('The handover photo could not be saved.');
+      }
     } finally {
-      if (mounted) setState(() => _busy.remove(request.requestId));
+      if (mounted && privateAccessActive) {
+        setState(() => _busy.remove(request.requestId));
+      }
     }
   }
 
@@ -276,6 +305,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     final waitingCount = _requests
         .where((request) => request.canConfirmCashGiven)
         .length;

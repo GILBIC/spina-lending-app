@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -23,7 +24,15 @@ class ManagementLoanPortfolioPage extends StatefulWidget {
 }
 
 class _ManagementLoanPortfolioPageState
-    extends State<ManagementLoanPortfolioPage> {
+    extends State<ManagementLoanPortfolioPage>
+    with PrivateAccessState<ManagementLoanPortfolioPage> {
+  @override
+  void clearPrivateData() {
+    _portfolio = null;
+    _deviceId = null;
+    _searchController.clear();
+  }
+
   late final ManagementLoanRepository _repository;
   final TextEditingController _searchController = TextEditingController();
   ManagementLoanPortfolio? _portfolio;
@@ -46,19 +55,21 @@ class _ManagementLoanPortfolioPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final portfolio = await _repository.loadPortfolio(
         widget.session,
         deviceId: identity.installationId,
         query: _searchController.text,
         status: _status,
       );
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -66,15 +77,16 @@ class _ManagementLoanPortfolioPageState
         _portfolio = portfolio;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = 'Loan Management could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -87,6 +99,7 @@ class _ManagementLoanPortfolioPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Loan Management'),

@@ -11,6 +11,34 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_staff_detail_page.dart';
 
 void main() {
+  for (final status in [401, 426]) {
+    testWidgets('staff refresh $status revokes private controls', (
+      tester,
+    ) async {
+      await _pumpDetail(
+        tester,
+        repository: _DetailRepository(),
+        session: _session(const ['account.manage', 'device.manage']),
+        reloadAccount: () async =>
+            throw SpinaApiException('Denied', statusCode: status),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('management-staff-role-control')),
+        findsOneWidget,
+      );
+      await _requestEmployeeRole(tester);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('management-staff-role-control')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('management-staff-devices-section')),
+        findsNothing,
+      );
+    });
+  }
   const cases = <(List<String>, bool, bool)>[
     (<String>['account.manage'], true, false),
     (<String>['device.manage'], false, true),

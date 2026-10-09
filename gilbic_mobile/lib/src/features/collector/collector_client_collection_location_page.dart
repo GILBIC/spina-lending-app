@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_collection_location.dart';
@@ -22,7 +23,13 @@ class CollectorClientCollectionLocationPage extends StatefulWidget {
 }
 
 class _CollectorClientCollectionLocationPageState
-    extends State<CollectorClientCollectionLocationPage> {
+    extends State<CollectorClientCollectionLocationPage>
+    with PrivateAccessState<CollectorClientCollectionLocationPage> {
+  @override
+  void clearPrivateData() {
+    _location = null;
+  }
+
   late final CollectorCollectionLocationRepository _repository;
   CollectorCollectionLocation? _location;
   Object? _error;
@@ -37,6 +44,7 @@ class _CollectorClientCollectionLocationPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -46,15 +54,16 @@ class _CollectorClientCollectionLocationPageState
         widget.session,
         clientId: widget.client.clientId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _location = location);
       }
     } on Object catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _error = error);
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -62,6 +71,7 @@ class _CollectorClientCollectionLocationPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       key: const Key('collector-client-collection-location-page'),
       appBar: AppBar(title: const Text('Collection Location')),
@@ -108,9 +118,9 @@ class _CollectorClientCollectionLocationPageState
         children: [
           Text(
             widget.client.clientName,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
           const Row(
@@ -118,7 +128,9 @@ class _CollectorClientCollectionLocationPageState
               Icon(Icons.lock_outline, size: 18),
               SizedBox(width: 7),
               Expanded(
-                child: Text('Read-only • route detail comes from the SPINA server.'),
+                child: Text(
+                  'Read-only • route detail comes from the SPINA server.',
+                ),
               ),
             ],
           ),

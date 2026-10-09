@@ -41,6 +41,11 @@ class SubmissionCursor(FakeCursor):
             self._next = self.saved
         elif "select state.state_version" in sql:
             self._next = {"state_version": self.loan["state_version"]}
+        elif "coalesce(sum(applied_amount)" in sql and "as remaining_balance" in sql:
+            self._next = {
+                "applied_amount": self.same_day_applied_amount,
+                "remaining_balance": self.loan["remaining_balance"],
+            }
         elif "from lending.loans loan" in sql:
             self._next = dict(
                 self.loan,

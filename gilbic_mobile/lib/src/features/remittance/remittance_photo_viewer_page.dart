@@ -15,6 +15,7 @@ class RemittancePhotoViewerPage extends StatefulWidget {
     required this.remittanceId,
     required this.remittanceNumber,
     this.repository,
+    this.onAuthorityDenied,
     super.key,
   });
 
@@ -23,6 +24,7 @@ class RemittancePhotoViewerPage extends StatefulWidget {
   final String remittanceId;
   final String remittanceNumber;
   final RemittancePhotoRepository? repository;
+  final ValueChanged<SpinaApiException>? onAuthorityDenied;
 
   @override
   State<RemittancePhotoViewerPage> createState() =>
@@ -75,6 +77,9 @@ class _RemittancePhotoViewerPageState extends State<RemittancePhotoViewerPage> {
       _errorMessage = '${error.message} Sign in again before continuing.';
     });
     _dismissPrivateRoutes();
+    if (error.statusCode == 401 || error.statusCode == 426) {
+      widget.onAuthorityDenied?.call(error);
+    }
     return true;
   }
 

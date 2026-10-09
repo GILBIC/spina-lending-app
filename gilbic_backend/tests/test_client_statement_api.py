@@ -74,6 +74,7 @@ class FakeLoans:
                     due_date=date(2026, 11, 30),
                     status="active",
                     remaining_balance=Decimal("4900.00"),
+                    paid_amount=Decimal("100.00"),
                     pass_count=0,
                     last_payment_date=date(2026, 8, 6),
                     advance_until=None,

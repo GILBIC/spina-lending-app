@@ -87,7 +87,7 @@ void main() {
     expect(find.textContaining('last successful snapshot'), findsOneWidget);
   });
 
-  testWidgets('permission failure is safe, explicit, and retryable', (
+  testWidgets('permission failure is explicit and closes private access', (
     tester,
   ) async {
     final repository = _ErrorRepository();
@@ -103,10 +103,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Alerts & Audit access unavailable'), findsOneWidget);
+    expect(find.text('Access unavailable'), findsOneWidget);
     expect(
       find.byKey(const Key('management-alerts-audit-retry')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.textContaining('dashboard permission'), findsOneWidget);
   });

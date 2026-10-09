@@ -432,7 +432,7 @@ class EmployeeTransaction:
         result["employee_id"] = str(employee_id)
         return result
 
-    def leave_balance(self, employee_id, as_of):
+    def leave_balance(self, employee_id, as_of, *, exclude_request_id=None):
         profile = self.profile(employee_id)
         hire = _day(profile["payload"]["hire_date"])
         ledger = self.all("leave_ledger", employee_id)
@@ -471,7 +471,9 @@ class EmployeeTransaction:
             and since.isoformat() <= r["payload"]["as_of"] <= as_of.isoformat()
         )
         requests = [
-            r for r in self.all("requests", employee_id) if r["status"] == "approved"
+            r
+            for r in self.all("requests", employee_id)
+            if r["status"] == "approved" and r["id"] != str(exclude_request_id)
         ]
         used = sum(
             r["payload"]["minutes"]

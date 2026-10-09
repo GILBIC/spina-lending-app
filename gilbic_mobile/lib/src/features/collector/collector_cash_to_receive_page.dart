@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -26,7 +27,13 @@ class CollectorCashToReceivePage extends StatefulWidget {
       _CollectorCashToReceivePageState();
 }
 
-class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage> {
+class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
+    with PrivateAccessState<CollectorCashToReceivePage> {
+  @override
+  void clearPrivateData() {
+    _requests = const [];
+  }
+
   late final CollectorRenewalWorkflowRepository _repository;
   List<CollectorRenewalRequest> _requests = const <CollectorRenewalRequest>[];
   String? _error;
@@ -41,35 +48,41 @@ class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
   }
 
   Future<void> _load() async {
-    if (!mounted) return;
+    if (!mounted || !privateAccessActive) return;
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final requests = await _repository.list(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _requests = requests
             .where((request) => request.canConfirmCashReceived)
             .toList(growable: false);
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Cash releases could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _openRelease(CollectorRenewalRequest request) async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => CollectorRenewalCashReleasePage(
@@ -84,6 +97,7 @@ class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     final total = _requests.fold<double>(
       0,
       (sum, request) => sum + (request.netReleaseAmount ?? 0),
@@ -147,12 +161,16 @@ class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
               _MessageCard(
                 icon: Icons.error_outline,
                 message: _error!,
-                action: TextButton(onPressed: _load, child: const Text('Retry')),
+                action: TextButton(
+                  onPressed: _load,
+                  child: const Text('Retry'),
+                ),
               )
             else if (_requests.isEmpty)
               const _MessageCard(
                 icon: Icons.check_circle_outline,
-                message: 'No Management cash release is waiting for your receipt.',
+                message:
+                    'No Management cash release is waiting for your receipt.',
               )
             else
               for (final request in _requests) ...[
@@ -178,7 +196,9 @@ class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
                                   ),
                                   Text(
                                     _clientMeta(request),
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
@@ -186,9 +206,7 @@ class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
                             const SizedBox(width: 8),
                             Text(
                               _money(request.netReleaseAmount ?? 0),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     color: SpinaTheme.brandPinkDark,
                                     fontWeight: FontWeight.w900,
@@ -227,11 +245,7 @@ class _CollectorCashToReceivePageState extends State<CollectorCashToReceivePage>
 }
 
 class _MessageCard extends StatelessWidget {
-  const _MessageCard({
-    required this.icon,
-    required this.message,
-    this.action,
-  });
+  const _MessageCard({required this.icon, required this.message, this.action});
 
   final IconData icon;
   final String message;
@@ -247,10 +261,7 @@ class _MessageCard extends StatelessWidget {
             Icon(icon, color: SpinaTheme.brandPinkDark),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
-            if (action != null) ...[
-              const SizedBox(height: 6),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: 6), action!],
           ],
         ),
       ),

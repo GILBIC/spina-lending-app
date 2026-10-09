@@ -50,19 +50,11 @@ class ManagementLoanRecord:
 
     paid_amount: Decimal
     contractual_total: Decimal | None
+    is_overdue: bool
 
     @property
     def paid_percent(self) -> Decimal | None:
         return paid_percentage(self.paid_amount, self.contractual_total)
-
-    @property
-    def is_overdue(self) -> bool:
-        return (
-            self.loan_status.lower() == "active"
-            and self.due_date is not None
-            and self.due_date < date.today()
-            and self.remaining_balance > 0
-        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +139,12 @@ class PostgresManagementLoanRepository:
                         loan.date_released,
                         loan.due_date,
                         loan.status as loan_status,
+                        coalesce(
+                            lower(loan.status) = 'active'
+                            and loan.due_date < current_date
+                            and coalesce(state.remaining_balance, loan.principal) > 0,
+                            false
+                        ) as is_overdue,
                         state.last_payment_date,
                         state.advance_until,
                         coalesce(state.pass_count, 0) as pass_count,
@@ -262,6 +260,7 @@ class PostgresManagementLoanRepository:
             date_released=row["date_released"],
             due_date=row["due_date"],
             loan_status=str(row["loan_status"]),
+            is_overdue=bool(row["is_overdue"]),
             last_payment_date=row["last_payment_date"],
             advance_until=row["advance_until"],
             pass_count=int(row["pass_count"]),

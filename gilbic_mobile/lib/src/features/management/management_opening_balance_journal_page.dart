@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -28,7 +29,14 @@ class ManagementOpeningBalanceJournalPage extends StatefulWidget {
 }
 
 class _ManagementOpeningBalanceJournalPageState
-    extends State<ManagementOpeningBalanceJournalPage> {
+    extends State<ManagementOpeningBalanceJournalPage>
+    with PrivateAccessState<ManagementOpeningBalanceJournalPage> {
+  @override
+  void clearPrivateData() {
+    _workbook = null;
+    _journal = null;
+  }
+
   late final OpeningBalanceWorkbookRepository _workbookRepository;
   late final OpeningBalanceJournalRepository _journalRepository;
 
@@ -49,12 +57,14 @@ class _ManagementOpeningBalanceJournalPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final workbook = await _workbookRepository.load(
         widget.session,
         deviceId: identity.installationId,
@@ -68,24 +78,28 @@ class _ManagementOpeningBalanceJournalPageState
           workbookId: workbookId,
         );
       }
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _workbook = workbook;
           _journal = journal;
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Opening Balance Journal could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _prepareDraft() async {
+    if (!mounted || !privateAccessActive) return;
     final workbookId = _workbook?.summary.workbookId;
     final journal = _journal;
     if (workbookId == null || journal == null || !journal.canPrepare || _busy) {
@@ -95,17 +109,18 @@ class _ManagementOpeningBalanceJournalPageState
       context,
       _openingJournalReview(journal, preparing: true, hasPermission: true),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     setState(() => _busy = true);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final prepared = await _journalRepository.prepare(
         widget.session,
         deviceId: identity.installationId,
         workbookId: workbookId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _journal = prepared;
           _error = null;
@@ -119,13 +134,14 @@ class _ManagementOpeningBalanceJournalPageState
         );
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Opening journal draft preparation failed.'),
@@ -133,11 +149,12 @@ class _ManagementOpeningBalanceJournalPageState
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && privateAccessActive) setState(() => _busy = false);
     }
   }
 
   Future<void> _postJournal() async {
+    if (!mounted || !privateAccessActive) return;
     final workbookId = _workbook?.summary.workbookId;
     final journal = _journal;
     final journalEntryId = journal?.journalEntryId;
@@ -153,11 +170,12 @@ class _ManagementOpeningBalanceJournalPageState
       context,
       _openingJournalReview(journal, preparing: false, hasPermission: true),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     setState(() => _busy = true);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final posted = await _journalRepository.post(
         widget.session,
         deviceId: identity.installationId,
@@ -166,7 +184,7 @@ class _ManagementOpeningBalanceJournalPageState
         totalDebit: journal.totalDebitExact,
         totalCredit: journal.totalCreditExact,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _journal = posted;
           _error = null;
@@ -180,13 +198,14 @@ class _ManagementOpeningBalanceJournalPageState
         );
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -196,12 +215,13 @@ class _ManagementOpeningBalanceJournalPageState
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && privateAccessActive) setState(() => _busy = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Opening Balance Journal'),

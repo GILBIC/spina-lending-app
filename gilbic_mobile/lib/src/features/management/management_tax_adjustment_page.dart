@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -29,7 +30,14 @@ class ManagementTaxAdjustmentPage extends StatefulWidget {
 }
 
 class _ManagementTaxAdjustmentPageState
-    extends State<ManagementTaxAdjustmentPage> {
+    extends State<ManagementTaxAdjustmentPage>
+    with PrivateAccessState<ManagementTaxAdjustmentPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _postingTokens.clear();
+  }
+
   late final TaxAdjustmentRepository _repository;
   late final String Function() _tokenGenerator;
   late final String Function() _idempotencyGenerator;
@@ -50,30 +58,35 @@ class _ManagementTaxAdjustmentPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _overview = overview;
           _writeStateUncertain = false;
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Tax corrections could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
@@ -92,6 +105,7 @@ class _ManagementTaxAdjustmentPageState
   }
 
   Future<void> _recordEvidence(TaxAdjustmentCandidate candidate) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_allowed('evidence', 'accounting.tax.adjustment_evidence.record')) {
       return;
     }
@@ -99,7 +113,7 @@ class _ManagementTaxAdjustmentPageState
       context: context,
       builder: (_) => _AdjustmentEvidenceDialog(candidate: candidate),
     );
-    if (fields == null || !mounted) return;
+    if (fields == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
@@ -155,9 +169,10 @@ class _ManagementTaxAdjustmentPageState
             'Records immutable correction evidence only; no adjustment journal is posted.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run(candidate.taxLiabilityPostingId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordEvidence(
         widget.session,
         deviceId: identity.installationId,
@@ -174,6 +189,7 @@ class _ManagementTaxAdjustmentPageState
   }
 
   Future<void> _prepare(TaxAdjustmentItem item) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_allowed('prepare', 'accounting.tax.adjustment.prepare')) return;
     item.requirePrepareCoordinates();
     final confirmed = await _confirmItem(
@@ -183,9 +199,10 @@ class _ManagementTaxAdjustmentPageState
       consequence:
           'Creates a protected draft only. No balance changes until separate posting confirmation.',
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run(item.adjustmentEvidenceId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
@@ -196,6 +213,7 @@ class _ManagementTaxAdjustmentPageState
   }
 
   Future<void> _post(TaxAdjustmentItem item) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_allowed('post', 'accounting.tax.adjustment.post')) return;
     item.requirePostCoordinates();
     final confirmed = await _confirmItem(
@@ -206,7 +224,7 @@ class _ManagementTaxAdjustmentPageState
           'Immutably posts the exact protected reversal or Tax Recoverable journal with permanent audit evidence.',
       prepared: true,
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final key = <String>[
       item.adjustmentEvidenceId,
       item.evidenceDigest,
@@ -221,6 +239,7 @@ class _ManagementTaxAdjustmentPageState
     final token = _postingTokens.putIfAbsent(key, _tokenGenerator);
     await _run(item.adjustmentEvidenceId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.post(
         widget.session,
         deviceId: identity.installationId,
@@ -299,6 +318,7 @@ class _ManagementTaxAdjustmentPageState
   );
 
   Future<void> _run(String key, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busy != null) return;
     setState(() => _busy = key);
     var succeeded = false;
@@ -307,27 +327,30 @@ class _ManagementTaxAdjustmentPageState
       succeeded = true;
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted && error.code == 'network_unavailable') {
+      revokePrivateAccess(error);
+      if (mounted &&
+          privateAccessActive &&
+          error.code == 'network_unavailable') {
         setState(() => _writeStateUncertain = true);
         _message(
           'The result is uncertain. Refresh authoritative correction state before retrying.',
         );
-      } else if (mounted) {
+      } else if (mounted && privateAccessActive) {
         _message(error.message);
       }
     } on ArgumentError catch (error) {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(error.message ?? 'Exact evidence fields are required.');
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The result is uncertain. Refresh authoritative correction state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = null);
-      if (!succeeded && mounted) setState(() {});
+      if (mounted && privateAccessActive) setState(() => _busy = null);
+      if (!succeeded && privateAccessActive) setState(() {});
     }
   }
 
@@ -338,19 +361,21 @@ class _ManagementTaxAdjustmentPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Tax Corrections'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh corrections',
-          onPressed: _loading || _busy != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Tax Corrections'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh corrections',
+                onPressed: _loading || _busy != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final overview = _overview;

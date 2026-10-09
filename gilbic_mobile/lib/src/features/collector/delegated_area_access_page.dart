@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/delegated_area_access.dart';
@@ -23,7 +24,17 @@ class DelegatedAreaAccessPage extends StatefulWidget {
       _DelegatedAreaAccessPageState();
 }
 
-class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
+class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage>
+    with PrivateAccessState<DelegatedAreaAccessPage> {
+  @override
+  void clearPrivateData() {
+    _availableScopes = const [];
+    _incoming = const [];
+    _outgoing = const [];
+    _grants = const [];
+    _busyIds.clear();
+  }
+
   late final DelegatedAreaRepository _repository;
 
   List<DelegatedAreaScope> _availableScopes = const <DelegatedAreaScope>[];
@@ -34,14 +45,16 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   bool _loading = true;
   String? _errorMessage;
 
-  bool get _canRequest => widget.session.hasPermission('delegated_area.request');
+  bool get _canRequest =>
+      widget.session.hasPermission('delegated_area.request');
   bool get _canGrant => widget.session.hasPermission('delegated_area.grant');
   bool get _canView => widget.session.hasPermission('delegated_area.view');
 
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ??
+    _repository =
+        widget.repository ??
         SpinaDelegatedAreaRepository(
           deviceIdentityProvider: widget.deviceIdentityProvider,
         );
@@ -49,6 +62,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _reload() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
@@ -66,7 +80,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
       final grants = _canView
           ? await _repository.activeGrants(widget.session)
           : const <DelegatedAreaGrant>[];
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -76,23 +90,25 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         _grants = grants;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _errorMessage = 'Temporary area access could not be loaded.';
         });
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _requestAccess() async {
+    if (!mounted || !privateAccessActive) return;
     if (!_canRequest || _availableScopes.isEmpty) {
       return;
     }
@@ -111,8 +127,11 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
       }
     }
     final orderedOwners = owners.values.toList(growable: false)
-      ..sort((left, right) => left.name.toLowerCase().compareTo(right.name.toLowerCase()));
-    if (!mounted || orderedOwners.isEmpty) {
+      ..sort(
+        (left, right) =>
+            left.name.toLowerCase().compareTo(right.name.toLowerCase()),
+      );
+    if ((!mounted || !privateAccessActive) || orderedOwners.isEmpty) {
       return;
     }
 
@@ -136,7 +155,9 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
                 DropdownButtonFormField<String>(
                   key: const Key('delegated-owner-select'),
                   initialValue: selectedOwnerId,
-                  decoration: const InputDecoration(labelText: 'Assigned collector'),
+                  decoration: const InputDecoration(
+                    labelText: 'Assigned collector',
+                  ),
                   items: orderedOwners
                       .map(
                         (owner) => DropdownMenuItem<String>(
@@ -212,7 +233,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         ),
       ),
     );
-    if (draft == null || !mounted) {
+    if (draft == null || (!mounted || !privateAccessActive)) {
       return;
     }
 
@@ -220,11 +241,12 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
     final targetOwners = draft.allOwners
         ? orderedOwners
         : orderedOwners
-            .where((owner) => owner.userId == draft.ownerUserId)
-            .toList(growable: false);
+              .where((owner) => owner.userId == draft.ownerUserId)
+              .toList(growable: false);
     var sent = 0;
     final failures = <String>[];
     for (final owner in targetOwners) {
+      if (!privateAccessActive) return;
       try {
         await _repository.createRequest(
           widget.session,
@@ -236,10 +258,11 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         );
         sent += 1;
       } on SpinaApiException catch (error) {
+        revokePrivateAccess(error);
         failures.add('${owner.name}: ${error.message}');
       }
     }
-    if (!mounted) {
+    if (!mounted || !privateAccessActive) {
       return;
     }
     if (sent > 0) {
@@ -249,15 +272,15 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
             failures.isEmpty
                 ? 'Sent $sent temporary access request${sent == 1 ? '' : 's'}.'
                 : 'Sent $sent request${sent == 1 ? '' : 's'}; '
-                    '${failures.length} could not be sent.',
+                      '${failures.length} could not be sent.',
           ),
         ),
       );
       await _reload();
     } else if (failures.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failures.first)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failures.first)));
     }
   }
 
@@ -267,9 +290,11 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _approve(DelegatedAreaRequest request) async {
+    if (!mounted || !privateAccessActive) return;
     final confirmed = await _confirm(
       title: 'Allow temporary access?',
-      message: '${request.requesterName} will be able to view and collect only '
+      message:
+          '${request.requesterName} will be able to view and collect only '
           'inside the requested scope until ${formatSpinaBusinessDateTime(request.requestedExpiresAt)}.',
       confirmLabel: 'Allow Access',
     );
@@ -282,9 +307,11 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _decline(DelegatedAreaRequest request) async {
+    if (!mounted || !privateAccessActive) return;
     final confirmed = await _confirm(
       title: 'Decline request?',
-      message: 'This declines access to your area only. It does not affect requests sent to other collectors.',
+      message:
+          'This declines access to your area only. It does not affect requests sent to other collectors.',
       confirmLabel: 'Decline',
     );
     if (confirmed != true) {
@@ -296,9 +323,11 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _cancel(DelegatedAreaRequest request) async {
+    if (!mounted || !privateAccessActive) return;
     final confirmed = await _confirm(
       title: 'Cancel request?',
-      message: 'The assigned collector will no longer be able to approve this request.',
+      message:
+          'The assigned collector will no longer be able to approve this request.',
       confirmLabel: 'Cancel Request',
     );
     if (confirmed != true) {
@@ -310,6 +339,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _revoke(DelegatedAreaGrant grant) async {
+    if (!mounted || !privateAccessActive) return;
     var revokeReason = '';
     final reason = await showDialog<String>(
       context: context,
@@ -342,7 +372,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         ],
       ),
     );
-    if (reason == null || !mounted) {
+    if (reason == null || (!mounted || !privateAccessActive)) {
       return;
     }
     await _mutate(grant.grantId, () async {
@@ -379,20 +409,22 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _mutate(String id, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     setState(() => _busyIds.add(id));
     try {
       await action();
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         await _reload();
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _busyIds.remove(id));
       }
     }
@@ -400,6 +432,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Temporary Area Access'),
@@ -440,24 +473,32 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
                       const SizedBox(height: 12),
                       Text(
                         _errorMessage!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 16),
                     _sectionTitle(context, 'Approved access'),
                     ..._visitorGrantCards(),
                     if (_visitorGrants.isEmpty)
-                      const _EmptyCard('No temporary areas are approved for you right now.'),
+                      const _EmptyCard(
+                        'No temporary areas are approved for you right now.',
+                      ),
                     const SizedBox(height: 20),
                     _sectionTitle(context, 'Requests for my areas'),
                     ..._incoming.map(_incomingCard),
                     if (_incoming.isEmpty)
-                      const _EmptyCard('No Collector is waiting for your area approval.'),
+                      const _EmptyCard(
+                        'No Collector is waiting for your area approval.',
+                      ),
                     const SizedBox(height: 20),
                     _sectionTitle(context, 'My requests'),
                     ..._outgoing.map(_outgoingCard),
                     if (_outgoing.isEmpty)
-                      const _EmptyCard('You have not requested temporary access yet.'),
+                      const _EmptyCard(
+                        'You have not requested temporary access yet.',
+                      ),
                     if (_grantorGrants.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       _sectionTitle(context, 'Access I granted'),
@@ -486,18 +527,18 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
       .toList(growable: false);
 
   Iterable<Widget> _visitorGrantCards() => _visitorGrants.map(
-        (grant) => Card(
-          key: Key('delegated-active-${grant.grantId}'),
-          child: ListTile(
-            leading: const Icon(Icons.verified_user_outlined),
-            title: Text(_scopeText(grant.scopes)),
-            subtitle: Text(
-              'Approved by ${grant.grantorName}\nUntil ${formatSpinaBusinessDateTime(grant.expiresAt)}',
-            ),
-            isThreeLine: true,
-          ),
+    (grant) => Card(
+      key: Key('delegated-active-${grant.grantId}'),
+      child: ListTile(
+        leading: const Icon(Icons.verified_user_outlined),
+        title: Text(_scopeText(grant.scopes)),
+        subtitle: Text(
+          'Approved by ${grant.grantorName}\nUntil ${formatSpinaBusinessDateTime(grant.expiresAt)}',
         ),
-      );
+        isThreeLine: true,
+      ),
+    ),
+  );
 
   Widget _incomingCard(DelegatedAreaRequest request) {
     final busy = _busyIds.contains(request.requestId);
@@ -508,11 +549,16 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(request.requesterName, style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              request.requesterName,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 4),
             Text(_scopeText(request.scopes)),
             Text('Reason: ${request.reason}'),
-            Text('Until ${formatSpinaBusinessDateTime(request.requestedExpiresAt)}'),
+            Text(
+              'Until ${formatSpinaBusinessDateTime(request.requestedExpiresAt)}',
+            ),
             const SizedBox(height: 10),
             if (request.isPending)
               Row(
@@ -544,7 +590,9 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
     return Card(
       key: Key('delegated-outgoing-${request.requestId}'),
       child: ListTile(
-        leading: Icon(request.isPending ? Icons.schedule : Icons.fact_check_outlined),
+        leading: Icon(
+          request.isPending ? Icons.schedule : Icons.fact_check_outlined,
+        ),
         title: Text('${request.requestedOwnerName} • ${request.status}'),
         subtitle: Text(
           '${_scopeText(request.scopes)}\nUntil ${formatSpinaBusinessDateTime(request.requestedExpiresAt)}',
@@ -596,11 +644,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
 }
 
 class _OwnerOption {
-  _OwnerOption({
-    required this.userId,
-    required this.name,
-    required this.areas,
-  });
+  _OwnerOption({required this.userId, required this.name, required this.areas});
 
   final String userId;
   final String name;
@@ -627,10 +671,7 @@ class _EmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(message),
-      ),
+      child: Padding(padding: const EdgeInsets.all(16), child: Text(message)),
     );
   }
 }

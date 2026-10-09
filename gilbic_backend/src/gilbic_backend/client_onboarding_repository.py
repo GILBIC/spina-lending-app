@@ -32,6 +32,10 @@ class ClientOnboardingAccessDenied(PermissionError):
     pass
 
 
+class ClientOnboardingConflict(ValueError):
+    pass
+
+
 _ONBOARDING_READ_AUTH_SQL = """
     select 1 from core.users actor
     where actor.id = %s and actor.status = 'active'
@@ -491,6 +495,32 @@ class PostgresClientOnboardingRepository:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
+                    select application_reference, status, promoted_client_id,
+                           national_id_status, tin_id_status, meralco_bill_status
+                    from lending.client_onboarding_applicants
+                    where id = %s
+                    for update
+                    """,
+                    (applicant_id,),
+                )
+                current = cursor.fetchone()
+                if current is None:
+                    raise RuntimeError("Onboarding applicant was not found.")
+                if current[2] is not None:
+                    if current[1] == "eligible_for_cif" and tuple(current[3:6]) == (
+                        national_id_status, tin_id_status, meralco_bill_status
+                    ):
+                        return ClientOnboardingRecord(
+                            application_reference=str(current[0]),
+                            status="eligible_for_cif",
+                            promoted_client_id=current[2],
+                        )
+                    raise ClientOnboardingConflict(
+                        "This applicant is already promoted to a Client; review the "
+                        "existing Client record instead of changing intake requirements."
+                    )
+                cursor.execute(
+                    """
                     update lending.client_onboarding_applicants
                     set
                         national_id_status = %s,
@@ -741,7 +771,12 @@ class PostgresClientOnboardingRepository:
                 application_reference = str(row[0])
                 current_status = cast(ClientOnboardingStatus, str(row[1]))
                 promoted_client_id = row[8]
-                if current_status == "eligible_for_cif" and promoted_client_id is not None:
+                if promoted_client_id is not None:
+                    if current_status != "eligible_for_cif":
+                        raise ClientOnboardingConflict(
+                            "This applicant already has a promoted Client identity; "
+                            "review its inconsistent eligibility before continuing."
+                        )
                     return ClientOnboardingRecord(
                         application_reference=application_reference,
                         status=current_status,
@@ -799,7 +834,12 @@ class PostgresClientOnboardingRepository:
                 application_reference = str(row[0])
                 current_status = cast(ClientOnboardingStatus, str(row[1]))
                 promoted_client_id = row[8]
-                if current_status == "eligible_for_cif" and promoted_client_id is not None:
+                if promoted_client_id is not None:
+                    if current_status != "eligible_for_cif":
+                        raise ClientOnboardingConflict(
+                            "This applicant already has a promoted Client identity; "
+                            "review its inconsistent eligibility before continuing."
+                        )
                     return ClientOnboardingRecord(
                         application_reference=application_reference,
                         status=current_status,

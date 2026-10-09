@@ -17,6 +17,20 @@ from .account_repository import (
 from .auth_client import SupabaseAuthClient, SupabaseAuthError
 
 
+def authentication_service_exception(exc: SupabaseAuthError) -> HTTPException | None:
+    """Provider failures do not establish that a user's credentials are invalid."""
+    if exc.status_code == 429:
+        return HTTPException(
+            status_code=429,
+            detail="Authentication is temporarily rate limited. Please retry shortly.",
+        )
+    if exc.status_code in {408, 409} or 500 <= exc.status_code <= 599:
+        return HTTPException(
+            status_code=503, detail="Authentication service is unavailable."
+        )
+    return None
+
+
 def bearer_token(authorization: str | None) -> str:
     if not authorization:
         raise HTTPException(status_code=401, detail="Authentication required.")
@@ -66,10 +80,13 @@ def authenticated_device_context(
     try:
         identity = auth.get_user(access_token=token)
     except SupabaseAuthError as exc:
-        if exc.status_code == 503:
+        service_error = authentication_service_exception(exc)
+        if service_error is not None:
+            raise service_error from exc
+        if exc.status_code not in {400, 401, 403}:
             raise HTTPException(
-                status_code=503,
-                detail="Authentication service is unavailable.",
+                status_code=502,
+                detail="Authentication service could not complete the request.",
             ) from exc
         raise HTTPException(status_code=401, detail="Authentication required.") from exc
 

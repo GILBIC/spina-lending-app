@@ -271,7 +271,19 @@ def _statutory_allocations(tx, employee_id, start, end, current_id):
     return allocations
 
 
+def _require_approved_advance_terms(tx, employee_id):
+    if any(
+        row["status"] == "terms_pending"
+        and Decimal(row["payload"]["outstanding_amount"]) > 0
+        for row in tx.all("advances", employee_id)
+    ):
+        raise EmployeeConflict(
+            "Review the pending advance reschedule terms before processing payroll"
+        )
+
+
 def _advance_allocations(tx, employee_id, end, current_id, available):
+    _require_approved_advance_terms(tx, employee_id)
     allocations = []
     issues = []
     reserved = {}
@@ -472,6 +484,31 @@ def _annual_tax(taxable):
     return money(0)
 
 
+def _require_conversion_entitlement(tx, employee_id, payload, as_of):
+    minutes = payload.get("conversion_minutes", 0)
+    if not minutes:
+        return
+    if _date(payload["period_end"]) > as_of:
+        raise EmployeeConflict("Leave conversion cannot settle future entitlement")
+    request_id = payload.get("leave_conversion_request_id")
+    if request_id:
+        request = tx.get("requests", request_id)
+        if (
+            request["employee_id"] != str(employee_id)
+            or request["status"] != "approved"
+            or request["payload"]["request_kind"] != "leave_conversion"
+            or request["payload"]["minutes"] != minutes
+        ):
+            raise EmployeeConflict("The leave conversion request is no longer eligible")
+    # Exclude this settlement's reservation before clamping available credits to
+    # zero. Adding its minutes to a clamped balance would hide a later deficit.
+    balance = tx.leave_balance(employee_id, as_of, exclude_request_id=request_id)
+    if not balance["eligible"] or balance["available_minutes"] < minutes:
+        raise EmployeeConflict(
+            "Insufficient eligible unused credits at settlement; review the leave conversion"
+        )
+
+
 def prepare(tx):
     c = tx.command
     tx.staff("prepare_payroll")
@@ -635,6 +672,7 @@ def prepare(tx):
         input_versions=versions,
         issues=issues,
     )
+    _require_conversion_entitlement(tx, c.employee_id, p, tx.today)
     recoveries = [
         r
         for r in tx.all("payroll", c.employee_id)
@@ -670,6 +708,9 @@ def approve(tx):
         raise EmployeeConflict("Only a current draft can be approved or rejected")
     p = row["payload"]
     if c.decision == "approved":
+        _require_conversion_entitlement(tx, c.employee_id, p, tx.today)
+        if p.get("payroll_kind") == "weekly":
+            _require_approved_advance_terms(tx, c.employee_id)
         if tx.fingerprint(c.employee_id, c.id)[0] != p["input_fingerprint"]:
             raise EmployeeConflict(
                 "Payroll inputs changed; regenerate the draft before approving"
@@ -774,6 +815,11 @@ def payment(tx):
             "The payment amount must be positive and cannot exceed unpaid approved pay"
         )
     if c.result == "completed":
+        _require_conversion_entitlement(
+            tx, c.employee_id, p, min(tx.today, c.occurred_at.astimezone(MANILA).date())
+        )
+        if p.get("payroll_kind") == "weekly":
+            _require_approved_advance_terms(tx, c.employee_id)
         if c.payment_method == "cash" and not c.employee_acknowledgment:
             raise EmployeeConflict(
                 "Completed cash payout requires the employee acknowledgment"

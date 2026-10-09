@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -27,7 +28,14 @@ class ManagementPeriodClosePage extends StatefulWidget {
       _ManagementPeriodClosePageState();
 }
 
-class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
+class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage>
+    with PrivateAccessState<ManagementPeriodClosePage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _confirmationTokens.clear();
+  }
+
   late final PeriodCloseRepository _repository;
   late final String Function() _confirmationTokenGenerator;
   final Map<String, String> _confirmationTokens = <String, String>{};
@@ -47,6 +55,7 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
   }
 
   Future<void> _load({String? status}) async {
+    if (!mounted || !privateAccessActive) return;
     final nextStatus = status ?? _filter;
     setState(() {
       _loading = true;
@@ -54,31 +63,36 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
         status: nextStatus,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _filter = nextStatus;
         _overview = overview;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () =>
               _error = 'The protected period-close queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _prepare(PeriodCloseItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPrepare(overview, item)) return;
     final confirmed = await showManagementReviewConfirmation(
@@ -110,29 +124,36 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
             'The server will create an immutable preparation snapshot. No retained-earnings journal is posted and the period is not closed yet.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     setState(() => _submittingPeriodId = item.fiscalPeriodId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final prepared = await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
         fiscalPeriodId: item.fiscalPeriodId,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _replaceItem(prepared);
       _showMessage('Protected close prepared for final review.');
     } on SpinaApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _showMessage(error.message);
     } on Object {
-      if (mounted) _showMessage('The protected close could not be prepared.');
+      if (mounted && privateAccessActive) {
+        _showMessage('The protected close could not be prepared.');
+      }
     } finally {
-      if (mounted) setState(() => _submittingPeriodId = null);
+      if (mounted && privateAccessActive) {
+        setState(() => _submittingPeriodId = null);
+      }
     }
   }
 
   Future<void> _post(PeriodCloseItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPost(overview, item)) return;
     item.requirePostCoordinates();
@@ -184,7 +205,7 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
             'The server will immutably post the retained-earnings close, close the fiscal period, and permanently audit this confirmation.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     final tokenKey = '${item.fiscalPeriodId}:${item.closeDigest!}';
     final token = _confirmationTokens.putIfAbsent(
@@ -194,26 +215,30 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
     setState(() => _submittingPeriodId = item.fiscalPeriodId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final closed = await _repository.post(
         widget.session,
         deviceId: identity.installationId,
         item: item,
         confirmationToken: token,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _confirmationTokens.remove(tokenKey);
       _replaceItem(closed);
       _showMessage('Protected period close posted.');
     } on SpinaApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _showMessage(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _showMessage(
           'The close result is uncertain. Review the server state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _submittingPeriodId = null);
+      if (mounted && privateAccessActive) {
+        setState(() => _submittingPeriodId = null);
+      }
     }
   }
 
@@ -257,6 +282,7 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Formal Period Close'),

@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
@@ -22,7 +23,13 @@ class CollectorClientSchedulePage extends StatefulWidget {
 }
 
 class _CollectorClientSchedulePageState
-    extends State<CollectorClientSchedulePage> {
+    extends State<CollectorClientSchedulePage>
+    with PrivateAccessState<CollectorClientSchedulePage> {
+  @override
+  void clearPrivateData() {
+    _schedules = null;
+  }
+
   late final CollectorScheduleRepository _repository;
   List<CollectorSchedule>? _schedules;
   Object? _error;
@@ -36,6 +43,7 @@ class _CollectorClientSchedulePageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -49,15 +57,16 @@ class _CollectorClientSchedulePageState
           await _repository.fetchSchedule(widget.session, loanId: loanId),
         );
       }
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _schedules = schedules);
       }
     } on Object catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _error = error);
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -65,6 +74,7 @@ class _CollectorClientSchedulePageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       key: const Key('collector-client-schedule-page'),
       appBar: AppBar(title: const Text('Client Schedule')),

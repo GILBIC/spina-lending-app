@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -24,7 +25,14 @@ class ManagementLoanOperationsPage extends StatefulWidget {
 }
 
 class _ManagementLoanOperationsPageState
-    extends State<ManagementLoanOperationsPage> {
+    extends State<ManagementLoanOperationsPage>
+    with PrivateAccessState<ManagementLoanOperationsPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _searchController.clear();
+  }
+
   late final ManagementOperationsRepository _repository;
   final TextEditingController _searchController = TextEditingController();
   ManagementOperationsOverview? _overview;
@@ -46,32 +54,35 @@ class _ManagementLoanOperationsPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.loadOverview(
         widget.session,
         deviceId: identity.installationId,
         query: _searchController.text,
         status: _status,
       );
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() => _overview = overview);
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = 'Loan Operations could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -84,6 +95,7 @@ class _ManagementLoanOperationsPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Loan Operations'),

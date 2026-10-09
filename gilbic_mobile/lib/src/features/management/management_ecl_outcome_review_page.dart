@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -25,7 +26,13 @@ class ManagementEclOutcomeReviewPage extends StatefulWidget {
 }
 
 class _ManagementEclOutcomeReviewPageState
-    extends State<ManagementEclOutcomeReviewPage> {
+    extends State<ManagementEclOutcomeReviewPage>
+    with PrivateAccessState<ManagementEclOutcomeReviewPage> {
+  @override
+  void clearPrivateData() {
+    _data = null;
+  }
+
   static const int _pageSize = 50;
 
   late final EclOutcomeReviewRepository _repository;
@@ -44,6 +51,7 @@ class _ManagementEclOutcomeReviewPageState
   }
 
   Future<void> _load({String? filter, int? offset}) async {
+    if (!mounted || !privateAccessActive) return;
     final nextFilter = filter ?? _filter;
     final nextOffset = offset ?? _offset;
     setState(() {
@@ -52,6 +60,7 @@ class _ManagementEclOutcomeReviewPageState
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final data = await _repository.loadQueue(
         widget.session,
         deviceId: identity.installationId,
@@ -59,26 +68,30 @@ class _ManagementEclOutcomeReviewPageState
         limit: _pageSize,
         offset: nextOffset,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _filter = nextFilter;
         _offset = nextOffset;
         _data = data;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _error = 'Historical outcome review could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _review(EclOutcomeReviewEpisode episode) async {
+    if (!mounted || !privateAccessActive) return;
     final data = _data;
     if (data == null || !data.reviewPermission || episode.sourceBlocked) return;
 
@@ -87,16 +100,17 @@ class _ManagementEclOutcomeReviewPageState
       barrierDismissible: false,
       builder: (context) => _ReviewDialog(episode: episode),
     );
-    if (draft == null || !mounted) return;
+    if (draft == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       _eclReviewPresentation(episode, draft: draft),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     setState(() => _submitting = true);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.reviewOutcome(
         widget.session,
         deviceId: identity.installationId,
@@ -106,7 +120,7 @@ class _ManagementEclOutcomeReviewPageState
         evidenceReference: draft.evidenceReference,
         reviewNote: draft.reviewNote,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -116,24 +130,26 @@ class _ManagementEclOutcomeReviewPageState
       );
       await _load(offset: _offset);
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Outcome review could not be saved.')),
         );
       }
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted && privateAccessActive) setState(() => _submitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Historical Outcome Review'),

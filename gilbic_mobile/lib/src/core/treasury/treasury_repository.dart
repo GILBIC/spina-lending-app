@@ -281,7 +281,7 @@ class SpinaTreasuryRepository
       rethrow;
     }
     _current();
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    if (const [401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -476,7 +476,7 @@ class SpinaTreasuryRepository
       headers: _headers(),
     );
     _current();
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    if (const [401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -868,7 +868,7 @@ class SpinaTreasuryRepository
       headers: _headers(),
     );
     _current();
-    if ([401, 403].contains(response.statusCode)) {
+    if ([401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -989,7 +989,8 @@ class SpinaTreasuryRepository
   @override
   Future<Map<String, dynamic>> loanPayoutSources(String accountId) async {
     if (_workspace == null) await loadWorkspace();
-    if (_workspace?.account(accountId)?.permits('loan_payout_prepare') != true) {
+    if (_workspace?.account(accountId)?.permits('loan_payout_prepare') !=
+        true) {
       throw const TreasuryAccessChanged();
     }
     final value = treasuryObject(
@@ -1743,7 +1744,7 @@ class SpinaTreasuryRepository
       headers: _headers(),
     );
     _current();
-    if ([401, 403].contains(response.statusCode)) {
+    if ([401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }

@@ -214,6 +214,7 @@ class _RemittanceNotificationsPageState
 
   @override
   Widget build(BuildContext context) {
+    final epoch = _epoch;
     final pendingCount = _notifications
         .where((notification) => notification.isPending)
         .length;
@@ -268,6 +269,7 @@ class _RemittanceNotificationsPageState
                           canReceiveRemittance: canReceiveRemittance,
                           onOpened: () => _markRead(notification),
                           onReview: () => _openReview(notification),
+                          onAuthorityDenied: (error) => _deny(error, epoch),
                         ),
                   ],
                 ),
@@ -285,6 +287,7 @@ class _NotificationCard extends StatelessWidget {
     required this.canReceiveRemittance,
     required this.onOpened,
     required this.onReview,
+    required this.onAuthorityDenied,
   });
 
   final RemittanceNotification notification;
@@ -293,6 +296,7 @@ class _NotificationCard extends StatelessWidget {
   final bool canReceiveRemittance;
   final VoidCallback onOpened;
   final VoidCallback onReview;
+  final ValueChanged<SpinaApiException> onAuthorityDenied;
 
   Future<void> _openPhoto(BuildContext context) async {
     await Navigator.of(context).push<void>(
@@ -302,6 +306,7 @@ class _NotificationCard extends StatelessWidget {
           deviceIdentityProvider: deviceIdentityProvider,
           remittanceId: notification.remittanceId,
           remittanceNumber: notification.remittanceNumber,
+          onAuthorityDenied: onAuthorityDenied,
         ),
       ),
     );

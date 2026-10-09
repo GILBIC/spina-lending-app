@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -27,7 +28,16 @@ class ManagementAlertsAuditPage extends StatefulWidget {
       _ManagementAlertsAuditPageState();
 }
 
-class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
+class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage>
+    with PrivateAccessState<ManagementAlertsAuditPage> {
+  @override
+  void clearPrivateData() {
+    _snapshot = null;
+    _deviceId = null;
+    _deviceIdLoad = null;
+    _generation++;
+  }
+
   late final ManagementAlertsAuditRepository _repository;
   ManagementAlertsAuditSnapshot? _snapshot;
   ManagementAlertsAuditDomain? _domain;
@@ -60,6 +70,7 @@ class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
   Future<String> _loadAndCacheDeviceId() async {
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       _deviceId = identity.installationId;
       return identity.installationId;
     } finally {
@@ -68,6 +79,7 @@ class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     final generation = ++_generation;
     setState(() {
       _loading = true;
@@ -76,11 +88,14 @@ class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
     });
     try {
       final deviceId = await _loadDeviceId();
+      requirePrivateAccess();
       final snapshot = await _repository.loadSnapshot(
         widget.session,
         deviceId: deviceId,
       );
-      if (!mounted || generation != _generation) return;
+      if ((!mounted || !privateAccessActive) || generation != _generation) {
+        return;
+      }
       setState(() {
         _snapshot = snapshot;
         if (_domain != null && !snapshot.visibleDomains.contains(_domain)) {
@@ -88,7 +103,10 @@ class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
         }
       });
     } on Object catch (error) {
-      if (!mounted || generation != _generation) return;
+      revokePrivateAccess(error);
+      if ((!mounted || !privateAccessActive) || generation != _generation) {
+        return;
+      }
       setState(() {
         _error = error is SpinaApiException
             ? error.message
@@ -96,7 +114,7 @@ class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
         _statusCode = error is SpinaApiException ? error.statusCode : null;
       });
     } finally {
-      if (mounted && generation == _generation) {
+      if (mounted && privateAccessActive && generation == _generation) {
         setState(() => _loading = false);
       }
     }
@@ -117,6 +135,7 @@ class _ManagementAlertsAuditPageState extends State<ManagementAlertsAuditPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     final snapshot = _snapshot;
     return Scaffold(
       appBar: AppBar(

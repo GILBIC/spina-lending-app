@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -29,7 +30,15 @@ class ManagementFinancialStatementsPage extends StatefulWidget {
 }
 
 class _ManagementFinancialStatementsPageState
-    extends State<ManagementFinancialStatementsPage> {
+    extends State<ManagementFinancialStatementsPage>
+    with PrivateAccessState<ManagementFinancialStatementsPage> {
+  @override
+  void clearPrivateData() {
+    _statements = null;
+    _periods = const [];
+    _selectedPeriodId = null;
+  }
+
   late final FinancialAccountingRepository _accountingRepository;
   late final FinancialStatementsRepository _statementsRepository;
 
@@ -50,21 +59,25 @@ class _ManagementFinancialStatementsPageState
   }
 
   Future<void> _load({bool initial = false}) async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       if (initial || _periods.isEmpty) {
         final suppliedPeriods = widget.periods;
         final periods = suppliedPeriods == null
-            ? [...(await _accountingRepository.loadOverview(
-                widget.session,
-                deviceId: identity.installationId,
-              ))
-                .fiscalPeriods]
+            ? [
+                ...(await _accountingRepository.loadOverview(
+                  widget.session,
+                  deviceId: identity.installationId,
+                )).fiscalPeriods,
+              ]
             : [...suppliedPeriods];
+        requirePrivateAccess();
         periods.sort((a, b) => b.endDate.compareTo(a.endDate));
         if (periods.isEmpty) {
           throw const SpinaApiException(
@@ -81,27 +94,29 @@ class _ManagementFinancialStatementsPageState
         deviceId: identity.installationId,
         periodId: _selectedPeriodId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _statements = statements);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _errorMessage = 'Financial Statements could not be loaded.',
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _selectPeriod(String? periodId) async {
+    if (!mounted || !privateAccessActive) return;
     if (periodId == null || periodId == _selectedPeriodId) {
       return;
     }
@@ -114,6 +129,7 @@ class _ManagementFinancialStatementsPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Financial Statements'),
@@ -135,7 +151,10 @@ class _ManagementFinancialStatementsPageState
       return const Center(child: CircularProgressIndicator());
     }
     if (_errorMessage != null && statements == null) {
-      return _ErrorPanel(message: _errorMessage!, onRetry: () => _load(initial: true));
+      return _ErrorPanel(
+        message: _errorMessage!,
+        onRetry: () => _load(initial: true),
+      );
     }
     if (statements == null) {
       return const SizedBox.shrink();
@@ -188,7 +207,9 @@ class _ManagementFinancialStatementsPageState
                 .map(
                   (period) => DropdownMenuItem<String>(
                     value: period.periodId,
-                    child: Text('${period.label} • ${_statusLabel(period.status)}'),
+                    child: Text(
+                      '${period.label} • ${_statusLabel(period.status)}',
+                    ),
                   ),
                 )
                 .toList(growable: false),
@@ -237,12 +258,14 @@ class _ProfitOrLossCard extends StatelessWidget {
             const Divider(height: 24),
             const _SectionTitle('Income'),
             ...result.incomeLines.map(_StatementLineRow.new),
-            if (result.incomeLines.isEmpty) const _EmptyLine('No posted income.'),
+            if (result.incomeLines.isEmpty)
+              const _EmptyLine('No posted income.'),
             _TotalRow('Total income', result.totalIncome),
             const SizedBox(height: 10),
             const _SectionTitle('Expenses'),
             ...result.expenseLines.map(_StatementLineRow.new),
-            if (result.expenseLines.isEmpty) const _EmptyLine('No posted expenses.'),
+            if (result.expenseLines.isEmpty)
+              const _EmptyLine('No posted expenses.'),
             _TotalRow('Total expenses', result.totalExpenses),
             const Divider(height: 24),
             _TotalRow(
@@ -290,7 +313,8 @@ class _FinancialPositionCard extends StatelessWidget {
             const Divider(height: 24),
             const _SectionTitle('Assets'),
             ...result.assetLines.map(_StatementLineRow.new),
-            if (result.assetLines.isEmpty) const _EmptyLine('No posted assets.'),
+            if (result.assetLines.isEmpty)
+              const _EmptyLine('No posted assets.'),
             _TotalRow('Total assets', result.totalAssets),
             const SizedBox(height: 10),
             const _SectionTitle('Liabilities'),
@@ -301,8 +325,12 @@ class _FinancialPositionCard extends StatelessWidget {
             const SizedBox(height: 10),
             const _SectionTitle('Equity'),
             ...result.equityLines.map(_StatementLineRow.new),
-            if (result.equityLines.isEmpty) const _EmptyLine('No posted equity.'),
-            _SimpleRow('Unclosed earnings to date', result.unclosedEarningsToDate),
+            if (result.equityLines.isEmpty)
+              const _EmptyLine('No posted equity.'),
+            _SimpleRow(
+              'Unclosed earnings to date',
+              result.unclosedEarningsToDate,
+            ),
             _TotalRow('Total equity', result.totalEquity),
             const Divider(height: 24),
             _TotalRow(
@@ -326,10 +354,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
     );
   }
 }
@@ -377,7 +402,9 @@ class _TotalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = emphasized
-        ? Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
+        ? Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
         : const TextStyle(fontWeight: FontWeight.w600);
     return Padding(
       padding: const EdgeInsets.only(top: 6),

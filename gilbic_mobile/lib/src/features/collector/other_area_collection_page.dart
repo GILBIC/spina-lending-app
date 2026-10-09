@@ -11,6 +11,8 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_payment_undo_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_payment_undo_page.dart';
@@ -40,7 +42,18 @@ class OtherAreaCollectionPage extends StatefulWidget {
       _OtherAreaCollectionPageState();
 }
 
-class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
+class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage>
+    with PrivateAccessState<OtherAreaCollectionPage> {
+  final _pendingDrafts = <(String, String), PaymentSubmissionDraft>{};
+  @override
+  void clearPrivateData() {
+    _results = const [];
+    _pendingDrafts.clear();
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    _loadGeneration++;
+  }
+
   late final TextEditingController _searchController;
   late final OtherAreaClientRepository _repository;
 
@@ -185,6 +198,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
 
   @override
   void dispose() {
+    _pendingDrafts.clear();
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -256,6 +270,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   }
 
   Future<void> _loadWork() async {
+    if (!privateAccessActive) return;
     final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
@@ -284,6 +299,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
             : _allCollectors;
       });
     } on SpinaApiException catch (error) {
+      revokePrivateAccess(error);
       if (!mounted || generation != _loadGeneration) {
         return;
       }
@@ -315,6 +331,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   }
 
   Future<void> _searchClients({bool showValidation = false}) async {
+    if (!privateAccessActive) return;
     final query = _searchController.text.trim();
     if (query.length < 2) {
       if (showValidation) {
@@ -345,6 +362,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         _selectedOwner = _allCollectors;
       });
     } on SpinaApiException catch (error) {
+      revokePrivateAccess(error);
       if (!mounted || generation != _loadGeneration) {
         return;
       }
@@ -412,6 +430,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   }
 
   Future<void> _openPayment(OtherAreaClient client) async {
+    if (!privateAccessActive) return;
     final blocked = _blockedReason(client);
     if (blocked != null) {
       ScaffoldMessenger.of(
@@ -454,7 +473,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (confirmed != true || !mounted || !privateAccessActive) {
       return;
     }
 
@@ -467,6 +486,17 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
           deviceIdentityProvider: widget.deviceIdentityProvider,
           deviceSequence: widget.deviceSequence,
           collectionDate: DateTime.now(),
+          pendingDraft:
+              _pendingDrafts[(client.entry.clientId, client.entry.loanId)],
+          onPendingDraftChanged: (draft) {
+            if (!privateAccessActive) return;
+            final key = (client.entry.clientId, client.entry.loanId);
+            if (draft == null) {
+              _pendingDrafts.remove(key);
+            } else {
+              _pendingDrafts[key] = draft;
+            }
+          },
         ),
       ),
     );
@@ -489,6 +519,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       entry.routeRevision != null;
 
   Future<void> _undoPayment(OtherAreaClient client) async {
+    if (!privateAccessActive) return;
     if (!_canUndo(client.entry)) return;
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
@@ -525,6 +556,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: Text(

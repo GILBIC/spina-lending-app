@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -29,7 +30,14 @@ class ManagementTaxEvidencePage extends StatefulWidget {
       _ManagementTaxEvidencePageState();
 }
 
-class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
+class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage>
+    with PrivateAccessState<ManagementTaxEvidencePage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _retryIds.clear();
+  }
+
   late final TaxEvidenceRepository _repository;
   late final String Function() _uuidGenerator;
   late final DateTime Function() _now;
@@ -49,28 +57,33 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) setState(() => _overview = overview);
+      if (mounted && privateAccessActive) setState(() => _overview = overview);
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () =>
               _error = 'The protected tax-evidence queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
@@ -85,6 +98,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
       widget.session.hasPermission('accounting.tax.percentage_evidence.record');
 
   Future<void> _recordRule() async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canRule(overview)) return;
     final draft = await showDialog<TaxRuleEvidenceDraft>(
@@ -92,7 +106,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
       builder: (context) =>
           _RuleDialog(rules: overview.rules, initialDate: taxDateText(_now())),
     );
-    if (draft == null || !mounted) return;
+    if (draft == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
@@ -131,7 +145,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
             'The backend will retain an immutable rule version. This action does not post tax or a journal.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final key = <String>[
       'rule',
       draft.taxType,
@@ -150,6 +164,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
     ].join('|');
     await _run(key, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordRule(
         widget.session,
         deviceId: identity.installationId,
@@ -162,6 +177,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
   }
 
   Future<void> _recordDst(DstTaxReadiness source) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canDst(overview)) return;
     final rules = overview.rules
@@ -175,7 +191,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
       context: context,
       builder: (context) => _DstDialog(rules: rules),
     );
-    if (draft == null || !mounted) return;
+    if (draft == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
@@ -220,7 +236,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
             'The backend will retain exact source evidence. Liability preparation remains a separate protected action.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final key = <String>[
       'dst',
       source.loanId,
@@ -238,6 +254,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
     ].join('|');
     await _run(key, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordDst(
         widget.session,
         deviceId: identity.installationId,
@@ -251,6 +268,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
   }
 
   Future<void> _recordPercentage(PercentageTaxReadiness source) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPercentage(overview) || source.isVoided) {
       return;
@@ -266,7 +284,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
       context: context,
       builder: (context) => _PercentageDialog(rules: rules, source: source),
     );
-    if (draft == null || !mounted) return;
+    if (draft == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
@@ -318,7 +336,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
             'The backend will immutably retain the reconciled allocation. This does not post a tax liability.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final key = <String>[
       'percentage',
       source.transactionId,
@@ -334,6 +352,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
     ].join('|');
     await _run(key, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordPercentage(
         widget.session,
         deviceId: identity.installationId,
@@ -347,6 +366,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
   }
 
   Future<void> _run(String key, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busy != null) return;
     setState(() => _busy = key);
     var succeeded = false;
@@ -355,16 +375,17 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
       succeeded = true;
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The result is uncertain. Review authoritative tax evidence before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = null);
-      if (!succeeded && mounted) setState(() {});
+      if (mounted && privateAccessActive) setState(() => _busy = null);
+      if (!succeeded && privateAccessActive) setState(() {});
     }
   }
 
@@ -375,27 +396,29 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Tax Evidence'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh tax evidence',
-          onPressed: _loading || _busy != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    floatingActionButton: _overview != null && _canRule(_overview!)
-        ? FloatingActionButton.small(
-            key: const Key('record-tax-rule'),
-            tooltip: 'Record retained tax rule evidence',
-            onPressed: _busy == null ? _recordRule : null,
-            child: const Icon(Icons.add),
-          )
-        : null,
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Tax Evidence'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh tax evidence',
+                onPressed: _loading || _busy != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          floatingActionButton: _overview != null && _canRule(_overview!)
+              ? FloatingActionButton.small(
+                  key: const Key('record-tax-rule'),
+                  tooltip: 'Record retained tax rule evidence',
+                  onPressed: _busy == null ? _recordRule : null,
+                  child: const Icon(Icons.add),
+                )
+              : null,
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final overview = _overview;

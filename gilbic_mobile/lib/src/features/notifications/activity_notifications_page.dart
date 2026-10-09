@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -23,8 +24,16 @@ class ActivityNotificationsPage extends StatefulWidget {
       _ActivityNotificationsPageState();
 }
 
-class _ActivityNotificationsPageState
-    extends State<ActivityNotificationsPage> {
+class _ActivityNotificationsPageState extends State<ActivityNotificationsPage>
+    with PrivateAccessState<ActivityNotificationsPage> {
+  @override
+  void clearPrivateData() {
+    _notifications = const [];
+    _deviceId = null;
+    _expanded.clear();
+    _updating.clear();
+  }
+
   late final ActivityNotificationRepository _repository;
 
   List<ActivityNotification> _notifications = const <ActivityNotification>[];
@@ -42,17 +51,19 @@ class _ActivityNotificationsPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final notifications = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -60,21 +71,23 @@ class _ActivityNotificationsPageState
         _notifications = notifications;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = 'Payment updates could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _toggle(ActivityNotification notification) async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       if (!_expanded.add(notification.id)) {
         _expanded.remove(notification.id);
@@ -94,7 +107,7 @@ class _ActivityNotificationsPageState
         deviceId: deviceId,
         notificationId: notification.id,
       );
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -102,10 +115,12 @@ class _ActivityNotificationsPageState
             .map((item) => item.id == updated.id ? updated : item)
             .toList(growable: false);
       });
+    } on SpinaApiException catch (error) {
+      revokePrivateAccess(error);
     } on Object {
-      // The update remains visible even if the read receipt cannot be saved.
+      // Connectivity failures may retain the authorized update.
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _updating.remove(notification.id));
       }
     }
@@ -113,6 +128,7 @@ class _ActivityNotificationsPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment Updates'),
@@ -229,7 +245,8 @@ class _ActivityCard extends StatelessWidget {
                       children: [
                         Text(
                           notification.title,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 fontWeight: notification.isRead
                                     ? FontWeight.w600
                                     : FontWeight.w900,

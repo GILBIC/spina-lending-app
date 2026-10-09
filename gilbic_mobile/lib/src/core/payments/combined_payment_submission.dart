@@ -51,6 +51,7 @@ class CombinedPaymentSubmissionDraft {
     this.extraAllocationChoice,
     this.reviewedAllocationHash,
     this.regularPastDueFollowup,
+    this.reviewedComponents,
   });
 
   final String idempotencyKey;
@@ -64,12 +65,14 @@ class CombinedPaymentSubmissionDraft {
   final CombinedExtraAllocationChoice? extraAllocationChoice;
   final String? reviewedAllocationHash;
   final PastDueFollowupDraft? regularPastDueFollowup;
+  final List<CombinedPaymentReviewedComponent>? reviewedComponents;
 
   CombinedPaymentSubmissionDraft withAllocationReview({
     required Object cashReceivedAmount,
     CombinedExtraAllocationChoice? extraAllocationChoice,
     String? reviewedAllocationHash,
     PastDueFollowupDraft? regularPastDueFollowup,
+    required CombinedPaymentAllocationPreview preview,
   }) {
     return CombinedPaymentSubmissionDraft(
       idempotencyKey: idempotencyKey,
@@ -83,6 +86,9 @@ class CombinedPaymentSubmissionDraft {
       extraAllocationChoice: extraAllocationChoice,
       reviewedAllocationHash: reviewedAllocationHash,
       regularPastDueFollowup: regularPastDueFollowup,
+      reviewedComponents: List.unmodifiable(
+        preview.reviewedComponents(extraAllocationChoice),
+      ),
     );
   }
 
@@ -157,6 +163,9 @@ class CombinedPaymentAllocationLeg {
     required this.extraAmount,
     required this.totalAmount,
     this.projectedCoveredDates = const <String>[],
+    this.rawScheduledAmount,
+    this.rawExtraAmount,
+    this.rawTotalAmount,
   });
 
   final String loanId;
@@ -165,6 +174,9 @@ class CombinedPaymentAllocationLeg {
   final double extraAmount;
   final double totalAmount;
   final List<String> projectedCoveredDates;
+  final String? rawScheduledAmount;
+  final String? rawExtraAmount;
+  final String? rawTotalAmount;
 
   factory CombinedPaymentAllocationLeg.fromPayload(
     Map<String, dynamic> payload,
@@ -183,6 +195,9 @@ class CombinedPaymentAllocationLeg {
       extraAmount: _requiredDouble(payload, 'extra_amount'),
       totalAmount: _requiredDouble(payload, 'total_amount'),
       projectedCoveredDates: projectedDates,
+      rawScheduledAmount: tryRequestMoney(payload['scheduled_amount']),
+      rawExtraAmount: tryRequestMoney(payload['extra_amount']),
+      rawTotalAmount: tryRequestMoney(payload['total_amount']),
     );
   }
 }
@@ -227,6 +242,65 @@ class CombinedPaymentAllocationPreview {
 
   CombinedPaymentAllocationLeg get regularLeg =>
       legs.firstWhere((leg) => leg.loanType == 'regular');
+
+  List<CombinedPaymentReviewedComponent> reviewedComponents(
+    CombinedExtraAllocationChoice? extraChoice,
+  ) {
+    final components = <CombinedPaymentReviewedComponent>[];
+    for (final leg in legs) {
+      final scheduled = requestMoneyCents(
+        leg.rawScheduledAmount ?? leg.scheduledAmount,
+      );
+      final extra = requestMoneyCents(leg.rawExtraAmount ?? leg.extraAmount);
+      final total = requestMoneyCents(leg.rawTotalAmount ?? leg.totalAmount);
+      if (scheduled == null ||
+          extra == null ||
+          total == null ||
+          scheduled < BigInt.zero ||
+          extra < BigInt.zero ||
+          scheduled + extra != total) {
+        throw const SpinaApiException(
+          'The reviewed allocation is incomplete.',
+          code: 'invalid_combined_payment_preview',
+        );
+      }
+      void add(String component, BigInt amount) {
+        if (amount > BigInt.zero) {
+          components.add(
+            CombinedPaymentReviewedComponent(
+              loanId: leg.loanId,
+              component: component,
+              amountInCents: amount,
+            ),
+          );
+        }
+      }
+
+      if (leg.loanType == 'regular') {
+        add(
+          extra > BigInt.zero
+              ? 'regular_scheduled_and_extra'
+              : 'regular_scheduled',
+          total,
+        );
+      } else {
+        add('seven_by_seven_scheduled', scheduled);
+        if (extra > BigInt.zero) {
+          if (extraChoice !=
+                  CombinedExtraAllocationChoice.sevenBySevenAdvance &&
+              extraChoice !=
+                  CombinedExtraAllocationChoice.sevenBySevenExtraPrincipal) {
+            throw const SpinaApiException(
+              'The reviewed extra allocation is missing.',
+              code: 'invalid_combined_payment_preview',
+            );
+          }
+          add(extraChoice!.apiValue, extra);
+        }
+      }
+    }
+    return components;
+  }
 
   factory CombinedPaymentAllocationPreview.fromPayload(Object? value) {
     final payload = stringMap(value);
@@ -347,8 +421,12 @@ class CombinedPaymentSubmissionResult {
   List<String> get receiptNumbers =>
       legs.map((leg) => leg.receiptNumber).toList(growable: false);
 
-  factory CombinedPaymentSubmissionResult.fromPayload(Object? value) {
+  factory CombinedPaymentSubmissionResult.fromPayload(
+    Object? value, {
+    CombinedPaymentSubmissionDraft? draft,
+  }) {
     final payload = stringMap(value);
+    if (draft != null) _validateFinalEvidence(payload, draft);
     final rawLegs = payload['legs'];
     if (rawLegs is! List) {
       throw const SpinaApiException(
@@ -392,6 +470,108 @@ class CombinedPaymentSubmissionResult {
           firstNonEmptyString(<Object?>[payload['message']]) ??
           'Regular + 7x7 payments saved.',
     );
+  }
+}
+
+class CombinedPaymentReviewedComponent {
+  const CombinedPaymentReviewedComponent({
+    required this.loanId,
+    required this.component,
+    required this.amountInCents,
+  });
+  final String loanId;
+  final String component;
+  final BigInt amountInCents;
+}
+
+void _validateFinalEvidence(
+  Map<String, dynamic> payload,
+  CombinedPaymentSubmissionDraft draft,
+) {
+  Never invalid() => throw const SpinaApiException(
+    'The combined payment result is not confirmed. Retry the same payment.',
+    code: 'invalid_combined_payment_payload',
+  );
+  final status = payload['status'];
+  if ((status != 'accepted' && status != 'duplicate') ||
+      payload['duplicate'] != (status == 'duplicate') ||
+      payload['client_transaction_id'] != draft.idempotencyKey ||
+      payload['client_id'] != draft.clientId ||
+      requestMoneyCents(payload['total_amount']) !=
+          requestMoneyCents(draft.cashReceivedAmount) ||
+      (draft.reviewedAllocationHash != null &&
+          payload['allocation_hash'] != draft.reviewedAllocationHash) ||
+      payload['extra_allocation_choice'] !=
+          draft.extraAllocationChoice?.apiValue) {
+    invalid();
+  }
+  final rawLegs = payload['legs'];
+  if (rawLegs is! List || rawLegs.isEmpty) invalid();
+  final expectedLoans = draft.legs.map((leg) => leg.loanId).toSet();
+  final transactions = <String>{};
+  final receipts = <String>{};
+  final receivedLoans = <String>{};
+  final expectedComponents = draft.reviewedComponents == null
+      ? null
+      : {
+          for (final component in draft.reviewedComponents!)
+            '${component.loanId}:${component.component}':
+                component.amountInCents,
+        };
+  var applied = BigInt.zero;
+  var unallocated = BigInt.zero;
+  for (final rawLeg in rawLegs) {
+    final leg = stringMap(rawLeg);
+    final transaction = firstNonEmptyString([leg['transaction_id']]);
+    final receipt = firstNonEmptyString([leg['receipt_number']]);
+    final balance = requestMoneyCents(leg['official_balance']);
+    final appliedAmount = requestMoneyCents(
+      leg['applied_amount'] ?? leg['amount'],
+    );
+    final unallocatedAmount = requestMoneyCents(
+      leg['unallocated_amount'] ?? '0.00',
+    );
+    receivedLoans.add(leg['loan_id'].toString());
+    if (!expectedLoans.contains(leg['loan_id']) ||
+        transaction == null ||
+        !transactions.add(transaction) ||
+        receipt == null ||
+        !receipts.add(receipt) ||
+        balance == null ||
+        balance < BigInt.zero ||
+        appliedAmount == null ||
+        appliedAmount < BigInt.zero ||
+        unallocatedAmount == null ||
+        unallocatedAmount < BigInt.zero) {
+      invalid();
+    }
+    if (leg['amount'] != null &&
+        requestMoneyCents(leg['amount']) != appliedAmount + unallocatedAmount) {
+      invalid();
+    }
+    if (expectedComponents != null) {
+      final expected = expectedComponents.remove(
+        '${leg['loan_id']}:${leg['allocation_component']}',
+      );
+      if (expected == null ||
+          expected != appliedAmount ||
+          unallocatedAmount != BigInt.zero) {
+        invalid();
+      }
+    }
+    applied += appliedAmount;
+    unallocated += unallocatedAmount;
+  }
+  if (applied + unallocated != requestMoneyCents(draft.cashReceivedAmount) ||
+      (expectedComponents != null && expectedComponents.isNotEmpty) ||
+      (expectedComponents == null &&
+          !receivedLoans.containsAll(expectedLoans)) ||
+      (payload['applied_total_amount'] != null &&
+          requestMoneyCents(payload['applied_total_amount']) != applied) ||
+      (payload['unallocated_total_amount'] != null &&
+          requestMoneyCents(payload['unallocated_total_amount']) !=
+              unallocated)) {
+    invalid();
   }
 }
 

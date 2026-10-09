@@ -60,10 +60,19 @@ _spec.loader.exec_module(cases)
     ],
 )
 def test_regular_followup_matches_the_posted_receipts_contract_mode(
-    activated: bool, entry_type: CollectionEntryType, cash: str | None, unpaid: str
+    activated: bool,
+    entry_type: CollectionEntryType,
+    cash: str | None,
+    unpaid: str,
+    monkeypatch,
 ) -> None:
     """Per-loan activation must bind follow-up to its actual unpaid installment."""
     assert DATABASE_URL is not None
+    from gilbic_backend import collection_posting
+
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: date(2097, 8, 2)
+    )
     case = cases._setup_combined_case(verified_regular_schedule=activated)
     with psycopg.connect(DATABASE_URL) as connection:
         # The live switch is immutable per-loan activation, not the retired

@@ -107,6 +107,7 @@ class FakeManagementLoans:
                     remaining_balance=Decimal("5900.00"),
                     paid_amount=Decimal("100.00"),
                     contractual_total=Decimal("6000.00"),
+                    is_overdue=True,
                     date_released=date(2026, 8, 1),
                     due_date=date(2020, 1, 1),
                     loan_status="active",
