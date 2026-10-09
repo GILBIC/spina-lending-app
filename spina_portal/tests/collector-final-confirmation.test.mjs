@@ -41,7 +41,7 @@ async function workspace(t, response) {
   await mountCollectorWorkspace(context);
   const form=root.querySelector('.collector-entry-form'); assert.ok(form); form.hidden=false;
   for(const [name,value] of Object.entries({entryType:'payment',amount:'250.00',allocation:'scheduled',note})) form.querySelector(`[name="${name}"]`).value=value;
-  return {root,form,writes,handle,guard:context.collectorWriteGuard,get reads(){return reads;},get sequence(){return sequence;}};
+  return {root,form,writes,handle,guard:context.collectorWriteGuard,abort:()=>controller.abort(),get reads(){return reads;},get sequence(){return sequence;}};
 }
 const flush = async () => {await setImmediate();await setImmediate();};
 
@@ -101,3 +101,39 @@ test('confirmed receipt retains large exact balance and timezone-bearing fractio
   fire(h.form,'submit');await flush();assert.match(h.form.querySelector('[data-collection-feedback]').textContent,/1,000,000,000,000,000\.01/);
   assert.equal(h.guard.pendingCommand,null);assert.equal(h.root.dataset.financialLocked,'false');
 });
+
+const teardowns = [
+  ['explicit disposal', h=>h.handle.dispose()],
+  ['signal abort', h=>h.abort()],
+];
+for(const [name,teardown] of teardowns) {
+  test(`real workspace ${name} clears its uncertain private command`,async t=>{
+    const h=await workspace(t,body=>({...finalFacts(body),transaction_id:null}));
+    fire(h.form,'submit');await flush();
+    assert.equal(h.guard.current,true);assert.equal(h.guard.locked,true);
+    assert.equal(h.guard.pendingCommand.options.body.note,note);
+    teardown(h);
+    assert.equal(h.guard.current,false);assert.equal(h.guard.pendingCommand,null);
+    assert.equal(h.root.innerHTML,'');
+  });
+
+  for(const completion of ['malformed result','lost acknowledgement']) {
+    test(`real workspace ${name} keeps private command cleared after late ${completion}`,async t=>{
+      let finish;
+      const h=await workspace(t,body=>new Promise((resolve,reject)=>{
+        finish=()=>completion==='malformed result'
+          ? resolve({...finalFacts(body),transaction_id:null})
+          : reject(Object.assign(new Error('Response lost'),{code:'network_uncertain'}));
+      }));
+      fire(h.form,'submit');await flush();
+      assert.equal(h.guard.busy,true);assert.equal(h.guard.pendingCommand.options.body.note,note);
+      teardown(h);
+      const clearedImmediately=h.guard.pendingCommand;
+      finish();await flush();
+      assert.equal(clearedImmediately,null);assert.equal(h.guard.pendingCommand,null);
+      assert.equal(h.guard.current,false);assert.equal(h.guard.busy,false);
+      assert.equal(h.root.innerHTML,'');assert.equal(h.reads,1);assert.equal(h.writes.length,1);
+      assert.doesNotMatch(h.form.querySelector('[data-collection-feedback]').textContent,/^Saved\./);
+    });
+  }
+}

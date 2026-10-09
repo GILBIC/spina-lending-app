@@ -24,6 +24,7 @@ export function createCollectorWriteGuard({
   function dispose() {
     if (disposed) return;
     disposed = true;
+    pendingCommand = null;
     eventTarget.removeEventListener?.('offline', offline);
     signal?.removeEventListener('abort', dispose);
   }
@@ -36,7 +37,7 @@ export function createCollectorWriteGuard({
     get locked() { return Boolean(lockMessage); },
     get busy() { return busy; },
     get pendingCommand() { return pendingCommand ? structuredClone(pendingCommand) : null; },
-    retainCommand(command) { pendingCommand=structuredClone(command); },
+    retainCommand(command) { if (!disposed) pendingCommand=structuredClone(command); },
     clearCommand() { pendingCommand=null; },
     begin() {
       if (disposed || busy) return false;
