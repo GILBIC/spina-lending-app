@@ -8,6 +8,7 @@ from uuid import UUID
 from psycopg.rows import dict_row
 
 from .database import open_connection
+from .loan_paid_projection import PAID_PROJECTION_COLUMNS, paid_percentage
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,18 +48,12 @@ class ManagementLoanRecord:
     state_version: int
     renewal_request_status: str | None
 
-    @property
-    def paid_amount(self) -> Decimal:
-        value = self.principal - self.remaining_balance
-        return value if value > 0 else Decimal("0.00")
+    paid_amount: Decimal
+    contractual_total: Decimal | None
 
     @property
-    def paid_percent(self) -> Decimal:
-        if self.principal <= 0:
-            return Decimal("0.0")
-        return (self.paid_amount / self.principal * Decimal("100")).quantize(
-            Decimal("0.1")
-        )
+    def paid_percent(self) -> Decimal | None:
+        return paid_percentage(self.paid_amount, self.contractual_total)
 
     @property
     def is_overdue(self) -> bool:
@@ -129,7 +124,7 @@ class PostgresManagementLoanRepository:
                 summary_row = cursor.fetchone()
 
                 cursor.execute(
-                    """
+                    f"""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -144,6 +139,7 @@ class PostgresManagementLoanRepository:
                         coalesce(loan_type.calculation_mode, '')
                             as calculation_mode,
                         loan.principal,
+                        {PAID_PROJECTION_COLUMNS},
                         loan.daily_amount,
                         loan.interest_rate,
                         coalesce(state.remaining_balance, loan.principal)
@@ -229,9 +225,7 @@ class PostgresManagementLoanRepository:
                 active_seven_by_seven_count=int(
                     summary_row["active_seven_by_seven_count"] or 0
                 ),
-                approved_renewal_count=int(
-                    summary_row["approved_renewal_count"] or 0
-                ),
+                approved_renewal_count=int(summary_row["approved_renewal_count"] or 0),
             ),
             loans=tuple(self._record_from_row(row) for row in loan_rows),
         )
@@ -259,6 +253,12 @@ class PostgresManagementLoanRepository:
                 else None
             ),
             remaining_balance=Decimal(row["remaining_balance"]),
+            paid_amount=Decimal(row["paid_amount"]).quantize(Decimal("0.01")),
+            contractual_total=(
+                Decimal(row["contractual_total"])
+                if row["contractual_total"] is not None
+                else None
+            ),
             date_released=row["date_released"],
             due_date=row["due_date"],
             loan_status=str(row["loan_status"]),

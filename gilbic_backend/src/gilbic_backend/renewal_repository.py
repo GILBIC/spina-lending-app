@@ -10,6 +10,7 @@ from psycopg.errors import UniqueViolation
 from psycopg.rows import dict_row
 
 from .database import open_connection
+from .loan_paid_projection import PAID_PROJECTION_COLUMNS, paid_percentage
 
 
 RenewalStatus = Literal["pending", "approved", "rejected", "cancelled"]
@@ -57,14 +58,7 @@ class RenewalLoanOption:
 
     @property
     def paid_percent(self) -> Decimal | None:
-        if self.contractual_total is None or self.contractual_total <= 0:
-            return None
-        return min(
-            Decimal("100.0"),
-            (self.paid_amount / self.contractual_total * Decimal("100")).quantize(
-                Decimal("0.1")
-            ),
-        )
+        return paid_percentage(self.paid_amount, self.contractual_total)
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,7 +97,7 @@ class PostgresRenewalRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 client = self._linked_client(cursor, user_id=user_id)
                 cursor.execute(
-                    """
+                    f"""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -111,19 +105,9 @@ class PostgresRenewalRepository:
                             as loan_type_name,
                         loan_type.calculation_mode,
                         loan.principal,
-                        (
-                            select sum(installment.contractual_amount)
-                            from lending.loan_contract_schedules schedule
-                            join lending.loan_contract_schedule_registrations registration
-                              on registration.schedule_id = schedule.id
-                            join lending.loan_contract_installments installment
-                              on installment.schedule_id = schedule.id
-                            where schedule.loan_id = loan.id
-                              and schedule.status = 'active'
-                        ) as contractual_total,
+                        {PAID_PROJECTION_COLUMNS},
                         coalesce(state.remaining_balance, loan.principal)
                             as remaining_balance,
-                        coalesce(receipts.paid_amount, 0)::numeric(18,2) as paid_amount,
                         loan.daily_amount,
                         loan.date_released,
                         loan.due_date,
@@ -135,13 +119,6 @@ class PostgresRenewalRepository:
                       on loan_type.id = loan.loan_type_id
                     left join lending.loan_collection_state state
                       on state.loan_id = loan.id
-                    left join lateral (
-                        select coalesce(sum(tx.applied_amount), 0)::numeric(18,2) as paid_amount
-                        from lending.collection_transactions tx
-                        where tx.loan_id = loan.id
-                          and tx.is_voided = false
-                          and tx.entry_type in ('payment', 'advance')
-                    ) receipts on true
                     left join lateral (
                         select request.id, request.status
                         from lending.client_renewal_requests request
@@ -185,30 +162,14 @@ class PostgresRenewalRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 client = self._linked_client(cursor, user_id=user_id)
                 cursor.execute(
-                    """
+                    f"""
                     select
                         loan.id,
                         loan.status,
                         loan.principal,
                         loan.daily_amount,
                         loan_type.calculation_mode,
-                        (
-                            select sum(installment.contractual_amount)
-                            from lending.loan_contract_schedules schedule
-                            join lending.loan_contract_schedule_registrations registration
-                              on registration.schedule_id = schedule.id
-                            join lending.loan_contract_installments installment
-                              on installment.schedule_id = schedule.id
-                            where schedule.loan_id = loan.id
-                              and schedule.status = 'active'
-                        ) as contractual_total,
-                        coalesce((
-                            select sum(tx.applied_amount)
-                            from lending.collection_transactions tx
-                            where tx.loan_id = loan.id
-                              and tx.is_voided = false
-                              and tx.entry_type in ('payment', 'advance')
-                        ), 0)::numeric(18,2) as paid_amount
+                        {PAID_PROJECTION_COLUMNS}
                     from lending.loans loan
                     join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
@@ -657,9 +618,7 @@ class PostgresRenewalRepository:
             submitted_at=row["submitted_at"],
             reviewed_at=row["reviewed_at"],
             reviewed_by_name=(
-                str(row["reviewed_by_name"])
-                if row["reviewed_by_name"]
-                else None
+                str(row["reviewed_by_name"]) if row["reviewed_by_name"] else None
             ),
             review_note=str(row["review_note"] or ""),
             cancelled_at=row["cancelled_at"],

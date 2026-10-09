@@ -40,15 +40,22 @@ def preview_reconciliation(conn, account, row):
         (account["id"], row["coverage_start"], row["cutoff"]),
     ).fetchall()
     events = [event_projection(conn, event) for event in events]
+    # Matches are immutable historical evidence. Only a match to a current
+    # in-scope movement can still cover a statement row or movement component.
+    event_ids = {event["id"] for event in events}
+    valid_matches = [match for match in matches if match["event_id"] in event_ids]
+    invalid_matches = [match for match in matches if match["event_id"] not in event_ids]
     unmatched_rows = [
         str(item["id"])
         for item in observations
-        if not any(match["observation_id"] == item["id"] for match in matches)
+        if not any(match["observation_id"] == item["id"] for match in valid_matches)
     ]
     unmatched_events = []
     for event in events:
         components = {
-            match["component"] for match in matches if match["event_id"] == event["id"]
+            match["component"]
+            for match in valid_matches
+            if match["event_id"] == event["id"]
         }
         if "total" not in components and (
             "principal" not in components or event["fee"] and "fee" not in components
@@ -66,6 +73,10 @@ def preview_reconciliation(conn, account, row):
         blockers.append("The declared statement history is incomplete.")
     if unmatched_rows:
         blockers.append("Statement observations remain unmatched.")
+    if invalid_matches:
+        blockers.append(
+            "Retained matches no longer reference valid movements. Create a new reviewed statement session; supersede prior closed coverage when required."
+        )
     if unmatched_events:
         blockers.append("Verified ledger movements remain unmatched.")
     if difference is not None and difference != 0:
@@ -122,6 +133,7 @@ def preview_reconciliation(conn, account, row):
             "difference": difference,
             "observations": observations,
             "matches": matches,
+            "invalid_match_ids": [match["id"] for match in invalid_matches],
             "unmatched_observation_ids": unmatched_rows,
             "unmatched_event_ids": unmatched_events,
             "blockers": blockers,

@@ -930,6 +930,16 @@ class TreasuryService:
         correction = command.action == "movement_correct"
         if correction:
             self.evidence(conn, account["id"], command.evidence_id, {"correction"})
+            # These bindings retain actual custody history even after a full
+            # protected return. The shared account lock fences their writers.
+            if conn.execute(
+                """select 1 from treasury.collector_settlements where event_id=%s
+                union all select 1 from treasury.collector_exceptions where event_id=%s limit 1""",
+                (event["id"], event["id"]),
+            ).fetchone():
+                raise TreasuryConflict(
+                    "Protected Collector custody history cannot be erased by a generic observation correction."
+                )
             if conn.execute(
                 "select 1 from treasury.transfers where source_event_id=%s or destination_event_id=%s limit 1",
                 (event["id"], event["id"]),
