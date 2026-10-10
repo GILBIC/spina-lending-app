@@ -97,3 +97,18 @@ test('authoritative ready state with own signature complete waits for office rat
  const value={...record,signer_readiness_status:'ready',signers:[{...own,signed:true},other]};
  assert.match(presentation(value).cards[0].nextStep,/complete.*Waiting.*office/);assert.doesNotMatch(presentation(value).cards[0].nextStep,/Other signers must finish/);
 });
+
+test('borrower-only guidance distinguishes new terms from historical supporting signer requirements',()=>{
+ const borrowerOnly={...record,signers:[own]};
+ assert.match(presentation(borrowerOnly).cards[0].nextStep,/Complete your own signer step/);
+ assert.doesNotMatch(presentation(borrowerOnly).cards[0].nextStep,/Other signers/);
+ const currentHtml=client.clientRenewalWorkflowRows([borrowerOnly]);
+ assert.match(currentHtml,/new V1.*borrower.only/i);
+ assert.match(currentHtml,/data-client-renewal-sign-request/);
+ const historicalHtml=client.clientRenewalWorkflowRows([record]);
+ assert.match(historicalHtml,/existing record.*other required signer.*own SPINA account/i);
+ assert.match(historicalHtml,/data-client-renewal-sign-request/);
+ const cashHtml=client.clientRenewalWorkflowRows([{...borrowerOnly,cash_given_to_client_at:'2026-10-02T09:00:00+08:00'}]);
+ assert.match(cashHtml,/personally receive the cash/);
+ assert.match(cashHtml,/data-client-renewal-cash-confirm/);
+});

@@ -66,7 +66,7 @@ class CollectorRecommendationBody(StrictWorkflowModel):
 
 
 class RenewalSignerInput(StrictWorkflowModel):
-    party_role: Literal["borrower", "guarantor", "solidary_co_maker", "surety"]
+    party_role: Literal["borrower"]
     full_name: str = Field(min_length=2, max_length=200)
     user_id: UUID | None = None
     government_id_verified: bool = False
@@ -84,7 +84,7 @@ class ManagementRenewalTermsBody(StrictWorkflowModel):
     review_note: str = Field(default="", max_length=1000)
     override_reason: str = Field(default="", max_length=1000)
     office_processing_required: bool = False
-    signers: list[RenewalSignerInput] = Field(default_factory=list, max_length=10)
+    signers: list[RenewalSignerInput] = Field(default_factory=list, max_length=1)
 
     @field_validator("review_note", "override_reason")
     @classmethod
@@ -852,39 +852,56 @@ def create_renewal_workflow_router() -> APIRouter:
                                 ),
                             },
                         )
-                    if not body.office_processing_required:
-                        borrowers = [
-                            signer
-                            for signer in body.signers
-                            if signer.party_role == "borrower"
-                        ]
-                        if len(borrowers) != 1:
-                            raise HTTPException(
-                                status_code=422,
-                                detail={
-                                    "code": "renewal_borrower_signer_required",
-                                    "message": (
-                                        "Remote renewal requires exactly one borrower "
-                                        "signer plus every other legally required signer."
-                                    ),
-                                },
-                            )
-                        borrower_user_id = row["borrower_user_id"]
-                        if (
-                            borrower_user_id is None
-                            or borrowers[0].user_id != borrower_user_id
-                        ):
-                            raise HTTPException(
-                                status_code=422,
-                                detail={
-                                    "code": "renewal_borrower_app_required",
-                                    "message": (
-                                        "The borrower must use their own linked GILBIC "
-                                        "account for remote renewal. Otherwise process "
-                                        "the renewal at the office."
-                                    ),
-                                },
-                            )
+                    borrowers = body.signers
+                    if not body.office_processing_required and len(borrowers) != 1:
+                        raise HTTPException(
+                            status_code=422,
+                            detail={
+                                "code": "renewal_borrower_signer_required",
+                                "message": (
+                                    "Remote renewal requires exactly one borrower signer."
+                                ),
+                            },
+                        )
+                    borrower_user_id = row.get("borrower_user_id")
+                    if any(
+                        signer.user_id is not None
+                        and signer.user_id != borrower_user_id
+                        for signer in borrowers
+                    ) or (
+                        not body.office_processing_required
+                        and (borrower_user_id is None or borrowers[0].user_id is None)
+                    ):
+                        raise HTTPException(
+                            status_code=422,
+                            detail={
+                                "code": "renewal_borrower_app_required",
+                                "message": (
+                                    "A signer account must be the borrower's own linked "
+                                    "GILBIC account. If the borrower has no linked account, "
+                                    "use office processing without a signer account."
+                                ),
+                            },
+                        )
+                    # Historical parties and signed evidence cannot be silently
+                    # replaced by a newly approved borrower-only terms submission.
+                    existing_signers = _signer_payloads(cursor, request_id=request_id)
+                    if any(
+                        signer["party_role"] != "borrower" or signer["signed"]
+                        for signer in existing_signers
+                    ):
+                        raise HTTPException(
+                            status_code=409,
+                            detail={
+                                "code": "renewal_existing_signers_review_required",
+                                "message": (
+                                    "This request has existing supporting or signed signer "
+                                    "records. Preserve them and review the existing case "
+                                    "before changing its terms."
+                                ),
+                            },
+                            headers={"Cache-Control": "no-store"},
+                        )
                     cursor.execute(
                         "delete from lending.renewal_required_signers where renewal_request_id=%s",
                         (request_id,),

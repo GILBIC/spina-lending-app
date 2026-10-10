@@ -103,18 +103,22 @@ Regular and 7x7 must stay independent unless a separate restructuring process is
 
 ## Signers and remote renewal
 
-Every legally required signer must use their own GILBIC/SPINA account for remote renewal. The Collector cannot sign for another person.
+Owner decision, 10 October 2026: new V1 applications and renewal terms use borrower-only signing. New guarantor, surety, and solidary co-maker selection is deferred until a separate form and authority design is approved. This is the approved product scope, not a statement that law mandates borrower-only signing.
 
-Each required remote signer must have:
+The borrower must use their own GILBIC/SPINA account for remote renewal. The Collector cannot sign for another person. Each remote borrower must have:
 
 - their own linked app account;
 - government-ID verification;
 - selfie/photo identity verification;
 - their own e-signature.
 
-A supporting party may be borrower-only, guarantor, surety, or solidary co-maker as designated by Management. These labels are not interchangeable.
+New terms accept at most one borrower signer. A linked signer account must match the borrower's authoritative account, including when office processing is selected. Office processing can retain a borrower without an app account or no electronic signer row; this does not permit remote signing or bypass existing office, identity, or release gates.
 
-If any required signer cannot complete the remote flow, the request is `Office Processing Required` and remote signing/release stays blocked.
+Existing supporting-party and signed records are preserved. Their display, own-account signing and existing readiness requirements remain available. A pending request containing any supporting-party or already signed record cannot replace its signers through new terms; it requires separate case review. Do not reinterpret an old guarantor, surety, or co-maker as the borrower.
+
+If the borrower (or a required signer on an existing record) cannot complete the remote flow, the request is `Office Processing Required` and remote signing/release stays blocked. Borrower personal acceptance and cash confirmation remain mandatory under the existing workflow.
+
+Release coordination: deploy the API restriction before or with the matching Web/Android controls. Older clients attempting supporting-party creation receive validation rejection; they cannot bypass the API policy. Recheck live signer usage before release and preserve any new historical records found. The 10 October read-only snapshot is not evidence of deployment or ongoing zero usage.
 
 ## Renewal settlement and cash
 

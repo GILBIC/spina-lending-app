@@ -52,6 +52,13 @@ void main() {
 
       expect(find.text('Set Management renewal terms'), findsOneWidget);
       expect(
+        find.byKey(const Key('add-renewal-supporting-signer')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('renewal-supporting-role')), findsNothing);
+      expect(find.byKey(const Key('renewal-supporting-name')), findsNothing);
+      expect(find.byKey(const Key('renewal-supporting-user-id')), findsNothing);
+      expect(
         find.textContaining('Remote signing stays fail-closed'),
         findsOneWidget,
       );
@@ -108,6 +115,75 @@ void main() {
       expect(repository.submittedDraft?.signers.first.selfieVerified, isFalse);
     },
   );
+
+  for (final role in ['guarantor', 'surety', 'solidary_co_maker', 'borrower']) {
+    testWidgets(
+      'pending renewal retains $role evidence and blocks reapproval',
+      (tester) async {
+        final signer = CollectorRenewalSigner(
+          signerId: 'historical-signer',
+          partyRole: role,
+          fullName: 'HISTORICAL SIGNER',
+          hasApp: true,
+          governmentIdVerified: true,
+          selfieVerified: true,
+          signed: role == 'borrower',
+          ready: true,
+        );
+        final repository = _FakeManagementRenewalWorkflowRepository(
+          signers: [signer],
+        );
+        await _pumpWorkflow(tester, repository);
+        final termsButton = find.byKey(
+          const Key('review-renewal-terms-request-1'),
+        );
+        await _showAction(tester, termsButton);
+
+        expect(tester.widget<FilledButton>(termsButton).onPressed, isNull);
+        expect(find.textContaining('HISTORICAL SIGNER'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'Existing signers require review before new terms',
+          ),
+          findsOneWidget,
+        );
+        expect(repository.submitTermsCalls, 0);
+      },
+    );
+  }
+
+  testWidgets('approved historical supporting signer remains visible', (
+    tester,
+  ) async {
+    final repository = _FakeManagementRenewalWorkflowRepository(
+      workflowState: 'release',
+      signers: const [
+        CollectorRenewalSigner(
+          signerId: 'historical-guarantor',
+          partyRole: 'guarantor',
+          fullName: 'SIGNED HISTORICAL GUARANTOR',
+          hasApp: true,
+          governmentIdVerified: true,
+          selfieVerified: true,
+          signed: true,
+          ready: true,
+        ),
+      ],
+    );
+    await _pumpWorkflow(tester, repository);
+    final signerText = find.textContaining('SIGNED HISTORICAL GUARANTOR');
+    await _showAction(tester, signerText);
+    expect(signerText, findsOneWidget);
+    expect(
+      find.textContaining('Guarantor • SIGNED HISTORICAL GUARANTOR'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('review-renewal-terms-request-1')),
+      findsNothing,
+    );
+    expect(repository.submitTermsCalls, 0);
+  });
 
   testWidgets(
     'Management override reason is mandatory after Collector Do Not Recommend',
@@ -367,10 +443,12 @@ class _FakeManagementRenewalWorkflowRepository
   _FakeManagementRenewalWorkflowRepository({
     this.recommendation = 'recommend',
     this.workflowState = 'terms',
+    this.signers = const [],
   });
 
   final String recommendation;
   final String workflowState;
+  final List<CollectorRenewalSigner> signers;
   String? deviceId;
   String? submittedRequestId;
   ManagementRenewalTermsDraft? submittedDraft;
@@ -402,6 +480,7 @@ class _FakeManagementRenewalWorkflowRepository
   CollectorRenewalRequest _requestForState(String status) =>
       switch (workflowState) {
         'release' => _request(
+          signers: signers,
           status: 'approved',
           recommendation: recommendation,
           approvedPrincipal: 6000,
@@ -434,7 +513,11 @@ class _FakeManagementRenewalWorkflowRepository
           newLoanId: 'new-loan-1',
           readyForActivation: true,
         ),
-        _ => _request(status: status, recommendation: recommendation),
+        _ => _request(
+          status: status,
+          recommendation: recommendation,
+          signers: signers,
+        ),
       };
 
   @override
@@ -515,6 +598,7 @@ CollectorRenewalRequest _request({
   String activationStatus = 'pending',
   String? newLoanId,
   bool readyForActivation = false,
+  List<CollectorRenewalSigner> signers = const [],
 }) {
   return CollectorRenewalRequest(
     requestId: 'request-1',
@@ -555,7 +639,7 @@ CollectorRenewalRequest _request({
     signerReadinessStatus: signerReadinessStatus,
     officeProcessingRequired:
         officeProcessingRequired ?? approvedPrincipal != null,
-    signers: const <CollectorRenewalSigner>[],
+    signers: signers,
     renewalOffsetAmount: null,
     netReleaseAmount: netReleaseAmount,
     amountLockedAt: amountLockedAt,

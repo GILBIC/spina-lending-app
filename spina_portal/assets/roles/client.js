@@ -199,7 +199,7 @@ export function clientRenewalWorkflowRows(requests) {
             : borrowerSigner
               ? `<p class="meta">Own app ${borrowerSigner.has_app === true ? '✓' : '—'} · Government ID ${borrowerSigner.government_id_verified === true ? '✓' : 'Pending'} · Selfie ${borrowerSigner.selfie_verified === true ? '✓' : 'Pending'} · Signature ${borrowerSigner.signed === true ? '✓' : 'Pending'}</p>${canSign ? `<button class="button button-primary" type="button" data-client-renewal-sign-request="${escapeHtml(requestId)}" data-client-renewal-sign-signer="${escapeHtml(borrowerSigner.signer_id)}">Sign Renewal</button>` : ''}`
               : '<p>Waiting for Management to register your borrower signer requirement.</p>'}
-          ${otherSigners.length ? '<p class="meta">Every other required signer must use their own SPINA account to complete verification and signing.</p>' : ''}
+          ${otherSigners.length ? '<p class="meta">This existing record retains its saved signer requirements. Every other required signer must use their own SPINA account to complete verification and signing.</p>' : '<p class="meta">New V1 terms use borrower-only signing.</p>'}
         </div>` : ''}
         ${canConfirmCash ? `<div class="notice-card">
           <strong>Collector marked ${netAmount} as given to you.</strong>
@@ -235,8 +235,8 @@ export function clientRenewalPresentation({eligibilityState,requestsState,workfl
   if(!['pending','ready','office_required'].includes(record.signer_readiness_status))nextStep='Signer status unavailable. Refresh to check the current renewal stage.';
   else if(record.signer_readiness_status==='office_required')nextStep='Continue the required steps at the office.';
   else if(!own)nextStep='Waiting for Management to register your borrower signer requirement.';
-  else if(own.signed===true)nextStep=record.signer_readiness_status==='pending'&&signers.some(signer=>signer.party_role!=='borrower'&&signer.signed===false)?'Your signer step is complete. Other signers must finish in their own SPINA accounts.':'Your signer step is complete. Waiting for the next office step.';
-  else if(clientRenewalActions(record,own).canSign)nextStep='Complete your own signer step. Other signers use their own accounts.';
+  else if(own.signed===true)nextStep=record.signer_readiness_status==='pending'&&signers.some(signer=>signer.party_role!=='borrower'&&signer.signed===false)?'Your signer step is complete. Other signers saved on this existing record must finish in their own SPINA accounts.':'Your signer step is complete. Waiting for the next office step.';
+  else if(clientRenewalActions(record,own).canSign)nextStep='Complete your own signer step.'+(signers.some(signer=>signer.party_role!=='borrower')?' Other signers saved on this existing record use their own accounts.':'');
   else nextStep='Waiting for your signer verification before signing. Contact the office for help.';
  }
  else if(record.status==='pending')nextStep='Your assigned Collector recommends this request before Management decides.';
