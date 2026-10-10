@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v32-remittance-review-binding';
+const CACHE_NAME = 'spina-company-shell-v33-client-photos';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -53,6 +53,7 @@ const SHELL_ASSETS = [
   '/assets/account-credentials.js',
   '/assets/client-account-admin.js',
   '/assets/client-documents.js',
+  '/assets/client-photo.js',
   '/assets/payment-proofs.js',
   '/assets/area-management.js',
   '/assets/office-cif-selection.js',

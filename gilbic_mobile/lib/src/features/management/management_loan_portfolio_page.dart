@@ -1,5 +1,8 @@
 import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
+import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_loan.dart';
@@ -11,12 +14,16 @@ class ManagementLoanPortfolioPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.photoRepository,
+    this.photoPicker,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ManagementLoanRepository? repository;
+  final ClientPhotoRepository? photoRepository;
+  final OfficePhotoPicker? photoPicker;
 
   @override
   State<ManagementLoanPortfolioPage> createState() =>
@@ -95,6 +102,37 @@ class _ManagementLoanPortfolioPageState
   void _clearSearch() {
     _searchController.clear();
     _load();
+  }
+
+  Future<void> _openPhoto(ManagementLoanItem loan) async {
+    if (!privateAccessActive ||
+        _deviceId == null ||
+        !canManageClientPhoto(widget.session)) {
+      return;
+    }
+    final session = widget.session;
+    final deviceId = _deviceId!;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Client photo')),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ClientPhotoCard(
+                session: session,
+                deviceId: deviceId,
+                clientId: loan.clientId,
+                clientName: loan.clientName,
+                repository: widget.photoRepository,
+                picker: widget.photoPicker,
+                allowUpload: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -222,7 +260,13 @@ class _ManagementLoanPortfolioPageState
             )
           else
             for (final loan in portfolio.loans) ...[
-              _ManagementLoanCard(loan: loan),
+              _ManagementLoanCard(
+                loan: loan,
+                onPhoto:
+                    canManageClientPhoto(widget.session) && _deviceId != null
+                    ? () => _openPhoto(loan)
+                    : null,
+              ),
               const SizedBox(height: 10),
             ],
           if (_deviceId == null) const SizedBox.shrink(),
@@ -329,9 +373,10 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _ManagementLoanCard extends StatelessWidget {
-  const _ManagementLoanCard({required this.loan});
+  const _ManagementLoanCard({required this.loan, this.onPhoto});
 
   final ManagementLoanItem loan;
+  final VoidCallback? onPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -350,6 +395,12 @@ class _ManagementLoanCard extends StatelessWidget {
         trailing: _StatusChip(loan: loan),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
+          if (onPhoto != null)
+            OutlinedButton.icon(
+              onPressed: onPhoto,
+              icon: const Icon(Icons.portrait_outlined),
+              label: const Text('Client photo'),
+            ),
           if (loan.renewalRequestStatus != null) ...[
             Container(
               width: double.infinity,

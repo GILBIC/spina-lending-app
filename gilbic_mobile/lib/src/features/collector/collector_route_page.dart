@@ -672,6 +672,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       isScrollControlled: true,
       builder: (context) => CollectorClientToolsSheet(
         client: selectedClient,
+        session: widget.session,
+        deviceIdentityProvider: _deviceIdentityProvider,
         directPayBlockedReasonFor: (entry) =>
             _directPayBlockedReason(loaded, entry),
         detailsBlockedReasonFor: (entry) =>

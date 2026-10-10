@@ -19,7 +19,7 @@ from .client_loan_api import create_client_loan_router
 from .client_onboarding_api import create_client_onboarding_router
 from .client_payment_api import create_client_payment_router
 from .client_payment_proof_api import create_client_payment_proof_router
-from .treasury_api import create_treasury_router
+from .client_photo_api import create_client_photo_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
 from .collection_void_api import create_collection_void_router
@@ -130,6 +130,7 @@ from .seven_by_seven_journal_posting_api import (
 )
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
+from .treasury_api import create_treasury_router
 from .v1_tax_additional_amendment_api import create_v1_tax_additional_amendment_router
 from .v1_tax_adjustment_api import create_v1_tax_adjustment_router
 from .v1_tax_evidence_api import create_v1_tax_evidence_router
@@ -235,6 +236,7 @@ def create_app() -> FastAPI:
     app.include_router(create_client_account_router())
     app.include_router(create_client_onboarding_router())
     app.include_router(create_client_cif_router())
+    app.include_router(create_client_photo_router())
     app.include_router(create_loan_application_router())
     app.include_router(create_office_review_evidence_router())
     app.include_router(create_first_loan_credential_router())

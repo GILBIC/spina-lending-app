@@ -1,4 +1,5 @@
-import {asArray, badge, emptyState, errorCard, escapeHtml, formatDate, formatMoney, metricCard} from './ui.js';
+import {asArray, badge, emptyState, errorCard, escapeHtml, formatDate, formatMoney, hasPermission, metricCard} from './ui.js';
+import {mountClientPhotoLauncher} from './client-photo.js';
 
 const validCount = value => Number.isSafeInteger(value) && value >= 0;
 const validMoney = value => typeof value === 'string' && /^\d+(?:\.\d{1,2})?$/.test(value);
@@ -19,7 +20,7 @@ export function managementLoanDetailMarkup(loan) {
     ['Loan status', text(loan.loan_status)], ['Client status', text(loan.client_status)],
     ['Renewal status', text(loan.renewal_request_status)], ['Record version', text(loan.state_version)],
   ];
-  return `<h3 tabindex="-1" data-portfolio-detail-title>${text(loan.loan_number || 'Loan details')}</h3><p class="meta">Read-only facts from this portfolio response. Refresh closes this detail so changed records can be selected again.</p><div class="detail-grid">${fields.map(([label,value])=>`<div class="detail-item"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><button type="button" class="button button-outline" data-portfolio-close>Close details</button>`;
+  return `<h3 tabindex="-1" data-portfolio-detail-title>${text(loan.loan_number || 'Loan details')}</h3><p class="meta">Read-only facts from this portfolio response. Refresh closes this detail so changed records can be selected again.</p><div class="detail-grid">${fields.map(([label,value])=>`<div class="detail-item"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><div data-portfolio-client-photo></div><button type="button" class="button button-outline" data-portfolio-close>Close details</button>`;
 }
 
 export function managementPortfolioSummaryMarkup({status, summary = {}}) {
@@ -36,7 +37,7 @@ export function managementPortfolioSummaryMarkup({status, summary = {}}) {
     </div>`;
 }
 
-export function mountManagementPortfolio({root, api, signal, initialResult, getSession = () => null, beforeTaskChange=()=>{}, afterTaskChange=()=>{}}) {
+export function mountManagementPortfolio({root, api, signal, initialResult, getSession = () => null, beforeTaskChange=()=>{}, afterTaskChange=()=>{}, confirmDiscard=message=>globalThis.confirm?.(message)===true}) {
   let disposed = false;
   let generation = 0;
   let offset = 0;
@@ -44,8 +45,9 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
   let loading = false;
   let queryKey = '';
   let detailCleanup = () => {};
+  let photoCleanup = null, selectedClientId = null;
   const owner = getSession()?.user?.id;
-  const alive = () => !disposed && !signal?.aborted && getSession()?.user?.id === owner;
+  const alive = () => {const current=!disposed && !signal?.aborted && getSession()?.user?.id === owner;if(!current && !disposed)dispose();return current;};
   if (!root) return {refresh: async () => {}, dispose() {}};
   root.innerHTML = `<div class="section-heading"><div><h2>Clients & loans</h2><p>Search the official portfolio. A Client may have both Regular and 7x7 loans.</p></div></div>
     <form id="management-loan-search" class="search-bar">
@@ -56,7 +58,7 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
     <button class="button button-outline" type="button" data-portfolio-retry hidden>Retry portfolio</button>
     <div class="inline-actions"><button class="button button-outline" type="button" data-portfolio-previous disabled>Previous page</button><span class="meta" data-portfolio-page></span><button class="button button-outline" type="button" data-portfolio-next disabled>Next page</button></div>
     <p class="meta">Pages show up to 100 loan entries. Records can change between pages; search or refresh for current results. The portfolio summary covers all active clients.</p>
-    <section class="data-card" data-portfolio-detail hidden></section>`;
+    <p role="status" data-portfolio-photo-status></p><section class="data-card" data-portfolio-detail hidden></section>`;
   const summaryRoot = root.querySelector('[data-portfolio-summary]');
   const results = root.querySelector('#management-loan-results');
   const retry = root.querySelector('[data-portfolio-retry]');
@@ -65,7 +67,14 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
   const previous = root.querySelector('[data-portfolio-previous]');
   const next = root.querySelector('[data-portfolio-next]');
   const page = root.querySelector('[data-portfolio-page]');
-  const closeDetail = () => {detailCleanup();detailCleanup=()=>{};detail.hidden=true;detail.innerHTML='';};
+  const closeDetail = () => {photoCleanup?.();photoCleanup=null;selectedClientId=null;detailCleanup();detailCleanup=()=>{};detail.hidden=true;detail.innerHTML='';};
+  const isWritePending = () => !disposed && (photoCleanup?.isWritePending()===true || photoCleanup?.isUncertain()===true);
+  function canReplaceDetail(){
+    const status=root.querySelector('[data-portfolio-photo-status]');
+    if(isWritePending()){status.textContent='Confirm the current photo upload before closing, refreshing or changing the selected client.';return false;}
+    if(photoCleanup?.isDirty() && !confirmDiscard('Discard the unsaved client photo preview and continue?')){status.textContent='Your client photo preview has been kept.';return false;}
+    status.textContent='';return true;
+  }
   function updatePaging() {
     previous.disabled = loading || offset === 0;
     next.disabled = loading || returned < 100;
@@ -86,18 +95,21 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
         if (!alive() || loading) return;
         const loan = result.data.loans.find(row => validId(row.loan_id) && validId(row.client_id)
           && row.loan_id === button.getAttribute('data-portfolio-open') && row.client_id === button.getAttribute('data-portfolio-client'));
-        if (!loan) return;
-        beforeTaskChange();closeDetail();detail.innerHTML=managementLoanDetailMarkup(loan);detail.hidden=false;afterTaskChange();
+        if (!loan || !canReplaceDetail()) return;
+        beforeTaskChange();closeDetail();selectedClientId=loan.client_id;detail.innerHTML=managementLoanDetailMarkup(loan);detail.hidden=false;
+        photoCleanup=mountClientPhotoLauncher({root:detail.querySelector('[data-portfolio-client-photo]'),api,getSession,signal,clientId:loan.client_id,clientName:loan.client_name || 'Selected Client',getClientId:()=>selectedClientId,allowUpload:hasPermission(getSession(),'client_onboarding.requirement.review')});
+        afterTaskChange();
         detail.querySelector('[data-portfolio-detail-title]')?.focus();
-        const close=()=>{beforeTaskChange();closeDetail();button.focus?.();if(alive())afterTaskChange();};
+        const close=()=>{if(!alive() || !canReplaceDetail())return;beforeTaskChange();closeDetail();button.focus?.();if(alive())afterTaskChange();};
         const control=detail.querySelector('[data-portfolio-close]');control.addEventListener('click',close);
         detailCleanup=()=>control.removeEventListener('click',close);
       });
     }
     afterTaskChange();
   }
-  async function refresh() {
-    if (!alive()) return;
+  async function refresh({targetOffset}={}) {
+    if (!alive() || !canReplaceDetail()) return false;
+    if(targetOffset!==undefined)offset=targetOffset;
     const version = ++generation;
     const query = String(form.querySelector('[name="query"]').value || '').trim();
     const selected = form.querySelector('[name="status"]').value || 'active';
@@ -116,10 +128,10 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
       if (alive() && generation === version) render({error});
     }
   }
-  const search = event => {event.preventDefault();offset=0;void refresh();};
+  const search = event => {event.preventDefault();void refresh({targetOffset:0});};
   const retryRead = () => {void refresh();};
-  const previousPage=()=>{if(!alive()||loading||offset===0)return;offset=Math.max(0,offset-100);void refresh();};
-  const nextPage=()=>{if(!alive()||loading||returned<100)return;offset+=100;void refresh();};
+  const previousPage=()=>{if(!alive()||loading||offset===0)return;void refresh({targetOffset:Math.max(0,offset-100)});};
+  const nextPage=()=>{if(!alive()||loading||returned<100)return;void refresh({targetOffset:offset+100});};
   form.addEventListener('submit',search);
   retry.addEventListener('click',retryRead);
   previous.addEventListener('click',previousPage);next.addEventListener('click',nextPage);
@@ -133,7 +145,7 @@ export function mountManagementPortfolio({root, api, signal, initialResult, getS
   signal?.addEventListener('abort',dispose,{once:true});
   if (initialResult) render(initialResult);
   else summaryRoot.innerHTML = managementPortfolioSummaryMarkup({status:'loading'});
-  return {refresh,dispose};
+  return {refresh,dispose,isWritePending};
 }
 
 function managementLoanTypeLabel(loan) {

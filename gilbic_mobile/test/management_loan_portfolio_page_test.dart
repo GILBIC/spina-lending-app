@@ -1,4 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'client_photo_repository_test.dart'
+    show photoClient, photoEnvelope, photoPng;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -8,6 +16,85 @@ import 'package:gilbic_mobile/src/core/management/management_loan_repository.dar
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 
 void main() {
+  testWidgets(
+    'existing portfolio client can add a photo without CIF or intake',
+    (tester) async {
+      final requests = <http.Request>[];
+      final photos = ClientPhotoRepository(
+        client: MockClient((request) async {
+          requests.add(request);
+          expect(
+            request.url.path.startsWith('/api/v1/clients/$photoClient/photo'),
+            isTrue,
+          );
+          return request.url.path.endsWith('/content')
+              ? http.Response.bytes(
+                  Uint8List.fromList(photoPng),
+                  200,
+                  headers: {'content-type': 'image/png'},
+                )
+              : http.Response(
+                  jsonEncode(photoEnvelope(missing: request.method != 'POST')),
+                  200,
+                );
+        }),
+      );
+      const session = UserSession(
+        userId: 'manager',
+        username: 'manager',
+        displayName: 'Manager',
+        role: AppRole.management,
+        rawRole: 'management',
+        accessToken: 'token',
+        permissions: ['client_onboarding.requirement.review'],
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementLoanPortfolioPage(
+            session: session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: _PhotoLoans(),
+            photoRepository: photos,
+            photoPicker: (_) async => OfficePhoto(photoPng, 'image/png'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('management-loan-loan-1')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('TEST CLIENT REGULAR'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Client photo'));
+      await tester.tap(find.text('Client photo'));
+      await tester.pumpAndSettle();
+      expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
+      expect(find.text('Add photo'), findsOneWidget);
+      await tester.tap(find.text('Add photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gallery'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 80)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save photo'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 80)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Photo saved.'), findsOneWidget);
+      expect(
+        requests.where((request) => request.method == 'POST'),
+        hasLength(1),
+      );
+      expect(
+        requests.where((request) => request.method == 'POST').single.bodyBytes,
+        photoPng,
+      );
+    },
+  );
   test('portfolio accepts unknown paid percent and retains actual cash', () {
     final loan = ManagementLoanItem.fromPayload(_loanPayload(null));
     expect(loan.paidPercent, isNull);
@@ -223,6 +310,34 @@ class _PayloadRepository extends _FakeManagementLoanRepository {
       summary: portfolio.summary,
       notice: portfolio.notice,
       loans: [ManagementLoanItem.fromPayload(_loanPayload(percent))],
+    );
+  }
+}
+
+class _PhotoLoans extends _PayloadRepository {
+  _PhotoLoans() : super(null);
+  @override
+  Future<ManagementLoanPortfolio> loadPortfolio(
+    UserSession session, {
+    required String deviceId,
+    required String query,
+    required String status,
+  }) async {
+    final portfolio = await super.loadPortfolio(
+      session,
+      deviceId: deviceId,
+      query: query,
+      status: status,
+    );
+    return ManagementLoanPortfolio(
+      summary: portfolio.summary,
+      notice: portfolio.notice,
+      loans: [
+        ManagementLoanItem.fromPayload({
+          ..._loanPayload(null),
+          'client_id': photoClient,
+        }),
+      ],
     );
   }
 }

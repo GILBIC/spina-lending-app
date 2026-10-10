@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
+import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
 import 'package:gilbic_mobile/src/core/areas/area_repository.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -11,11 +14,15 @@ class AreaManagementPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.photoRepository,
+    this.photoPicker,
     super.key,
   });
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final AreaRepository? repository;
+  final ClientPhotoRepository? photoRepository;
+  final OfficePhotoPicker? photoPicker;
   @override
   State<AreaManagementPage> createState() => _AreaManagementPageState();
 }
@@ -344,6 +351,35 @@ class _AreaManagementPageState extends State<AreaManagementPage> {
     _clients = clients;
     if (clients.isEmpty) _notice = 'No borrowers matched.';
   });
+
+  Future<void> _openPhoto(Map<String, dynamic> client) async {
+    if (_busy || !_ready || !canManageClientPhoto(_session)) return;
+    final session = _session;
+    final clientId = requiredStaffText(client, 'client_id');
+    final clientName = requiredStaffText(client, 'full_name');
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Client photo')),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ClientPhotoCard(
+                session: session,
+                deviceIdentityProvider: widget.deviceIdentityProvider,
+                clientId: clientId,
+                clientName: clientName,
+                repository: widget.photoRepository,
+                picker: widget.photoPicker,
+                allowUpload: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _transfer(Map<String, dynamic> client) => _operate(() async {
     final area = await _choose(
       'Transfer borrower to',
@@ -565,8 +601,21 @@ class _AreaManagementPageState extends State<AreaManagementPage> {
               for (final client in _clients)
                 ListTile(
                   title: Text(requiredStaffText(client, 'full_name')),
-                  subtitle: Text(
-                    '${client['client_code']?.toString() ?? ''} · ${client['area_path']?.toString() ?? 'Unassigned'}',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${client['client_code']?.toString() ?? ''} · ${client['area_path']?.toString() ?? 'Unassigned'}',
+                      ),
+                      if (canManageClientPhoto(_session))
+                        TextButton.icon(
+                          onPressed: _busy || !_ready
+                              ? null
+                              : () => _openPhoto(client),
+                          icon: const Icon(Icons.portrait_outlined),
+                          label: const Text('Client photo'),
+                        ),
+                    ],
                   ),
                   trailing: TextButton(
                     onPressed: _canWrite ? () => _transfer(client) : null,

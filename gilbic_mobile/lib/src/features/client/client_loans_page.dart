@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
@@ -16,6 +18,7 @@ class ClientLoansPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     this.repository,
     this.scheduleRepository,
+    this.photoRepository,
     super.key,
   });
 
@@ -23,6 +26,7 @@ class ClientLoansPage extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientLoanRepository? repository;
   final ClientScheduleRepository? scheduleRepository;
+  final ClientPhotoRepository? photoRepository;
 
   @override
   State<ClientLoansPage> createState() => _ClientLoansPageState();
@@ -172,7 +176,12 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-          _BorrowerCard(portfolio: portfolio),
+          _BorrowerCard(
+            portfolio: portfolio,
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            photoRepository: widget.photoRepository,
+          ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 10),
             Card(
@@ -243,37 +252,36 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
 }
 
 class _BorrowerCard extends StatelessWidget {
-  const _BorrowerCard({required this.portfolio});
+  const _BorrowerCard({
+    required this.portfolio,
+    required this.session,
+    required this.deviceIdentityProvider,
+    this.photoRepository,
+  });
 
   final ClientLoanPortfolio portfolio;
+  final UserSession session;
+  final DeviceIdentityProvider deviceIdentityProvider;
+  final ClientPhotoRepository? photoRepository;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const CircleAvatar(
-              radius: 24,
-              child: Icon(Icons.account_balance_wallet_outlined),
+            ClientPhotoCard(
+              session: session,
+              deviceIdentityProvider: deviceIdentityProvider,
+              clientId: portfolio.clientId,
+              clientName: portfolio.clientName,
+              repository: photoRepository,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    portfolio.clientName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${portfolio.clientCode}'
-                    '${portfolio.area == null ? '' : ' • ${portfolio.area}'}',
-                  ),
-                ],
-              ),
+            Text(
+              '${portfolio.clientCode}'
+              '${portfolio.area == null ? '' : ' • ${portfolio.area}'}',
             ),
           ],
         ),

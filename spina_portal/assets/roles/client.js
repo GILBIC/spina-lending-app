@@ -1,4 +1,5 @@
 import {mountLoanPayouts} from '../loan-payouts.js';
+import {mountClientPhotoLauncher} from '../client-photo.js';
 import {mountTreasuryClaim} from '../treasury-payment-claim.js';
 import {createTreasuryRoleGate} from '../treasury-role-tasks.js';
 import {createClientReadController,createClientMutationController} from '../client-workspace-state.js';
@@ -574,6 +575,7 @@ function renderWorkspace(root, model, raw, errors) {
 
   <section class="section-card" id="client-account" data-workspace-section>
     <div class="section-heading"><div><h2>Account and devices</h2><p>Review your SPINA profile and registered sessions.</p></div></div>
+    <div data-own-client-photo></div>
     <div data-client-region="account">${errors.account ? errorCard(errors.account) : clientAccountCard(model.account)}</div>
   </section>`;
 }
@@ -795,8 +797,9 @@ export async function mountClientWorkspace(context) {
  const homeSources=['loans','payments','renewals','renewalWorkflow','support'];
  let scheduleView=null,gcashHandle=null,paymentDetailsCleanup=null,statementCopyController=null;
  childCleanups.push(()=>gcashHandle?.dispose(),()=>paymentDetailsCleanup?.(),()=>statementCopyController?.abort());
- const reads=createClientReadController({signal:controller.signal,isCurrent:current,onChange:(key,state)=>{if(!current())return;if(state.status==='error'&&[401,403].includes(state.error?.status)){dispose();return;}if(key.startsWith('schedule:')){const id=key.slice(9);updateLoanSummary(id,state);scheduleView?.renderState(id);return;}if(state.status==='ready')raw[key]=state.data;renderRegion(key);if(homeSources.includes(key))renderHomeCopy();if(key==='loans'&&initialized.has('gcash'))renderRegion('gcash');}});context.clientReads=reads;
- let linkedClientId=null;
+ const reads=createClientReadController({signal:controller.signal,isCurrent:current,onChange:(key,state)=>{if(!current())return;if(state.status==='error'&&[401,403].includes(state.error?.status)){dispose();return;}if(key.startsWith('schedule:')){const id=key.slice(9);updateLoanSummary(id,state);scheduleView?.renderState(id);return;}if(state.status==='ready')raw[key]=state.data;renderRegion(key);if(state.status==='ready')syncPhoto();if(homeSources.includes(key))renderHomeCopy();if(key==='loans'&&initialized.has('gcash'))renderRegion('gcash');}});context.clientReads=reads;
+ let linkedClientId=null,photoHandle=null;
+ function syncPhoto(){if(!linkedClientId || photoHandle || !current())return;const target=root.querySelector('[data-own-client-photo]');if(!target)return;photoHandle=mountClientPhotoLauncher({root:target,api,getSession:()=>context.getSession?context.getSession():context.session,signal:controller.signal,clientId:linkedClientId,getClientId:()=>linkedClientId,clientName:raw.loans.client?.client_name || raw.loans.client?.full_name || raw.account.profile?.full_name || 'Your client record'});childCleanups.push(photoHandle);}
  const paths={account:'/api/v1/account',loans:'/api/v1/client/loans',payments:'/api/v1/client/payments',statement:'/api/v1/client/statement',renewals:'/api/v1/client/renewals',renewalWorkflow:'/api/v1/client/renewal-workflow',support:'/api/v1/client/support',gcash:'/api/v1/client/gcash/config',notifications:'/api/v1/activity-notifications'};
  function unavailable(key){const state=reads.state(key);return state.status==='error'?`<div class="notice-card warning"><strong>${escapeHtml(key)} records unavailable</strong>${errorCard(state.error)}<button class="button button-secondary" type="button" data-client-retry="${key}">Retry</button></div>`:loadingPanel(`Loading ${key} records…`);}
  function setRegion(key,html){const region=root.querySelector(`[data-client-region="${key}"]`);if(!region)return;if(key==='notifications')for(const button of region.querySelectorAll('[data-client-notification-read]'))clearButtonBusyFocus(button);context.beforeTaskChange?.();region.innerHTML=html;context.afterTaskChange?.();for(const b of region.querySelectorAll('[data-client-retry]'))b.addEventListener('click',()=>load(key,{refresh:true}));}

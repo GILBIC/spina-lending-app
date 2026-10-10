@@ -7,6 +7,7 @@ import {
   loadingPanel,
   settledRequest,
 } from './ui.js';
+import {mountClientPhotoLauncher} from './client-photo.js';
 
 function cloneAreaNode(node) {
   return {
@@ -325,7 +326,7 @@ function clientTransferTimingMarkup(preview) {
   return `<p>Effective: ${escapeHtml(formatAreaDate(preview.effective_date))}</p>`;
 }
 
-function clientTransferEditorMarkup(clientTransferEditor, tree = []) {
+function clientTransferEditorMarkup(clientTransferEditor, tree = [], canUsePhoto = false) {
   if (!clientTransferEditor) return '';
   const results = Array.isArray(clientTransferEditor.results) ? clientTransferEditor.results : [];
   const selectedClient = clientTransferEditor.selectedClient || null;
@@ -353,6 +354,7 @@ function clientTransferEditorMarkup(clientTransferEditor, tree = []) {
         <p><strong>${escapeHtml(selectedClient.full_name || selectedClient.client_code || selectedClient.client_id)}</strong></p>
         <p>Current Area: ${escapeHtml(selectedClient.area_path || 'Unassigned')}</p>
         <p>Effective Collector: ${escapeHtml(collectorDisplayName(selectedClient.effective_collector))}</p>
+        ${canUsePhoto ? '<div data-area-client-photo></div>' : ''}
         <form class="entry-form" data-area-client-transfer-preview-form>
           <label>Target Area<select name="target_area_id">
             <option value="">Select target Area</option>
@@ -571,7 +573,8 @@ export function renderAreaManagementShell({
         ${editorMarkup(editor, selected)}
         ${collectorEditorMarkup(collectorEditor, selected, collectors)}
         ${moveEditorMarkup(moveEditor, selected, tree)}
-        ${clientTransferEditorMarkup(clientTransferEditor, tree)}
+        ${clientTransferEditorMarkup(clientTransferEditor, tree, hasPermission(session, 'client_onboarding.requirement.review'))}
+        <p data-area-photo-status role="status"></p>
         ${retirementEditorMarkup(retirementEditor, selected)}
         ${mutationError ? errorCard(mutationError, 'Area change could not be saved.') : ''}
         <div data-area-collector-status role="status">${collectorErrorMarkup(collectorLoadError)}</div>
@@ -587,17 +590,19 @@ export async function mountAreaManagement(context) {
   const getSession = context.getSession || (() => context.session || {});
   const session = getSession();
   const scope = () => JSON.stringify([getSession()?.user?.id, ...[
-    'area.manage', 'area.collector.assign', 'area.client.assign', 'area.retire',
+    'area.manage', 'area.collector.assign', 'area.client.assign', 'area.retire', 'client_onboarding.requirement.review',
   ].map(permission => hasPermission(getSession(), permission))]);
   const initialScope = scope();
   const controller = new AbortController();
   let disposed = false, loaded = false, loading = null, refreshLoaded = null;
-  const handle = { dispose, refresh: load, refreshReadOnly: load };
+  let editorHandle = null, areaRequests = 0;
+  const handle = { dispose, refresh: load, refreshReadOnly: load, isWritePending:()=>!disposed && editorHandle?.isWritePending?.()===true };
 
   function dispose() {
     if (disposed) return;
     disposed = true;
     controller.abort();
+    editorHandle?.dispose?.();
     signal?.removeEventListener('abort', dispose);
     if (areaMounts.get(root) !== handle) return;
     areaMounts.delete(root);
@@ -622,8 +627,12 @@ export async function mountAreaManagement(context) {
   };
   const api = { async request(path, options = {}) {
     if (!current()) throw new DOMException('Area workspace was closed.', 'AbortError');
+    const photoRequest=/^\/api\/v1\/clients\/[^/]+\/photo(?:[/?]|$)/.test(path);
+    if(photoRequest && !['GET','HEAD'].includes((options.method ?? 'GET').toUpperCase()) && areaRequests>0)throw Object.assign(new Error('Wait for the current Area operation before saving the client photo.'),{beforeWrite:true});
+    if(!photoRequest && handle.isWritePending())throw Object.assign(new Error('Confirm the current client photo upload before another Area operation.'),{beforeWrite:true});
+    if(!photoRequest)areaRequests++;
     try {
-      const result = await originalApi.request(path, { ...options, signal: controller.signal });
+      const result = await originalApi.request(path, { ...options, signal: options.signal ?? controller.signal });
       if (!current()) throw new DOMException('Area workspace was closed.', 'AbortError');
       return result;
     } catch (error) {
@@ -632,6 +641,8 @@ export async function mountAreaManagement(context) {
         root.innerHTML = '<p role="status">Area access is unavailable. Reopen the workspace after your access is restored.</p>';
       }
       throw error;
+    } finally {
+      if(!photoRequest)areaRequests--;
     }
   } };
 
@@ -647,14 +658,16 @@ export async function mountAreaManagement(context) {
     // Once mounted, the existing editor owns its reads. Header refresh must not
     // replace an Area draft or replay a business action.
     if (!current()) return Promise.resolve(false);
+    if(handle.isWritePending())return Promise.resolve(false);
     if (loaded) return refreshLoaded?.() || Promise.resolve(false);
     if (loading) return loading;
     context.beforeTaskChange?.();
     root.innerHTML = loadingPanel('Loading authoritative Area structure…');
-    loading = mountAreaEditor({ root, api, session, on, current,
+    loading = mountAreaEditor({ root, api, session, getSession, signal:controller.signal, confirmDiscard:context.confirmDiscard, on, current,
       beforeTaskChange: context.beforeTaskChange, afterTaskChange: context.afterTaskChange }).then(result => {
       if (!current()) return false;
       if (result?.error) return failed(result.error);
+      editorHandle = result;
       refreshLoaded = result?.refreshReadOnly;
       loaded = true;
       return true;
@@ -674,7 +687,7 @@ export async function mountAreaManagement(context) {
   return handle;
 }
 
-async function mountAreaEditor({ root, api, session, on, current, beforeTaskChange, afterTaskChange }) {
+async function mountAreaEditor({ root, api, session, getSession, signal, confirmDiscard=message=>globalThis.confirm?.(message)===true, on, current, beforeTaskChange, afterTaskChange }) {
 
   const canManageAreas = hasPermission(session, 'area.manage');
   const canAssignCollector = hasPermission(session, 'area.collector.assign');
@@ -710,6 +723,12 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
     draggingAreaId: null,
   };
   let collectorRead = null;
+  let photoCleanup=null,photoRoot=null,photoClientId=null;
+  const isWritePending=()=>photoCleanup?.isWritePending()===true || photoCleanup?.isUncertain()===true;
+  function photoStatus(message){const target=root.querySelector('[data-area-photo-status]');if(target)target.textContent=message;}
+  function photoBlocksAction(){if(!isWritePending())return false;photoStatus('Confirm the current client photo upload before changing clients or Area operations.');return true;}
+  function clearPhoto(){photoCleanup?.();photoCleanup=null;photoRoot=null;photoClientId=null;}
+  function leavePhoto(){if(photoBlocksAction())return false;if(photoCleanup?.isDirty() && !confirmDiscard('Discard the unsaved client photo preview and continue?')){photoStatus('Your client photo preview has been kept.');return false;}clearPhoto();return true;}
 
   function refreshCollectors() {
     if (!current() || !collectorsResult.error) return Promise.resolve(false);
@@ -742,6 +761,8 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
 
   const render = () => {
     if (!current()) return;
+    const selectedClient=state.clientTransferEditor?.selectedClient;
+    if(photoClientId!==selectedClient?.client_id)clearPhoto();
     root.innerHTML = renderAreaManagementShell({
       tree: state.tree,
       selectedAreaId: state.selectedAreaId,
@@ -757,6 +778,11 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
       retirementEditor: state.retirementEditor,
       mutationError: state.mutationError,
     });
+    const target=root.querySelector('[data-area-client-photo]');
+    if(target && selectedClient){
+      if(photoRoot)target.replaceWith(photoRoot);
+      else{photoRoot=target;photoClientId=selectedClient.client_id;photoCleanup=mountClientPhotoLauncher({root:photoRoot,api,getSession,signal,clientId:selectedClient.client_id,clientName:selectedClient.full_name || selectedClient.client_code || 'Selected Client',getClientId:()=>state.clientTransferEditor?.selectedClient?.client_id,allowUpload:true});}
+    }
   };
 
   const reloadAreas = async () => {
@@ -798,6 +824,8 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
   render();
 
   on('click', async (event) => {
+    if(event.target?.closest?.('[data-area-client-photo]'))return;
+    if(photoBlocksAction())return;
     const collectorRetry = event.target?.closest?.('[data-area-collectors-retry]');
     if (collectorRetry) {
       if (root.querySelector('[data-area-collectors-retry]') === collectorRetry) await refreshCollectors();
@@ -904,6 +932,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
         (candidate) => candidate.client_id === clientResult.dataset.areaClientId,
       );
       if (!client) return;
+      if(client.client_id!==state.clientTransferEditor.selectedClient?.client_id && !leavePhoto())return;
       state.clientTransferEditor.selectedClient = client;
       state.clientTransferEditor.targetAreaId = '';
       state.clientTransferEditor.preview = null;
@@ -974,6 +1003,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
 
     const action = event.target?.closest?.('[data-area-action]');
     if (action) {
+      if(!leavePhoto())return;
       const selected = findArea(state.tree, state.selectedAreaId);
       const actionName = action.dataset.areaAction;
 
@@ -1108,6 +1138,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
     const areaId = row.dataset.areaId;
     const area = findArea(state.tree, areaId);
     if (!area) return;
+    if(!leavePhoto())return;
     state.selectedAreaId = areaId;
     clearEditors();
     state.mutationError = null;
@@ -1119,6 +1150,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
   });
 
   on('dragstart', (event) => {
+    if(photoBlocksAction())return;
     if (!canManageAreas) return;
     const row = event.target?.closest?.('[data-area-id]');
     if (!row) return;
@@ -1140,6 +1172,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
   });
 
   on('drop', async (event) => {
+    if(photoBlocksAction())return;
     if (!canManageAreas || !state.draggingAreaId) return;
     const targetRow = event.target?.closest?.('[data-area-id]');
     const source = findArea(state.tree, state.draggingAreaId);
@@ -1160,6 +1193,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
   });
 
   on('submit', async (event) => {
+    if(photoBlocksAction()){event.preventDefault();return;}
     if (event.target?.matches?.('[data-area-client-search-form]')) {
       event.preventDefault();
       if (!canAssignClient || !state.clientTransferEditor) return;
@@ -1169,6 +1203,7 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
         render();
         return;
       }
+      if(!leavePhoto())return;
       try {
         const data = await api.request(`/api/v1/areas/clients?q=${encodeURIComponent(query)}`);
         state.clientTransferEditor.query = query;
@@ -1353,5 +1388,5 @@ async function mountAreaEditor({ root, api, session, on, current, beforeTaskChan
     state.query = event.target.value || '';
     render();
   });
-  return { refreshReadOnly: refreshCollectors };
+  return { refreshReadOnly: refreshCollectors, isWritePending, dispose:clearPhoto };
 }
