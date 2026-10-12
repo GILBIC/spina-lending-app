@@ -1,13 +1,18 @@
 """Current-schema workflow regressions; run only on an owned disposable database."""
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from threading import Barrier
 from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from gilbic_backend.collection_void_repository import PostgresCollectionVoidRepository
+from gilbic_backend.collection_void_repository import (
+    CollectionVoidInvalid,
+    PostgresCollectionVoidRepository,
+)
 from gilbic_backend.concurrent_receipt_collection_posting import (
     ConcurrentReceiptSafeCollectionPostingBridge,
 )
@@ -25,7 +30,7 @@ from test_combined_collection_renewal_workflow_postgres import (
     _setup_combined_case,
 )
 
-from gilbic_backend import collection_void_repository
+from gilbic_backend import collection_posting, collection_void_repository
 
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="GILBIC_TEST_DATABASE_URL is not configured"
@@ -46,19 +51,15 @@ def _command(case, sequence, version):
         device_sequence=sequence,
         route_revision=f"loan:{case.regular_loan_id}:v{version}",
         note="Synthetic unable to pay",
-        # The original Past Due case survives void and needs no new reason.
-        past_due_followup=(
-            PastDueFollowupInput(
-                reason_code=PastDueReasonCode.NO_CASH, note="Synthetic no cash today."
-            )
-            if version == 0
-            else None
-        ),
     )
 
 
 def test_pass_save_void_replace_and_concurrent_replacement(monkeypatch):
     monkeypatch.setattr(collection_void_repository, "open_connection", _connect)
+    # Imported setup helpers do not apply their module's autouse clock fixture.
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: date(2097, 8, 2)
+    )
     case = _setup_combined_case()
     executor = PostgresCollectionExecutor(
         connection_factory=_connect,
@@ -73,9 +74,42 @@ def test_pass_save_void_replace_and_concurrent_replacement(monkeypatch):
             request_hash=command.idempotency_key.hex * 2,
         )
 
-    original = _command(case, 1, 0)
+    # A real partial receipt owns today's Past Due evidence. It cannot be
+    # generically voided, while a later PASS adds no new linked obligation.
+    partial = post(
+        replace(
+            _command(case, 1, 0),
+            entry_type=CollectionEntryType.PAYMENT,
+            amount=Decimal("10.00"),
+            past_due_followup=PastDueFollowupInput(
+                reason_code=PastDueReasonCode.NO_CASH, note="Synthetic no cash today."
+            ),
+        )
+    )
+    assert partial.status == CollectionStatus.ACCEPTED, partial
+    with pytest.raises(CollectionVoidInvalid, match="changed linked Past Due"):
+        PostgresCollectionVoidRepository().void_unremitted(
+            actor_user_id=case.collector_id,
+            transaction_id=UUID(partial.posted.server_transaction_id),
+            reason="Synthetic linked receipt cannot be voided alone",
+        )
+    with _connect() as connection:
+        past_due_before = connection.execute(
+            "select id,source_transaction_id,remaining_past_due_amount from lending.past_due_obligations where loan_id=%s order by id",
+            (case.regular_loan_id,),
+        ).fetchall()
+        assert len(past_due_before) == 1
+        assert past_due_before[0][1:] == (
+            UUID(partial.posted.server_transaction_id),
+            Decimal("40.00"),
+        )
+        assert connection.execute(
+            "select is_voided from lending.collection_transactions where id=%s",
+            (partial.posted.server_transaction_id,),
+        ).fetchone() == (False,)
+    original = _command(case, 2, 1)
     first = post(original)
-    assert first.status == CollectionStatus.ACCEPTED
+    assert first.status == CollectionStatus.ACCEPTED, first
     voided = PostgresCollectionVoidRepository().void_unremitted(
         actor_user_id=case.collector_id,
         transaction_id=UUID(first.posted.server_transaction_id),
@@ -84,10 +118,10 @@ def test_pass_save_void_replace_and_concurrent_replacement(monkeypatch):
     replay = post(original)
     assert replay.status == CollectionStatus.DUPLICATE
     assert replay.posted.server_transaction_id == first.posted.server_transaction_id
-    replacement = post(_command(case, 2, voided.state_version))
+    replacement = post(_command(case, 3, voided.state_version))
     assert replacement.status == CollectionStatus.ACCEPTED, replacement
     duplicate = post(
-        _command(case, 3, int(replacement.posted.route_revision.rsplit("v", 1)[1]))
+        _command(case, 4, int(replacement.posted.route_revision.rsplit("v", 1)[1]))
     )
     assert duplicate.status == CollectionStatus.CONFLICT
     assert duplicate.code == "pass_already_recorded"
@@ -114,7 +148,7 @@ def test_pass_save_void_replace_and_concurrent_replacement(monkeypatch):
         return post(command)
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = [pool.submit(compete, sequence) for sequence in (4, 5)]
+        futures = [pool.submit(compete, sequence) for sequence in (5, 6)]
         outcomes = [future.result(timeout=20) for future in futures]
     assert sorted(o.status.value for o in outcomes) == ["accepted", "conflict"]
     with _connect() as connection:
@@ -123,6 +157,13 @@ def test_pass_save_void_replace_and_concurrent_replacement(monkeypatch):
             (case.regular_loan_id, "pass"),
         ).fetchone()
         assert counts == (3, 1)
+        assert (
+            connection.execute(
+                "select id,source_transaction_id,remaining_past_due_amount from lending.past_due_obligations where loan_id=%s order by id",
+                (case.regular_loan_id,),
+            ).fetchall()
+            == past_due_before
+        )
     assert (
         post(original).posted.server_transaction_id
         == first.posted.server_transaction_id

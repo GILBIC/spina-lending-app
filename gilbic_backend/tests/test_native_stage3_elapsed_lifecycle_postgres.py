@@ -13,6 +13,7 @@ from gilbic_backend.elapsed_period_assessment_repository import (
     _impaired_cash_review_payload,
     _impaired_cash_source_payload,
 )
+from native_stage3_constraint_boundaries import flush_completed_action
 from native_stage3_elapsed_support import (
     aged_stage3,
     emit_public,
@@ -54,6 +55,7 @@ def test_genuine_aged_cash_renewal_and_successor_assessment(
     expected_net_interest = rounded_gross_interest - economic_unwind
     assert rounded_gross_interest > 0 and economic_unwind > 0
     retained = {}
+    constraint_boundaries = []
 
     def actual_cash(source, patch, destination):
         applied = actual_first_application(
@@ -88,6 +90,7 @@ def test_genuine_aged_cash_renewal_and_successor_assessment(
         retained.update(
             candidate=candidate, review=review, target=target, cash_journal=journal
         )
+        flush_completed_action(conn, "predecessor_cash_review", constraint_boundaries)
         return coordinates, journal
 
     # Adapt only test orchestration. The captured opening is verified, never
@@ -102,6 +105,7 @@ def test_genuine_aged_cash_renewal_and_successor_assessment(
         completed = renewal.completed_native_renewal(
             f, adapters, tmp_path, predecessor_credit_impaired=True
         )
+    flush_completed_action(conn, "completed_renewal", constraint_boundaries)
     candidate = completed["candidate"]
     boundary = candidate["credit_impaired_boundary"]
     target = retained["target"]
@@ -224,6 +228,7 @@ def test_genuine_aged_cash_renewal_and_successor_assessment(
         "SELECT exact_posted AND NOT correction_pending AS exact FROM accounting.treasury_application_posting_status WHERE journal_entry_id=%s",
         (cash_journal,),
     ).fetchone()["exact"]
+    flush_completed_action(conn, "successor_cash_review", constraint_boundaries)
 
     context = conn.execute(
         "SELECT accounting.current_credit_risk_review_context(%s,%s) AS value",
@@ -283,6 +288,7 @@ def test_genuine_aged_cash_renewal_and_successor_assessment(
     assert measured["measurement_snapshot"]["risk_review"]["recovery_label"] == (
         "cured" if cure else "none"
     )
+    flush_completed_action(conn, "successor_assessment", constraint_boundaries)
 
     old = conn.execute(
         "SELECT accounting.loan_period_elapsed_assessment_candidate(%s,%s) AS value",
@@ -329,10 +335,44 @@ def test_genuine_aged_cash_renewal_and_successor_assessment(
         "SELECT accounting.period_elapsed_loan_assessment_exact(%s,%s) AS exact",
         (f["period_id"], f["loan_id"]),
     ).fetchone()["exact"]
+    # Earlier action boundaries have consumed their deferred queues. Recheck
+    # their exactness against the complete final state, so later actions cannot
+    # invalidate an earlier receipt, application, review, renewal or assessment.
+    for application, journal in (
+        (retained["application"], retained["cash_journal"]),
+        (applied, cash_journal),
+    ):
+        assert conn.execute(
+            "SELECT exact_posted AND NOT correction_pending AS exact FROM accounting.treasury_receipt_posting_status WHERE receipt_id=%s",
+            (application["receipt_id"],),
+        ).fetchone()["exact"]
+        assert conn.execute(
+            "SELECT exact_posted AND NOT correction_pending AS exact FROM accounting.treasury_application_posting_status WHERE journal_entry_id=%s",
+            (journal,),
+        ).fetchone()["exact"]
+    for cash_measurement in (retained["review"], cash_review):
+        assert conn.execute(
+            "SELECT accounting.native_impaired_cash_review_exact(%s) AS exact",
+            (cash_measurement["id"],),
+        ).fetchone()["exact"]
+    assert conn.execute(
+        "SELECT accounting.native_renewal_structural_exact(%s) AS exact",
+        (completed["journal_id"],),
+    ).fetchone()["exact"]
+    assert conn.execute(
+        "SELECT exact_posted AND NOT correction_pending AS exact FROM accounting.loan_payout_accounting_posting_status WHERE journal_entry_id=%s",
+        (completed["journal_id"],),
+    ).fetchone()["exact"]
+    for loan in (completed["loan_id"], f["loan_id"]):
+        assert conn.execute(
+            "SELECT accounting.period_elapsed_loan_assessment_exact(%s,%s) AS exact",
+            (completed["application_period_id"], loan),
+        ).fetchone()["exact"]
     conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
     emit_public(
         f"native-stage3-aged-{'cure' if cure else 'continuing'}.json",
         {
+            "constraint_boundaries": constraint_boundaries,
             "candidate": candidate,
             "completion": completed["completion"],
             "inherited_risk_context": public_context(context),
