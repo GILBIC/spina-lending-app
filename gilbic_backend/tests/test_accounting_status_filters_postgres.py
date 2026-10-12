@@ -99,15 +99,36 @@ FILTERS = {
             "ready_for_review": ("ready_for_review",),
             "ready_to_prepare": ("ready_to_prepare",),
             "prepared": ("prepared_confirmation_required",),
-            "closed": ("closed_protected", "blocked_closed_source_review_required"),
+            "closed": (
+                "closed_protected",
+                "blocked_closed_source_review_required",
+                "closed_source_review_required",
+                "closed_legacy_without_protected_close_audit",
+            ),
             "blocked": (
                 "blocked_evidence",
                 "blocked_closed_source_review_required",
+                "closed_source_review_required",
                 "closed_legacy_without_protected_close_audit",
             ),
         },
         ("unknown_status",),
     ),
+}
+
+# Closed fiscal periods remain in the closed queue even when their protected
+# close audit is absent or later sources require review. Keep these independent
+# fixture coordinates explicit: close_status alone is not the fiscal status.
+PERIOD_CLOSE_FISCAL_STATUSES = {
+    "ready_for_review": "open",
+    "ready_to_prepare": "review",
+    "prepared_confirmation_required": "review",
+    "closed_protected": "closed",
+    "blocked_closed_source_review_required": "closed",
+    "closed_source_review_required": "closed",
+    "closed_legacy_without_protected_close_audit": "closed",
+    "blocked_evidence": "review",
+    "unknown_status": "open",
 }
 
 
@@ -139,10 +160,16 @@ def test_queue_filter_executes_and_selects_only_matching_statuses(name, status):
     values = sorted(set(other_values).union(*expected_by_filter.values()))
     expected = values if status == "all" else sorted(expected_by_filter[status])
     clause, parameters = repository._status_where(status)
+    if name == "period_close":
+        cases = "unnest(%s::text[], %s::text[]) AS cases(close_status, fiscal_period_status)"
+        examples = (values, [PERIOD_CLOSE_FISCAL_STATUSES[value] for value in values])
+    else:
+        cases = f"unnest(%s::text[]) AS cases({column})"
+        examples = (values,)
     with psycopg.connect(DATABASE_URL) as connection:
         actual = connection.execute(
-            f"SELECT {column} FROM unnest(%s::text[]) AS cases({column}) WHERE {clause} ORDER BY {column}",
-            (values, *parameters),
+            f"SELECT {column} FROM {cases} WHERE {clause} ORDER BY {column}",
+            (*examples, *parameters),
         ).fetchall()
     assert [row[0] for row in actual] == expected
 
