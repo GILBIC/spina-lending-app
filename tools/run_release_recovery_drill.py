@@ -35,7 +35,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[1]
-BOOTSTRAP_THROUGH = 141
+BOOTSTRAP_THROUGH = 171
 DATABASE_NAME = re.compile(r"spina_recovery_(source|restore)_[0-9a-f]{24}")
 PDF = b"%PDF-1.4\nSYNTHETIC RECOVERY DRILL - NO REAL PAYMENT\n%%EOF"
 ALLOWED_PARAMS = frozenset(

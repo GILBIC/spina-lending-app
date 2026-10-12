@@ -2,6 +2,7 @@
 
 import os
 import re
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import psycopg
@@ -13,6 +14,24 @@ from gilbic_backend.treasury_repository import TreasuryService
 from psycopg.rows import dict_row
 
 PDF = b"%PDF-1.4\nSynthetic private evidence\n%%EOF"
+
+
+@pytest.fixture
+def employee_treasury_clock(monkeypatch):
+    """Keep historical employee sources on the October 2 Treasury action date."""
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = datetime(2026, 10, 2, tzinfo=timezone.utc)
+            return value.astimezone(tz) if tz else value.replace(tzinfo=None)
+
+    for module in (
+        "employee_operations",
+        "employee_operations_repository",
+        "employee_operations_payroll",
+    ):
+        monkeypatch.setattr(f"gilbic_backend.{module}.datetime", FixedDatetime)
 
 
 def connect():

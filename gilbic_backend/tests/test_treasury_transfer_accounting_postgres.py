@@ -17,6 +17,7 @@ from gilbic_backend.treasury_models import TransferRecord
 from gilbic_backend.treasury_repository import TreasuryService
 from test_treasury_receipt_accounting_postgres import (
     RECEIPT_FILE,
+    SQL_ROOT,
     install,
     mapping,
     seed,
@@ -31,7 +32,17 @@ MIGRATION = (
 
 
 def seed_transfer(conn, tmp_path):
-    f = seed(conn)
+    if conn.execute(
+        "SELECT to_regprocedure('accounting.period_initial_source_blockers(uuid)') IS NULL AS missing"
+    ).fetchone()["missing"]:
+        # The Treasury runner intentionally starts at140. Transfer153 also needs
+        # authoritative141 and the composed legacy/liability controls through148.
+        # Install that complete prefix in order; never replay it over a composed
+        # schema supplied by the later accounting validators.
+        for path in sorted(SQL_ROOT.glob("*.sql")):
+            if 141 <= int(path.name[:4]) <= 148:
+                install(conn, path)
+    f = seed(conn, install_migrations=False)
     store = PrivateEvidenceStore(tmp_path)
     store.put(f["evidence"], RECEIPT_FILE, "application/pdf")
     destination, evidence, transfer_id = uuid4(), uuid4(), uuid4()

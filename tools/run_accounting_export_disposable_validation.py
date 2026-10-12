@@ -14,7 +14,7 @@ from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
 ROOT = Path(__file__).resolve().parents[1]
-BOOTSTRAP_THROUGH = 161
+BOOTSTRAP_THROUGH = 171
 
 
 def run(

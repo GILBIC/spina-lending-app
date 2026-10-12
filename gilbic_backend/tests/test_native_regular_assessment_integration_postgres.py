@@ -12,6 +12,12 @@ import os
 from pathlib import Path
 
 import pytest
+from native_current_schema_test_support import (
+    NATIVE_SCHEMA_BASELINE,
+    assert_native_schema_preserved,
+    current_native_head,
+    install_native_fixture_migration,
+)
 from test_native_payout_regular_origin_postgres import (
     _actual_debit,
     _assert_no_legacy_cash,
@@ -21,7 +27,6 @@ from test_native_payout_regular_origin_postgres import (
     payout_database,
     private_fixture_configuration,
 )
-from test_treasury_receipt_accounting_postgres import install
 
 MIGRATION = (
     Path(__file__).resolve().parents[1]
@@ -30,10 +35,11 @@ MIGRATION = (
 
 
 @pytest.fixture
-def integrated_native(native_origin):
+def integrated_native(native_origin, request):
     f = native_origin
     if MIGRATION.exists() and os.getenv("SPINA_NATIVE_BASELINE") != "1":
-        install(f["conn"], MIGRATION)
+        install_native_fixture_migration(f["conn"], MIGRATION)
+    assert_native_schema_preserved(f["conn"], request)
     f["conn"].execute(
         "UPDATE accounting.fiscal_periods SET end_date=%s WHERE id=%s",
         (f["today"], f["period"]),
@@ -137,3 +143,12 @@ def test_elapsed_assessment_rechecks_exact_native_posting(integrated_native):
     assert not reviewed["ready"]
     assert "native_payout_posting_not_exact" in reviewed["blockers"]
     _assert_no_legacy_cash(f)
+
+
+def test_integration_fixture_preserves_current_native_functions(
+    integrated_native, request
+):
+    assert current_native_head(integrated_native["conn"]) == (
+        request.node.stash.get(NATIVE_SCHEMA_BASELINE, None) is not None
+    )
+    assert_native_schema_preserved(integrated_native["conn"], request)

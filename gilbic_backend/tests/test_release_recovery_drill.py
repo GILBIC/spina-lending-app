@@ -230,3 +230,63 @@ def test_output_cannot_overwrite_private_dsn(monkeypatch, tmp_path):
     with pytest.raises(SystemExit):
         drill.main()
     assert dsn.read_text(encoding="utf-8") == "password=secret"
+
+
+@pytest.mark.parametrize("kind", ["recovery", "export"])
+def test_current_bootstrap_replays_complete_repository_and_restores_limit(
+    monkeypatch, kind
+):
+    from tools import run_accounting_export_disposable_validation as export
+
+    runner = drill if kind == "recovery" else export.recovery
+    boundary = (
+        drill.BOOTSTRAP_THROUGH if kind == "recovery" else export.BOOTSTRAP_THROUGH
+    )
+    monkeypatch.setattr(runner, "BOOTSTRAP_THROUGH", boundary)
+    previous = runner.disposable.BOOTSTRAP_THROUGH
+    replayed = []
+    auth_installed = []
+    monkeypatch.setattr(
+        runner.disposable,
+        "_install_supabase_auth_prerequisite",
+        lambda dsn: auth_installed.append(dsn),
+    )
+    monkeypatch.setattr(
+        runner.disposable,
+        "_bootstrap_database",
+        lambda dsn: replayed.extend(runner.disposable._migration_paths()),
+    )
+    manifest = runner.bootstrap("synthetic-no-connection")
+    expected = sorted(runner.disposable.SQL_ROOT.glob("[0-9][0-9][0-9][0-9]_*.sql"))
+    assert replayed == expected
+    assert auth_installed == ["synthetic-no-connection"]
+    assert manifest == [
+        {"file": path.name, "sha256": runner.sha256(path.read_bytes())}
+        for path in expected
+    ]
+    assert runner.disposable.BOOTSTRAP_THROUGH == previous
+
+
+def test_bootstrap_still_refuses_unreviewed_newer_migration_before_connecting(
+    monkeypatch, tmp_path
+):
+    paths = list(drill.disposable.SQL_ROOT.glob("[0-9][0-9][0-9][0-9]_*.sql"))
+    for path in paths:
+        (tmp_path / path.name).write_text("-- synthetic migration\n", encoding="utf-8")
+    next_number = max(int(path.name[:4]) for path in paths) + 1
+    (tmp_path / f"{next_number:04d}_unreviewed_synthetic.sql").write_text(
+        "-- next migration\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(drill.disposable, "SQL_ROOT", tmp_path)
+    previous = drill.disposable.BOOTSTRAP_THROUGH
+
+    def unexpected(*args):
+        pytest.fail("An incomplete current bootstrap must not connect")
+
+    monkeypatch.setattr(
+        drill.disposable, "_install_supabase_auth_prerequisite", unexpected
+    )
+    monkeypatch.setattr(drill.disposable, "_bootstrap_database", unexpected)
+    with pytest.raises(drill.DrillError, match="current migration files"):
+        drill.bootstrap("synthetic-no-connection")
+    assert drill.disposable.BOOTSTRAP_THROUGH == previous

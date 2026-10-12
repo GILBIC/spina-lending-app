@@ -131,7 +131,9 @@ def money_state(f):
 
 @pytest.mark.parametrize("kind", ["payroll", "salary_advance"])
 @pytest.mark.parametrize("first", ["source", "refund"])
-def test_refund_and_employee_source_cannot_consume_same_debit(treasury, kind, first):
+def test_refund_and_employee_source_cannot_consume_same_debit(
+    treasury, employee_treasury_clock, kind, first
+):
     f = treasury
     source_fields = approved_employee_source(f, kind)
     received = f["service"].execute(f["owner"], receipt(f))
