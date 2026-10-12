@@ -101,6 +101,35 @@ def build_command(flutter):
     ]
 
 
+def verify_debug_signer(certificates):
+    # Called only after apksigner verify exits zero. Recognize the observed SDK
+    # 37 prefix and the legacy format, without ignoring extra certificate rows.
+    lines = certificates.splitlines()
+    counts = [line for line in lines if "Number of signers:" in line]
+    subjects = [line for line in lines if "certificate DN:" in line]
+    digests = [line for line in lines if "certificate SHA-256 digest:" in line]
+    if counts != ["Number of signers: 1"] or len(digests) != 1 or len(subjects) != 1:
+        raise ValueError("Exactly one fresh Android debug signer required")
+    subject = re.fullmatch(r"(Signer #1|V2 Signer:) certificate DN: (.+)", subjects[0])
+    digest = re.fullmatch(
+        r"(Signer #1|V2 Signer:) certificate SHA-256 digest: ([0-9a-fA-F]{64})",
+        digests[0],
+    )
+    if (
+        not subject
+        or not digest
+        or subject[1] != digest[1]
+        or [
+            part.strip()
+            for part in subject[2].split(",")
+            if part.strip().startswith("CN=")
+        ]
+        != ["CN=Android Debug"]
+    ):
+        raise ValueError("Exactly one fresh Android debug signer required")
+    return digest[2].lower()
+
+
 def resource_snapshot(directory):
     match = re.search(
         r"^MemAvailable:\s+(\d+)\s+kB$", Path("/proc/meminfo").read_text(), re.MULTILINE
@@ -406,21 +435,7 @@ def execute():
             cwd=host,
             timeout=60,
         )
-        digests = re.findall(
-            r"^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$",
-            certificates,
-            re.MULTILINE,
-        )
-        subjects = re.findall(
-            r"^Signer #\d+ certificate DN: (.+)$", certificates, re.MULTILINE
-        )
-        if (
-            "Number of signers: 1" not in certificates
-            or len(digests) != 1
-            or len(subjects) != 1
-            or "CN=Android Debug" not in subjects[0]
-        ):
-            raise ValueError("Exactly one fresh Android debug signer required")
+        certificate_sha256 = verify_debug_signer(certificates)
         destination = output / "Spina-Native-Acceptance-arm64-debug.apk"
         with apk.open("rb") as reader, destination.open("xb") as writer:
             shutil.copyfileobj(reader, writer)
@@ -438,7 +453,7 @@ def execute():
             "api_url": builder.API_URL,
             "apk_name": destination.name,
             "apk_sha256": builder.sha256(destination),
-            "certificate_sha256": digests[0].lower(),
+            "certificate_sha256": certificate_sha256,
             "endpoint_evidence": "Exact build define, copied source/lock hashes, APK metadata and endpoint string in debug kernel; phone connectivity untested",
         }
         builder.write_json_new(output / "debug-artifact-result.json", result)
