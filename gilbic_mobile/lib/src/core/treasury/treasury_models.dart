@@ -717,6 +717,18 @@ final Map<TreasuryAction, List<TreasuryField>> treasuryFields = {
     ),
   ],
   TreasuryAction.collectorCountRecord: [
+    TreasuryField(
+      'credit_application_id',
+      'Approved credit',
+      TreasuryFieldKind.id,
+      required: false,
+    ),
+    TreasuryField(
+      'credit_application_version',
+      'Approval version',
+      TreasuryFieldKind.integer,
+      required: false,
+    ),
     TreasuryField('remittance_id', 'Remittance id', TreasuryFieldKind.id),
     TreasuryField('source_digest', 'Source digest', TreasuryFieldKind.digest),
     TreasuryField('counted_amount', 'Counted amount', TreasuryFieldKind.money),
@@ -1357,6 +1369,14 @@ class TreasuryCommand {
     }
     if (action == TreasuryAction.openingActivate && body['confirmed'] != true) {
       throw const FormatException('Confirm the actual observed opening.');
+    }
+    if ((action == TreasuryAction.collectorCountRecord ||
+            action == TreasuryAction.collectorCountAccept) &&
+        ((body['credit_application_id'] == null) !=
+            (body['credit_application_version'] == null))) {
+      throw const FormatException(
+        'Select an approved credit with its exact version.',
+      );
     }
     for (final key in [
       'review_acknowledged',

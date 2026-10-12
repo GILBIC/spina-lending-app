@@ -1166,7 +1166,23 @@ def test_source_recognition_invalidates_close_without_changing_cash_or_snapshot(
     assert (
         original["collector_source_status"]["pending_identification_amount"] == "100.00"
     )
-    assert not original["collector_source_status"]["gl_posting_available"]
+    with connect() as conn:
+        installed = conn.execute(
+            "SELECT to_regprocedure('accounting.post_collector_liability(uuid,text,text,uuid)') IS NOT NULL AS available"
+        ).fetchone()["available"]
+        journals_before = conn.execute(
+            "SELECT count(*) AS n FROM accounting.journal_entries"
+        ).fetchone()["n"]
+    assert original["collector_source_status"]["gl_posting_available"] is installed
+    assert (
+        original["collector_source_status"]["accounting"]["automatic_posting"] is False
+    )
+    assert (
+        original["collector_source_status"]["accounting"][
+            "comprehensive_source_coverage"
+        ]
+        is False
+    )
     command(
         t,
         "collector_surplus_recognize",
@@ -1186,6 +1202,12 @@ def test_source_recognition_invalidates_close_without_changing_cash_or_snapshot(
             "select * from treasury.accounts where id=%s", (t["account_id"],)
         ).fetchone()
         current = preview_reconciliation(conn, account, row)
+        assert (
+            conn.execute(
+                "SELECT count(*) AS n FROM accounting.journal_entries"
+            ).fetchone()["n"]
+            == journals_before
+        )
         assert row["requires_review"] and row["closed_snapshot"] == original
         assert (
             current["collector_source_status"]["pending_identification_amount"]

@@ -10,6 +10,124 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  for (final label in ['Empty first period', 'Capital-only first period']) {
+    test(
+      '$label prepares and closes with audited null journal coordinates',
+      () async {
+        final requests = <http.Request>[];
+        final prepared = <String, Object?>{
+          ..._preparedItemPayload,
+          'label': label,
+          'journal_entry_id': null,
+          'temporary_account_count': 0,
+          'net_income': '0.00',
+          'retained_earnings_balance_before': '0.00',
+        };
+        final closed = <String, Object?>{
+          ...prepared,
+          'fiscal_period_status': 'closed',
+          'close_status': 'closed_protected',
+          'close_posting_id': '55555555-5555-4555-8555-555555555555',
+          'retained_earnings_balance_after': '0.00',
+          'closed_by_user_id': _session.userId,
+          'closed_at': '2026-09-01T08:00:00+08:00',
+        };
+        final repository = SpinaPeriodCloseRepository(
+          client: MockClient((request) async {
+            requests.add(request);
+            return _response({
+              'item': request.url.path.endsWith('/prepare') ? prepared : closed,
+            });
+          }),
+        );
+        final item = await repository.prepare(
+          _session,
+          deviceId: 'management-phone',
+          fiscalPeriodId: _periodId,
+        );
+        expect(item.journalEntryId, isNull);
+        expect(item.temporaryAccountCount, 0);
+        expect(() => item.requirePostCoordinates(), returnsNormally);
+        final result = await repository.post(
+          _session,
+          deviceId: 'management-phone',
+          item: item,
+          confirmationToken: 'b' * 64,
+        );
+        expect(requests.length, 2);
+        expect(jsonDecode(requests.first.body), {'confirm': true});
+        expect(jsonDecode(requests.last.body), {
+          'confirm': true,
+          'confirmation_token': 'b' * 64,
+          'expected_close_digest': 'a' * 64,
+          'expected_net_income': '0.00',
+          'expected_retained_earnings_account_code': '3100',
+          'expected_period_end_date': '2026-08-31',
+        });
+        expect(result.closeStatus, 'closed_protected');
+        expect(result.journalEntryId, isNull);
+        expect(result.closingEntryNumber, isNull);
+        expect(result.closePostingId, closed['close_posting_id']);
+        expect(result.retainedEarningsBalanceAfter, '0.00');
+        expect(() => result.requirePostCoordinates(), throwsArgumentError);
+      },
+    );
+  }
+  test(
+    'zero-journal close rejects missing or contradictory protected evidence',
+    () {
+      final prepared = <String, Object?>{
+        ..._preparedItemPayload,
+        'journal_entry_id': null,
+        'temporary_account_count': 0,
+        'net_income': '0.00',
+      };
+      for (final patch in <Map<String, Object?>>[
+        {'temporary_account_count': 2},
+        {'temporary_account_count': null},
+        {'temporary_account_count': -1},
+        {'net_income': '0.01'},
+        {'journal_entry_id': _periodId},
+        {'preparation_id': null},
+        {'close_digest': null},
+        {'retained_earnings_balance_before': null},
+        {'automatic_source_posting': true},
+      ]) {
+        expect(
+          () => PeriodCloseItem.fromPayload({...prepared, ...patch}),
+          throwsA(isA<SpinaApiException>()),
+        );
+      }
+      final omitted = {...prepared}..remove('journal_entry_id');
+      expect(
+        () => PeriodCloseItem.fromPayload(omitted),
+        throwsA(isA<SpinaApiException>()),
+      );
+      final closed = <String, Object?>{
+        ...prepared,
+        'fiscal_period_status': 'closed',
+        'close_status': 'closed_protected',
+        'close_posting_id': _periodId,
+        'retained_earnings_balance_after': '100.00',
+        'closed_by_user_id': _session.userId,
+        'closed_at': '2026-09-01T00:00:00Z',
+      };
+      for (final patch in <Map<String, Object?>>[
+        {'closing_entry_number': 'invented'},
+        {'close_posting_id': null},
+        {'closed_by_user_id': null},
+        {'closed_at': null},
+        {'retained_earnings_balance_after': null},
+        {'fiscal_period_status': 'review'},
+        {'temporary_account_count': 2, 'journal_entry_id': _periodId},
+      ]) {
+        expect(
+          () => PeriodCloseItem.fromPayload({...closed, ...patch}),
+          throwsA(isA<SpinaApiException>()),
+        );
+      }
+    },
+  );
   test(
     'loads exact protected close evidence with device authorization',
     () async {

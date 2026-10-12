@@ -428,6 +428,14 @@ class SettlementPreview(StrictModel):
     credit_application_id: UUID | None = None
     credit_application_version: Version | None = None
 
+    @model_validator(mode="after")
+    def paired_application_reference(self):
+        if (self.credit_application_id is None) != (
+            self.credit_application_version is None
+        ):
+            raise ValueError("Application ID and version must be supplied together.")
+        return self
+
 
 class CollectorCountRecord(Command):
     action: Literal["collector_count_record"]
@@ -438,6 +446,16 @@ class CollectorCountRecord(Command):
     evidence_id: UUID
     recipient_attestation: Text
     review_acknowledged: StrictBool
+    credit_application_id: UUID | None = None
+    credit_application_version: Version | None = None
+
+    @model_validator(mode="after")
+    def paired_application_reference(self):
+        if (self.credit_application_id is None) != (
+            self.credit_application_version is None
+        ):
+            raise ValueError("Application ID and version must be supplied together.")
+        return self
 
 
 class CollectorCountAccept(Command):
@@ -448,6 +466,14 @@ class CollectorCountAccept(Command):
     physical_receipt_acknowledged: StrictBool
     credit_application_id: UUID | None = None
     credit_application_version: Version | None = None
+
+    @model_validator(mode="after")
+    def paired_application_reference(self):
+        if (self.credit_application_id is None) != (
+            self.credit_application_version is None
+        ):
+            raise ValueError("Application ID and version must be supplied together.")
+        return self
 
 
 class CollectorSurplusRecognize(Command):
@@ -692,9 +718,15 @@ COMMAND_ADAPTER = TypeAdapter(TreasuryCommand)
 
 
 def command_hash(command: BaseModel) -> str:
-    encoded = json.dumps(
-        command.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
-    )
+    payload = command.model_dump(mode="json")
+    # A retry of a pre-0157 cash-only count must retain its original hash.
+    # Explicit application coordinates always remain part of the command hash.
+    if payload.get("action") == "collector_count_record" and not payload.get(
+        "credit_application_id"
+    ):
+        payload.pop("credit_application_id", None)
+        payload.pop("credit_application_version", None)
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 

@@ -3,6 +3,7 @@
 import os
 import re
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 import psycopg
@@ -44,6 +45,14 @@ def test_statement_pack_uses_one_snapshot_during_concurrent_post(
 ):
     url = isolated_statement_database
     with psycopg.connect(url) as setup:
+        # This test also supports the pre-identity baseline schema used for RED.
+        setup.execute(
+            (
+                Path(__file__).resolve().parents[1]
+                / "sql"
+                / "0144_add_accounting_book_identity.sql"
+            ).read_text(encoding="utf-8")
+        )
         actor = _management_actor(setup, uuid4().hex)
         period, start, _ = _period(setup, actor_id=actor, suffix=uuid4().hex)
         _manual_journal(
@@ -75,12 +84,27 @@ def test_statement_pack_uses_one_snapshot_during_concurrent_post(
                     )
             return rows
 
-    report = InterleavedReport().load_statement_pack(period_id=period)
+    report = InterleavedReport().load_statement_pack(
+        period_id=period, actor_user_id=actor
+    )
     assert report.net_income == Decimal("100.00")
     assert report.unclosed_earnings_to_date == report.net_income
     assert report.total_assets == Decimal("100.00")
     # The next request must see the newly committed journal.
     fresh = statements.PostgresFinancialStatementsRepository().load_statement_pack(
-        period_id=period
+        period_id=period, actor_user_id=actor
     )
     assert fresh.net_income == fresh.total_assets == Decimal("125.00")
+    if int(os.getenv("SPINA_CURRENT_SCHEMA_THROUGH", "0")) >= 161:
+        assert (
+            report.reporting_supplement["journal_disclosures"]["coverage"][
+                "journal_count"
+            ]
+            == 1
+        )
+        assert (
+            fresh.reporting_supplement["journal_disclosures"]["coverage"][
+                "journal_count"
+            ]
+            == 2
+        )

@@ -163,11 +163,14 @@ class _RemittanceHandoverPhotoPageState
                     const SizedBox(height: 4),
                     Text('Recipient: ${widget.remittance.recipientName}'),
                     Text(
-                      'Cash: ₱${widget.remittance.summary.totalAmount.toStringAsFixed(2)}',
+                      widget.remittance.settlementSplit?.description ??
+                          'Cash: ₱${widget.remittance.summary.totalAmount.toStringAsFixed(2)}',
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Take a clear photo showing that the cash was physically handed to the selected recipient. Do not include unrelated private documents.',
+                    Text(
+                      widget.remittance.settlementSplit?.physical == '0.00'
+                          ? 'This remittance was settled using approved credit with no cash received. Keep the settlement evidence with its original record.'
+                          : 'Take a clear photo showing that the cash was physically handed to the selected recipient. Do not include unrelated private documents.',
                     ),
                   ],
                 ),

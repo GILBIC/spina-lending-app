@@ -62,6 +62,7 @@ class RemittanceHistoryRecord:
     rejected_at: datetime | None = None
     rejected_by_user_id: UUID | None = None
     rejection_reason: str = ""
+    settlement_split: dict[str, str] | None = None
 
     @property
     def refund_due_release_count(self) -> int:
@@ -110,6 +111,9 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
                 )
                 rows = cursor.fetchall()
                 records: list[RemittanceHistoryRecord] = []
+                from .remittance_settlement_projection import attach_settlement_splits
+
+                attach_settlement_splits(cursor, rows)
                 for row in rows:
                     items = self._remittance_items(cursor, row["id"])
                     refund_due_releases = self._remittance_refund_due_releases(
@@ -415,6 +419,7 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
         rejected_at = row.get("rejected_at")
         status = "rejected" if rejected_at is not None else str(row["status"])
         return RemittanceHistoryRecord(
+            settlement_split=row.get("settlement_split"),
             remittance_id=row["id"],
             remittance_number=str(row["remittance_number"]),
             collector_user_id=row["collector_user_id"],

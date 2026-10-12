@@ -78,6 +78,7 @@ class PostgresRenewalTreatmentAccountingTargetRepository:
             original_daily_eir=decision.original_daily_eir,
             present_value_at_original_eir=decision.present_value_at_original_eir,
             present_value_change_amount=decision.present_value_change_amount,
+            renewal_cash_disbursed_amount=decision.renewal_cash_disbursed_amount,
         )
         return RenewalTreatmentAccountingTargetRecord(
             decision=decision,

@@ -24,6 +24,17 @@ test('blocked contract readiness exposes the reason and sends no mutation',async
  const h=await harness(t,()=>({permission:true,loans:[{loan_id:LOAN,client_name:'Borrower',can_activate:false,can_deactivate:false,blockers:['Signed schedule missing']}]}),['lending.contract_collection.activate']);
  assert.match(h.root.textContent,/Signed schedule missing/);assert.equal(h.root.querySelector('[data-contract-activate]'),null);assert.equal(h.calls.some(call=>call.options.method==='POST'),false);
 });
+
+test('retained native reconciliation is explicit and preview sends no mutation',async t=>{
+ const h=await harness(t,(path,options)=>options.method==='POST'?{loan_id:LOAN,is_active:true}:{permission:true,loans:[{loan_id:LOAN,client_name:'Captured native borrower',can_activate:true,can_deactivate:false,balance_reconciled:false,native_reconciliation_available:true,blockers:[]}]},['lending.contract_collection.activate']);
+ assert.match(h.root.textContent,/Reconcile and activate collection/);
+ assert.match(h.root.textContent,/amount owed stays unchanged/);
+ assert.equal(h.calls.some(call=>call.options.method==='POST'),false);
+ set(h.root,'activation_note','Reviewed protected original release');await submit(h.root,'[data-contract-activate]');
+ const posts=h.calls.filter(call=>call.options.method==='POST');assert.equal(posts.length,1);
+ assert.equal(posts[0].path,`/api/v1/management/financial-accounting/contract-collection-activation/${LOAN}/activate`);
+ assert.equal(posts[0].options.body.confirm_action,true);
+});
 test('No Collection requires a matching preview and submits the loaded operational revision',async t=>{
  const h=await harness(t,(path,options)=>{
   if(path.includes('/management/loans?'))return {loans:[{loan_id:LOAN,client_name:'Borrower',loan_number:'LN-1'}]};

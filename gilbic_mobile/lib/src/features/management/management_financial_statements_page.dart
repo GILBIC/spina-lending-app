@@ -1,11 +1,15 @@
 import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/management/reporting_supplement_card.dart';
+import 'package:gilbic_mobile/src/features/management/accounting_report_download_card.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_statements.dart';
 import 'package:gilbic_mobile/src/core/management/financial_statements_repository.dart';
+import 'package:gilbic_mobile/src/core/management/accounting_readiness_repository.dart';
+import 'package:gilbic_mobile/src/features/management/accounting_readiness_card.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
 class ManagementFinancialStatementsPage extends StatefulWidget {
@@ -15,6 +19,7 @@ class ManagementFinancialStatementsPage extends StatefulWidget {
     this.periods,
     this.accountingRepository,
     this.statementsRepository,
+    this.readinessRepository,
     super.key,
   });
 
@@ -23,6 +28,7 @@ class ManagementFinancialStatementsPage extends StatefulWidget {
   final List<AccountingFiscalPeriod>? periods;
   final FinancialAccountingRepository? accountingRepository;
   final FinancialStatementsRepository? statementsRepository;
+  final AccountingReadinessRepository? readinessRepository;
 
   @override
   State<ManagementFinancialStatementsPage> createState() =>
@@ -34,6 +40,7 @@ class _ManagementFinancialStatementsPageState
     with PrivateAccessState<ManagementFinancialStatementsPage> {
   @override
   void clearPrivateData() {
+    _loadGeneration++;
     _statements = null;
     _periods = const [];
     _selectedPeriodId = null;
@@ -47,6 +54,10 @@ class _ManagementFinancialStatementsPageState
   AccountingFinancialStatements? _statements;
   String? _errorMessage;
   bool _loading = true;
+  int _loadGeneration = 0;
+  late String _sessionScope;
+  String get _currentSessionScope =>
+      '${widget.session.userId}:${widget.session.accessToken}:${widget.session.permissions.join(',')}:${widget.session.workspaceRoles.join(',')}';
 
   @override
   void initState() {
@@ -55,29 +66,45 @@ class _ManagementFinancialStatementsPageState
         widget.accountingRepository ?? SpinaFinancialAccountingRepository();
     _statementsRepository =
         widget.statementsRepository ?? SpinaFinancialStatementsRepository();
+    _sessionScope = _currentSessionScope;
     _load(initial: true);
   }
 
+  @override
+  void didUpdateWidget(covariant ManagementFinancialStatementsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_sessionScope != _currentSessionScope ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider) {
+      _sessionScope = _currentSessionScope;
+      _periods = const [];
+      _selectedPeriodId = null;
+      _load(initial: true);
+    }
+  }
+
   Future<void> _load({bool initial = false}) async {
-    if (!mounted || !privateAccessActive) return;
+    if (!privateAccessActive) return;
+    final generation = ++_loadGeneration;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _errorMessage = null;
+      _statements = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      requirePrivateAccess();
+      if (!privateAccessActive || generation != _loadGeneration) return;
       if (initial || _periods.isEmpty) {
         final suppliedPeriods = widget.periods;
         final periods = suppliedPeriods == null
             ? [
                 ...(await _accountingRepository.loadOverview(
-                  widget.session,
+                  session,
                   deviceId: identity.installationId,
                 )).fiscalPeriods,
               ]
             : [...suppliedPeriods];
-        requirePrivateAccess();
+        if (!privateAccessActive || generation != _loadGeneration) return;
         periods.sort((a, b) => b.endDate.compareTo(a.endDate));
         if (periods.isEmpty) {
           throw const SpinaApiException(
@@ -90,33 +117,33 @@ class _ManagementFinancialStatementsPageState
       }
 
       final statements = await _statementsRepository.loadStatements(
-        widget.session,
+        session,
         deviceId: identity.installationId,
         periodId: _selectedPeriodId,
       );
-      if (mounted && privateAccessActive) {
+      if (privateAccessActive && generation == _loadGeneration) {
         setState(() => _statements = statements);
       }
     } on SpinaApiException catch (error) {
-      revokePrivateAccess(error);
-      if (mounted && privateAccessActive) {
+      if (privateAccessActive && generation == _loadGeneration) {
+        revokePrivateAccess(error);
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted && privateAccessActive) {
+      if (privateAccessActive && generation == _loadGeneration) {
         setState(
           () => _errorMessage = 'Financial Statements could not be loaded.',
         );
       }
     } finally {
-      if (mounted && privateAccessActive) {
+      if (privateAccessActive && generation == _loadGeneration) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _selectPeriod(String? periodId) async {
-    if (!mounted || !privateAccessActive) return;
+    if (!privateAccessActive) return;
     if (periodId == null || periodId == _selectedPeriodId) {
       return;
     }
@@ -166,6 +193,18 @@ class _ManagementFinancialStatementsPageState
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
+          AccountingReadinessCard(
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            repository: widget.readinessRepository,
+          ),
+          AccountingReportDownloadCard(
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            startDate: statements.period.startDate,
+            endDate: statements.period.endDate,
+            onAccessDenied: revokePrivateAccess,
+          ),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -219,6 +258,7 @@ class _ManagementFinancialStatementsPageState
           _ProfitOrLossCard(statements: statements),
           const SizedBox(height: 16),
           _FinancialPositionCard(statements: statements),
+          ReportingSupplementCard(supplement: statements.reportingSupplement),
           const SizedBox(height: 16),
           Card(
             child: Padding(
@@ -269,7 +309,7 @@ class _ProfitOrLossCard extends StatelessWidget {
             _TotalRow('Total expenses', result.totalExpenses),
             const Divider(height: 24),
             _TotalRow(
-              result.netIncome >= 0 ? 'Net income' : 'Net loss',
+              result.netIncome.startsWith('-') ? 'Net loss' : 'Net income',
               result.netIncome,
               emphasized: true,
             ),
@@ -374,7 +414,7 @@ class _SimpleRow extends StatelessWidget {
   const _SimpleRow(this.label, this.amount);
 
   final String label;
-  final double amount;
+  final String amount;
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +436,7 @@ class _TotalRow extends StatelessWidget {
   const _TotalRow(this.label, this.amount, {this.emphasized = false});
 
   final String label;
-  final double amount;
+  final String amount;
   final bool emphasized;
 
   @override
@@ -466,8 +506,8 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-String _money(double amount) {
-  final absolute = amount.abs().toStringAsFixed(2);
+String _money(String amount) {
+  final absolute = amount.startsWith('-') ? amount.substring(1) : amount;
   final parts = absolute.split('.');
   final whole = parts.first;
   final grouped = StringBuffer();
@@ -478,7 +518,7 @@ String _money(double amount) {
     grouped.write(whole[index]);
   }
   final formatted = '${grouped.toString()}.${parts.last}';
-  return amount < 0 ? '(₱$formatted)' : '₱$formatted';
+  return amount.startsWith('-') ? '(₱$formatted)' : '₱$formatted';
 }
 
 String _date(DateTime value) {

@@ -326,7 +326,10 @@ class PostgresCollectionCorrectionRepository:
                                 transaction_id,
                             ),
                         ).fetchone()
-                        assert other_payments is not None  # An aggregate always returns one row.
+                        if other_payments is None:
+                            raise RuntimeError(
+                                "The required collection total is unavailable."
+                            )
                         applied_today = (
                             self._money(other_payments["applied_amount"])
                             + corrected_amount

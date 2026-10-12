@@ -8,9 +8,12 @@ import 'package:gilbic_mobile/src/core/management/financial_statements.dart';
 import 'package:gilbic_mobile/src/core/management/financial_statements_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
+import 'support/accounting_readiness_fixture.dart';
 
 void main() {
-  testWidgets('Management sees posted-ledger financial statements', (tester) async {
+  testWidgets('Management sees posted-ledger financial statements', (
+    tester,
+  ) async {
     final repository = _FakeStatementsRepository();
 
     await tester.pumpWidget(
@@ -20,6 +23,7 @@ void main() {
           deviceIdentityProvider: _deviceIdentityProvider(),
           periods: _periods,
           statementsRepository: repository,
+          readinessRepository: FakeAccountingReadinessRepository(),
         ),
       ),
     );
@@ -29,6 +33,13 @@ void main() {
     expect(repository.periodId, 'period-aug-2026');
     expect(find.text('Financial Statements'), findsOneWidget);
     expect(find.text('August 2026 • Open'), findsOneWidget);
+    expect(find.text('Reporting review download'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('profit-or-loss-statement')),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Statement of Profit or Loss'), findsOneWidget);
     expect(find.text('4000 Interest Income - Regular'), findsOneWidget);
     expect(find.text('₱1,500.00'), findsWidgets);
@@ -45,7 +56,10 @@ void main() {
 
     expect(find.text('Statement of Financial Position'), findsOneWidget);
     expect(find.text('Balanced'), findsOneWidget);
-    expect(find.text('1190 Allowance for Expected Credit Loss'), findsOneWidget);
+    expect(
+      find.text('1190 Allowance for Expected Credit Loss'),
+      findsOneWidget,
+    );
     expect(find.text('(₱200.00)'), findsOneWidget);
     expect(find.text('Total assets'), findsOneWidget);
     expect(find.text('Liabilities + equity'), findsOneWidget);
@@ -62,51 +76,70 @@ void main() {
           deviceIdentityProvider: _deviceIdentityProvider(),
           periods: _periods,
           statementsRepository: repository,
+          readinessRepository: FakeAccountingReadinessRepository(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('financial-statements-period')));
-    await tester.pumpAndSettle();
+    await _openPeriodSelector(tester);
     await tester.tap(find.text('July 2026 • Closed').last);
     await tester.pumpAndSettle();
 
     expect(repository.periodId, 'period-jul-2026');
   });
 
-  testWidgets('Failed period load never leaves previous period figures visible', (
-    tester,
-  ) async {
-    final repository = _FakeStatementsRepository(
-      failPeriodId: 'period-jul-2026',
-    );
+  testWidgets(
+    'Failed period load never leaves previous period figures visible',
+    (tester) async {
+      final repository = _FakeStatementsRepository(
+        failPeriodId: 'period-jul-2026',
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ManagementFinancialStatementsPage(
-          session: _session,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          periods: _periods,
-          statementsRepository: repository,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementFinancialStatementsPage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            periods: _periods,
+            statementsRepository: repository,
+            readinessRepository: FakeAccountingReadinessRepository(),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('profit-or-loss-statement')),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Statement of Profit or Loss'), findsOneWidget);
+      expect(find.text('₱1,500.00'), findsWidgets);
 
-    expect(find.text('Statement of Profit or Loss'), findsOneWidget);
-    expect(find.text('₱1,500.00'), findsWidgets);
+      await _openPeriodSelector(tester);
+      await tester.tap(find.text('July 2026 • Closed').last);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('financial-statements-period')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('July 2026 • Closed').last);
-    await tester.pumpAndSettle();
+      expect(repository.periodId, 'period-jul-2026');
+      expect(find.text('Statement load failed.'), findsOneWidget);
+      expect(find.text('Statement of Profit or Loss'), findsNothing);
+      expect(find.text('₱1,500.00'), findsNothing);
+    },
+  );
+}
 
-    expect(repository.periodId, 'period-jul-2026');
-    expect(find.text('Statement load failed.'), findsOneWidget);
-    expect(find.text('Statement of Profit or Loss'), findsNothing);
-    expect(find.text('₱1,500.00'), findsNothing);
-  });
+Future<void> _openPeriodSelector(WidgetTester tester) async {
+  final selector = find.byKey(const Key('financial-statements-period'));
+  await tester.scrollUntilVisible(
+    selector,
+    -250,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  expect(selector.hitTestable(), findsOneWidget);
+  await tester.tap(selector);
+  await tester.pumpAndSettle();
 }
 
 const UserSession _session = UserSession(
@@ -195,19 +228,19 @@ class _FakeStatementsRepository implements FinancialStatementsRepository {
           FinancialStatementLine(
             accountCode: '4000',
             accountName: 'Interest Income - Regular',
-            amount: 1500,
+            amount: '1500.00',
           ),
         ],
         expenseLines: <FinancialStatementLine>[
           FinancialStatementLine(
             accountCode: '5100',
             accountName: 'Salaries and Wages Expense',
-            amount: 500,
+            amount: '500.00',
           ),
         ],
-        totalIncome: 1500,
-        totalExpenses: 500,
-        netIncome: 1000,
+        totalIncome: '1500.00',
+        totalExpenses: '500.00',
+        netIncome: '1000.00',
       ),
       financialPosition: FinancialPositionStatement(
         asOfDate: isJuly ? _julyEnd : _augustEnd,
@@ -215,44 +248,44 @@ class _FakeStatementsRepository implements FinancialStatementsRepository {
           FinancialStatementLine(
             accountCode: '1010',
             accountName: 'Cash - Office',
-            amount: 2000,
+            amount: '2000.00',
           ),
           FinancialStatementLine(
             accountCode: '1100',
             accountName: 'Loans Receivable - Regular',
-            amount: 5000,
+            amount: '5000.00',
           ),
           FinancialStatementLine(
             accountCode: '1190',
             accountName: 'Allowance for Expected Credit Loss',
-            amount: -200,
+            amount: '-200.00',
           ),
         ],
         liabilityLines: const <FinancialStatementLine>[
           FinancialStatementLine(
             accountCode: '2000',
             accountName: 'Accounts Payable',
-            amount: 1000,
+            amount: '1000.00',
           ),
         ],
         equityLines: const <FinancialStatementLine>[
           FinancialStatementLine(
             accountCode: '3000',
             accountName: 'Capital',
-            amount: 4000,
+            amount: '4000.00',
           ),
           FinancialStatementLine(
             accountCode: '3100',
             accountName: 'Retained Earnings',
-            amount: 800,
+            amount: '800.00',
           ),
         ],
-        totalAssets: 6800,
-        totalLiabilities: 1000,
-        recordedEquity: 4800,
-        unclosedEarningsToDate: 1000,
-        totalEquity: 5800,
-        totalLiabilitiesAndEquity: 6800,
+        totalAssets: '6800.00',
+        totalLiabilities: '1000.00',
+        recordedEquity: '4800.00',
+        unclosedEarningsToDate: '1000.00',
+        totalEquity: '5800.00',
+        totalLiabilitiesAndEquity: '6800.00',
         balanced: true,
       ),
       source: 'posted_general_ledger_only',

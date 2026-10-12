@@ -2,6 +2,8 @@
 
 Stage 5C converts the Stage 5B read-only cutover worksheet into a controlled Management workbook. It remains outside the General Ledger.
 
+This document records the original Stage 5C boundary. The owner confirmed on 10 October 2026 that there are no existing accounting books. A workbook may still be needed for verified balances already present at the start date, based on operational evidence; it does not require a prior ledger. It is not a mandatory first-book setup step when no opening balances are needed. See [first-book setup](first-book-setup.md) for the current workflow. Subsequent protected opening-journal preparation/posting is a separate action from this workbook.
+
 ## Scope
 
 - Management permission: `accounting.cutover.manage`.

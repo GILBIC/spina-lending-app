@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 from .database import open_connection
@@ -116,7 +117,7 @@ class PostgresManagementLoanRepository:
                 summary_row = cursor.fetchone()
 
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -131,7 +132,7 @@ class PostgresManagementLoanRepository:
                         coalesce(loan_type.calculation_mode, '')
                             as calculation_mode,
                         loan.principal,
-                        {PAID_PROJECTION_COLUMNS},
+                        {},
                         loan.daily_amount,
                         loan.interest_rate,
                         coalesce(state.remaining_balance, loan.principal)
@@ -194,7 +195,7 @@ class PostgresManagementLoanRepository:
                         client.full_name,
                         loan.created_at desc
                     limit %s offset %s
-                    """,
+                    """).format(sql.SQL(PAID_PROJECTION_COLUMNS)),
                     (
                         normalized_status,
                         normalized_status,

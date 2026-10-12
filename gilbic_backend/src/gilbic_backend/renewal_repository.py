@@ -6,12 +6,12 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
+from psycopg import sql
 from psycopg.errors import UniqueViolation
 from psycopg.rows import dict_row
 
 from .database import open_connection
 from .loan_paid_projection import PAID_PROJECTION_COLUMNS, paid_percentage
-
 
 RenewalStatus = Literal["pending", "approved", "rejected", "cancelled"]
 RenewalDecision = Literal["approved", "rejected"]
@@ -97,7 +97,7 @@ class PostgresRenewalRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 client = self._linked_client(cursor, user_id=user_id)
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -105,7 +105,7 @@ class PostgresRenewalRepository:
                             as loan_type_name,
                         loan_type.calculation_mode,
                         loan.principal,
-                        {PAID_PROJECTION_COLUMNS},
+                        {},
                         coalesce(state.remaining_balance, loan.principal)
                             as remaining_balance,
                         loan.daily_amount,
@@ -136,7 +136,7 @@ class PostgresRenewalRepository:
                         case when loan.status = 'active' then 0 else 1 end,
                         loan.date_released desc,
                         loan.id desc
-                    """,
+                    """).format(sql.SQL(PAID_PROJECTION_COLUMNS)),
                     (client["id"],),
                 )
                 loans = tuple(self._loan_from_row(row) for row in cursor.fetchall())
@@ -162,21 +162,21 @@ class PostgresRenewalRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 client = self._linked_client(cursor, user_id=user_id)
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id,
                         loan.status,
                         loan.principal,
                         loan.daily_amount,
                         loan_type.calculation_mode,
-                        {PAID_PROJECTION_COLUMNS}
+                        {}
                     from lending.loans loan
                     join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
                     where loan.id = %s
                       and loan.client_id = %s
                     for update of loan
-                    """,
+                    """).format(sql.SQL(PAID_PROJECTION_COLUMNS)),
                     (loan_id, client["id"]),
                 )
                 loan = cursor.fetchone()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from uuid import UUID
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,6 +18,9 @@ class Settings(BaseSettings):
 
     app_name: str = "Gilbic API"
     environment: str = "development"
+    # Pin after protected setup. Separate company deployments must each use
+    # their own immutable database identity; a wrong DSN then fails closed.
+    expected_accounting_book_id: UUID | None = None
     api_prefix: str = "/api"
     database_url: str = Field(
         default="postgresql://127.0.0.1:5432/gilbic_dev",

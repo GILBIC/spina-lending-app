@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 from uuid import UUID
 
+from psycopg import Error as DatabaseError
 from psycopg.rows import dict_row
 
 from .database import open_connection
-
 
 MONEY = Decimal("0.01")
 ActivationAction = Literal["activate", "deactivate"]
@@ -56,6 +56,7 @@ class ContractCollectionActivationPreview:
     activation_note: str
     activated_by_user_id: UUID | None
     activation_acted_at: datetime | None
+    native_reconciliation_available: bool = False
 
     @property
     def unpaid_contractual_amount(self) -> Decimal:
@@ -99,27 +100,41 @@ class ContractCollectionActivationPreview:
         values: list[str] = []
         if self.loan_status != "active":
             values.append("Loan is not active.")
-        if not self.collection_state_reconciled:
+        if (
+            not self.collection_state_reconciled
+            and not self.native_reconciliation_available
+        ):
             values.append("Official loan collection state is not reconciled.")
         if not self.mobile_collections_enabled:
             values.append("Mobile collections are disabled for this loan type.")
         if self.mobile_balance_mode != "direct_remaining_balance":
-            values.append("Loan type is not using direct remaining-balance collection mode.")
+            values.append(
+                "Loan type is not using direct remaining-balance collection mode."
+            )
         if self.schedule_id is None:
             values.append("Signed-contract schedule has not been registered.")
         elif self.registration_id is None:
-            values.append("Current schedule is not backed by verified signed-contract evidence.")
+            values.append(
+                "Current schedule is not backed by verified signed-contract evidence."
+            )
         if self.dpd_data_status != "ready":
             values.append(
                 "Contract schedule/payment allocation is not DPD-ready "
                 f"({self.dpd_data_status})."
             )
-        if self.schedule_verified and not self.balance_reconciled:
+        if self.schedule_verified and (
+            self.remaining_balance != self.unpaid_contractual_amount
+            or (
+                not self.balance_reconciled and not self.native_reconciliation_available
+            )
+        ):
             values.append(
                 "Operational remaining balance does not match the unpaid contractual schedule."
             )
         if not self.accounting_safe:
-            values.append("Protected Default/ECL/posting state is not safe for activation.")
+            values.append(
+                "Protected Default/ECL/posting state is not safe for activation."
+            )
         if self.is_active and not self.active_for_current_schedule:
             values.append(
                 "An older schedule is still marked active; deactivate it before activating the current schedule."
@@ -141,13 +156,21 @@ class PostgresContractCollectionActivationRepository:
     The repository never creates schedules, allocates payments, changes balances,
     classifies Default/ECL, or posts journals. It only appends immutable activation
     events after rechecking the current protected readiness state in one transaction.
+    An exact untouched native release may additionally record its initial
+    reconciliation through the protected database command, without changing money.
     """
 
     def list_previews(self) -> tuple[ContractCollectionActivationPreview, ...]:
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
-                cursor.execute(self._preview_sql() + " order by lower(client.full_name), loan.loan_number")
-                return tuple(self._preview_from_row(row) for row in cursor.fetchall())
+                cursor.execute(
+                    self._preview_sql()
+                    + " order by lower(client.full_name), loan.loan_number"
+                )
+                previews = tuple(
+                    self._preview_from_row(row) for row in cursor.fetchall()
+                )
+                return self._native_reconciliation_previews(cursor, previews)
 
     def get_preview(self, *, loan_id: UUID) -> ContractCollectionActivationPreview:
         with open_connection() as connection:
@@ -170,8 +193,33 @@ class PostgresContractCollectionActivationRepository:
                     raise ContractCollectionActivationConflict(
                         "This loan already has an active contractual collection event."
                     )
+                if not preview.collection_state_reconciled:
+                    available = cursor.execute(
+                        "SELECT to_regprocedure('lending.activate_reconciled_native_original(uuid,uuid,text)') AS helper"
+                    ).fetchone()
+                    if available is not None and available["helper"] is not None:
+                        try:
+                            repaired = cursor.execute(
+                                "SELECT lending.activate_reconciled_native_original(%s,%s,%s) AS activated",
+                                (loan_id, acted_by_user_id, note),
+                            ).fetchone()
+                        except DatabaseError as error:
+                            if error.sqlstate not in {
+                                "23514",
+                                "55000",
+                                "42501",
+                                "55P03",
+                            }:
+                                raise
+                            raise ContractCollectionActivationConflict(
+                                "Native reconciliation is no longer available; reload the current review and authority."
+                            ) from error
+                        if repaired is not None and repaired["activated"]:
+                            return self._load_preview_cursor(cursor, loan_id=loan_id)
                 if preview.blockers:
-                    raise ContractCollectionActivationConflict(" ".join(preview.blockers))
+                    raise ContractCollectionActivationConflict(
+                        " ".join(preview.blockers)
+                    )
                 if preview.schedule_id is None:
                     raise ContractCollectionActivationConflict(
                         "A verified current schedule is required before activation."
@@ -244,7 +292,33 @@ class PostgresContractCollectionActivationRepository:
         row = cursor.fetchone()
         if row is None:
             raise ContractCollectionActivationNotFound("Loan not found.")
-        return self._preview_from_row(row)
+        return self._native_reconciliation_previews(
+            cursor, (self._preview_from_row(row),)
+        )[0]
+
+    @staticmethod
+    def _native_reconciliation_previews(cursor, previews):
+        candidates = [
+            item.loan_id
+            for item in previews
+            if not item.collection_state_reconciled and not item.is_active
+        ]
+        if not candidates:
+            return previews
+        available = cursor.execute(
+            "SELECT to_regprocedure('lending.native_original_activation_ready(uuid)') AS helper"
+        ).fetchone()
+        if available is None or available["helper"] is None:
+            return previews
+        rows = cursor.execute(
+            "SELECT loan_id,lending.native_original_activation_ready(loan_id) AS ready FROM unnest(%s::uuid[]) loan_id",
+            (candidates,),
+        ).fetchall()
+        ready = {row["loan_id"] for row in rows if row["ready"]}
+        return tuple(
+            replace(item, native_reconciliation_available=item.loan_id in ready)
+            for item in previews
+        )
 
     @staticmethod
     def _preview_sql() -> str:

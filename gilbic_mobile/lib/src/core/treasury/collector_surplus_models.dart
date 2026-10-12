@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/treasury/treasury_models.dart';
+import 'package:gilbic_mobile/src/core/treasury/collector_credit_application.dart';
 
 enum CollectorSurplusKind {
   credits,
@@ -373,7 +374,13 @@ void validateCollectorProjection(Object? value, {String? ownUserId}) {
           TreasuryFieldKind.instant,
         ).parse(e.value);
       }
-      validateCollectorProjection(e.value, ownUserId: ownUserId);
+      // Historical collection snapshots preserve their original JSON types.
+      // They are evidence, never the current count or credit amount contract.
+      if (e.key == 'transaction_snapshot' && ownUserId == null) {
+        treasuryObject(e.value);
+      } else {
+        validateCollectorProjection(e.value, ownUserId: ownUserId);
+      }
     }
   }
 }
@@ -698,6 +705,8 @@ class CollectorSettlementPreview {
     required String deviceId,
     required String remittanceId,
     required CollectorSurplusAccount account,
+    String? creditApplicationId,
+    int? creditApplicationVersion,
   }) : raw = treasuryObject(immutableTreasury(json)) {
     if (raw['collector_surplus_contract_version'] != 1 ||
         raw['actor_user_id'] != userId ||
@@ -719,6 +728,11 @@ class CollectorSettlementPreview {
       );
     }
     validateCollectorProjection(raw);
+    validateCollectorCreditPreview(
+      raw,
+      creditApplicationId,
+      creditApplicationVersion,
+    );
     for (final key in [
       'gross_obligation',
       'refund_due_total',
@@ -776,7 +790,11 @@ const collectorResultPhases = {
     'exception_returned',
   ],
   'collector_surplus_action_cancel': ['action_record', 'cancelled'],
-  'collector_surplus_application_prepare': ['credit', 'blocked_adapter'],
+  'collector_surplus_application_prepare': [
+    'action_record',
+    'reserved',
+    'blocked_adapter',
+  ],
   'collector_surplus_resolve_source': [
     'credit',
     'blocked_adapter',
@@ -1002,7 +1020,8 @@ TreasuryResult validateCollectorOutcome(
         principal['count_id'] != count['id'] ||
         principal['physical_amount'] != count['counted_amount'] ||
         principal['gross_obligation'] != count['gross_obligation'] ||
-        principal['authorized_credit_amount'] != '0.00' ||
+        principal['authorized_credit_amount'] !=
+            (count['authorized_credit_application'] ?? '0.00') ||
         principal['remittance_id'] != count['remittance_id'] ||
         principal['recipient_user_id'] != count['recipient_user_id'] ||
         principal['collector_user_id'] != count['collector_user_id'] ||
@@ -1022,7 +1041,7 @@ TreasuryResult validateCollectorOutcome(
           excess['received_excess_amount'] != count['difference'] ||
           excess['unidentified_amount'] != count['difference'] ||
           count['difference'] == '0.00' ||
-          r['credit'] != null) {
+          (count['credit_application_id'] == null && r['credit'] != null)) {
         throw const FormatException(
           'The pending excess identification changed.',
         );
@@ -1030,7 +1049,7 @@ TreasuryResult validateCollectorOutcome(
     } else if (disposition == 'accepted_exact' &&
         (count['difference'] != '0.00' ||
             excess != null ||
-            r['credit'] != null)) {
+            (count['credit_application_id'] == null && r['credit'] != null))) {
       throw const FormatException(
         'Exact acceptance cannot recognize excess credit.',
       );
@@ -1084,6 +1103,7 @@ TreasuryResult validateCollectorOutcome(
       throw const FormatException('The observed incoming reversal changed.');
     }
   }
+  if (value.status == 'saved') validateCollectorCreditOutcome(r, body, held);
   return value;
 }
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from dataclasses import replace
 from uuid import UUID
 
 from gilbic_backend.renewal_treatment_accounting_target import (
@@ -75,6 +76,27 @@ def test_zero_modification_adjustment_is_explicit() -> None:
 
     assert target.modification_adjustment_amount == Decimal("0.00")
     assert target.modification_signed_adjustment_amount == Decimal("0.00")
+    assert target.modification_profit_or_loss == "none"
+
+
+def test_funded_modification_separates_new_cash_from_profit_or_loss() -> None:
+    evidence = replace(
+        _evidence(carrying="1000.00", revised="1450.00", change="450.00"),
+        renewal_cash_disbursed_amount=Decimal("500.00"),
+    )
+    target = build_renewal_treatment_accounting_target(evidence)
+    assert target.modification_signed_adjustment_amount == Decimal("-50.00")
+    assert target.modification_profit_or_loss == "loss"
+    assert target.accounting_asset_loan_id == OLD_LOAN_ID
+
+
+def test_fresh_cash_equal_to_present_value_increase_creates_no_gain() -> None:
+    evidence = replace(
+        _evidence(carrying="1000.00", revised="1500.00", change="500.00"),
+        renewal_cash_disbursed_amount=Decimal("500.00"),
+    )
+    target = build_renewal_treatment_accounting_target(evidence)
+    assert target.modification_signed_adjustment_amount == 0
     assert target.modification_profit_or_loss == "none"
 
 

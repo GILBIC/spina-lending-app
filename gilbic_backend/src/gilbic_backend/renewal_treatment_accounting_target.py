@@ -6,7 +6,7 @@ from uuid import UUID
 
 
 MONEY = Decimal("0.01")
-POLICY_VERSION = "renewal_treatment_accounting_target_v2"
+POLICY_VERSION = "renewal_treatment_accounting_target_v3"
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +22,7 @@ class RenewalTreatmentAccountingEvidence:
     original_daily_eir: Decimal
     present_value_at_original_eir: Decimal
     present_value_change_amount: Decimal
+    renewal_cash_disbursed_amount: Decimal = Decimal(0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,7 +130,12 @@ def build_renewal_treatment_accounting_target(
             automatic_source_posting=False,
         )
 
-    if old_carrying <= 0 or revised_carrying <= 0 or evidence.original_daily_eir <= 0:
+    if (
+        old_carrying <= 0
+        or revised_carrying <= 0
+        or evidence.original_daily_eir <= 0
+        or evidence.renewal_cash_disbursed_amount < 0
+    ):
         return RenewalTreatmentAccountingTarget(
             disposition="renewal_treatment_accounting_blocked",
             blocker_code="reviewed_measurement_snapshot_invalid",
@@ -174,6 +180,9 @@ def build_renewal_treatment_accounting_target(
             automatic_source_posting=False,
         )
 
+    # Funding increases the continuing asset before modification measurement.
+    # The retained PV comparison is informational and includes that fresh cash.
+    change = _money(change - evidence.renewal_cash_disbursed_amount)
     profit_or_loss = "none"
     if change > 0:
         profit_or_loss = "gain"
@@ -187,7 +196,8 @@ def build_renewal_treatment_accounting_target(
             "The reviewed modification-without-derecognition decision preserves the "
             "old financial-asset accounting identity. The revised gross carrying amount "
             "is the reviewed modified contractual cash flows discounted at the original "
-            "EIR, with the difference identified as modification profit or loss. GL "
+            "EIR. Modification profit or loss is revised carrying less old carrying "
+            "less fresh cash advanced. GL "
             "account mapping and posting remain separate protected work."
         ),
         policy_version=POLICY_VERSION,

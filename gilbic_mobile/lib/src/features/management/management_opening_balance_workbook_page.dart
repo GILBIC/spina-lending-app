@@ -563,6 +563,9 @@ class _InitializeWorkbookCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
+            const Text(
+              'Use this workbook for supported balances that already exist at your start date. An old ledger is not required. If no opening balances are needed, start with actual transactions instead; do not create amounts just to fill this workbook.',
+            ),
             Text(
               '$lineCount balance-sheet lines are available, with $sourceReferenceCount source references. Initializing snapshots these references at the selected cutover date; it does not post to the General Ledger.',
             ),

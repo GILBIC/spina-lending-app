@@ -39,6 +39,11 @@ def create_accounting_export_router() -> APIRouter:
     @router.get(
         "/api/v1/management/financial-accounting/export", response_class=Response
     )
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/export",
+        response_class=Response,
+        include_in_schema=False,
+    )
     def download_accounting_export(
         start_date: Annotated[date, BeforeValidator(_iso_date)],
         end_date: Annotated[date, BeforeValidator(_iso_date)],
@@ -52,6 +57,7 @@ def create_accounting_export_router() -> APIRouter:
         ],
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        include_reporting: bool = False,
     ) -> Response:
         actor = authenticated_device_context(
             authorization=authorization,
@@ -69,7 +75,10 @@ def create_accounting_export_router() -> APIRouter:
         try:
             validate_range(start_date, end_date)
             snapshot = repository.load_snapshot(
-                start_date=start_date, end_date=end_date
+                start_date=start_date,
+                end_date=end_date,
+                actor_user_id=actor.user_id,
+                include_reporting=include_reporting,
             )
             content = build_accounting_export(
                 snapshot,
@@ -88,7 +97,7 @@ def create_accounting_export_router() -> APIRouter:
             ) from error
         except psycopg.Error as error:
             raise HTTPException(
-                status_code=503,
+                status_code=403 if error.sqlstate == "42501" else 503,
                 detail={
                     "code": "accounting_export_unavailable",
                     "message": "Accounting export is unavailable; retry later or select a shorter range.",

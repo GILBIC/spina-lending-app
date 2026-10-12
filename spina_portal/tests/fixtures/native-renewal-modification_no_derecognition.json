@@ -1,0 +1,141 @@
+{
+  "candidate": {
+    "old_loan_component": "523.44",
+    "old_accrued_interest": "0.00",
+    "old_allowance": "0.00",
+    "old_gross_carrying": "523.44",
+    "original_daily_eir": "0.029228540769",
+    "accounting_asset_id": "e10907e5-3abe-4b84-8229-ad39134126e4",
+    "policy_version": "native_regular_renewal_measurement_v1",
+    "book_id": "d0589167-7566-4d5f-b896-f4539f9d0a76",
+    "payout_id": "2c84b63c-6263-5358-8b0d-63347a700830",
+    "execution_id": "44af55ab-2680-4189-ae54-eeb65d120d03",
+    "old_loan_id": "e10907e5-3abe-4b84-8229-ad39134126e4",
+    "new_loan_id": "ee80a150-77b3-4757-873d-d70f5fe2ca80",
+    "treasury_account_id": "2671873c-be1c-410a-a69e-2459ac86f464",
+    "effective_date": "2026-10-12",
+    "source_digest": "d56d23f63af392b9fae42f84ab54a945a2515dee2b5a29faa76f809c099863f5",
+    "fresh_cash": "1000.00",
+    "revised_pv": "963.42",
+    "nominal_settlement": "500.00",
+    "contractual_total": "1800.00",
+    "schedule_id": "c6fb838f-3f69-435c-b56c-4623845a3a11",
+    "contract_reference": "SYNTHETIC-RENEWAL-0a3741ac42a54e0eb6e994bd1a5fd2bf",
+    "evidence_reference": "test:explicit-new-signed-contract",
+    "retained_review": null,
+    "predecessor_credit_impaired": false
+  },
+  "completion": {
+    "book_id": "d0589167-7566-4d5f-b896-f4539f9d0a76",
+    "payout_id": "2c84b63c-6263-5358-8b0d-63347a700830",
+    "stage": "completion",
+    "event_id": "da2884da-f94f-5014-8c67-c6383869441f",
+    "loan_id": "ee80a150-77b3-4757-873d-d70f5fe2ca80",
+    "client_id": "7e23331a-b77e-4a4f-9d78-bf4f69e421eb",
+    "disbursement_event_id": "babbfe5d-36d3-428c-9786-0f46da890f3c",
+    "treasury_account_id": "2671873c-be1c-410a-a69e-2459ac86f464",
+    "fiscal_period_id": "a381777b-6d6a-4b61-97b1-0de9974f58ad",
+    "posting_date": "2026-10-12",
+    "amount": "1000.00",
+    "fee": "0.00",
+    "accounting_policy_version": "native_regular_renewal_completion_v1",
+    "old_loan_id": "e10907e5-3abe-4b84-8229-ad39134126e4",
+    "accounting_asset_id": "e10907e5-3abe-4b84-8229-ad39134126e4",
+    "renewal_review_id": "327b75a7-6bd1-440a-acd1-1bae3d556284",
+    "renewal_decision": "modification_no_derecognition",
+    "measurement": {
+      "lines": [
+        {
+          "debit": "963.42",
+          "credit": "0.00",
+          "component": "renewed_asset",
+          "loan_role": "new",
+          "line_number": 10,
+          "account_code": "1100"
+        },
+        {
+          "debit": "0.00",
+          "credit": "523.44",
+          "component": "old_loan_component",
+          "loan_role": "old",
+          "line_number": 20,
+          "account_code": "1100"
+        },
+        {
+          "debit": "0.00",
+          "credit": "1000.00",
+          "component": "fresh_cash_transit",
+          "loan_role": "new",
+          "line_number": 40,
+          "account_code": "1050"
+        },
+        {
+          "debit": "560.02",
+          "credit": "0.00",
+          "component": "old_asset_difference",
+          "loan_role": "old",
+          "line_number": 70,
+          "account_code": "5010"
+        }
+      ],
+      "decision": "modification_no_derecognition",
+      "fresh_cash": "1000.00",
+      "old_allowance": "0.00",
+      "policy_version": "native_regular_renewal_measurement_v1",
+      "old_gross_carrying": "523.44",
+      "new_asset_difference": "0.00",
+      "new_initial_carrying": "963.42",
+      "old_asset_difference": "-560.02",
+      "new_initial_allowance": "0.00",
+      "accounting_asset_continues": true
+    },
+    "predecessor_credit_impaired": false,
+    "source_digest": "f2e9a54825fbd11bca2ca89304030dbba185cd4c02ba0ea78f4ebaa33c73e55b",
+    "lines": [
+      {
+        "line_number": 1,
+        "account_code": "1100",
+        "debit": "963.42",
+        "credit": "0.00",
+        "loan_id": "ee80a150-77b3-4757-873d-d70f5fe2ca80",
+        "component": "renewed_asset",
+        "account_snapshot": {
+          "name": "Loans Receivable - Regular"
+        }
+      },
+      {
+        "line_number": 2,
+        "account_code": "1100",
+        "debit": "0.00",
+        "credit": "523.44",
+        "loan_id": "e10907e5-3abe-4b84-8229-ad39134126e4",
+        "component": "old_loan_component",
+        "account_snapshot": {
+          "name": "Loans Receivable - Regular"
+        }
+      },
+      {
+        "line_number": 3,
+        "account_code": "1050",
+        "debit": "0.00",
+        "credit": "1000.00",
+        "loan_id": "ee80a150-77b3-4757-873d-d70f5fe2ca80",
+        "component": "fresh_cash_transit",
+        "account_snapshot": {
+          "name": "Loan Disbursement Transit"
+        }
+      },
+      {
+        "line_number": 4,
+        "account_code": "5010",
+        "debit": "560.02",
+        "credit": "0.00",
+        "loan_id": "e10907e5-3abe-4b84-8229-ad39134126e4",
+        "component": "old_asset_difference",
+        "account_snapshot": {
+          "name": "Regular Renewal Loss"
+        }
+      }
+    ]
+  }
+}

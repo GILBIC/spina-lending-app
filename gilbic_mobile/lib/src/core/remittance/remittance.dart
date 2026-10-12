@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/remittance/remittance_settlement_split.dart';
 
 class RemittanceRecipient {
   const RemittanceRecipient({
@@ -167,6 +168,7 @@ class RemittanceRecord {
     this.rejectedAt,
     this.rejectedByUserId = '',
     this.rejectionReason = '',
+    this.settlementSplit,
   });
 
   final String remittanceId;
@@ -185,6 +187,7 @@ class RemittanceRecord {
   final DateTime? rejectedAt;
   final String rejectedByUserId;
   final String rejectionReason;
+  final RemittanceSettlementSplit? settlementSplit;
 
   String get normalizedStatus => status.trim().toLowerCase();
   bool get isReceived => normalizedStatus == 'received';
@@ -205,6 +208,12 @@ class RemittanceRecord {
       return null;
     }
     return RemittanceRecord(
+      settlementSplit: data['settlement_split'] == null
+          ? null
+          : RemittanceSettlementSplit.fromPayload(
+              data['settlement_split'],
+              data['total_amount'],
+            ),
       remittanceId: id,
       remittanceNumber: number,
       collectorUserId:

@@ -38,6 +38,7 @@ def consuming_source(conn, event, source_kind, source_id, *, transfer_leg=None):
     if any(
         source_kind != "account_transfer"
         or row["id"] != source_id
+        or transfer_leg is None
         or row[transfer_leg + "_event_id"] != event["id"]
         for row in transfers
     ):

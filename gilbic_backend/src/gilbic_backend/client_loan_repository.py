@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 from .collector_schedule_repository import (
@@ -19,7 +20,6 @@ from .loan_paid_projection import PAID_PROJECTION_COLUMNS
 from .seven_by_seven_penalty_coordinator import (
     project_verified_seven_by_seven_penalty_state,
 )
-
 
 ZERO = Decimal("0.00")
 
@@ -92,7 +92,7 @@ class PostgresClientLoanRepository:
                     )
 
                 cursor.execute(
-                    f"""
+                    sql.SQL("""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -100,7 +100,7 @@ class PostgresClientLoanRepository:
                         coalesce(nullif(btrim(loan_type.name), ''), 'Loan')
                             as loan_type_name,
                         loan.principal,
-                        {PAID_PROJECTION_COLUMNS},
+                        {},
                         loan.daily_amount,
                         loan.interest_rate,
                         loan.date_released,
@@ -139,7 +139,7 @@ class PostgresClientLoanRepository:
                         loan.date_released desc nulls last,
                         loan.created_at desc,
                         loan.id desc
-                    """,
+                    """).format(sql.SQL(PAID_PROJECTION_COLUMNS)),
                     (client["id"],),
                 )
                 rows = cursor.fetchall()

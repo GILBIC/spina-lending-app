@@ -1321,7 +1321,7 @@ def release_in_transaction(
         else sum((r.contractual_amount for r in rows), Decimal("0.00"))
     )
     cursor.execute(
-        "insert into lending.loan_collection_state(loan_id,remaining_balance) values(%s,%s)",
+        "insert into lending.loan_collection_state(loan_id,remaining_balance,is_reconciled) values(%s,%s,true)",
         (loan_id, remaining),
     )
     receipt = {

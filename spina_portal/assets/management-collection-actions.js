@@ -9,7 +9,7 @@ const value=(root,name)=>String(root.querySelector(`[name="${name}"]`)?.value||'
 const note=(name,label)=>`<label>${label}<textarea name="${name}" maxlength="500" required></textarea></label>`;
 const button=(label,extra='')=>`<button class="button button-primary" ${extra}>${label}</button>`;
 
-const readinessLabel=loan=>loan.is_active?'Active':loan.can_activate?'Ready':'Blocked';
+const readinessLabel=loan=>loan.is_active?'Active':loan.can_activate?(loan.native_reconciliation_available?'Ready for reconciliation':'Ready'):'Blocked';
 const readinessTone=loan=>loan.is_active?'success':loan.can_activate?'warning':'danger';
 function plainBlocker(reason) {
   const text=String(reason||'').trim();
@@ -53,7 +53,7 @@ function contractReadinessMarkup(result) {
         <ul>${blockers.map(reason=>`<li>${h(reason)}</li>`).join('')}</ul>
       </details>`:'';
       const action=result.permission===true&&(loan.can_activate===true||loan.can_deactivate===true)
-        ?`<form class="entry-form contract-activation-form" data-contract-activate="${index}">${note('activation_note','Evidence / reason')}${button(loan.can_activate?'Activate contract collection':'Deactivate contract collection','type="submit"')}</form>`
+        ?`<form class="entry-form contract-activation-form" data-contract-activate="${index}">${loan.native_reconciliation_available?'<p>The protected original release and signed schedule match. This action records initial reconciliation and activates collection; the amount owed stays unchanged.</p>':''}${note('activation_note','Evidence / reason')}${button(loan.can_activate?(loan.native_reconciliation_available?'Reconcile and activate collection':'Activate contract collection'):'Deactivate contract collection','type="submit"')}</form>`
         :'';
       return `<article class="contract-loan-row" data-contract-loan="${h(loan.loan_id||index)}">
         <div class="contract-loan-heading">

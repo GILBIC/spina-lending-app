@@ -381,6 +381,32 @@
         "review_acknowledged": {
           "title": "Review Acknowledged",
           "type": "boolean"
+        },
+        "credit_application_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Application Id"
+        },
+        "credit_application_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Application Version"
         }
       },
       "required": [

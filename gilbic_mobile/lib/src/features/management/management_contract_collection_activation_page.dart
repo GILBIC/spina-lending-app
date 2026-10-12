@@ -364,7 +364,11 @@ class _LoanCard extends StatelessWidget {
           ),
           _DetailRow(
             label: 'Balance match',
-            value: loan.balanceReconciled ? 'Matched' : 'Not matched',
+            value: loan.balanceReconciled
+                ? 'Matched'
+                : loan.nativeReconciliationAvailable
+                ? 'Verified original; reconciliation pending'
+                : 'Not matched',
           ),
           _DetailRow(
             label: 'Accounting guard',
@@ -392,12 +396,22 @@ class _LoanCard extends StatelessWidget {
               ),
           ],
           const SizedBox(height: 12),
+          if (loan.nativeReconciliationAvailable) ...[
+            const Text(
+              'The protected original release and signed schedule match. This action records initial reconciliation and activates collection; the amount owed stays unchanged.',
+            ),
+            const SizedBox(height: 8),
+          ],
           if (loan.canActivate)
             FilledButton.icon(
               key: Key('activate-contract-collection-${loan.loanId}'),
               onPressed: canActivate ? onActivate : null,
               icon: const Icon(Icons.play_circle_outline),
-              label: const Text('Activate for Collection'),
+              label: Text(
+                loan.nativeReconciliationAvailable
+                    ? 'Reconcile and Activate'
+                    : 'Activate for Collection',
+              ),
             ),
           if (loan.canDeactivate)
             OutlinedButton.icon(

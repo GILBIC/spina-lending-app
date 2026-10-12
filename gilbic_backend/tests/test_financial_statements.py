@@ -5,23 +5,24 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-
 from gilbic_backend.account_repository import AccountContext
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.financial_statements_api import (
     financial_statements_repository_dependency,
 )
 from gilbic_backend.financial_statements_repository import (
-    AccountMovement,
     AccountingStatementPeriod,
+    AccountMovement,
     FinancialStatementPack,
     PostgresFinancialStatementsRepository,
     StatementPeriodNotFound,
     build_financial_statement_pack,
 )
 from gilbic_backend.main import create_app
-
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 MANAGEMENT_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -69,7 +70,12 @@ class FakeStatementsRepository:
         self.missing = missing
         self.requested_period_id: UUID | None = None
 
-    def load_statement_pack(self, *, period_id: UUID | None = None) -> FinancialStatementPack:
+    def load_statement_pack(
+        self, *, period_id: UUID | None = None, actor_user_id: UUID | None = None
+    ) -> FinancialStatementPack:
+        assert actor_user_id == MANAGEMENT_USER_ID, (
+            "Statement disclosure access must be bound to the live server actor"
+        )
         self.requested_period_id = period_id
         if self.missing:
             raise StatementPeriodNotFound("Accounting period was not found.")
@@ -227,6 +233,9 @@ def test_management_can_view_posted_ledger_financial_statements() -> None:
     assert statements["profit_or_loss"]["net_income"] == "1000.00"
     assert statements["financial_position"]["total_assets"] == "6800.00"
     assert statements["financial_position"]["balanced"] is True
+    assert statements["assurance"]["arithmetic_balanced"] is True
+    assert statements["assurance"]["comprehensive_source_coverage"] is False
+    assert statements["assurance"]["annual_reporting_package_complete"] is False
 
 
 def test_financial_statements_require_management_role() -> None:

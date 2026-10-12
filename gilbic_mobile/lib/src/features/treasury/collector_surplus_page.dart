@@ -27,7 +27,7 @@ String collectorDispositionLabel(String code) => switch (code) {
   'active' => 'Active opening classification',
   'counted_ready' => 'Count recorded - acceptance still required',
   'counted_short_rejected' => 'Short count rejected - cash not accepted',
-  'accepted_exact' => 'Exact physical cash accepted',
+  'accepted_exact' => 'Exact remittance settlement accepted',
   'accepted_pending_identification' =>
     'Physical cash accepted - excess pending identification',
   'recognized' => 'Collector credit recognized - no additional cash received',
@@ -546,6 +546,7 @@ class _CollectorSurplusRecordPageState
     extends State<CollectorSurplusRecordPage> {
   late Map<String, dynamic> _record;
   CollectorSettlementPreview? _preview;
+  Map<String, dynamic>? _creditApplication;
   String? _accountId, _error;
   bool _busy = false;
   bool get _locked =>
@@ -609,10 +610,73 @@ class _CollectorSurplusRecordPageState
       final p = await widget.repository.collectorSettlementPreview(
         _record['id'] as String,
         _accountId!,
+        creditApplicationId: _creditApplication?['id'] as String?,
+        creditApplicationVersion: _creditApplication?['version'] as int?,
       );
       if (mounted) setState(() => _preview = p);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _chooseCreditApplication() async {
+    if (_locked || _accountId == null) return;
+    setState(() => _busy = true);
+    try {
+      Map<String, dynamic>? candidate;
+      for (var offset = 0; offset <= 100000; offset += 100) {
+        final page = await widget.repository.loadCollectorSurplus(
+          kind: CollectorSurplusKind.actions,
+          accountId: _accountId,
+          mode: 'staff',
+          limit: 100,
+          offset: offset,
+        );
+        candidate = page.page.items
+            .where(
+              (row) =>
+                  row['kind'] == 'application' &&
+                  row['status'] == 'reserved' &&
+                  row['remittance_id'] == _record['id'] &&
+                  row['account_id'] == _accountId,
+            )
+            .firstOrNull;
+        if (candidate != null || !page.page.hasMore) break;
+      }
+      if (!mounted) return;
+      if (candidate == null) {
+        throw StateError(
+          'No reserved credit approval is available for this remittance. Approve the Collector request first.',
+        );
+      }
+      final current = await widget.repository.collectorSurplusDetail(
+        CollectorSurplusKind.actions,
+        candidate['id'] as String,
+      );
+      await widget.repository.loadCollectorSurplus(
+        kind: CollectorSurplusKind.remittances,
+        accountId: _accountId,
+        mode: 'staff',
+      );
+      if (mounted) {
+        setState(() {
+          _creditApplication = current;
+          _preview = null;
+          _error = null;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = error.toString();
+          if (widget.repository.denied) {
+            _record = {};
+            _creditApplication = null;
+          }
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -783,9 +847,29 @@ class _CollectorSurplusRecordPageState
                       : (id) => setState(() {
                           _accountId = id;
                           _preview = null;
+                          _creditApplication = null;
                         }),
                 ),
               if (widget.kind == CollectorSurplusKind.remittances && !own) ...[
+                action(
+                  'Select approved credit for this remittance',
+                  'application_prepare',
+                  _chooseCreditApplication,
+                ),
+                if (_creditApplication != null) ...[
+                  Text(
+                    'Approved credit: PHP ${_creditApplication!['amount']}. Review the updated cash required before counting.',
+                  ),
+                  TextButton(
+                    onPressed: _locked
+                        ? null
+                        : () => setState(() {
+                            _creditApplication = null;
+                            _preview = null;
+                          }),
+                    child: const Text('Use cash only'),
+                  ),
+                ],
                 action(
                   'Review current count snapshot',
                   'count_record',
@@ -802,6 +886,14 @@ class _CollectorSurplusRecordPageState
                       () => _open(TreasuryAction.collectorCountRecord, {
                         'remittance_id': r['id'],
                         'source_digest': _preview!.digest,
+                        if (_preview!.raw['credit_application'] is Map) ...{
+                          'credit_application_id':
+                              (_preview!.raw['credit_application']
+                                  as Map)['id'],
+                          'credit_application_version':
+                              (_preview!.raw['credit_application']
+                                  as Map)['version'],
+                        },
                       }, account: a),
                     ),
                 ],
@@ -811,12 +903,19 @@ class _CollectorSurplusRecordPageState
                   a != null) ...[
                 if (r['disposition'] == 'counted_ready')
                   action(
-                    'Accept reviewed physical cash',
+                    r['credit_application_id'] == null
+                        ? 'Accept reviewed physical cash'
+                        : 'Accept reviewed cash and credit settlement',
                     'count_accept',
                     () => _open(TreasuryAction.collectorCountAccept, {
                       'count_id': r['id'],
                       'count_version': r['version'],
                       'source_digest': r['source_digest'],
+                      if (r['credit_application_id'] != null) ...{
+                        'credit_application_id': r['credit_application_id'],
+                        'credit_application_version':
+                            r['credit_application_version'],
+                      },
                     }, account: a),
                   ),
                 if (r['disposition'] == 'counted_short_rejected') ...[
@@ -1017,7 +1116,13 @@ class _CollectorSurplusActionFormState
       widget.repository.busy ||
       widget.repository.denied ||
       widget.repository.pendingRequestId != null;
-  List<TreasuryField> get _fields => treasuryFields[widget.action]!;
+  List<TreasuryField> get _fields => treasuryFields[widget.action]!
+      .where(
+        (field) =>
+            !field.key.startsWith('credit_application_') ||
+            widget.initial[field.key] != null,
+      )
+      .toList();
   @override
   void initState() {
     super.initState();
@@ -1594,6 +1699,7 @@ bool _technicalReference(String key) =>
     key == 'id' ||
     key.endsWith('_id') ||
     key == 'version' ||
+    key == 'source_timezone' ||
     key.endsWith('_version') ||
     key.contains('digest') ||
     key == 'source_snapshot' ||

@@ -7,6 +7,8 @@ import {
   formatDate,
   formatMoney,
 } from './ui.js';
+import { mountAccountingReadiness, postedLedgerScopeNotice } from './management-general-journal.js';
+import { reportingSupplementMarkup } from './accounting-reporting.js';
 
 const STATEMENTS_PATH = '/api/v1/management/financial-accounting/statements';
 
@@ -16,14 +18,21 @@ export function loadManagementFinancialStatements(api, periodId = '') {
 
 export function mountManagementFinancialStatements({root,api,signal,getSession}) {
   const owner=getSession?.()?.user?.id;
-  let disposed=false,generation=0,periods=null,periodsPromise=null;
-  const alive=()=>!disposed&&!signal?.aborted&&getSession?.()?.user?.id===owner;
+  let disposed=false,denied=false,generation=0,periods=null,periodsPromise=null,readiness=()=>{};
+  const alive=()=>!disposed&&!denied&&!signal?.aborted&&getSession?.()?.user?.id===owner;
   const validId=value=>typeof value==='string'&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value);
-  root.innerHTML='<div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements.</p></div></div><label>Accounting period<select data-statement-period><option value="">Server default period</option></select></label><div data-statement-results></div><button type="button" class="button button-outline" data-statement-retry hidden>Retry statements</button>';
+  root.innerHTML='<div class="section-heading"><div><h2>Financial statements</h2><p>Read-only posted General Ledger statements.</p></div></div><div data-accounting-readiness></div><label>Accounting period<select data-statement-period><option value="">Server default period</option></select></label><div data-statement-results></div><button type="button" class="button button-outline" data-statement-retry hidden>Retry statements</button>';
   const select=root.querySelector('[data-statement-period]'),results=root.querySelector('[data-statement-results]'),retry=root.querySelector('[data-statement-retry]');
+  function denyAccess() {
+    if(disposed||denied)return;
+    denied=true;generation++;periods=null;readiness();
+    select.innerHTML='';select.value='';select.disabled=true;retry.hidden=true;
+    results.innerHTML='<p role="alert">Accounting access is unavailable. Refresh your session and permissions.</p>';
+  }
   async function loadPeriods() {
     if(periods)return periods;
     if(!periodsPromise)periodsPromise=api.request('/api/v1/management/financial-accounting').then(data=>{
+      if(!alive())return [];
       if(!Array.isArray(data?.fiscal_periods))throw new Error('Accounting periods are unavailable. Retry this read.');
       periods=data.fiscal_periods.filter(period=>validId(period.period_id));
       if(alive()) {
@@ -38,6 +47,7 @@ export function mountManagementFinancialStatements({root,api,signal,getSession})
   async function refresh({reloadPeriods=true}={}) {
     if(!alive())return;
     const version=++generation,selected=select.value||'';
+    readiness();
     if(reloadPeriods)periods=null;
     results.innerHTML='<p role="status">Loading statements for the selected period…</p>';retry.hidden=true;
     try {
@@ -45,15 +55,16 @@ export function mountManagementFinancialStatements({root,api,signal,getSession})
       if(!alive()||version!==generation)return;
       if(selected&&!available.some(period=>period.period_id===selected))throw new Error('The selected period is no longer available. Choose a listed period.');
       if(!available.length){results.innerHTML=emptyState('No accounting period is available. No period was created.');return;}
+      readiness=mountAccountingReadiness({root:root.querySelector('[data-accounting-readiness]'),api,signal,onAccessDenied:denyAccess});
       const data=await loadManagementFinancialStatements(api,selected);
       if(!alive()||version!==generation)return;
       const id=data?.statements?.period?.period_id;
       if(!validId(id)||!available.some(period=>period.period_id===id)||(selected&&id!==selected))throw new Error('Statements did not match the selected period. Retry before using these figures.');
       select.value=id;results.innerHTML=financialStatementsMarkup(data);
-    }catch(error){if(alive()&&version===generation){results.innerHTML=errorCard(error);retry.hidden=false;}}
+    }catch(error){if(alive()&&version===generation){if([401,403,426].includes(error?.status)){denyAccess();return;}results.innerHTML=errorCard(error);retry.hidden=false;}}
   }
   const request=()=>void refresh(),change=()=>void refresh({reloadPeriods:false});select.addEventListener('change',change);retry.addEventListener('click',request);
-  function dispose(){if(disposed)return;disposed=true;generation++;select.removeEventListener('change',change);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
+  function dispose(){if(disposed)return;disposed=true;generation++;readiness();results.innerHTML='';select.removeEventListener('change',change);retry.removeEventListener('click',request);signal?.removeEventListener('abort',dispose);}
   signal?.addEventListener('abort',dispose,{once:true});
   return{refresh,dispose};
 }
@@ -89,7 +100,7 @@ function totalItem(label, value) {
   return `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${formatMoney(value)}</strong></div>`;
 }
 
-export function financialStatementsMarkup(payload) {
+export function financialStatementsMarkup(payload, includeComparative = true) {
   const statements = payload?.statements;
   if (!statements || typeof statements !== 'object') {
     return emptyState('No Financial Statement pack is currently available.');
@@ -109,6 +120,7 @@ export function financialStatementsMarkup(payload) {
     ? 'Posted General Ledger only' : statements.source || 'Authoritative server record';
 
   return `<div class="list-stack management-statements">
+    <p class="meta">${escapeHtml(postedLedgerScopeNotice)}</p>
     <article class="data-card">
       <div class="section-heading">
         <div>
@@ -155,6 +167,7 @@ export function financialStatementsMarkup(payload) {
       </div>
     </article>
 
+    ${reportingSupplementMarkup(statements.reporting_supplement, includeComparative ? (prior) => financialStatementsMarkup({ statements: prior }, false) : null)}
     ${statements.notice ? `<details class="notice-card" data-financial-statements-about><summary>About these statements</summary><p>${escapeHtml(statements.notice)}</p></details>` : ''}
   </div>`;
 }

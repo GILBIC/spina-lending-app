@@ -11,6 +11,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -140,14 +141,14 @@ class PostgresClientPhotoRepository:
 
     @staticmethod
     def _latest(connection, client_id, *, include_content=False):
-        content_column = ", photo_data" if include_content else ""
+        content_column = sql.SQL(", photo_data") if include_content else sql.SQL("")
         with connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
-                f"""
+                sql.SQL("""
                 select id, client_id, version, content_type, byte_size,
-                    uploaded_at, uploaded_by_user_id {content_column}
+                    uploaded_at, uploaded_by_user_id {}
                 from lending.client_photos where client_id=%s order by version desc limit 1
-            """,
+            """).format(content_column),
                 (client_id,),
             )
             return cursor.fetchone()

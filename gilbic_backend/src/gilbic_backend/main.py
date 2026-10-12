@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from . import __version__
 from .account_api import create_account_router
+from .accounting_book_api import create_accounting_book_router
 from .accounting_export_api import create_accounting_export_router
 from .activity_notification_api import create_activity_notification_router
 from .area_management_api import create_area_management_router
@@ -27,6 +28,9 @@ from .collector_cash_accountability_api import (
     create_collector_cash_accountability_router,
 )
 from .collector_client_detail_api import create_collector_client_detail_router
+from .collector_liability_accounting_api import (
+    create_collector_liability_accounting_router,
+)
 from .collector_route_api import create_collector_route_router
 from .collector_schedule_api import create_collector_schedule_router
 from .combined_collection_api import create_combined_collection_router
@@ -51,6 +55,8 @@ from .ecl_outcome_review_api import create_ecl_outcome_review_router
 from .ecl_quantitative_measurement_api import create_ecl_quantitative_measurement_router
 from .eir_cash_allocation_api import create_eir_cash_allocation_router
 from .eir_period_journal_api import create_eir_period_journal_router
+from .elapsed_period_assessment_api import create_elapsed_period_assessment_router
+from .current_credit_risk_review_api import create_current_credit_risk_review_router
 from .employee_operations_api import create_employee_operations_router
 from .financial_accounting_api import create_financial_accounting_router
 from .financial_statements_api import create_financial_statements_router
@@ -68,6 +74,8 @@ from .greenfield_regular_renewal_rollforward_api import (
     create_greenfield_regular_renewal_rollforward_router,
 )
 from .initial_capital_funding_api import create_initial_capital_funding_router
+from .journal_disclosure_api import create_journal_disclosure_router
+from .liability_control_api import create_liability_control_router
 from .loan_application_api import create_loan_application_router
 from .loan_disbursement_cancellation_api import (
     create_loan_disbursement_cancellation_router,
@@ -79,6 +87,7 @@ from .loan_disbursement_journal_draft_api import (
 from .loan_disbursement_journal_posting_api import (
     create_loan_disbursement_journal_posting_router,
 )
+from .loan_payout_accounting_api import create_loan_payout_accounting_router
 from .loan_renewal_execution_evidence_api import (
     create_loan_renewal_execution_evidence_router,
 )
@@ -120,8 +129,10 @@ from .renewal_treatment_decision_api import create_renewal_treatment_decision_ro
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
 from .renewal_workflow_api import create_renewal_workflow_router
 from .renewal_workflow_query_api import create_renewal_workflow_query_router
+from .reporting_evidence_api import create_reporting_evidence_router
 from .request_body_limit import RequestBodyLimitMiddleware
 from .request_observability import RequestObservabilityMiddleware
+from .retained_cutoff_assessment_api import create_retained_cutoff_assessment_router
 from .screen_share_api import create_screen_share_router
 from .screen_share_repository import PostgresScreenShareRepository
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
@@ -131,6 +142,11 @@ from .seven_by_seven_journal_posting_api import (
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
 from .treasury_api import create_treasury_router
+from .treasury_application_accounting_api import (
+    create_treasury_application_accounting_router,
+)
+from .treasury_receipt_accounting_api import create_treasury_receipt_accounting_router
+from .treasury_transfer_accounting_api import create_treasury_transfer_accounting_router
 from .v1_tax_additional_amendment_api import create_v1_tax_additional_amendment_router
 from .v1_tax_adjustment_api import create_v1_tax_adjustment_router
 from .v1_tax_evidence_api import create_v1_tax_evidence_router
@@ -255,6 +271,18 @@ def create_app() -> FastAPI:
     app.include_router(create_past_due_reporting_router())
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
+    app.include_router(create_accounting_book_router())
+    app.include_router(create_liability_control_router())
+    app.include_router(create_treasury_receipt_accounting_router())
+    app.include_router(create_reporting_evidence_router())
+    app.include_router(create_journal_disclosure_router())
+    app.include_router(create_retained_cutoff_assessment_router())
+    app.include_router(create_elapsed_period_assessment_router())
+    app.include_router(create_current_credit_risk_review_router())
+    app.include_router(create_treasury_application_accounting_router())
+    app.include_router(create_treasury_transfer_accounting_router())
+    app.include_router(create_loan_payout_accounting_router())
+    app.include_router(create_collector_liability_accounting_router())
     app.include_router(create_source_event_accounting_router())
     app.include_router(create_seven_by_seven_journal_draft_router())
     app.include_router(create_seven_by_seven_journal_posting_router())
