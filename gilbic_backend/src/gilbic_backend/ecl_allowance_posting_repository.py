@@ -201,6 +201,7 @@ class PostgresEclAllowancePostingRepository:
                         posting_ready_count, posted_current_count,
                         a5_remeasurement_required_count,
                         posting_audit_incomplete_count,
+                        preparation_blocked_count,
                         protected_allowance_balance_total,
                         account_1190_posting_enabled, automatic_source_posting
                     FROM accounting.ecl_allowance_posting_summary

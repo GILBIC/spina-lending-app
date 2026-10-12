@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import importlib.util
 import os
+from contextlib import nullcontext
 from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
 import psycopg
 import pytest
+
+from gilbic_backend import ecl_allowance_posting_repository
 
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
@@ -221,6 +224,46 @@ def _post(connection, actor_id, prepared, token=POST_TOKEN):
             POSTING_POLICY,
         ),
     ).fetchone()[0]
+
+
+def test_a4_repository_summary_preserves_blocked_preparation_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert DATABASE_URL is not None
+    with psycopg.connect(DATABASE_URL) as connection:
+        try:
+            _install(connection)
+            actor_id, loan_id, period_id, _, _ = _measured_case(
+                connection, uuid4().hex[:10]
+            )
+            connection.execute(
+                "SELECT accounting.set_fiscal_period_status(%s, 'review', %s)",
+                (period_id, actor_id),
+            )
+            assert connection.execute(
+                "SELECT allowance_posting_status "
+                "FROM accounting.ecl_allowance_posting_queue WHERE loan_id = %s",
+                (loan_id,),
+            ).fetchone() == ("preparation_blocked",)
+            expected_count = connection.execute(
+                "SELECT preparation_blocked_count "
+                "FROM accounting.ecl_allowance_posting_summary"
+            ).fetchone()[0]
+            assert expected_count > 0
+            monkeypatch.setattr(
+                ecl_allowance_posting_repository,
+                "open_connection",
+                lambda: nullcontext(connection),
+            )
+
+            summary = (
+                ecl_allowance_posting_repository.PostgresEclAllowancePostingRepository()
+                .summary()
+            )
+
+            assert summary["preparation_blocked_count"] == expected_count
+        finally:
+            connection.rollback()
 
 
 def test_a4_initial_allowance_is_exact_audited_idempotent_and_manual_bypass_blocked() -> None:
