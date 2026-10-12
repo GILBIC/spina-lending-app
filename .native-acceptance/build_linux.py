@@ -18,7 +18,7 @@ SOURCE_SHA = "83d66b31cfaff67783b03353fa16cf2dee509cd2"
 REPOSITORY = "GILBIC/spina-lending-app"
 REF = "refs/heads/acceptance/s04-native-83-20261013"
 FLUTTER_VERSION = "3.44.7"
-BUILDER_HASH = "d18e40bd46a340530fff444da05005571b9acaabcec0e0b87822ce7a112d6722"
+BUILDER_HASH = "a731a8d36476584d970f342e8ccedbe14a787e77bcf251d2bdf850c94c3febdc"
 BRANCH_FILES = {
     ".github/workflows/spina-ci.yml",
     ".native-acceptance/build_linux.py",

@@ -187,8 +187,9 @@ gradle.taskGraph.whenReady {
     val rejected = allTasks.filter {
         val debugProfileSupport = listOf("DebugArtProfile", "DebugStartupProfile", "DebugArtProfileWildcards")
             .any { suffix -> it.name.endsWith(suffix, ignoreCase = true) }
+        val emptyJniProfilePreparation = it.path == ":jni:preProfileBuild" && it.actions.isEmpty()
         it.name.contains("release", ignoreCase = true) ||
-            (it.name.contains("profile", ignoreCase = true) && !debugProfileSupport)
+            (it.name.contains("profile", ignoreCase = true) && !debugProfileSupport && !emptyJniProfilePreparation)
     }
     if (rejected.isNotEmpty()) {
         throw GradleException("Debug acceptance host rejects release/profile tasks: " + rejected.joinToString { it.path })
