@@ -7,8 +7,6 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from psycopg.types.json import Jsonb
-
 from gilbic_backend.contract_schedule_registration_service import (
     register_verified_contract_schedule,
 )
@@ -21,6 +19,7 @@ from gilbic_backend.seven_by_seven_multi_receipt_posting import (
 from gilbic_backend.seven_by_seven_signed_schedule import (
     generate_signed_seven_by_seven_schedule,
 )
+from psycopg.types.json import Jsonb
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
@@ -34,12 +33,24 @@ from spina_mobile_collections.service import (
     SubmissionHeaders,
 )
 
+from gilbic_backend import collection_posting
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL,
     reason="GILBIC_TEST_DATABASE_URL is not configured",
 )
+
+
+@pytest.fixture(autouse=True)
+def _fixed_business_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Keep the server business day aligned with this fixed-date signed schedule.
+    # Activation scenarios explicitly move it forward before posting on row 2.
+    monkeypatch.setattr(
+        collection_posting,
+        "current_collection_business_date",
+        lambda: date(2097, 9, 2),
+    )
 
 
 class Case:
@@ -365,7 +376,9 @@ def test_verified_advance_is_future_row_evidence_without_receipt_date_financial_
     ]
 
 
-def test_full_advance_row_activates_on_due_date_before_later_advance() -> None:
+def test_full_advance_row_activates_on_due_date_before_later_advance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     if not _schema_supports_verified_advance():
         pytest.skip("Migration 0104 future Advance allocation basis is not installed")
 
@@ -401,6 +414,9 @@ def test_full_advance_row_activates_on_due_date_before_later_advance() -> None:
     assert advance_row2.posted is not None
     assert advance_row2.posted.official_balance == Decimal("2971.00")
 
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: row2
+    )
     advance_row3_on_row2_due_date = _submit(
         case,
         _command(
@@ -439,7 +455,9 @@ def test_full_advance_row_activates_on_due_date_before_later_advance() -> None:
     assert receipt == (Decimal("2942.00"), Decimal("2942.00"))
 
 
-def test_partial_advance_row_activates_interest_then_due_payment_finishes_principal() -> None:
+def test_partial_advance_row_activates_interest_then_due_payment_finishes_principal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     if not _schema_supports_verified_advance():
         pytest.skip("Migration 0104 future Advance allocation basis is not installed")
 
@@ -474,6 +492,9 @@ def test_partial_advance_row_activates_interest_then_due_payment_finishes_princi
     assert partial_advance.posted is not None
     assert partial_advance.posted.official_balance == Decimal("2971.00")
 
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: row2
+    )
     due_remainder = _submit(
         case,
         _command(

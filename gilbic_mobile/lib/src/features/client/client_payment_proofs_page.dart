@@ -538,7 +538,10 @@ class _ClientPaymentProofUploadPageState
     }
   }
 
-  Future<void> _pick(ImageSource source) async {
+  // A null source opens DocumentsUI instead of the system Photo Picker. Some
+  // Android 16 Photo Picker builds crash while displaying their own media grid;
+  // keep an explicit file route without changing camera/gallery recovery.
+  Future<void> _pick(ImageSource? source) async {
     if (!privateAccessActive) return;
     if (_busy || _uncertain || _conflict) return;
     final loanId = _loanId;
@@ -563,10 +566,21 @@ class _ClientPaymentProofUploadPageState
           }),
           label: proof == null ? 'Payment proof' : 'Correct payment proof',
         ),
-        pick: () => (widget.imagePicker ?? ImagePicker()).pickImage(
-          source: source,
-          requestFullMetadata: false,
-        ),
+        pick: () => source == null
+            ? documents.openFile(
+                acceptedTypeGroups: const [
+                  documents.XTypeGroup(
+                    label: 'Payment proof image',
+                    extensions: ['jpg', 'jpeg', 'png'],
+                    mimeTypes: ['image/jpeg', 'image/png'],
+                    uniformTypeIdentifiers: ['public.jpeg', 'public.png'],
+                  ),
+                ],
+              )
+            : (widget.imagePicker ?? ImagePicker()).pickImage(
+                source: source,
+                requestFullMetadata: false,
+              ),
       );
       if (file == null || !privateAccessActive) return;
       if (await file.length() > widget.capability.maxBytes) {
@@ -832,7 +846,16 @@ class _ClientPaymentProofUploadPageState
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Take photo'),
                   ),
+                  OutlinedButton.icon(
+                    key: const Key('proof-image-file'),
+                    onPressed: locked ? null : () => _pick(null),
+                    icon: const Icon(Icons.folder_open_outlined),
+                    label: const Text('Choose image file'),
+                  ),
                 ],
+              ),
+              const Text(
+                'If your gallery closes, use Choose image file to browse for a JPEG or PNG.',
               ),
               if (_draft != null) Text('Selected: ${_draft!.filename}'),
               if (_error != null)

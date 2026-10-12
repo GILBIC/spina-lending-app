@@ -24,6 +24,8 @@ from spina_mobile_collections.service import (
     SubmissionHeaders,
 )
 
+from gilbic_backend import collection_posting
+
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL,
@@ -37,6 +39,17 @@ _spec = importlib.util.spec_from_file_location("regular_advance_cases", _source)
 assert _spec is not None and _spec.loader is not None
 cases = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cases)
+
+
+@pytest.fixture(autouse=True)
+def _fixed_business_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Importing the combined-case helper does not register its pytest fixtures.
+    # This financial scenario uses its fixed 2097 schedule, not the wall clock.
+    monkeypatch.setattr(
+        collection_posting,
+        "current_collection_business_date",
+        lambda: date(2097, 8, 2),
+    )
 
 
 def test_verified_regular_advance_allocates_selected_dates_through_runtime_bridge() -> (

@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 for relative in (
+    "",
     "gilbic_backend/src",
     "spina_backend_mobile/src",
     "gilbic_backend/tests",

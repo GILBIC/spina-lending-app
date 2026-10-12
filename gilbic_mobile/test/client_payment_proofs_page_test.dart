@@ -1,8 +1,9 @@
-import 'dart:typed_data';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
@@ -21,7 +22,137 @@ import 'package:http/testing.dart';
 import 'client_documents_repository_test.dart' show session;
 import 'client_payment_proof_repository_test.dart' as fixture;
 
+Future<void> chooseImageFile(WidgetTester tester) async {
+  await tester.runAsync(() async {
+    await tester.tap(find.byKey(const Key('proof-image-file')));
+    final waiting = Stopwatch()..start();
+    do {
+      await tester.pump();
+      if (tester
+              .widget<OutlinedButton>(find.byKey(const Key('proof-image-file')))
+              .onPressed !=
+          null) {
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    } while (waiting.elapsed < const Duration(seconds: 5));
+    fail('Image file selection did not finish.');
+  });
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  for (final scenario in ['cancelled', 'unsupported content', 'oversized']) {
+    testWidgets('image file $scenario cannot become a payment proof', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final directory = Directory.systemTemp.createTempSync(
+        'spina-invalid-file-',
+      );
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final bytes = scenario == 'oversized'
+          ? Uint8List.fromList([...png, ...List.filled(101, 0)])
+          : Uint8List.fromList('%PDF-1.7'.codeUnits);
+      final file = File('${directory.path}${Platform.pathSeparator}proof.png')
+        ..writeAsBytesSync(bytes);
+      const channel = MethodChannel('plugins.flutter.io/file_selector');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => scenario == 'cancelled' ? null : [file.path],
+      );
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final repository = _Repository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ClientPaymentProofUploadPage(
+            session: session,
+            deviceIdentityProvider: device(),
+            repository: repository,
+            capability: capability(),
+            loanRepository: _Loans(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await chooseImageFile(tester);
+      expect(find.textContaining('Selected:'), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('submit-payment-proof')))
+            .onPressed,
+        isNull,
+      );
+      expect(repository.requests, isEmpty);
+      if (scenario == 'unsupported content') {
+        expect(
+          find.text('Choose a supported JPEG or PNG image.'),
+          findsOneWidget,
+        );
+      } else if (scenario == 'oversized') {
+        expect(find.textContaining('exceeds the upload size'), findsOneWidget);
+      }
+    });
+  }
+
+  testWidgets(
+    'image file bypasses gallery and requires explicit proof submission',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final directory = Directory.systemTemp.createTempSync(
+        'spina-proof-file-',
+      );
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final file = File('${directory.path}${Platform.pathSeparator}proof.png')
+        ..writeAsBytesSync(png);
+      const channel = MethodChannel('plugins.flutter.io/file_selector');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'openFile');
+        expect(call.arguments['multiple'], isFalse);
+        expect(call.arguments['acceptedTypeGroups'].single['mimeTypes'], [
+          'image/jpeg',
+          'image/png',
+        ]);
+        return [file.path];
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final repository = _Repository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ClientPaymentProofUploadPage(
+            session: session,
+            deviceIdentityProvider: device(),
+            repository: repository,
+            capability: capability(),
+            loanRepository: _Loans(),
+            imagePicker: _Picker(cancel: true),
+            requestIdGenerator: () => 'image-file-request',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('proof-image-file')), findsOneWidget);
+      await chooseImageFile(tester);
+      expect(find.text('Selected: proof.png'), findsOneWidget);
+      expect(repository.requests, isEmpty);
+      await tester.tap(find.byKey(const Key('submit-payment-proof')));
+      await tester.pumpAndSettle();
+      expect(repository.requests.single, {
+        'id': 'image-file-request',
+        'loan': 'loan-1',
+        'note': '',
+        'bytes': png,
+        'device': 'device',
+      });
+    },
+  );
+
   for (final status in [401, 503]) {
     testWidgets(
       'proof delayed download after $status fences saver before rebuild',
@@ -569,6 +700,12 @@ void main() {
       expect(
         tester
             .widget<OutlinedButton>(find.byKey(const Key('proof-gallery')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const Key('proof-image-file')))
             .onPressed,
         isNull,
       );

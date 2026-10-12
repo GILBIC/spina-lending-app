@@ -2,11 +2,44 @@
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 import run_native_stage3_elapsed_validation as runner
+
+
+def test_standalone_runner_can_import_its_lifecycle_tests_without_pythonpath(tmp_path):
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("GILBIC_", "SPINA_", "SUPABASE_", "PG"))
+        and key not in {"PYTHONPATH", "DATABASE_URL", "POSTGRES_URL"}
+    }
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            (
+                "import runpy, sys; "
+                "runpy.run_path(sys.argv[1], run_name='stage3_bootstrap_probe'); "
+                "import test_native_stage3_elapsed_lifecycle_postgres"
+            ),
+            str(Path(runner.__file__).resolve()),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.fixture
