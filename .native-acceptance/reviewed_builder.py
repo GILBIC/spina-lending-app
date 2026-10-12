@@ -184,8 +184,14 @@ def debug_gradle(original):
         + """
 // Disposable acceptance host: no release/profile task may execute.
 gradle.taskGraph.whenReady {
-    if (allTasks.any { it.name.contains("release", ignoreCase = true) || it.name.contains("profile", ignoreCase = true) }) {
-        throw GradleException("Debug acceptance host rejects release/profile tasks")
+    val rejected = allTasks.filter {
+        val debugProfileSupport = listOf("DebugArtProfile", "DebugStartupProfile", "DebugArtProfileWildcards")
+            .any { suffix -> it.name.endsWith(suffix, ignoreCase = true) }
+        it.name.contains("release", ignoreCase = true) ||
+            (it.name.contains("profile", ignoreCase = true) && !debugProfileSupport)
+    }
+    if (rejected.isNotEmpty()) {
+        throw GradleException("Debug acceptance host rejects release/profile tasks: " + rejected.joinToString { it.path })
     }
 }
 """
