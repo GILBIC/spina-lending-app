@@ -72,6 +72,13 @@ jobs:
           "$runtime/bin/python" -m pip check
           "$runtime/bin/python" -c 'import fastapi, uvicorn, psycopg, pydantic, httpx, pypdf, reportlab, docx, pymupdf, uvloop, gilbic_backend.main, spina_mobile_collections; print("Locked production runtime imports passed")'
 
+      - name: Audit the exact production dependency lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip-audit --disable-pip --no-deps -r requirements-runtime.lock \
+            -f json -o ci-artifacts/backend/pip-audit-runtime.json
+
       - name: Compile Python sources
         shell: bash
         run: |
