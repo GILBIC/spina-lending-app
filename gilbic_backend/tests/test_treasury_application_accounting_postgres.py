@@ -68,6 +68,20 @@ def test_application_consumes_exact_existing_eir_allocation_without_cash(
 ):
     f = create_application_source(application_db, monkeypatch)
     conn = f["conn"]
+    assert f["measurement"]["authoritative_initial_gross_carrying_amount"] == Decimal(
+        "1000.00"
+    )
+    assert (
+        conn.execute(
+            "SELECT count(*) AS n FROM lending.loan_contract_installments WHERE schedule_id=%s",
+            (f["schedule"],),
+        ).fetchone()["n"]
+        == 24
+    )
+    assert conn.execute(
+        "SELECT remaining_balance FROM lending.loan_collection_state WHERE loan_id=%s",
+        (f["loan"],),
+    ).fetchone()["remaining_balance"] == Decimal("957.00")
     source = conn.execute(
         "SELECT accounting.treasury_application_coordinates(%s) AS source",
         (f["application"],),

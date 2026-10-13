@@ -25,8 +25,19 @@ application_db = _application_db
 def test_prepare_post_exact_audit_preserves_cash_and_consumes_only_liability(
     application_db, monkeypatch
 ):
-    f = create_application_source(application_db, monkeypatch)
+    # Retain the original long signed contract through protected prepare/post,
+    # exact retry, source status, cash/liability conservation and deferred audit.
+    f = create_application_source(
+        application_db, monkeypatch, principal=Decimal("3000.00")
+    )
     conn = f["conn"]
+    assert (
+        conn.execute(
+            "SELECT count(*) AS n FROM lending.loan_contract_installments WHERE schedule_id=%s",
+            (f["schedule"],),
+        ).fetchone()["n"]
+        == 104
+    )
     prep = application_prepare(f)
     assert (
         conn.execute(

@@ -22,12 +22,17 @@ from treasury_test_support import grant_live
 from gilbic_backend import treasury_collection_posting as allocation
 
 
-def create_application_source(f, monkeypatch, *, collection_delay=0):
+def create_application_source(
+    f, monkeypatch, *, collection_delay=0, principal=Decimal("1000.00")
+):
+    # Keep the real signed schedule/EIR path affordable across boundary cases.
+    # The full protected-post proof opts into the original 104-row 3000 contract.
+    principal = Decimal(principal).quantize(Decimal("0.01"))
     conn, actor = f["conn"], f["actor"]
     release = f["day"] - timedelta(days=1)
     collection_day = f["day"] + timedelta(days=collection_delay)
     signed = generate_signed_seven_by_seven_schedule(
-        original_principal=Decimal("3000.00"),
+        original_principal=principal,
         agreed_daily_payment=Decimal("50.00"),
         daily_interest_per_1000=Decimal("7.00"),
         first_due_date=f["day"],
@@ -46,19 +51,20 @@ def create_application_source(f, monkeypatch, *, collection_delay=0):
         (uuid4().hex, len(signed), Jsonb(settings)),
     ).fetchone()["id"]
     loan = conn.execute(
-        "INSERT INTO lending.loans(loan_number,client_id,loan_type_id,principal,daily_amount,date_released,due_date,status,created_by_user_id) VALUES(%s,%s,%s,3000,50,%s,%s,'active',%s) RETURNING id",
+        "INSERT INTO lending.loans(loan_number,client_id,loan_type_id,principal,daily_amount,date_released,due_date,status,created_by_user_id) VALUES(%s,%s,%s,%s,50,%s,%s,'active',%s) RETURNING id",
         (
             uuid4().hex,
             f["client"],
             loan_type,
+            principal,
             release,
             signed[-1].due_date,
             actor.user_id,
         ),
     ).fetchone()["id"]
     conn.execute(
-        "INSERT INTO lending.loan_collection_state(loan_id,remaining_balance,is_reconciled,state_version) VALUES(%s,3000,true,0)",
-        (loan,),
+        "INSERT INTO lending.loan_collection_state(loan_id,remaining_balance,is_reconciled,state_version) VALUES(%s,%s,true,0)",
+        (loan, principal),
     )
     with conn.cursor(row_factory=tuple_row) as cursor:
         schedule = register_verified_contract_schedule(
@@ -110,15 +116,16 @@ def create_application_source(f, monkeypatch, *, collection_delay=0):
         "SELECT accounting.seven_by_seven_eir_anchor_review_token(%s) AS token", (loan,)
     ).fetchone()["token"]
     anchor = conn.execute(
-        """SELECT accounting.record_seven_by_seven_eir_initial_carrying_anchor(%s,%s,3000,
+        """SELECT accounting.record_seven_by_seven_eir_initial_carrying_anchor(%s,%s,%s,
         'management_evidence_backed_ifrs9_initial_measurement',%s,'test:initial-measurement',
         'Synthetic initial fair value and costs reviewed explicitly.',%s) AS id""",
         (
             loan,
             anchor_token,
+            principal,
             Jsonb(
                 {
-                    "fair_value_basis": "Synthetic 3000",
+                    "fair_value_basis": f"Synthetic {principal:.2f}",
                     "transaction_costs_assessment": "Synthetic zero",
                     "integral_fees_assessment": "Synthetic zero",
                     "source_documents": ["test:initial"],
@@ -130,12 +137,12 @@ def create_application_source(f, monkeypatch, *, collection_delay=0):
     lines = [
         {
             "account_code": "1110",
-            "debit": "3000.00",
+            "debit": format(principal, ".2f"),
             "credit": "0",
             "client_id": str(f["client"]),
             "loan_id": str(loan),
         },
-        {"account_code": "3000", "debit": "0", "credit": "3000.00"},
+        {"account_code": "3000", "debit": "0", "credit": format(principal, ".2f")},
     ]
     opening = conn.execute(
         "SELECT accounting.create_manual_journal_draft(%s,'Synthetic reviewed initial carrying value',%s,%s) AS id",
@@ -151,10 +158,13 @@ def create_application_source(f, monkeypatch, *, collection_delay=0):
     conn.execute(
         "SELECT accounting.post_manual_journal_entry(%s,%s)", (opening, actor.user_id)
     )
-    assert conn.execute(
-        "SELECT sum(l.debit-l.credit) AS amount FROM accounting.journal_lines l JOIN accounting.journal_entries j ON j.id=l.journal_entry_id WHERE j.id=%s AND j.status='posted' AND l.loan_id=%s",
-        (opening, loan),
-    ).fetchone()["amount"] == Decimal("3000.00")
+    assert (
+        conn.execute(
+            "SELECT sum(l.debit-l.credit) AS amount FROM accounting.journal_lines l JOIN accounting.journal_entries j ON j.id=l.journal_entry_id WHERE j.id=%s AND j.status='posted' AND l.loan_id=%s",
+            (opening, loan),
+        ).fetchone()["amount"]
+        == principal
+    )
     receipt_preparation = prepare(f, mapping(f))
     receipt_journal = post(f, receipt_preparation)
     grant_live(conn, actor.user_id, "treasury.payment.apply")
@@ -202,6 +212,7 @@ def create_application_source(f, monkeypatch, *, collection_delay=0):
         "Current EIR authority must be ready before adapter assertions"
     )
     return f | {
+        "principal": principal,
         "day": collection_day,
         "loan": loan,
         "schedule": schedule,
@@ -295,7 +306,7 @@ def late_prior_collection(f):
             """INSERT INTO lending.collection_transactions(idempotency_key,loan_id,client_id,collector_user_id,
         registered_device_id,route_entry_id,collection_date,entry_type,amount,applied_amount,unallocated_amount,
         recorded_at,device_sequence,previous_balance,official_balance,pass_count_after,receipt_number)
-        VALUES(%s,%s,%s,%s,%s,%s,%s,'payment',1,1,0,now(),923,3000,2999,0,%s) RETURNING id""",
+        VALUES(%s,%s,%s,%s,%s,%s,%s,'payment',1,1,0,now(),923,%s,%s,0,%s) RETURNING id""",
             (
                 uuid4(),
                 f["loan"],
@@ -304,6 +315,8 @@ def late_prior_collection(f):
                 f["actor"].registered_device_id,
                 f["loan"],
                 f["day"] - timedelta(days=1),
+                f["principal"],
+                f["principal"] - Decimal("1.00"),
                 uuid4().hex,
             ),
         )
