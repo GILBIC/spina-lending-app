@@ -319,7 +319,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         return;
       }
       final status = error.statusCode;
-      final uncertain = status == null || status == 429 || status >= 500;
+      final uncertain =
+          status == null || status < 400 || status == 429 || status >= 500;
       if (!uncertain) {
         _pendingDirectDrafts.remove(entry.loanId);
       }
@@ -357,6 +358,18 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteClientGroup client,
   ) async {
+    if (client.loans.any(
+      (entry) => _pendingDirectDrafts.containsKey(entry.loanId),
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Retry the pending individual entry before starting a combined payment.',
+          ),
+        ),
+      );
+      return;
+    }
     final payable = client.loans
         .where((entry) => _directPayBlockedReason(loaded, entry) == null)
         .toList(growable: false);
@@ -417,6 +430,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         draft = baseDraft.withAllocationReview(
           cashReceivedAmount: cash,
           reviewedAllocationHash: preview.allocationHash,
+          preview: preview,
         );
       }
       _pendingCombinedDrafts[client.clientId] = draft;
@@ -463,7 +477,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         return;
       }
       final status = error.statusCode;
-      final uncertain = status == null || status == 429 || status >= 500;
+      final uncertain =
+          status == null || status < 400 || status == 429 || status >= 500;
       if (!uncertain) {
         _pendingCombinedDrafts.remove(client.clientId);
       }
@@ -511,6 +526,18 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
   ) async {
+    if (_pendingCombinedDrafts.values.any(
+      (draft) => draft.legs.any((leg) => leg.loanId == entry.loanId),
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Retry the pending combined payment before opening another entry.',
+          ),
+        ),
+      );
+      return;
+    }
     final blockedReason = _detailsBlockedReason(loaded, entry);
     if (blockedReason != null) {
       ScaffoldMessenger.of(
@@ -528,11 +555,21 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           deviceIdentityProvider: _deviceIdentityProvider,
           deviceSequence: _deviceSequence,
           collectionDate: loaded.route.routeDate,
+          pendingDraft: _pendingDirectDrafts[entry.loanId],
+          onPendingDraftChanged: (draft) {
+            if (draft == null) {
+              _pendingDirectDrafts.remove(entry.loanId);
+            } else {
+              _pendingDirectDrafts[entry.loanId] = draft;
+            }
+          },
         ),
       ),
     );
     if (saved == true && mounted) {
       await _loadRoute();
+    } else if (mounted) {
+      setState(() {});
     }
   }
 
@@ -635,6 +672,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       isScrollControlled: true,
       builder: (context) => CollectorClientToolsSheet(
         client: selectedClient,
+        session: widget.session,
+        deviceIdentityProvider: _deviceIdentityProvider,
         directPayBlockedReasonFor: (entry) =>
             _directPayBlockedReason(loaded, entry),
         detailsBlockedReasonFor: (entry) =>

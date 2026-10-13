@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -28,7 +29,14 @@ class ManagementEclA5AccountingPage extends StatefulWidget {
 }
 
 class _ManagementEclA5AccountingPageState
-    extends State<ManagementEclA5AccountingPage> {
+    extends State<ManagementEclA5AccountingPage>
+    with PrivateAccessState<ManagementEclA5AccountingPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _tokens.clear();
+  }
+
   late final EclA5AccountingRepository _repository;
   late final String Function() _reviewTokenGenerator;
   final Map<String, String> _tokens = <String, String>{};
@@ -47,6 +55,7 @@ class _ManagementEclA5AccountingPageState
   }
 
   Future<void> _load({String? status}) async {
+    if (!mounted || !privateAccessActive) return;
     final nextStatus = status ?? _filter;
     setState(() {
       _loading = true;
@@ -54,31 +63,36 @@ class _ManagementEclA5AccountingPageState
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
         status: nextStatus,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _overview = overview;
         _filter = nextStatus;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _error =
               'The protected ECL adjustments queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _remeasure(EclA5ActionItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canRemeasure(overview, item)) return;
     item.requireRemeasurementCoordinates();
@@ -130,7 +144,7 @@ class _ManagementEclA5AccountingPageState
             'The backend will post the exact allowance increase, decrease, or reversal and permanently audit this Management confirmation.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey =
         'remeasure:${item.measurementId}:${item.calculationDigest}';
     await _runAction(
@@ -147,6 +161,7 @@ class _ManagementEclA5AccountingPageState
   }
 
   Future<void> _writeoff(EclA5ActionItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canWriteoff(overview, item)) return;
     item.requireWriteoffCoordinates();
@@ -201,7 +216,7 @@ class _ManagementEclA5AccountingPageState
             'The backend will immutably use the fully covering ECL allowance to derecognize the exact gross carrying amount and audit the result.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey =
         'writeoff:${item.loanId}:${item.creditRiskReviewId}:${item.measurementId}';
     await _runAction(
@@ -218,6 +233,7 @@ class _ManagementEclA5AccountingPageState
   }
 
   Future<void> _reviewRecovery(EclA5ActionItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canReviewRecovery(overview, item)) return;
     item.requireRecoveryReviewCoordinates();
@@ -225,7 +241,7 @@ class _ManagementEclA5AccountingPageState
       context: context,
       builder: (context) => const _RecoveryEvidenceDialog(),
     );
-    if (evidence == null || !mounted) return;
+    if (evidence == null || (!mounted || !privateAccessActive)) return;
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
@@ -266,7 +282,7 @@ class _ManagementEclA5AccountingPageState
             'The backend will bind this exact protected later cash transaction to retained Management evidence for separate recovery posting review.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey =
         'recovery-review:${item.loanId}:${item.recoveryCandidateTransactionId}';
     await _runAction(
@@ -285,6 +301,7 @@ class _ManagementEclA5AccountingPageState
   }
 
   Future<void> _postRecovery(EclA5ActionItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPostRecovery(overview, item)) return;
     item.requireRecoveryPostingCoordinates();
@@ -331,7 +348,7 @@ class _ManagementEclA5AccountingPageState
             'The backend will immutably post the exact reviewed cash recovery and permanently audit this Management confirmation.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey =
         'recovery-post:${item.creditRiskReviewId}:${item.recoveryTransactionId}';
     await _runAction(
@@ -353,25 +370,28 @@ class _ManagementEclA5AccountingPageState
     Future<EclA5ActionReceipt> Function(String deviceId, String token) action,
     String successMessage,
   ) async {
+    if (!mounted || !privateAccessActive) return;
     final token = _tokens.putIfAbsent(tokenKey, _reviewTokenGenerator);
     setState(() => _busyLoanId = item.loanId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await action(identity.installationId, token);
       _tokens.remove(tokenKey);
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _message(successMessage);
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The result is uncertain. Review the authoritative server state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busyLoanId = null);
+      if (mounted && privateAccessActive) setState(() => _busyLoanId = null);
     }
   }
 
@@ -402,19 +422,21 @@ class _ManagementEclA5AccountingPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('ECL Adjustments'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh ECL adjustments',
-          onPressed: _loading || _busyLoanId != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('ECL Adjustments'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh ECL adjustments',
+                onPressed: _loading || _busyLoanId != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final overview = _overview;

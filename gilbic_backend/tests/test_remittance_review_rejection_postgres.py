@@ -2,19 +2,16 @@ from __future__ import annotations
 
 import os
 from datetime import date, timedelta
-from decimal import Decimal
 from uuid import uuid4
 
 import psycopg
 import pytest
-
 from gilbic_backend.remittance_repository import PostgresRemittanceRepository
 from gilbic_backend.remittance_review_repository import (
     PostgresReviewedRemittanceRepository,
     RemittanceAlreadyReceived,
     RemittanceReviewRequired,
 )
-
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -45,8 +42,12 @@ def _user(connection: psycopg.Connection, *, label: str, role_code: str):
 def _seed_collection(*, suffix: str, collection_date: date):
     assert DATABASE_URL is not None
     with psycopg.connect(DATABASE_URL) as connection:
-        collector_id = _user(connection, label=f"collector-{suffix}", role_code="collector")
-        recipient_id = _user(connection, label=f"recipient-{suffix}", role_code="management")
+        collector_id = _user(
+            connection, label=f"collector-{suffix}", role_code="collector"
+        )
+        recipient_id = _user(
+            connection, label=f"recipient-{suffix}", role_code="management"
+        )
         device_id = connection.execute(
             """
             insert into core.devices(user_id, device_identifier_hash, platform, status)
@@ -166,7 +167,9 @@ def _assert_financial_mutation_is_blocked(transaction_id) -> None:
                 )
 
 
-def test_rejection_preserves_snapshot_unlocks_and_allows_corrected_resubmission() -> None:
+def test_rejection_preserves_snapshot_unlocks_and_allows_corrected_resubmission() -> (
+    None
+):
     assert DATABASE_URL is not None
     collection_date = date(2099, 2, 10)
     suffix = uuid4().hex[:8]
@@ -178,6 +181,9 @@ def test_rejection_preserves_snapshot_unlocks_and_allows_corrected_resubmission(
     submitter = PostgresRemittanceRepository()
     reviewer = PostgresReviewedRemittanceRepository()
     first = submitter.submit(
+        expected_review_digest=submitter.preview(
+            collector_user_id=collector_id, collection_date=collection_date
+        ).review_digest,
         collector_user_id=collector_id,
         recipient_user_id=recipient_id,
         collection_date=collection_date,
@@ -198,10 +204,13 @@ def test_rejection_preserves_snapshot_unlocks_and_allows_corrected_resubmission(
         )
 
     with psycopg.connect(DATABASE_URL) as connection:
-        assert connection.execute(
-            "select count(*) from lending.collection_remittance_reviews where remittance_id=%s",
-            (first.remittance_id,),
-        ).fetchone()[0] == 0
+        assert (
+            connection.execute(
+                "select count(*) from lending.collection_remittance_reviews where remittance_id=%s",
+                (first.remittance_id,),
+            ).fetchone()[0]
+            == 0
+        )
 
     rejected = reviewer.reject(
         remittance_id=first.remittance_id,
@@ -260,6 +269,9 @@ def test_rejection_preserves_snapshot_unlocks_and_allows_corrected_resubmission(
     assert _financial_snapshot(transaction_id) == financial_before
 
     second = submitter.submit(
+        expected_review_digest=submitter.preview(
+            collector_user_id=collector_id, collection_date=collection_date
+        ).review_digest,
         collector_user_id=collector_id,
         recipient_user_id=recipient_id,
         collection_date=collection_date,
@@ -316,6 +328,9 @@ def test_acceptance_records_review_and_keeps_collection_locked() -> None:
     submitter = PostgresRemittanceRepository()
     reviewer = PostgresReviewedRemittanceRepository()
     remittance = submitter.submit(
+        expected_review_digest=submitter.preview(
+            collector_user_id=collector_id, collection_date=collection_date
+        ).review_digest,
         collector_user_id=collector_id,
         recipient_user_id=recipient_id,
         collection_date=collection_date,
@@ -348,10 +363,13 @@ def test_acceptance_records_review_and_keeps_collection_locked() -> None:
             (remittance.remittance_id,),
         ).fetchone()
         assert review_row == (recipient_id,)
-        assert connection.execute(
-            "select count(*) from lending.collection_remittance_rejections where remittance_id=%s",
-            (remittance.remittance_id,),
-        ).fetchone()[0] == 0
+        assert (
+            connection.execute(
+                "select count(*) from lending.collection_remittance_rejections where remittance_id=%s",
+                (remittance.remittance_id,),
+            ).fetchone()[0]
+            == 0
+        )
         locked = connection.execute(
             """
             select remittance_id, is_locked

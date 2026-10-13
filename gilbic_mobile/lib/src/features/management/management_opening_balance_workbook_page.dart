@@ -1,4 +1,7 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/formatting/spina_display.dart';
+import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/opening_balance_workbook.dart';
@@ -24,7 +27,13 @@ class ManagementOpeningBalanceWorkbookPage extends StatefulWidget {
 }
 
 class _ManagementOpeningBalanceWorkbookPageState
-    extends State<ManagementOpeningBalanceWorkbookPage> {
+    extends State<ManagementOpeningBalanceWorkbookPage>
+    with PrivateAccessState<ManagementOpeningBalanceWorkbookPage> {
+  @override
+  void clearPrivateData() {
+    _workbook = null;
+  }
+
   late final OpeningBalanceWorkbookRepository _repository;
   OpeningBalanceWorkbookData? _workbook;
   bool _loading = true;
@@ -39,37 +48,41 @@ class _ManagementOpeningBalanceWorkbookPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final workbook = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _workbook = workbook);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _errorMessage = 'Opening Balance Workbook could not be loaded.',
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _initializeWorkbook() async {
+    if (!mounted || !privateAccessActive) return;
     final now = DateTime.now();
     final selected = await showDatePicker(
       context: context,
@@ -78,7 +91,7 @@ class _ManagementOpeningBalanceWorkbookPageState
       lastDate: DateTime(2100),
       helpText: 'Select accounting cutover date',
     );
-    if (selected == null || !mounted) {
+    if (selected == null || (!mounted || !privateAccessActive)) {
       return;
     }
     final workbook = _workbook;
@@ -108,12 +121,13 @@ class _ManagementOpeningBalanceWorkbookPageState
             'cutover date. It will not create or post a journal.',
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runAction(
       () async {
         final identity = await widget.deviceIdentityProvider.load();
+        requirePrivateAccess();
         return _repository.create(
           widget.session,
           deviceId: identity.installationId,
@@ -126,18 +140,21 @@ class _ManagementOpeningBalanceWorkbookPageState
   }
 
   Future<void> _editLine(OpeningBalanceWorkbookLine line) async {
+    if (!mounted || !privateAccessActive) return;
     final draft = await showDialog<_LineEditDraft>(
       context: context,
       builder: (context) => _EditOpeningBalanceLineDialog(line: line),
     );
     final workbookId = _workbook?.summary.workbookId;
-    if (draft == null || workbookId == null || !mounted) {
+    if (draft == null ||
+        workbookId == null ||
+        (!mounted || !privateAccessActive)) {
       return;
     }
     final amount = draft.debit != null
-        ? 'Debit ${_money(draft.debit!)}'
+        ? 'Debit ${formatSpinaMoney(draft.debit!)}'
         : draft.credit != null
-        ? 'Credit ${_money(draft.credit!)}'
+        ? 'Credit ${formatSpinaMoney(draft.credit!)}'
         : 'Explicit zero or blank amount';
     final confirmed = await showManagementReviewConfirmation(
       context,
@@ -179,11 +196,12 @@ class _ManagementOpeningBalanceWorkbookPageState
         ],
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       return _repository.updateLine(
         widget.session,
         deviceId: identity.installationId,
@@ -198,6 +216,7 @@ class _ManagementOpeningBalanceWorkbookPageState
   }
 
   Future<void> _editPolicy() async {
+    if (!mounted || !privateAccessActive) return;
     final workbook = _workbook;
     final workbookId = workbook?.summary.workbookId;
     if (workbook == null || workbookId == null) {
@@ -210,7 +229,7 @@ class _ManagementOpeningBalanceWorkbookPageState
         note: workbook.summary.profitLossPolicyNote,
       ),
     );
-    if (draft == null || !mounted) {
+    if (draft == null || (!mounted || !privateAccessActive)) {
       return;
     }
     final confirmed = await showManagementReviewConfirmation(
@@ -239,11 +258,12 @@ class _ManagementOpeningBalanceWorkbookPageState
         ],
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       return _repository.updatePolicy(
         widget.session,
         deviceId: identity.installationId,
@@ -255,6 +275,7 @@ class _ManagementOpeningBalanceWorkbookPageState
   }
 
   Future<void> _changeStatus(String targetStatus) async {
+    if (!mounted || !privateAccessActive) return;
     final workbook = _workbook;
     final workbookId = workbook?.summary.workbookId;
     if (workbook == null || workbookId == null) {
@@ -298,12 +319,13 @@ class _ManagementOpeningBalanceWorkbookPageState
         ],
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runAction(
       () async {
         final identity = await widget.deviceIdentityProvider.load();
+        requirePrivateAccess();
         return _repository.changeStatus(
           widget.session,
           deviceId: identity.installationId,
@@ -321,13 +343,14 @@ class _ManagementOpeningBalanceWorkbookPageState
     Future<OpeningBalanceWorkbookData> Function() action, {
     required String successMessage,
   }) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busy) {
       return;
     }
     setState(() => _busy = true);
     try {
       final workbook = await action();
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _workbook = workbook;
           _errorMessage = null;
@@ -337,13 +360,14 @@ class _ManagementOpeningBalanceWorkbookPageState
         ).showSnackBar(SnackBar(content: Text(successMessage)));
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Opening-balance workbook action failed.'),
@@ -351,7 +375,7 @@ class _ManagementOpeningBalanceWorkbookPageState
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _busy = false);
       }
     }
@@ -359,6 +383,7 @@ class _ManagementOpeningBalanceWorkbookPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Opening Balance Workbook'),
@@ -538,6 +563,9 @@ class _InitializeWorkbookCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
+            const Text(
+              'Use this workbook for supported balances that already exist at your start date. An old ledger is not required. If no opening balances are needed, start with actual transactions instead; do not create amounts just to fill this workbook.',
+            ),
             Text(
               '$lineCount balance-sheet lines are available, with $sourceReferenceCount source references. Initializing snapshots these references at the selected cutover date; it does not post to the General Ledger.',
             ),
@@ -694,9 +722,9 @@ class _WorkbookLineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final proposed = line.proposedDebit != null
-        ? 'Dr ${_money(line.proposedDebit!)}'
+        ? 'Dr ${formatSpinaMoney(line.proposedDebit!)}'
         : line.proposedCredit != null
-        ? 'Cr ${_money(line.proposedCredit!)}'
+        ? 'Cr ${formatSpinaMoney(line.proposedCredit!)}'
         : 'Not entered';
     return Card(
       key: Key('opening-workbook-line-${line.accountCode}'),
@@ -778,10 +806,10 @@ class _EditOpeningBalanceLineDialogState
   void initState() {
     super.initState();
     _debitController = TextEditingController(
-      text: widget.line.proposedDebit?.toStringAsFixed(2) ?? '',
+      text: widget.line.proposedDebit ?? '',
     );
     _creditController = TextEditingController(
-      text: widget.line.proposedCredit?.toStringAsFixed(2) ?? '',
+      text: widget.line.proposedCredit ?? '',
     );
     _noteController = TextEditingController(
       text: widget.line.evidenceNote ?? '',
@@ -797,9 +825,9 @@ class _EditOpeningBalanceLineDialogState
     super.dispose();
   }
 
-  double? _parse(TextEditingController controller) {
+  String? _parse(TextEditingController controller) {
     final text = controller.text.trim();
-    return text.isEmpty ? null : double.tryParse(text);
+    return text.isEmpty ? null : tryRequestMoney(text);
   }
 
   void _save() {
@@ -807,14 +835,14 @@ class _EditOpeningBalanceLineDialogState
     final credit = _parse(_creditController);
     if ((_debitController.text.trim().isNotEmpty && debit == null) ||
         (_creditController.text.trim().isNotEmpty && credit == null)) {
-      setState(() => _error = 'Debit and credit must be valid numbers.');
+      setState(
+        () => _error =
+            'Use nonnegative amounts with at most two decimal places and 16 whole digits.',
+      );
       return;
     }
-    if ((debit ?? 0) < 0 || (credit ?? 0) < 0) {
-      setState(() => _error = 'Amounts cannot be negative.');
-      return;
-    }
-    if ((debit ?? 0) > 0 && (credit ?? 0) > 0) {
+    if ((requestMoneyCents(debit) ?? BigInt.zero) > BigInt.zero &&
+        (requestMoneyCents(credit) ?? BigInt.zero) > BigInt.zero) {
       setState(() => _error = 'Use only one side: debit or credit.');
       return;
     }
@@ -1024,8 +1052,8 @@ class _LineEditDraft {
     required this.evidenceNote,
   });
 
-  final double? debit;
-  final double? credit;
+  final String? debit;
+  final String? credit;
   final String verificationStatus;
   final String? evidenceNote;
 }

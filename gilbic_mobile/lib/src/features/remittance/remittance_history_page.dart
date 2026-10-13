@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/features/treasury/collector_surplus_page.dart';
 import 'package:gilbic_mobile/src/core/treasury/treasury_repository.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +31,7 @@ class RemittanceHistoryPage extends StatefulWidget {
 }
 
 class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
-  late final RemittanceRepository _repository;
+  late RemittanceRepository _repository;
   List<RemittanceRecord> _records = const <RemittanceRecord>[];
   final Set<String> _reviewed = <String>{};
   String? _deviceId;
@@ -54,18 +56,80 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
     _load();
   }
 
+  int _epoch = 0;
+  int _request = 0;
+  bool _denied = false;
+  bool _active(int epoch) => mounted && !_denied && epoch == _epoch;
+  bool _current(int epoch, int request) =>
+      _active(epoch) && request == _request;
+
+  void _clearPrivate() {
+    _records = const [];
+    _reviewed.clear();
+    _deviceId = null;
+    _actionId = null;
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  bool _deny(SpinaApiException error, int epoch) {
+    if (!_active(epoch) || !staffAccessRejected(error)) return false;
+    _epoch++;
+    setState(() {
+      _denied = true;
+      _clearPrivate();
+      _loading = false;
+      _errorMessage = '${error.message} Sign in again before continuing.';
+    });
+    _dismissPrivateRoutes();
+    return true;
+  }
+
+  @override
+  void didUpdateWidget(RemittanceHistoryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final scopeChanged =
+        oldWidget.session.authorizationScopeKey !=
+        widget.session.authorizationScopeKey;
+    if (scopeChanged ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository ||
+        oldWidget.focusRemittanceId != widget.focusRemittanceId) {
+      _epoch++;
+      if (scopeChanged) _denied = false;
+      _clearPrivate();
+      _repository = widget.repository ?? SpinaRemittanceRepository();
+      _dismissPrivateRoutes();
+      if (!_denied) _load();
+    }
+  }
+
   Future<void> _load() async {
+    if (_denied) return;
+    final epoch = _epoch;
+    final request = ++_request;
+    final session = widget.session;
+    final repository = _repository;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final records = await _repository.loadHistory(
-        widget.session,
+      if (!_current(epoch, request)) return;
+      final records = await repository.loadHistory(
+        session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() {
           _deviceId = identity.installationId;
           _records = records;
@@ -75,23 +139,25 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (_deny(error, epoch)) return;
+      if (_current(epoch, request)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(
           () => _errorMessage = 'Remittance history could not be loaded.',
         );
       }
     } finally {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() => _loading = false);
       }
     }
   }
 
   void _setReviewed(RemittanceRecord record, bool value) {
+    if (_denied) return;
     setState(() {
       if (value) {
         _reviewed.add(record.remittanceId);
@@ -103,6 +169,9 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
   }
 
   Future<void> _confirmReceived(RemittanceRecord record) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     final deviceId = _deviceId;
     if (deviceId == null || _actionId != null) {
       return;
@@ -137,24 +206,24 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
       final contract =
           await (repository as RemittanceReceivingContractRepository)
               .loadReceivingContract(
-                widget.session,
+                session,
                 deviceId: deviceId,
                 remittanceId: record.remittanceId,
               );
-      if (!mounted) return;
+      if (!mounted || !_active(epoch)) return;
       setState(() => _actionId = null);
       if (contract.countRequired) {
         await Navigator.of(context).push<void>(
           MaterialPageRoute(
             builder: (_) => CollectorSurplusPage(
-              session: widget.session,
+              session: session,
               deviceIdentityProvider: widget.deviceIdentityProvider,
               repository: widget.surplusRepository,
               focusRemittanceId: record.remittanceId,
             ),
           ),
         );
-        if (mounted) await _load();
+        if (_active(epoch)) await _load();
       } else if (contract.legacyReceiveAllowed) {
         final confirmed = await showDialog<bool>(
           context: context,
@@ -176,26 +245,30 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
             ],
           ),
         );
-        if (confirmed == true && mounted) {
+        if (confirmed == true && _active(epoch)) {
           setState(() => _actionId = record.remittanceId);
           final updated = await _repository.confirmReceived(
-            widget.session,
+            session,
             deviceId: deviceId,
             remittanceId: record.remittanceId,
           );
-          _replaceRecord(updated);
+          if (_active(epoch)) _replaceRecord(updated);
         }
       }
     } on SpinaApiException catch (e) {
-      if (mounted) setState(() => _errorMessage = e.message);
+      if (_deny(e, epoch)) return;
+      if (_active(epoch)) setState(() => _errorMessage = e.message);
     } on Object catch (e) {
-      if (mounted) setState(() => _errorMessage = e.toString());
+      if (_active(epoch)) setState(() => _errorMessage = e.toString());
     } finally {
-      if (mounted) setState(() => _actionId = null);
+      if (_active(epoch)) setState(() => _actionId = null);
     }
   }
 
   Future<void> _reject(RemittanceRecord record) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     final deviceId = _deviceId;
     final rejectionRepository = _repository;
     if (deviceId == null || _actionId != null) {
@@ -215,55 +288,11 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
       return;
     }
 
-    final controller = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject remittance?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${record.collectorName} will remain responsible for '
-              '${_money(record.summary.totalAmount)}. The complete rejected '
-              'handover stays in history.',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: Key('remittance-rejection-reason-${record.remittanceId}'),
-              controller: controller,
-              autofocus: true,
-              maxLength: 500,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Rejection reason',
-                hintText: 'Example: Cash total does not match',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: Key('confirm-reject-remittance-${record.remittanceId}'),
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isNotEmpty) {
-                Navigator.of(context).pop(value);
-              }
-            },
-            child: const Text('Reject handover'),
-          ),
-        ],
-      ),
+      builder: (_) => _RemittanceRejectionDialog(record: record),
     );
-    controller.dispose();
-    if (reason == null || !mounted) {
+    if (reason == null || !_active(epoch)) {
       return;
     }
 
@@ -272,30 +301,33 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
       _errorMessage = null;
     });
     try {
-      final updated = await rejectionRepository.rejectRemittance(
-        widget.session,
-        deviceId: deviceId,
-        remittanceId: record.remittanceId,
-        reason: reason,
-      );
-      _replaceRecord(updated);
+      final updated =
+          await (rejectionRepository as RemittanceRejectionRepository)
+              .rejectRemittance(
+                session,
+                deviceId: deviceId,
+                remittanceId: record.remittanceId,
+                reason: reason,
+              );
+      if (_active(epoch)) _replaceRecord(updated);
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (_deny(error, epoch)) return;
+      if (_active(epoch)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (_active(epoch)) {
         setState(() => _errorMessage = 'Remittance rejection failed.');
       }
     } finally {
-      if (mounted) {
+      if (_active(epoch)) {
         setState(() => _actionId = null);
       }
     }
   }
 
   void _replaceRecord(RemittanceRecord updated) {
-    if (!mounted) return;
+    if (!mounted || _denied) return;
     setState(() {
       _records = _records
           .map(
@@ -320,7 +352,7 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
         actions: [
           IconButton(
             tooltip: 'Refresh remittances',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -376,6 +408,69 @@ class _RemittanceHistoryPageState extends State<RemittanceHistoryPage> {
   }
 }
 
+class _RemittanceRejectionDialog extends StatefulWidget {
+  const _RemittanceRejectionDialog({required this.record});
+  final RemittanceRecord record;
+  @override
+  State<_RemittanceRejectionDialog> createState() =>
+      _RemittanceRejectionDialogState();
+}
+
+class _RemittanceRejectionDialogState
+    extends State<_RemittanceRejectionDialog> {
+  final controller = TextEditingController();
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Reject remittance?'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${widget.record.collectorName} will remain responsible for '
+          '${_money(widget.record.summary.totalAmount)}. The complete rejected '
+          'handover stays in history.',
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          key: Key('remittance-rejection-reason-${widget.record.remittanceId}'),
+          controller: controller,
+          autofocus: true,
+          maxLength: 500,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Rejection reason',
+            hintText: 'Example: Cash total does not match',
+            border: OutlineInputBorder(),
+          ),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        key: Key('confirm-reject-remittance-${widget.record.remittanceId}'),
+        onPressed: () {
+          final value = controller.text.trim();
+          if (value.isNotEmpty) {
+            Navigator.of(context).pop(value);
+          }
+        },
+        child: const Text('Reject handover'),
+      ),
+    ],
+  );
+}
+
 class _RemittanceCard extends StatelessWidget {
   const _RemittanceCard({
     required this.record,
@@ -426,6 +521,8 @@ class _RemittanceCard extends StatelessWidget {
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
+          if (record.settlementSplit != null)
+            Text(record.settlementSplit!.description),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(

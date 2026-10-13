@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from gilbic_backend.account_repository import AccountContext
 from gilbic_backend.auth_api import (
@@ -260,12 +261,14 @@ def test_collector_preview_and_submit_use_server_calculated_summary() -> None:
         headers=headers(),
         json={
             "recipient_user_id": str(RECIPIENT_USER_ID),
+            "expected_review_digest": _summary().review_digest,
             "collection_date": COLLECTION_DATE.isoformat(),
             "note": "Daily cash",
         },
     )
 
     assert preview.status_code == 200
+    assert preview.json()["data"]["review_digest"] == _summary().review_digest
     assert preview.json()["data"]["total_amount"] == "100.00"
     assert preview.json()["data"]["covered_payment_count"] == 1
     assert preview.json()["data"]["items"][0]["covered_dates"] == [
@@ -325,3 +328,22 @@ def test_selected_recipient_can_reject_after_review_with_reason() -> None:
         "review_acknowledged": True,
         "reason": "Cash total does not match",
     }
+
+
+@pytest.mark.parametrize("prefix", ["/api/v1", "/api/mobile/v1"])
+def test_submission_requires_review_identity_before_repository_write(prefix):
+    client, repo = client_with_fakes(
+        user_id=COLLECTOR_USER_ID, permissions=("remittance.create",)
+    )
+    response = client.post(
+        prefix + "/collector/remittances",
+        headers=headers(),
+        json={
+            "recipient_user_id": str(RECIPIENT_USER_ID),
+            "collection_date": COLLECTION_DATE.isoformat(),
+            "note": "Legacy client",
+        },
+    )
+    assert response.status_code == 422
+    assert "Refresh and review" in response.text
+    assert repo.submit_request is None

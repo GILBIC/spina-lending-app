@@ -9,54 +9,58 @@ import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 
 void main() {
-  testWidgets('keeps Management distinct from assigned Collector for dual-role user',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(900, 1800));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'keeps Management distinct from assigned Collector for dual-role user',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1800));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
 
-    final repository = _Repository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: CrossCollectorRemittancePage(
-          session: _session,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          repository: repository,
-          collectionDate: DateTime(2026, 8, 19),
+      final repository = _Repository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CrossCollectorRemittancePage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: repository,
+            collectionDate: DateTime(2026, 8, 19),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Other-Area Remittance'), findsOneWidget);
-    expect(repository.previewCapacity,
-        CrossRemittanceRecipientCapacity.assignedCollector);
+      expect(find.text('Other-Area Remittance'), findsOneWidget);
+      expect(
+        repository.previewCapacity,
+        CrossRemittanceRecipientCapacity.assignedCollector,
+      );
 
-    await tester.tap(find.byKey(const Key('cross-remittance-recipient')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Dual Role • Management').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cross-remittance-recipient')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Dual Role • Management').last);
+      await tester.pumpAndSettle();
 
-    expect(repository.previewRecipientId, 'dual-role-user');
-    expect(
-      repository.previewCapacity,
-      CrossRemittanceRecipientCapacity.management,
-    );
-    expect(find.text('Cash to Management: ₱100.00'), findsOneWidget);
+      expect(repository.previewRecipientId, 'dual-role-user');
+      expect(
+        repository.previewCapacity,
+        CrossRemittanceRecipientCapacity.management,
+      );
+      expect(find.text('Cash to Management: ₱100.00'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('submit-cross-remittance')));
-    await tester.pumpAndSettle();
-    expect(find.text('Send to Management?'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('confirm-cross-remittance')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('submit-cross-remittance')));
+      await tester.pumpAndSettle();
+      expect(find.text('Send to Management?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-cross-remittance')));
+      await tester.pumpAndSettle();
 
-    expect(repository.submitRecipientId, 'dual-role-user');
-    expect(
-      repository.submitCapacity,
-      CrossRemittanceRecipientCapacity.management,
-    );
-    expect(find.text('Management notified'), findsOneWidget);
-    expect(find.text('Management: Dual Role'), findsOneWidget);
-  });
+      expect(repository.submitRecipientId, 'dual-role-user');
+      expect(
+        repository.submitCapacity,
+        CrossRemittanceRecipientCapacity.management,
+      );
+      expect(find.text('Management notified'), findsOneWidget);
+      expect(find.text('Management: Dual Role'), findsOneWidget);
+    },
+  );
 }
 
 const UserSession _session = UserSession(
@@ -140,12 +144,17 @@ class _Repository implements CrossRemittanceRepository {
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     CrossRemittanceRecipientCapacity recipientCapacity =
         CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
     String note = '',
   }) async {
+    expect(
+      expectedReviewDigest,
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
     submitRecipientId = recipientUserId;
     submitCapacity = recipientCapacity;
     final summary = _summary();
@@ -167,6 +176,8 @@ class _Repository implements CrossRemittanceRepository {
 
 RemittanceSummary _summary() {
   return RemittanceSummary(
+    reviewDigest:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     collectionDate: DateTime(2026, 8, 19),
     collectorName: 'Collector One',
     transactionCount: 1,

@@ -2,7 +2,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-API = (ROOT / "src" / "gilbic_backend" / "period_close_api.py").read_text(encoding="utf-8")
+API = (ROOT / "src" / "gilbic_backend" / "period_close_api.py").read_text(
+    encoding="utf-8"
+)
 REPOSITORY = (ROOT / "src" / "gilbic_backend" / "period_close_repository.py").read_text(
     encoding="utf-8"
 )
@@ -27,7 +29,9 @@ def test_period_close_api_exposes_same_handlers_to_mobile() -> None:
         assert route in API
 
 
-def test_period_close_api_requires_action_permissions_and_explicit_confirmation() -> None:
+def test_period_close_api_requires_action_permissions_and_explicit_confirmation() -> (
+    None
+):
     for permission in (
         'CLOSE_PREPARE_PERMISSION = "accounting.period.close.prepare"',
         'CLOSE_POST_PERMISSION = "accounting.period.close.post"',
@@ -62,7 +66,9 @@ def test_period_close_api_exposes_exact_close_coordinates_only() -> None:
     assert "automatic_source_posting" in API
 
 
-def test_period_close_repository_calls_only_protected_close_functions_and_views() -> None:
+def test_period_close_repository_calls_only_protected_close_functions_and_views() -> (
+    None
+):
     assert "accounting.period_close_queue" in REPOSITORY
     assert "accounting.period_close_summary" in REPOSITORY
     assert "accounting.prepare_period_close" in REPOSITORY
@@ -78,6 +84,7 @@ def test_period_close_status_filters_keep_legacy_closed_periods_fail_closed() ->
     assert "ready_for_review" in REPOSITORY
     assert "ready_to_prepare" in REPOSITORY
     assert "prepared_confirmation_required" in REPOSITORY
-    assert "closed_protected" in REPOSITORY
+    assert "fiscal_period_status = 'closed'" in REPOSITORY
     assert "closed_legacy_without_protected_close_audit" in REPOSITORY
-    assert "close_status LIKE 'blocked_%'" in REPOSITORY
+    assert "close_status LIKE %s" in REPOSITORY
+    assert '("blocked_%",)' in REPOSITORY

@@ -325,6 +325,20 @@ test('accounting export accepts a single inclusive day', async (t) => {
   assert.equal(h.downloads.length, 1);
 });
 
+test('accountant reporting package requests exact configured-period evidence explicitly', async (t) => {
+  const paths = [];
+  const h = await exportHarness(t, async (path) => {
+    paths.push(path);
+    return new Blob(['zip'], { type: 'application/zip' });
+  });
+  const reporting = h.form.querySelector('[name="include_reporting"]');
+  assert.ok(reporting, 'The user can request the reporting package');
+  reporting.checked = true;
+  fire(h.form, 'submit');
+  await h.downloaded;
+  assert.equal(paths[0], '/api/v1/management/financial-accounting/export?start_date=2026-09-01&end_date=2026-09-20&include_reporting=true');
+});
+
 test('accounting export surfaces bounded server failures without downloading error payloads', async (t) => {
   let status = 413;
   const h = await exportHarness(t, async () => { throw Object.assign(new Error('<private error>'), { status }); });

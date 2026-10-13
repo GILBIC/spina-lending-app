@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -28,7 +29,14 @@ class ManagementEclAllowancePostingPage extends StatefulWidget {
 }
 
 class _ManagementEclAllowancePostingPageState
-    extends State<ManagementEclAllowancePostingPage> {
+    extends State<ManagementEclAllowancePostingPage>
+    with PrivateAccessState<ManagementEclAllowancePostingPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _tokens.clear();
+  }
+
   late final EclAllowancePostingRepository _repository;
   late final String Function() _reviewTokenGenerator;
   final Map<String, String> _tokens = <String, String>{};
@@ -47,6 +55,7 @@ class _ManagementEclAllowancePostingPageState
   }
 
   Future<void> _load({String? status}) async {
+    if (!mounted || !privateAccessActive) return;
     final nextStatus = status ?? _filter;
     setState(() {
       _loading = true;
@@ -54,31 +63,36 @@ class _ManagementEclAllowancePostingPageState
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
         status: nextStatus,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _overview = overview;
         _filter = nextStatus;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () =>
               _error = 'The protected ECL allowance queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _prepare(EclAllowancePostingItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPrepare(overview, item)) return;
     item.requirePreparationCoordinates();
@@ -137,12 +151,13 @@ class _ManagementEclAllowancePostingPageState
             'The backend will freeze an exact protected draft for separate posting review. No General Ledger balance changes yet.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey = 'prepare:${item.measurementId}:${item.calculationDigest}';
     final token = _tokens.putIfAbsent(tokenKey, _reviewTokenGenerator);
     setState(() => _submittingLoanId = item.loanId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
@@ -150,23 +165,27 @@ class _ManagementEclAllowancePostingPageState
         reviewToken: token,
       );
       _tokens.remove(tokenKey);
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _message('Initial ECL allowance draft prepared.');
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The preparation result is uncertain. Review the server state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _submittingLoanId = null);
+      if (mounted && privateAccessActive) {
+        setState(() => _submittingLoanId = null);
+      }
     }
   }
 
   Future<void> _post(EclAllowancePostingItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPost(overview, item)) return;
     item.requirePostingCoordinates();
@@ -222,12 +241,13 @@ class _ManagementEclAllowancePostingPageState
             'The backend will immutably post the initial ECL allowance to the protected General Ledger and permanently audit this confirmation.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey = 'post:${item.preparationId}:${item.preparationDigest}';
     final token = _tokens.putIfAbsent(tokenKey, _reviewTokenGenerator);
     setState(() => _submittingLoanId = item.loanId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.post(
         widget.session,
         deviceId: identity.installationId,
@@ -235,19 +255,22 @@ class _ManagementEclAllowancePostingPageState
         reviewToken: token,
       );
       _tokens.remove(tokenKey);
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _message('Initial ECL allowance posted.');
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The posting result is uncertain. Review the server state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _submittingLoanId = null);
+      if (mounted && privateAccessActive) {
+        setState(() => _submittingLoanId = null);
+      }
     }
   }
 
@@ -279,6 +302,7 @@ class _ManagementEclAllowancePostingPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Initial ECL Allowance'),

@@ -5,11 +5,13 @@ from datetime import date
 from decimal import Decimal
 from functools import partial
 from typing import Any, LiteralString
+from uuid import UUID
 
-from psycopg import sql
+from psycopg import errors, sql
 from psycopg.rows import dict_row
 from psycopg.types.json import set_json_loads
 
+from .accounting_book_repository import book_identity_payload, read_book_identity
 from .accounting_export import (
     MAX_BYTES,
     MAX_ROWS,
@@ -18,10 +20,20 @@ from .accounting_export import (
     validate_range,
 )
 from .database import open_connection
+from .financial_statement_payload import statement_pack_payload
+from .financial_statements_repository import PostgresFinancialStatementsRepository
+from .reporting_review_export import build_range_statements, validate_reporting_scope
 
 
 class PostgresAccountingExportRepository:
-    def load_snapshot(self, *, start_date: date, end_date: date) -> dict[str, Any]:
+    def load_snapshot(
+        self,
+        *,
+        start_date: date,
+        end_date: date,
+        actor_user_id: UUID,
+        include_reporting: bool = False,
+    ) -> dict[str, Any]:
         validate_range(start_date, end_date)
         with (
             open_connection() as connection,
@@ -31,6 +43,40 @@ class PostgresAccountingExportRepository:
             cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             cursor.execute("SET LOCAL statement_timeout = '15000ms'")
             cursor.execute("SET LOCAL TIME ZONE 'Asia/Manila'")
+            # Opening balances and audit rows are private too. Authorize every
+            # contributing historical period before reading any monetary data.
+            cursor.execute(
+                "SELECT to_regprocedure('accounting.require_disclosure_actor(uuid,uuid,text,boolean)') AS guard"
+            )
+            guard_row = cursor.fetchone()
+            if guard_row is None:
+                raise errors.InsufficientPrivilege(
+                    "Current reporting authorization could not be verified."
+                )
+            has_guard = guard_row["guard"] is not None
+            if has_guard:
+                cursor.execute(
+                    "SELECT accounting.require_disclosure_actor(%s,%s,'accounting.view')",
+                    (actor_user_id, None),
+                )
+                cursor.execute(
+                    "SELECT id FROM accounting.fiscal_periods WHERE start_date<=%s ORDER BY start_date,id",
+                    (end_date,),
+                )
+                for row in list(cursor.fetchall()):
+                    cursor.execute(
+                        "SELECT accounting.require_disclosure_actor(%s,%s,'accounting.view')",
+                        (actor_user_id, row["id"]),
+                    )
+            else:
+                cursor.execute(
+                    "SELECT to_regclass('accounting.treasury_receipt_postings') AS private_adapter"
+                )
+                adapter_row = cursor.fetchone()
+                if adapter_row is None or adapter_row["private_adapter"] is not None:
+                    raise errors.InsufficientPrivilege(
+                        "Current private reporting authorization is unavailable."
+                    )
             cursor.execute("SELECT transaction_timestamp() AS generated_at")
             timestamp = cursor.fetchone()
             if timestamp is None:
@@ -165,4 +211,123 @@ class PostgresAccountingExportRepository:
                    ORDER BY posting_date, id LIMIT 100001""",
                 (start_date, end_date),
             )
+            if include_reporting:
+                report = {
+                    "schema_version": 1,
+                    "scope": "accountant_review",
+                    "start_date": start_date.isoformat(),
+                    "end_date": end_date.isoformat(),
+                    "book": book_identity_payload(read_book_identity(cursor)),
+                    "period_statements": [
+                        {
+                            "period": {
+                                "period_id": str(period["id"]),
+                                "label": period["label"],
+                                "start_date": period["start_date"].isoformat(),
+                                "end_date": period["end_date"].isoformat(),
+                                "status": period["status"],
+                            }
+                        }
+                        for period in result["periods"]
+                    ],
+                    "annual_consolidation": "accountant_review_required",
+                    "statutory_acceptance": False,
+                }
+                try:
+                    validate_reporting_scope(report, start_date, end_date)
+                except (ValueError, KeyError, TypeError) as error:
+                    raise AccountingExportError(
+                        "range",
+                        "Choose the complete dates of contiguous configured fiscal periods for the reporting package.",
+                    ) from error
+                reports = PostgresFinancialStatementsRepository()
+                report["period_statements"] = []
+                for period in result["periods"]:
+                    payload = statement_pack_payload(
+                        reports.read_statement_pack(
+                            cursor,
+                            period_id=period["id"],
+                            actor_user_id=actor_user_id,
+                            include_calculation_proof=True,
+                        )
+                    )
+                    consumed += len(json_bytes(payload))
+                    if consumed > MAX_BYTES:
+                        raise AccountingExportError(
+                            "oversized",
+                            "Reporting evidence exceeds the content limit; select a shorter range.",
+                        )
+                    report["period_statements"].append(payload)
+
+                # Use the same calendar dates in the prior year only where
+                # complete configured periods exist. No first-book balances
+                # or comparative fiscal periods are invented.
+                def prior_year(day):
+                    try:
+                        return day.replace(year=day.year - 1)
+                    except ValueError:
+                        return day.replace(year=day.year - 1, day=28)
+
+                prior_start, prior_end = prior_year(start_date), prior_year(end_date)
+                cursor.execute(
+                    "SELECT id,label,start_date,end_date,status FROM accounting.fiscal_periods WHERE start_date<=%s AND end_date>=%s ORDER BY start_date,id",
+                    (prior_end, prior_start),
+                )
+                prior_periods = list(cursor.fetchall())
+                prior_scope = {
+                    "start_date": prior_start.isoformat(),
+                    "end_date": prior_end.isoformat(),
+                    "period_statements": [
+                        {
+                            "period": {
+                                "period_id": str(p["id"]),
+                                "start_date": p["start_date"].isoformat(),
+                                "end_date": p["end_date"].isoformat(),
+                            }
+                        }
+                        for p in prior_periods
+                    ],
+                }
+                comparative = None
+                try:
+                    validate_reporting_scope(prior_scope, prior_start, prior_end)
+                except (ValueError, KeyError, TypeError):
+                    pass
+                else:
+                    previous = []
+                    for period in prior_periods:
+                        payload = statement_pack_payload(
+                            reports.read_statement_pack(
+                                cursor,
+                                period_id=period["id"],
+                                actor_user_id=actor_user_id,
+                                include_calculation_proof=True,
+                            )
+                        )
+                        consumed += len(json_bytes(payload))
+                        if consumed > MAX_BYTES:
+                            raise AccountingExportError(
+                                "oversized",
+                                "Comparative reporting evidence exceeds the content limit; select a shorter range.",
+                            )
+                        previous.append(payload)
+                    comparative = build_range_statements(previous)
+                    comparative["period"]["label"] = (
+                        "Prior-year configured reporting range"
+                    )
+                report["range_statements"] = build_range_statements(
+                    report["period_statements"], comparative=comparative
+                )
+                report["comparative_basis"] = (
+                    "same_calendar_dates_prior_year"
+                    if comparative
+                    else "prior_year_range_not_configured"
+                )
+                report["annual_consolidation"] = "full_range_posted_ledger"
+                if consumed + len(json_bytes(report["range_statements"])) > MAX_BYTES:
+                    raise AccountingExportError(
+                        "oversized",
+                        "Reporting evidence exceeds the content limit; select a shorter range.",
+                    )
+                result["reporting_review"] = report
             return result

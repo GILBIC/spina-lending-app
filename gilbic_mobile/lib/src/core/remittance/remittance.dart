@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/remittance/remittance_settlement_split.dart';
 
 class RemittanceRecipient {
   const RemittanceRecipient({
@@ -91,7 +92,12 @@ class RemittanceSummary {
     required this.clientCount,
     required this.totalAmount,
     required this.items,
+    this.reviewDigest,
   });
+
+  final String? reviewDigest;
+  bool get hasReviewDigest =>
+      RegExp(r'^[0-9a-f]{64}$').hasMatch(reviewDigest ?? '');
 
   final DateTime? collectionDate;
   final String collectorName;
@@ -120,6 +126,9 @@ class RemittanceSummary {
         firstNumber(<Object?>[data['covered_payment_count']])?.toInt() ?? 0;
 
     return RemittanceSummary(
+      reviewDigest: data['review_digest'] is String
+          ? data['review_digest'] as String
+          : null,
       collectionDate: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['collection_date']]) ?? '',
       ),
@@ -159,6 +168,7 @@ class RemittanceRecord {
     this.rejectedAt,
     this.rejectedByUserId = '',
     this.rejectionReason = '',
+    this.settlementSplit,
   });
 
   final String remittanceId;
@@ -177,6 +187,7 @@ class RemittanceRecord {
   final DateTime? rejectedAt;
   final String rejectedByUserId;
   final String rejectionReason;
+  final RemittanceSettlementSplit? settlementSplit;
 
   String get normalizedStatus => status.trim().toLowerCase();
   bool get isReceived => normalizedStatus == 'received';
@@ -197,6 +208,12 @@ class RemittanceRecord {
       return null;
     }
     return RemittanceRecord(
+      settlementSplit: data['settlement_split'] == null
+          ? null
+          : RemittanceSettlementSplit.fromPayload(
+              data['settlement_split'],
+              data['total_amount'],
+            ),
       remittanceId: id,
       remittanceNumber: number,
       collectorUserId:

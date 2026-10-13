@@ -26,6 +26,7 @@ from .office_review_evidence_route import PrivateOfficeRoute
 from .request_auth import (
     active_device_context,
     authenticated_device_context,
+    authentication_service_exception,
     bearer_token,
 )
 
@@ -92,11 +93,12 @@ def _session_payload(session: AuthSession, context) -> dict[str, object]:
 
 
 def _auth_exception(exc: SupabaseAuthError, *, login: bool = False) -> HTTPException:
-    if exc.status_code == 503:
-        return HTTPException(status_code=503, detail="Authentication service is unavailable.")
-    if login:
+    service_error = authentication_service_exception(exc)
+    if service_error is not None:
+        return service_error
+    if login and exc.status_code in {400, 401, 403}:
         return HTTPException(status_code=401, detail="Invalid username or password.")
-    if exc.status_code in {400, 409, 422}:
+    if not login and exc.status_code in {400, 409, 422}:
         return HTTPException(status_code=409, detail="An account with these credentials already exists.")
     return HTTPException(status_code=502, detail="Authentication service could not complete the request.")
 
@@ -178,9 +180,9 @@ def create_auth_router() -> APIRouter:
                 platform=request.platform,
                 app_version=request.app_version,
             )
-        except (AccountNotFound, SupabaseAuthError) as exc:
-            if isinstance(exc, SupabaseAuthError) and exc.status_code == 503:
-                raise _auth_exception(exc, login=True) from exc
+        except SupabaseAuthError as exc:
+            raise _auth_exception(exc, login=True) from exc
+        except AccountNotFound as exc:
             raise HTTPException(status_code=401, detail="Invalid username or password.") from exc
         except AccountDisabled as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc

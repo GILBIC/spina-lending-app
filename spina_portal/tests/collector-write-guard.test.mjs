@@ -93,3 +93,50 @@ test('a disconnected load re-applies its lock after the new markup is rendered',
   assert.equal(fixture.guard.begin(), false);
   fixture.guard.dispose();
 });
+
+const privateCommand = {
+  path: '/api/v1/collector/collections',
+  options: {method: 'POST', body: {loan_id: 'synthetic-loan', note: 'Synthetic private note'}},
+};
+const teardowns = [
+  ['explicit disposal', fixture => fixture.guard.dispose()],
+  ['signal abort', fixture => fixture.controller.abort()],
+];
+
+for (const [name, teardown] of teardowns) {
+  test(`${name} clears the retained private command immediately`, () => {
+    const fixture = setup();
+    fixture.guard.retainCommand(privateCommand);
+    assert.deepEqual(fixture.guard.pendingCommand, privateCommand);
+    teardown(fixture);
+    assert.equal(fixture.guard.current, false);
+    assert.equal(fixture.guard.pendingCommand, null);
+  });
+
+  test(`${name} rejects private command retention after late completion`, () => {
+    const fixture = setup();
+    assert.equal(fixture.guard.begin(), true);
+    teardown(fixture);
+    fixture.guard.finish();
+    fixture.guard.retainCommand(privateCommand);
+    assert.equal(fixture.guard.pendingCommand, null);
+    assert.equal(fixture.guard.begin(), false);
+  });
+}
+
+test('live uncertainty preserves the exact private command until authority teardown', () => {
+  const fixture = setup();
+  const command = structuredClone(privateCommand);
+  assert.equal(fixture.guard.begin(), true);
+  fixture.guard.retainCommand(command);
+  command.options.body.note = 'Changed caller draft';
+  fixture.guard.lock('Check the saved result before another payment.');
+  fixture.guard.finish();
+  const retained = fixture.guard.pendingCommand;
+  assert.deepEqual(retained, privateCommand);
+  retained.options.body.note = 'Changed reader copy';
+  assert.deepEqual(fixture.guard.pendingCommand, privateCommand);
+  assert.equal(fixture.guard.current, true);
+  assert.equal(fixture.guard.begin(), false);
+  fixture.guard.dispose();
+});

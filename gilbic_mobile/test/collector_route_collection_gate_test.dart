@@ -16,6 +16,68 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 void main() {
+  for (final quickRetry in [false, true]) {
+    testWidgets(
+      'detailed uncertain attempt survives Back into ${quickRetry ? 'quick Retry' : 'reopened details'}',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1000, 1700));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final repository = _RetryRepository();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: CollectorRoutePage(
+              session: _session,
+              loader: _RouteLoader(isFromCache: false),
+              paymentRepository: repository,
+              deviceIdentityProvider: _deviceIdentityProvider(),
+              deviceSequence: MemoryCollectionDeviceSequence(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('route-client-client-1')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('collection-details-entry-1')));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('collection-note')),
+          'Original payment facts',
+        );
+        await tester.tap(find.byKey(const Key('submit-collection-entry')));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        if (quickRetry) {
+          await tester.tap(find.byKey(const Key('record-collection-entry-1')));
+        } else {
+          await tester.tap(find.byKey(const Key('route-client-client-1')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('collection-details-entry-1')));
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('collection-note')))
+                .controller!
+                .text,
+            'Original payment facts',
+          );
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('collection-note')))
+                .enabled,
+            isFalse,
+          );
+          await tester.tap(find.byKey(const Key('submit-collection-entry')));
+        }
+        await tester.pumpAndSettle();
+        expect(repository.drafts, hasLength(2));
+        expect(
+          repository.drafts.last.toJson(),
+          repository.drafts.first.toJson(),
+        );
+      },
+    );
+  }
   testWidgets('offline route keeps collection button disabled', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

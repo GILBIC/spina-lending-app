@@ -26,6 +26,7 @@ Future<XFile?> pickRecoverableImage(
   required ImagePickContext recoveryContext,
   required Future<XFile?> Function() pick,
   String recoveryActionLabel = 'Use photo',
+  bool showRecoveryPreview = true,
 }) async {
   final recovery = ImageRecoveryScope.of(context);
   // Standalone page tests and non-app hosts retain the normal picker contract.
@@ -64,7 +65,7 @@ Future<XFile?> pickRecoverableImage(
                     ? 'Spina restarted while choosing this photo for ${recoveryContext.label}. Review it before continuing. Nothing has been submitted.'
                     : 'The recovered photo belongs to ${recovered!.context.label}. Return to that form to use it, or discard it before choosing another.',
               ),
-              if (matches) ...[
+              if (matches && showRecoveryPreview) ...[
                 const SizedBox(height: 12),
                 _RecoveredPhotoPreview(
                   read: () => recovery.preview(recovered.file),

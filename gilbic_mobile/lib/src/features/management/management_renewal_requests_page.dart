@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:gilbic_mobile/src/core/payments/request_money.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -27,7 +28,14 @@ class ManagementRenewalRequestsPage extends StatefulWidget {
 }
 
 class _ManagementRenewalRequestsPageState
-    extends State<ManagementRenewalRequestsPage> {
+    extends State<ManagementRenewalRequestsPage>
+    with PrivateAccessState<ManagementRenewalRequestsPage> {
+  @override
+  void clearPrivateData() {
+    _items = const [];
+    _deviceId = null;
+  }
+
   late final ManagementRenewalWorkflowRepository _repository;
   List<ManagementRenewalWorkflowItem> _items = const [];
   String _status = 'pending';
@@ -45,42 +53,50 @@ class _ManagementRenewalRequestsPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final items = await _repository.list(
         widget.session,
         deviceId: identity.installationId,
         status: _status,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       setState(() {
         _deviceId = identity.installationId;
         _items = items;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _errorMessage = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _errorMessage = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _errorMessage =
               'Management renewal workflow could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _submitTerms(ManagementRenewalWorkflowItem item) async {
+    if (!mounted || !privateAccessActive || item.requiresExistingSignerReview) {
+      return;
+    }
     final draft = await showDialog<ManagementRenewalTermsDraft>(
       context: context,
       builder: (context) => _ManagementRenewalTermsDialog(item: item),
     );
-    if (draft == null) return;
+    if (draft == null || !mounted || !privateAccessActive) return;
     final confirmed = await _confirmRenewalAction(
       item,
       nextActionLabel: 'Record renewal terms',
@@ -104,7 +120,7 @@ class _ManagementRenewalRequestsPageState
           ),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _runAction(
       item.request.requestId,
       successMessage: 'Management renewal terms recorded.',
@@ -118,6 +134,7 @@ class _ManagementRenewalRequestsPageState
   }
 
   Future<void> _reject(ManagementRenewalWorkflowItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final note = await showDialog<String>(
       context: context,
       builder: (context) => _RejectRenewalDialog(request: item.request),
@@ -132,7 +149,7 @@ class _ManagementRenewalRequestsPageState
         ManagementReviewFact(label: 'Management reason', value: note),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _runAction(
       item.request.requestId,
       successMessage: 'Renewal request rejected.',
@@ -152,6 +169,7 @@ class _ManagementRenewalRequestsPageState
   }
 
   Future<void> _releaseToCollector(ManagementRenewalWorkflowItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final confirmed = await _confirmRenewalAction(
       item,
       statusLabel: item.request.cashReleasedToCollectorAt == null
@@ -180,7 +198,7 @@ class _ManagementRenewalRequestsPageState
           ),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _runAction(
       item.request.requestId,
       successMessage: 'Cash release to Collector recorded.',
@@ -196,6 +214,7 @@ class _ManagementRenewalRequestsPageState
     ManagementRenewalWorkflowItem item,
     String decision,
   ) async {
+    if (!mounted || !privateAccessActive) return;
     final note = await showDialog<String>(
       context: context,
       builder: (context) => _ProofReviewDialog(decision: decision),
@@ -227,7 +246,7 @@ class _ManagementRenewalRequestsPageState
         ManagementReviewFact(label: 'Management note', value: note),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _runAction(
       item.request.requestId,
       successMessage: message,
@@ -242,6 +261,7 @@ class _ManagementRenewalRequestsPageState
   }
 
   Future<void> _activate(ManagementRenewalWorkflowItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final confirmed = await _confirmRenewalAction(
       item,
       statusLabel: _activationStatusLabel(item.request.activationStatus),
@@ -267,7 +287,7 @@ class _ManagementRenewalRequestsPageState
         ),
       ],
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _runAction(
       item.request.requestId,
       successMessage: 'Renewal activation check completed.',
@@ -336,24 +356,26 @@ class _ManagementRenewalRequestsPageState
     required String successMessage,
     required Future<CollectorRenewalRequest> Function(String deviceId) action,
   }) async {
+    if (!mounted || !privateAccessActive) return;
     final deviceId = _deviceId;
     if (deviceId == null || _busyRequestId != null) return;
     setState(() => _busyRequestId = requestId);
     try {
       await action(deviceId);
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(successMessage)));
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Renewal action could not be completed.'),
@@ -361,12 +383,13 @@ class _ManagementRenewalRequestsPageState
         );
       }
     } finally {
-      if (mounted) setState(() => _busyRequestId = null);
+      if (mounted && privateAccessActive) setState(() => _busyRequestId = null);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Renewal Requests'),
@@ -587,9 +610,12 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
               'Remaining old balance',
               _money(request.remainingBalance),
             ),
-            _LabelValue('Contractual total', request.contractualTotal == null
-                ? 'Verified schedule unavailable'
-                : _money(request.contractualTotal!)),
+            _LabelValue(
+              'Contractual total',
+              request.contractualTotal == null
+                  ? 'Verified schedule unavailable'
+                  : _money(request.contractualTotal!),
+            ),
             _LabelValue(
               'Paid toward contractual total',
               '${_money(request.paidCash)} • ${request.paidPercent == null ? 'Paid % unavailable' : '${request.paidPercent!.toStringAsFixed(1)}%'}',
@@ -598,8 +624,11 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
             if (!request.isSevenBySeven)
               _LabelValue(
                 'Regular 50% gate',
-                request.regular50PercentEligible ? 'Eligible'
-                    : request.paidPercent == null ? 'Verified schedule required' : 'Below 50%',
+                request.regular50PercentEligible
+                    ? 'Eligible'
+                    : request.paidPercent == null
+                    ? 'Verified schedule required'
+                    : 'Below 50%',
               ),
             if (request.isSevenBySeven)
               const _LabelValue(
@@ -677,25 +706,6 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
                   'Amount locked',
                   formatSpinaBusinessDateTime(request.amountLockedAt),
                 ),
-              if (request.signers.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Required signers',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 4),
-                for (final signer in request.signers)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      '${_partyRoleLabel(signer.partyRole)} • ${signer.fullName} • '
-                      '${signer.hasApp ? 'app linked' : 'no app'} • '
-                      '${signer.governmentIdVerified ? 'ID verified' : 'ID pending'} • '
-                      '${signer.selfieVerified ? 'selfie verified' : 'selfie pending'} • '
-                      '${signer.signed ? 'signed' : 'signature pending'}',
-                    ),
-                  ),
-              ],
               const SizedBox(height: 8),
               _CustodyTimeline(request: request),
               _LabelValue(
@@ -708,6 +718,25 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
               ),
               if (request.newLoanId != null)
                 _LabelValue('Linked new loan', request.newLoanId!),
+            ],
+            if (request.signers.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Recorded signers',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              for (final signer in request.signers)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '${_partyRoleLabel(signer.partyRole)} • ${signer.fullName} • '
+                    '${signer.hasApp ? 'app linked' : 'no app'} • '
+                    '${signer.governmentIdVerified ? 'ID verified' : 'ID pending'} • '
+                    '${signer.selfieVerified ? 'selfie verified' : 'selfie pending'} • '
+                    '${signer.signed ? 'signed' : 'signature pending'}',
+                  ),
+                ),
             ],
             if (request.reviewNote.isNotEmpty)
               _LabelValue('Management note', request.reviewNote),
@@ -729,12 +758,21 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
                   Expanded(
                     child: FilledButton.icon(
                       key: Key('review-renewal-terms-${request.requestId}'),
-                      onPressed: busy ? null : onTerms,
+                      onPressed: busy || item.requiresExistingSignerReview
+                          ? null
+                          : onTerms,
                       icon: const Icon(Icons.fact_check_outlined),
                       label: const Text('Set Terms'),
                     ),
                   ),
                 ],
+              ),
+            ],
+            if (request.status == 'pending' &&
+                item.requiresExistingSignerReview) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Existing signers require review before new terms. Recorded supporting parties and signatures are preserved.',
               ),
             ],
             if (request.status == 'pending' && recommendation == null) ...[
@@ -833,12 +871,6 @@ class _ManagementRenewalTermsDialogState
   late final TextEditingController _principalController;
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _overrideController = TextEditingController();
-  final TextEditingController _supportingNameController =
-      TextEditingController();
-  final TextEditingController _supportingUserIdController =
-      TextEditingController();
-  final List<ManagementRenewalSignerDraft> _supportingSigners = [];
-  String _supportingRole = 'guarantor';
   String? _error;
 
   @override
@@ -854,32 +886,7 @@ class _ManagementRenewalTermsDialogState
     _principalController.dispose();
     _noteController.dispose();
     _overrideController.dispose();
-    _supportingNameController.dispose();
-    _supportingUserIdController.dispose();
     super.dispose();
-  }
-
-  void _addSupportingSigner() {
-    final fullName = _supportingNameController.text.trim();
-    final userId = _supportingUserIdController.text.trim();
-    if (fullName.length < 2) {
-      setState(() => _error = 'Enter the supporting signer full name.');
-      return;
-    }
-    setState(() {
-      _supportingSigners.add(
-        ManagementRenewalSignerDraft(
-          partyRole: _supportingRole,
-          fullName: fullName,
-          userId: userId.isEmpty ? null : userId,
-          governmentIdVerified: false,
-          selfieVerified: false,
-        ),
-      );
-      _supportingNameController.clear();
-      _supportingUserIdController.clear();
-      _error = null;
-    });
   }
 
   void _submit() {
@@ -907,7 +914,6 @@ class _ManagementRenewalTermsDialogState
         governmentIdVerified: false,
         selfieVerified: false,
       ),
-      ..._supportingSigners,
     ];
 
     Navigator.pop(
@@ -1003,76 +1009,9 @@ class _ManagementRenewalTermsDialogState
                 '${request.clientName} • ${widget.item.borrowerUserId == null ? 'no linked app account' : 'app account linked'}',
               ),
               const SizedBox(height: 14),
-              Text(
-                'Supporting party (optional)',
-                style: Theme.of(context).textTheme.titleSmall,
+              const Text(
+                'New renewal terms require only the borrower. Guarantors, sureties, and co-makers require separate approval before they can be added.',
               ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                key: const Key('renewal-supporting-role'),
-                initialValue: _supportingRole,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Party role'),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'guarantor',
-                    child: Text('Guarantor'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'solidary_co_maker',
-                    child: Text('Solidary co-maker'),
-                  ),
-                  DropdownMenuItem(value: 'surety', child: Text('Surety')),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _supportingRole = value);
-                },
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                key: const Key('renewal-supporting-name'),
-                controller: _supportingNameController,
-                decoration: const InputDecoration(labelText: 'Full name'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                key: const Key('renewal-supporting-user-id'),
-                controller: _supportingUserIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Linked app user ID (optional)',
-                  helperText:
-                      'Leave blank when the supporting party has no app.',
-                ),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                key: const Key('add-renewal-supporting-signer'),
-                onPressed: _addSupportingSigner,
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Add Supporting Party'),
-              ),
-              if (_supportingSigners.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                for (
-                  var index = 0;
-                  index < _supportingSigners.length;
-                  index += 1
-                )
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_supportingSigners[index].fullName),
-                    subtitle: Text(
-                      _partyRoleLabel(_supportingSigners[index].partyRole),
-                    ),
-                    trailing: IconButton(
-                      tooltip: 'Remove',
-                      onPressed: () =>
-                          setState(() => _supportingSigners.removeAt(index)),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                  ),
-              ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(

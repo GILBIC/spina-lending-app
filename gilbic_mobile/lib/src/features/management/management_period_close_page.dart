@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/period_close.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
+import 'package:gilbic_mobile/src/core/management/accounting_readiness_repository.dart';
+import 'package:gilbic_mobile/src/features/management/accounting_readiness_card.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
@@ -13,6 +16,7 @@ class ManagementPeriodClosePage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.readinessRepository,
     this.confirmationTokenGenerator,
     super.key,
   });
@@ -20,6 +24,7 @@ class ManagementPeriodClosePage extends StatefulWidget {
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final PeriodCloseRepository? repository;
+  final AccountingReadinessRepository? readinessRepository;
   final String Function()? confirmationTokenGenerator;
 
   @override
@@ -27,7 +32,14 @@ class ManagementPeriodClosePage extends StatefulWidget {
       _ManagementPeriodClosePageState();
 }
 
-class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
+class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage>
+    with PrivateAccessState<ManagementPeriodClosePage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _confirmationTokens.clear();
+  }
+
   late final PeriodCloseRepository _repository;
   late final String Function() _confirmationTokenGenerator;
   final Map<String, String> _confirmationTokens = <String, String>{};
@@ -36,6 +48,10 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
   String? _error;
   bool _loading = true;
   String? _submittingPeriodId;
+  int _loadGeneration = 0;
+  late String _sessionScope;
+  String get _currentSessionScope =>
+      '${widget.session.userId}:${widget.session.accessToken}:${widget.session.permissions.join(',')}:${widget.session.workspaceRoles.join(',')}';
 
   @override
   void initState() {
@@ -43,42 +59,70 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
     _repository = widget.repository ?? SpinaPeriodCloseRepository();
     _confirmationTokenGenerator =
         widget.confirmationTokenGenerator ?? _newConfirmationToken;
+    _sessionScope = _currentSessionScope;
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant ManagementPeriodClosePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_sessionScope != _currentSessionScope ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider) {
+      _sessionScope = _currentSessionScope;
+      _confirmationTokens.clear();
+      _filter = 'all';
+      _load();
+    }
+  }
+
   Future<void> _load({String? status}) async {
+    if (!mounted || !privateAccessActive) return;
     final nextStatus = status ?? _filter;
+    final generation = ++_loadGeneration;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _error = null;
+      _overview = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
+      if (generation != _loadGeneration) return;
       final overview = await _repository.load(
-        widget.session,
+        session,
         deviceId: identity.installationId,
         status: nextStatus,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive || generation != _loadGeneration) {
+        return;
+      }
       setState(() {
         _filter = nextStatus;
         _overview = overview;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (generation != _loadGeneration) return;
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive && generation == _loadGeneration) {
         setState(
           () =>
               _error = 'The protected period-close queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive && generation == _loadGeneration) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> _prepare(PeriodCloseItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPrepare(overview, item)) return;
     final confirmed = await showManagementReviewConfirmation(
@@ -110,29 +154,36 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
             'The server will create an immutable preparation snapshot. No retained-earnings journal is posted and the period is not closed yet.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     setState(() => _submittingPeriodId = item.fiscalPeriodId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final prepared = await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
         fiscalPeriodId: item.fiscalPeriodId,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _replaceItem(prepared);
       _showMessage('Protected close prepared for final review.');
     } on SpinaApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _showMessage(error.message);
     } on Object {
-      if (mounted) _showMessage('The protected close could not be prepared.');
+      if (mounted && privateAccessActive) {
+        _showMessage('The protected close could not be prepared.');
+      }
     } finally {
-      if (mounted) setState(() => _submittingPeriodId = null);
+      if (mounted && privateAccessActive) {
+        setState(() => _submittingPeriodId = null);
+      }
     }
   }
 
   Future<void> _post(PeriodCloseItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPost(overview, item)) return;
     item.requirePostCoordinates();
@@ -165,26 +216,31 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
             value: item.temporaryAccountCount!.toString(),
           ),
         ],
-        warnings: const <ManagementReviewWarning>[
+        warnings: <ManagementReviewWarning>[
           ManagementReviewWarning(
             severity: ManagementReviewWarningSeverity.caution,
-            message:
-                'The close journal and audit evidence are permanent. Corrections require a separately authorized accounting process.',
+            message: item.closesWithoutJournal
+                ? 'The close audit evidence is permanent. Corrections require a separately authorized accounting process.'
+                : 'The close journal and audit evidence are permanent. Corrections require a separately authorized accounting process.',
           ),
         ],
         secondaryReferences: <ManagementReviewFact>[
-          ManagementReviewFact(
-            label: 'Immutable journal reference',
-            value: item.journalEntryId!,
-          ),
+          if (!item.closesWithoutJournal)
+            ManagementReviewFact(
+              label: 'Immutable journal reference',
+              value: item.journalEntryId!,
+            ),
           ManagementReviewFact(label: 'Close digest', value: item.closeDigest!),
         ],
-        nextActionLabel: 'Post retained earnings & close',
-        consequence:
-            'The server will immutably post the retained-earnings close, close the fiscal period, and permanently audit this confirmation.',
+        nextActionLabel: item.closesWithoutJournal
+            ? 'Close fiscal period'
+            : 'Post retained earnings & close',
+        consequence: item.closesWithoutJournal
+            ? 'No closing journal is required because temporary account balances are zero. The server will revalidate the reviewed evidence, close the fiscal period, and permanently audit this confirmation.'
+            : 'The server will immutably post the retained-earnings close, close the fiscal period, and permanently audit this confirmation.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
 
     final tokenKey = '${item.fiscalPeriodId}:${item.closeDigest!}';
     final token = _confirmationTokens.putIfAbsent(
@@ -194,26 +250,34 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
     setState(() => _submittingPeriodId = item.fiscalPeriodId);
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final closed = await _repository.post(
         widget.session,
         deviceId: identity.installationId,
         item: item,
         confirmationToken: token,
       );
-      if (!mounted) return;
+      if (!mounted || !privateAccessActive) return;
       _confirmationTokens.remove(tokenKey);
       _replaceItem(closed);
-      _showMessage('Protected period close posted.');
+      _showMessage(
+        item.closesWithoutJournal
+            ? 'Protected period close completed.'
+            : 'Protected period close posted.',
+      );
     } on SpinaApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _showMessage(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _showMessage(
           'The close result is uncertain. Review the server state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _submittingPeriodId = null);
+      if (mounted && privateAccessActive) {
+        setState(() => _submittingPeriodId = null);
+      }
     }
   }
 
@@ -257,6 +321,7 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Formal Period Close'),
@@ -290,6 +355,11 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         physics: const AlwaysScrollableScrollPhysics(),
         children: <Widget>[
+          AccountingReadinessCard(
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            repository: widget.readinessRepository,
+          ),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -357,7 +427,14 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
           else
             ...overview.items.map(
               (item) => _PeriodCloseCard(
+                key: ValueKey(item.fiscalPeriodId),
                 item: item,
+                sourceBlockers: AccountingSourceBlockers(
+                  session: widget.session,
+                  deviceIdentityProvider: widget.deviceIdentityProvider,
+                  repository: widget.readinessRepository,
+                  periodId: item.fiscalPeriodId,
+                ),
                 canPrepare: _canPrepare(overview, item),
                 canPost: _canPost(overview, item),
                 submitting: _submittingPeriodId == item.fiscalPeriodId,
@@ -434,6 +511,8 @@ class _PeriodCloseCard extends StatelessWidget {
     required this.submitting,
     required this.onPrepare,
     required this.onPost,
+    required this.sourceBlockers,
+    super.key,
   });
 
   final PeriodCloseItem item;
@@ -442,6 +521,7 @@ class _PeriodCloseCard extends StatelessWidget {
   final bool submitting;
   final VoidCallback onPrepare;
   final VoidCallback onPost;
+  final Widget sourceBlockers;
 
   @override
   Widget build(BuildContext context) {
@@ -460,6 +540,7 @@ class _PeriodCloseCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(_statusLabel(item.closeStatus)),
+            sourceBlockers,
             if (item.closeBlocker != null) ...<Widget>[
               const SizedBox(height: 8),
               Text(
@@ -475,9 +556,16 @@ class _PeriodCloseCard extends StatelessWidget {
                 '${item.retainedEarningsBalanceBefore}',
               ),
             ],
-            if (item.closingEntryNumber != null) ...<Widget>[
+            if (item.closesWithoutJournal) ...<Widget>[
               const SizedBox(height: 8),
-              Text('Closing journal: ${item.closingEntryNumber}'),
+              const Text(
+                'No closing journal is required because temporary account balances are zero.',
+              ),
+            ],
+            if (item.closeStatus == 'closed_protected') ...<Widget>[
+              const SizedBox(height: 8),
+              if (item.closingEntryNumber != null)
+                Text('Closing journal: ${item.closingEntryNumber}'),
               Text(
                 'Retained Earnings after close: '
                 '${item.retainedEarningsBalanceAfter}',
@@ -500,7 +588,11 @@ class _PeriodCloseCard extends StatelessWidget {
                   key: Key('post-period-${item.fiscalPeriodId}'),
                   onPressed: submitting ? null : onPost,
                   icon: const Icon(Icons.lock_outline),
-                  label: const Text('Post retained earnings & close'),
+                  label: Text(
+                    item.closesWithoutJournal
+                        ? 'Close fiscal period'
+                        : 'Post retained earnings & close',
+                  ),
                 ),
             ],
             if (submitting) ...<Widget>[

@@ -2,7 +2,6 @@ import {
   escapeHtml as h, formatExactMoney, formatDateTime, hasPermission
 } from './ui.js';
 const statuses = ['pending', 'approved', 'rejected'];
-const parties = ['borrower', 'guarantor', 'solidary_co_maker', 'surety'];
 const reviewStates = ['under_review', 'correction_required', 'flagged'];
 const proofDecisions = {
   approved: 'approved', request_new_photo: 'correction_required', flag_for_review: 'flagged'
@@ -21,6 +20,8 @@ const money = value => renewalMoney(value) === null ? 'Unavailable' : formatExac
 const identity = row => row && validId(row.request_id) && validId(row.client_id) && validId(row.loan_id);
 const sameIdentity = (a, b) => identity(a) && identity(b) && ['request_id', 'client_id', 'loan_id'].every(key => a[key] === b[key]);
 const fingerprint = row => JSON.stringify(row);
+const existingSignerReviewRequired = row => Array.isArray(row.signers) && row.signers.some(s => s.party_role !== 'borrower' || s.signed === true);
+const existingSignerReviewMessage = 'Existing signer records: review required. Saved supporting parties or signatures must be preserved; this screen cannot replace their terms.';
 // Complete authorized payload: no mixed snapshots.
 const lockedMoney = row => !!row.amount_locked_at && renewalMoney(row.renewal_offset_amount) !== null && renewalMoney(row.net_release_amount) !== null && validId(row.new_loan_id);
 const sameLockedMoney = (before, after) => lockedMoney(before) && lockedMoney(after) && before.new_loan_id === after.new_loan_id && before.amount_locked_at === after.amount_locked_at && ['renewal_offset_amount', 'net_release_amount'].every(key => renewalMoney(before[key]) === renewalMoney(after[key]));
@@ -49,9 +50,9 @@ export function renewalResultMatches(command, result) {
   if (command.action === 'proof-review') return row.handover_proof_status === proofDecisions[body.decision] && (row.activation_status === command.request.activation_status || (body.decision === 'approved' && row.activation_status === 'active')) && typeof row.ready_for_activation === 'boolean';
   return command.action === 'activate' && row.activation_status === 'active' && row.handover_proof_status === 'approved' && !!row.client_cash_confirmed_at;
 }
-export function renewalActionBlocker(row, action) {
+export function renewalActionBlocker(row, action, decision = 'approved') {
   if (!identity(row)) return 'Request identity is unavailable.';
-  if (action === 'terms') return row.status !== 'pending' ? 'This request is no longer pending.' : !['recommend','do_not_recommend'].includes(row.collector_recommendation) ? 'Wait for the assigned Collector recommendation.' : '';
+  if (action === 'terms') return row.status !== 'pending' ? 'This request is no longer pending.' : decision !== 'rejected' && existingSignerReviewRequired(row) ? existingSignerReviewMessage : !['recommend','do_not_recommend'].includes(row.collector_recommendation) ? 'Wait for the assigned Collector recommendation.' : '';
   if (row.status !== 'approved') return 'Approved terms are required.';
   if (!renewalMoney(row.approved_principal, { positive: true })) return 'Approved principal is unavailable.';
   if (action === 'proof-review') return !lockedMoney(row) || !row.cash_given_to_client_at || !reviewStates.includes(row.handover_proof_status) ? 'A submitted handover photo and authoritative locked execution evidence are required before review.' : '';
@@ -62,14 +63,15 @@ export function renewalActionBlocker(row, action) {
   if (action === 'activate') return row.activation_status === 'active' ? 'Renewal is already active.' : row.ready_for_activation !== true || row.handover_proof_status !== 'approved' || !row.client_cash_confirmed_at ? 'Activation is not ready. Borrower cash confirmation, settlement, signer and CIF checks remain independent.' : '';
   return 'This action is unavailable.';
 }
-function signerMarkup(index, role = 'guarantor') {
-  return '<fieldset data-signer><legend>Required signer ' + (index + 1) + '</legend><label>Party<select name="party_role">' + parties.map(p => '<option value="' + p + '"' + (p === role ? ' selected' : '') + '>' + h(p.replaceAll('_',' ')) + '</option>').join('') + '</select></label><label>Full name<input name="full_name" maxlength="200" /></label><label>Verified account UUID<input name="user_id" maxlength="36" autocomplete="off" /></label><label><input type="checkbox" name="identity_reviewed" />I checked this named person and exact account against authorized identity evidence.</label><label><input type="checkbox" name="government_id_verified" />Government ID evidence verified</label><label><input type="checkbox" name="selfie_verified" />Selfie evidence verified</label><button type="button" class="button button-outline" data-remove-signer>Remove this signer</button></fieldset>';
+function signerMarkup() {
+  return '<fieldset data-signer><legend>Borrower signer</legend><input type="hidden" name="party_role" value="borrower" /><label>Borrower full name<input name="full_name" maxlength="200" /></label><label>Verified borrower account UUID<input name="user_id" maxlength="36" autocomplete="off" /></label><label><input type="checkbox" name="identity_reviewed" />I checked this borrower and exact account against authorized identity evidence.</label><label><input type="checkbox" name="government_id_verified" />Government ID evidence verified</label><label><input type="checkbox" name="selfie_verified" />Selfie evidence verified</label></fieldset>';
 }
 function recordMarkup(row) {
   const detail = (label, value) => '<div class="detail-item"><span>' + h(label) + '</span><strong>' + h(value ?? 'Unavailable') + '</strong></div>';
   const timestamp = value => value ? formatDateTime(value) : 'Not recorded';
   let markup = '<h3>' + h(row.client_name || 'Borrower') + ' | ' + h(row.loan_number || 'Loan') + '</h3><p>' + h(row.client_code || '') + ' | ' + h(row.area || '') + '</p><p class="meta">Request ' + h(row.request_id) + ' | Client ' + h(row.client_id) + ' | Loan ' + h(row.loan_id) + '</p><div class="loan-meta">' + detail('Request status', row.status) + detail('Requested principal', money(row.requested_amount)) + detail('Current principal', money(row.current_principal)) + detail('Remaining balance', money(row.remaining_balance)) + detail('Contractual total', money(row.contractual_total)) + detail('Paid cash', money(row.paid_cash)) + detail('Paid percent', row.paid_percent == null ? 'Unavailable' : String(row.paid_percent) + '%') + detail('Regular 50% eligibility', typeof row.regular_50_percent_eligible === 'boolean' ? row.regular_50_percent_eligible ? 'Eligible' : 'Not eligible' : 'Unavailable') + detail('Approved principal', money(row.approved_principal)) + detail('Collector recommendation', row.collector_recommendation) + detail('Recommendation reason', row.collector_reason_code) + detail('Collector comment', row.collector_comment) + detail('Client message', row.client_message) + detail('Management review note', row.review_note) + detail('Override reason', row.management_override_reason) + detail('Borrower decision', row.client_decision) + detail('Signer readiness', row.signer_readiness_status) + detail('Office processing', typeof row.office_processing_required === 'boolean' ? row.office_processing_required ? 'Required' : 'Remote workflow' : 'Unavailable') + detail('Locked offset', money(row.renewal_offset_amount)) + detail('Locked net cash', money(row.net_release_amount)) + detail('Photo review', row.handover_proof_status) + detail('Activation', row.activation_status) + detail('New loan', row.new_loan_id) + '</div><details><summary>Saved signer and custody evidence</summary>' + (Array.isArray(row.signers) ? row.signers.map(s => '<p>' + h(s.party_role) + ': ' + h(s.full_name) + ' | account ' + h(s.user_id || 'No linked app') + ' | ID ' + h(s.government_id_verified === true ? 'verified' : 'pending') + ' | selfie ' + h(s.selfie_verified === true ? 'verified' : 'pending') + ' | signature ' + h(s.signed === true ? 'signed' : 'pending') + '</p>').join('') : '<p>Signer evidence unavailable.</p>') + ['submitted_at','recommended_at','reviewed_at','client_decided_at','amount_locked_at','cash_released_to_collector_at','collector_cash_received_at','cash_given_to_client_at','client_cash_confirmed_at'].map(k => '<p>' + h(k.replaceAll('_',' ')) + ': ' + timestamp(row[k]) + '</p>').join('') + '</details><p role="status" tabindex="-1" data-renewal-result></p><div data-renewal-confirm></div><div data-renewal-photo-region></div>';
-  if (row.status === 'pending') markup += '<p>' + h(renewalActionBlocker(row,'terms')) + '</p><form class="entry-form" data-renewal-terms><label>Decision<select name="decision"><option value="approved">Approve terms</option><option value="rejected">Reject request</option></select></label><label>Approved principal<input name="approved_principal" inputmode="decimal" autocomplete="off" placeholder="Exact amount, up to 2 decimal places" /></label><label>Review or rejection reason<textarea name="review_note" maxlength="1000"></textarea></label><label>Override reason<textarea name="override_reason" maxlength="1000"></textarea></label><label><input type="checkbox" name="office_processing_required" />Process at the office (does not complete signing or release)</label><p>Enter exact account UUIDs from independently verified identity evidence; names alone are insufficient. Verification checks start unchecked.</p><div data-signers>' + signerMarkup(0,'borrower') + '</div><button type="button" class="button button-outline" data-add-signer>Add required signer</button><label><input type="checkbox" name="all_signers_reviewed" />I reviewed every legally required party and their explicit identity evidence.</label><button class="button button-primary" type="submit">Review terms decision</button></form>';
+  if (row.status === 'pending' && existingSignerReviewRequired(row)) markup += '<p role="status">' + h(existingSignerReviewMessage) + '</p><p>You may reject this request while retaining its saved signer evidence.</p><p>' + h(renewalActionBlocker(row,'terms','rejected')) + '</p><form class="entry-form" data-renewal-terms><label>Decision<select name="decision"><option value="rejected" selected>Reject request</option></select></label><label>Rejection reason<textarea name="review_note" maxlength="1000"></textarea></label><button class="button button-primary" type="submit">Review rejection</button></form>';
+  if (row.status === 'pending' && !existingSignerReviewRequired(row)) markup += '<p>' + h(renewalActionBlocker(row,'terms')) + '</p><form class="entry-form" data-renewal-terms><label>Decision<select name="decision"><option value="approved">Approve terms</option><option value="rejected">Reject request</option></select></label><label>Approved principal<input name="approved_principal" inputmode="decimal" autocomplete="off" placeholder="Exact amount, up to 2 decimal places" /></label><label>Review or rejection reason<textarea name="review_note" maxlength="1000"></textarea></label><label>Override reason<textarea name="override_reason" maxlength="1000"></textarea></label><label><input type="checkbox" name="office_processing_required" />Process at the office (does not complete signing or release)</label><p>New V1 renewal terms use borrower-only signing. Guarantor, surety and co-maker creation is deferred. Enter the borrower account UUID from independently verified identity evidence; names alone are insufficient. Verification checks start unchecked.</p><div data-signers>' + signerMarkup() + '</div><label><input type="checkbox" name="all_signers_reviewed" />I reviewed the borrower and their explicit identity evidence.</label><button class="button button-primary" type="submit">Review terms decision</button></form>';
   if (row.status === 'approved') {
     for (const [action,label] of [['release-to-collector','Release using server execution'],['activate','Review activation']]) markup += '<p>' + h(renewalActionBlocker(row,action)) + '</p><button class="button button-outline" type="button" data-renewal-action="' + action + '"' + (renewalActionBlocker(row,action) ? ' disabled' : '') + '>' + label + '</button>';
     markup += '<p>Release requires the existing authoritative execution record, checked by the server. This queue does not expose that record or pre-lock offset/net cash; no amount is calculated here.</p><button class="button button-outline" type="button" data-renewal-photo>View private latest handover photo</button><form class="entry-form" data-renewal-proof><label>Proof decision<select name="decision"><option value="approved">Approve handover proof</option><option value="request_new_photo">Request new photo</option><option value="flag_for_review">Flag for review</option></select></label><label>Review note<textarea name="note" maxlength="1000"></textarea></label><p>Approving proof may also activate the renewal when all server requirements pass. A saved review can remain CIF-blocked. The latest photo is checked before submission, but it may change before the server saves your review.</p><button type="submit" class="button button-primary"' + (renewalActionBlocker(row,'proof-review') ? ' disabled' : '') + '>Review photo decision</button></form>';
@@ -80,6 +82,7 @@ function safeError(error) {
   if (error?.status === 401) return 'Sign in again to review renewals.';
   if (error?.status === 403) return 'Access unavailable for this account or device.';
   const messages = {
+    renewal_existing_signers_review_required:existingSignerReviewMessage,
     renewal_execution_evidence_required:'Create the authoritative renewal execution/disbursement evidence before releasing cash to the Collector.', client_cif_new_credit_not_ready:'Complete the required CIF re-verification before approving or releasing new credit.',renewal_signers_not_ready:'All required signers must complete their own verification and signing, or use office processing.',renewal_amount_already_locked:'Release is already recorded. Refresh the authoritative request.'
   };
   return messages[error?.code] || (error?.status ? 'The server did not accept this action. Refresh and review the current prerequisites.' : 'The read could not be completed. Retry this read.');
@@ -138,7 +141,7 @@ export function mountManagementRenewals({
   const local = (node,message) => {
     if(alive())node.querySelector('[data-renewal-result]').textContent=message;
   };
-  const dirty = () => Array.from(list.querySelectorAll('input')).some(e=>e.checked===true || (e.type!=='checkbox' && e.getAttribute('type')!=='checkbox' && String(e.value||'').length)) || Array.from(list.querySelectorAll('textarea')).some(e=>String(e.value||'').length) || Array.from(list.querySelectorAll('select')).some(e=>e.value!==(e.querySelector('option[selected]')?.getAttribute('value') ?? e.querySelector('option')?.getAttribute('value')));
+  const dirty = () => Array.from(list.querySelectorAll('input')).some(e=>e.checked===true || (e.type!=='checkbox' && e.getAttribute('type')!=='checkbox' && e.getAttribute('type')!=='hidden' && String(e.value||'').length)) || Array.from(list.querySelectorAll('textarea')).some(e=>String(e.value||'').length) || Array.from(list.querySelectorAll('select')).some(e=>e.value!==(e.querySelector('option[selected]')?.getAttribute('value') ?? e.querySelector('option')?.getAttribute('value')));
   async function readStatus(selected){
     const data=await api.request(path(selected),{
       signal
@@ -201,13 +204,12 @@ export function mountManagementRenewals({
     const override_reason=normalize(form.querySelector('[name="override_reason"]').value);
     if(override_reason.length>1000||(row.collector_recommendation==='do_not_recommend'&&override_reason.length<3))throw new Error('Explain the actual Management override before approving against the Collector recommendation.');
     const office_processing_required=form.querySelector('[name="office_processing_required"]').checked===true;
-    if(form.querySelector('[name="all_signers_reviewed"]').checked!==true)throw new Error('Review every legally required signer first.');
+    if(form.querySelector('[name="all_signers_reviewed"]').checked!==true)throw new Error('Review the borrower identity evidence first.');
     const signers=Array.from(form.querySelectorAll('[data-signer]')).map(node=>({
-      party_role:node.querySelector('[name="party_role"]').value||'borrower',full_name:normalize(node.querySelector('[name="full_name"]').value),user_id:normalize(node.querySelector('[name="user_id"]').value)||null,government_id_verified:node.querySelector('[name="government_id_verified"]').checked===true,selfie_verified:node.querySelector('[name="selfie_verified"]').checked===true,identity_reviewed:node.querySelector('[name="identity_reviewed"]').checked===true
+      party_role:node.querySelector('[name="party_role"]')?.value,full_name:normalize(node.querySelector('[name="full_name"]').value),user_id:normalize(node.querySelector('[name="user_id"]').value)||null,government_id_verified:node.querySelector('[name="government_id_verified"]').checked===true,selfie_verified:node.querySelector('[name="selfie_verified"]').checked===true,identity_reviewed:node.querySelector('[name="identity_reviewed"]').checked===true
     }));
-    if(signers.length>10||signers.some(s=>!parties.includes(s.party_role)||s.full_name.length<2||s.full_name.length>200||(s.user_id&&!validId(s.user_id))||!s.identity_reviewed||(!office_processing_required&&!s.user_id))||(!office_processing_required&&signers.filter(s=>s.party_role==='borrower').length!==1))throw new Error('Enter and explicitly verify every signer identity; remote processing requires exactly one borrower account and an account for every signer. Otherwise choose office processing.');
-    const accounts=signers.filter(s=>s.user_id).map(s=>s.user_id);
-    if(new Set(accounts).size!==accounts.length)throw new Error('Distinct required parties cannot use the same account.');
+    if(signers.length!==1||signers.some(s=>s.party_role!=='borrower'))throw new Error('New terms require one borrower only. Supporting-party creation is deferred.');
+    if(signers.some(s=>s.full_name.length<2||s.full_name.length>200||(s.user_id&&!validId(s.user_id))||!s.identity_reviewed||(!office_processing_required&&!s.user_id)))throw new Error('Enter and explicitly verify the borrower identity. Remote processing requires the borrower account; otherwise choose office processing.');
     return {
       decision,approved_principal,review_note,override_reason,office_processing_required,signers:signers.map(({
         identity_reviewed,...s
@@ -215,7 +217,7 @@ export function mountManagementRenewals({
     };
   }
   function commandFor(node,row,action,form){
-    const blocker=renewalActionBlocker(row,action);
+    const blocker=renewalActionBlocker(row,action,action==='terms'?form?.querySelector('[name="decision"]')?.value:undefined);
     if(blocker)throw new Error(blocker);
     let body;
     if(action==='terms')body=termsBody(form,row);
@@ -233,31 +235,7 @@ export function mountManagementRenewals({
   function bindRow(node,row){
     const terms=node.querySelector('[data-renewal-terms]'),proof=node.querySelector('[data-renewal-proof]');
     if(terms){
-      terms.querySelector('[name="decision"]').value='approved';
-      const initialise=()=>{
-        for(const [index,s]of Array.from(terms.querySelectorAll('[data-signer]')).entries()){
-          const party=s.querySelector('[name="party_role"]');
-          if(!party.value)party.value=party.querySelector('option[selected]')?.getAttribute('value')??(index===0?'borrower':'guarantor');
-          if(!s.dataset?.renewalBound){
-            s.querySelector('[data-remove-signer]').addEventListener('click',()=>{
-              if(alive()&&!busy&&!attempt){
-                s.remove?.();
-                node.querySelector('[data-renewal-confirm]').innerHTML='';
-              }
-            });
-            if(s.dataset)s.dataset.renewalBound='true';
-          }
-        }
-      };
-      initialise();
-      terms.querySelector('[data-add-signer]').addEventListener('click',()=>{
-        if(!alive()||busy||attempt)return;
-        const region=terms.querySelector('[data-signers]'),existing=region.querySelectorAll('[data-signer]');
-        if(existing.length>=10)return;
-        region.insertAdjacentHTML?.('beforeend',signerMarkup(existing.length));
-        initialise();
-        node.querySelector('[data-renewal-confirm]').innerHTML='';
-      });
+      terms.querySelector('[name="decision"]').value=existingSignerReviewRequired(row)?'rejected':'approved';
       terms.addEventListener('submit',e=>{
         e.preventDefault();
         if(node.querySelector('[data-renewal-terms]')===terms)void review(node,row,'terms',terms);

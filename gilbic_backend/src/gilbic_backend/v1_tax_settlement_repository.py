@@ -146,7 +146,7 @@ class PostgresV1TaxSettlementRepository:
     def list_items(
         self, *, status: str = "all", limit: int = 100, offset: int = 0
     ) -> tuple[V1TaxSettlementItem, ...]:
-        where = self._status_where(status)
+        where, filter_params = self._status_where(status)
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
@@ -157,7 +157,7 @@ class PostgresV1TaxSettlementRepository:
                     ORDER BY return_period_end DESC, filing_date DESC, tax_return_id
                     LIMIT %s OFFSET %s
                     """,
-                    (limit, offset),
+                    (*filter_params, limit, offset),
                 )
                 return tuple(
                     V1TaxSettlementItem(**dict(row)) for row in cursor.fetchall()
@@ -327,7 +327,7 @@ class PostgresV1TaxSettlementRepository:
         )
 
     @staticmethod
-    def _status_where(status: str) -> str:
+    def _status_where(status: str) -> tuple[str, tuple[object, ...]]:
         clauses = {
             "all": "true",
             "awaiting_payment": "settlement_status = 'return_recorded_awaiting_payment'",
@@ -337,12 +337,13 @@ class PostgresV1TaxSettlementRepository:
             "adjustment_review": "settlement_status = 'settled_adjustment_review_required'",
             "adjustment_in_progress": "settlement_status = 'settled_adjustment_in_progress'",
             "adjusted": "settlement_status = 'settled_adjustment_recorded'",
-            "blocked": "settlement_status LIKE 'blocked_%' OR settlement_status LIKE 'prepared_blocked_%'",
+            "blocked": "settlement_status LIKE %s OR settlement_status LIKE %s",
         }
         clause = clauses.get(status)
         if clause is None:
             raise ValueError("Unsupported V1 tax settlement status filter.")
-        return clause
+        parameters = {"blocked": ("blocked_%", "prepared_blocked_%")}
+        return clause, parameters.get(status, ())
 
     @staticmethod
     def _call_id(query: str, params: tuple[object, ...]) -> UUID:

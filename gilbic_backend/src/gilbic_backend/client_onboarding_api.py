@@ -20,6 +20,7 @@ from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .client_onboarding_repository import (
     ClientOnboardingAccessDenied,
+    ClientOnboardingConflict,
     ClientOnboardingStatus,
     PostgresClientOnboardingRepository,
 )
@@ -522,13 +523,16 @@ def create_client_onboarding_router() -> APIRouter:
                 status_code=403,
                 detail="Employee or Management role is required to review requirements.",
             )
-        record = onboarding.review_document_requirements(
-            actor_user_id=actor.user_id,
-            applicant_id=applicant_id,
-            national_id_status=body.national_id_status,
-            tin_id_status=body.tin_id_status,
-            meralco_bill_status=body.meralco_bill_status,
-        )
+        try:
+            record = onboarding.review_document_requirements(
+                actor_user_id=actor.user_id,
+                applicant_id=applicant_id,
+                national_id_status=body.national_id_status,
+                tin_id_status=body.tin_id_status,
+                meralco_bill_status=body.meralco_bill_status,
+            )
+        except ClientOnboardingConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
         return {"status": record.status}
 
     @router.post("/api/v1/collector/onboarding/applicants/{applicant_id}/visit")
@@ -592,10 +596,13 @@ def create_client_onboarding_router() -> APIRouter:
                 detail="Employee or Management role is required to approve eligibility.",
             )
 
-        record = onboarding.approve_normal_eligibility(
-            actor_user_id=actor.user_id,
-            applicant_id=applicant_id,
-        )
+        try:
+            record = onboarding.approve_normal_eligibility(
+                actor_user_id=actor.user_id,
+                applicant_id=applicant_id,
+            )
+        except ClientOnboardingConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
         if record.status != "eligible_for_cif" or record.promoted_client_id is None:
             raise HTTPException(
                 status_code=409,
@@ -638,12 +645,15 @@ def create_client_onboarding_router() -> APIRouter:
                 detail="Management role is required to bypass onboarding requirements.",
             )
 
-        record = onboarding.bypass_and_approve_eligibility(
-            actor_user_id=actor.user_id,
-            applicant_id=applicant_id,
-            bypassed_requirements=body.bypassed_requirements,
-            reason=body.reason,
-        )
+        try:
+            record = onboarding.bypass_and_approve_eligibility(
+                actor_user_id=actor.user_id,
+                applicant_id=applicant_id,
+                bypassed_requirements=body.bypassed_requirements,
+                reason=body.reason,
+            )
+        except ClientOnboardingConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
         if record.status != "eligible_for_cif" or record.promoted_client_id is None:
             raise HTTPException(
                 status_code=409,

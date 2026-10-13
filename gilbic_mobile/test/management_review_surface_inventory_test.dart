@@ -208,9 +208,68 @@ void main() {
             'post credit',
           ],
         ),
+        'receipt-accounting': (
+          owner: 'ManagementSourceAccountingPage',
+          actions: <String>[
+            'configure cash mapping',
+            'prepare receipt',
+            'post receipt',
+          ],
+        ),
+        'application-accounting': (
+          owner: 'ManagementProtectedAccountingPage',
+          actions: <String>[
+            'prepare application accounting',
+            'post application accounting',
+          ],
+        ),
+        'transfer-accounting': (
+          owner: 'ManagementTransferAccountingPage',
+          actions: <String>[
+            'prepare actual transfer leg',
+            'post actual transfer leg',
+          ],
+        ),
+        'payout-accounting': (
+          owner: 'ManagementPayoutAccountingPage',
+          actions: <String>[
+            'prepare actual payout stage',
+            'post actual payout stage',
+          ],
+        ),
+        'collector-accounting': (
+          owner: 'ManagementCollectorAccountingPage',
+          actions: <String>[
+            'prepare Collector accounting',
+            'post Collector accounting',
+          ],
+        ),
+        'cutoff-assessment': (
+          owner: 'ManagementProtectedAccountingPage',
+          actions: <String>['prepare dated assessment', 'confirm dated proof'],
+        ),
+        'liability-schedule': (
+          owner: 'ManagementSourceAccountingPage',
+          actions: <String>[
+            'register obligation',
+            'record settlement',
+            'record correction',
+          ],
+        ),
+        'accounting-book': (
+          owner: 'ManagementSourceAccountingPage',
+          actions: <String>['set permanent book identity'],
+        ),
+        'reporting-evidence': (
+          owner: 'ManagementSourceAccountingPage',
+          actions: <String>[
+            'retain reporting policy',
+            'classify posted cash line',
+          ],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(31));
+      expect(managementMutationSurfaceCatalog, hasLength(40));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),
@@ -250,7 +309,7 @@ void main() {
     expect(mutationOwners.intersection(readOnlyOwners), isEmpty);
   });
 
-  test('typed production bindings are complete and one-to-one', () {
+  test('typed production bindings have unique binding and surface IDs', () {
     expect(
       managementMutationSurfaceCatalog,
       orderedEquals(ManagementMutationBinding.values),
@@ -262,8 +321,37 @@ void main() {
       ),
     );
     expect(
-      managementMutationSurfaceCatalog.map((entry) => entry.owner).toSet(),
+      managementMutationSurfaceCatalog.map((entry) => entry.name).toSet(),
       hasLength(managementMutationSurfaceCatalog.length),
+    );
+    expect(
+      managementMutationSurfaceCatalog.map((entry) => entry.surface.id).toSet(),
+      hasLength(managementMutationSurfaceCatalog.length),
+    );
+  });
+
+  test('only approved accounting pages share mutation surface ownership', () {
+    final surfacesByOwner = <String, Set<String>>{};
+    for (final entry in managementMutationSurfaceCatalog) {
+      (surfacesByOwner[entry.owner] ??= <String>{}).add(entry.surface.id);
+    }
+    expect(
+      <String, Set<String>>{
+        for (final entry in surfacesByOwner.entries)
+          if (entry.value.length > 1) entry.key: entry.value,
+      },
+      const <String, Set<String>>{
+        'ManagementSourceAccountingPage': <String>{
+          'receipt-accounting',
+          'liability-schedule',
+          'accounting-book',
+          'reporting-evidence',
+        },
+        'ManagementProtectedAccountingPage': <String>{
+          'application-accounting',
+          'cutoff-assessment',
+        },
+      },
     );
   });
 

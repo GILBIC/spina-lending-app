@@ -8,6 +8,7 @@ export function createCollectorWriteGuard({
   let disposed = false;
   let busy = false;
   let lockMessage = '';
+  let pendingCommand = null;
   const offlineMessage = 'Connection lost. New payments and remittances are blocked. An in-flight request may already be saved; reconnect and refresh the route before another attempt.';
   function lock(message) {
     if (disposed) return;
@@ -23,6 +24,7 @@ export function createCollectorWriteGuard({
   function dispose() {
     if (disposed) return;
     disposed = true;
+    pendingCommand = null;
     eventTarget.removeEventListener?.('offline', offline);
     signal?.removeEventListener('abort', dispose);
   }
@@ -34,6 +36,9 @@ export function createCollectorWriteGuard({
     get current() { return !disposed; },
     get locked() { return Boolean(lockMessage); },
     get busy() { return busy; },
+    get pendingCommand() { return pendingCommand ? structuredClone(pendingCommand) : null; },
+    retainCommand(command) { if (!disposed) pendingCommand=structuredClone(command); },
+    clearCommand() { pendingCommand=null; },
     begin() {
       if (disposed || busy) return false;
       sync();

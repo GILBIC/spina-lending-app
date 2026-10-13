@@ -5,9 +5,11 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 from .database import open_connection
+from .loan_paid_projection import PAID_PROJECTION_COLUMNS, paid_percentage
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,27 +49,13 @@ class ManagementLoanRecord:
     state_version: int
     renewal_request_status: str | None
 
-    @property
-    def paid_amount(self) -> Decimal:
-        value = self.principal - self.remaining_balance
-        return value if value > 0 else Decimal("0.00")
+    paid_amount: Decimal
+    contractual_total: Decimal | None
+    is_overdue: bool
 
     @property
-    def paid_percent(self) -> Decimal:
-        if self.principal <= 0:
-            return Decimal("0.0")
-        return (self.paid_amount / self.principal * Decimal("100")).quantize(
-            Decimal("0.1")
-        )
-
-    @property
-    def is_overdue(self) -> bool:
-        return (
-            self.loan_status.lower() == "active"
-            and self.due_date is not None
-            and self.due_date < date.today()
-            and self.remaining_balance > 0
-        )
+    def paid_percent(self) -> Decimal | None:
+        return paid_percentage(self.paid_amount, self.contractual_total)
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,7 +117,7 @@ class PostgresManagementLoanRepository:
                 summary_row = cursor.fetchone()
 
                 cursor.execute(
-                    """
+                    sql.SQL("""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -144,6 +132,7 @@ class PostgresManagementLoanRepository:
                         coalesce(loan_type.calculation_mode, '')
                             as calculation_mode,
                         loan.principal,
+                        {},
                         loan.daily_amount,
                         loan.interest_rate,
                         coalesce(state.remaining_balance, loan.principal)
@@ -151,6 +140,12 @@ class PostgresManagementLoanRepository:
                         loan.date_released,
                         loan.due_date,
                         loan.status as loan_status,
+                        coalesce(
+                            lower(loan.status) = 'active'
+                            and loan.due_date < current_date
+                            and coalesce(state.remaining_balance, loan.principal) > 0,
+                            false
+                        ) as is_overdue,
                         state.last_payment_date,
                         state.advance_until,
                         coalesce(state.pass_count, 0) as pass_count,
@@ -200,7 +195,7 @@ class PostgresManagementLoanRepository:
                         client.full_name,
                         loan.created_at desc
                     limit %s offset %s
-                    """,
+                    """).format(sql.SQL(PAID_PROJECTION_COLUMNS)),
                     (
                         normalized_status,
                         normalized_status,
@@ -229,9 +224,7 @@ class PostgresManagementLoanRepository:
                 active_seven_by_seven_count=int(
                     summary_row["active_seven_by_seven_count"] or 0
                 ),
-                approved_renewal_count=int(
-                    summary_row["approved_renewal_count"] or 0
-                ),
+                approved_renewal_count=int(summary_row["approved_renewal_count"] or 0),
             ),
             loans=tuple(self._record_from_row(row) for row in loan_rows),
         )
@@ -259,9 +252,16 @@ class PostgresManagementLoanRepository:
                 else None
             ),
             remaining_balance=Decimal(row["remaining_balance"]),
+            paid_amount=Decimal(row["paid_amount"]).quantize(Decimal("0.01")),
+            contractual_total=(
+                Decimal(row["contractual_total"])
+                if row["contractual_total"] is not None
+                else None
+            ),
             date_released=row["date_released"],
             due_date=row["due_date"],
             loan_status=str(row["loan_status"]),
+            is_overdue=bool(row["is_overdue"]),
             last_payment_date=row["last_payment_date"],
             advance_until=row["advance_until"],
             pass_count=int(row["pass_count"]),

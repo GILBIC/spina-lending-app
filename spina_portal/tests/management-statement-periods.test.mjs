@@ -16,7 +16,7 @@ test('period controls use actual fiscal periods and reject a mismatched pack whi
 test('late statements and aborted reads cannot replace the selected period',async()=>{
  const mod=await import('../assets/management-financial-statements.js');assert.equal(typeof mod.mountManagementFinancialStatements,'function');
  const root=new Element(),pending=[],controller=new AbortController();
- const h=mod.mountManagementFinancialStatements({root,getSession:()=>session,signal:controller.signal,api:{async request(path){if(path.endsWith('/financial-accounting'))return {fiscal_periods:[{period_id:A},{period_id:B}]};return new Promise(resolve=>pending.push(resolve));}}});
+ const h=mod.mountManagementFinancialStatements({root,getSession:()=>session,signal:controller.signal,api:{async request(path){if(path.endsWith('/book'))return {book:{status:'unconfigured'}};if(path.endsWith('/financial-accounting'))return {fiscal_periods:[{period_id:A},{period_id:B}]};return new Promise(resolve=>pending.push(resolve));}}});
  const first=h.refresh();await tick();const select=root.querySelector('[data-statement-period]');select.value=B;fire(select,'change');await tick();pending[1](pack(B));await tick();pending[0](pack(A));await first;assert.match(root.querySelector('[data-statement-results]').textContent,/September/);
  const last=h.refresh();await tick();controller.abort();pending[2](pack(A));await last;assert.doesNotMatch(root.querySelector('[data-statement-results]').textContent,/August/);
 });
@@ -25,4 +25,38 @@ test('explicit refresh discovers changed periods and reports a removed selection
  const {mountManagementFinancialStatements}=await import('../assets/management-financial-statements.js');const root=new Element();let available=[{period_id:A}],reads=0;
  const h=mountManagementFinancialStatements({root,getSession:()=>session,api:{async request(path){if(path.endsWith('/financial-accounting')){reads++;return {fiscal_periods:available};}return pack(A);}}});
  await h.refresh();available=[{period_id:B,label:'September'}];await h.refresh();assert.equal(reads,2);assert.match(root.querySelector('[data-statement-results]').textContent,/no longer available/);assert.doesNotMatch(root.querySelector('[data-statement-results]').textContent,/August/);assert.match(root.querySelector('[data-statement-period]').innerHTML,/September/);h.dispose();
+});
+
+for (const status of [401,403,426]) {
+ test(`readiness denial ${status} clears balances and prevents a late statement from returning`,async()=>{
+  const {mountManagementFinancialStatements}=await import('../assets/management-financial-statements.js');
+  const root=new Element();let denyBook,finishStatement,statementReads=0;
+  const h=mountManagementFinancialStatements({root,getSession:()=>session,api:{request(path){
+   if(path.endsWith('/book'))return new Promise((_,reject)=>{denyBook=reject;});
+   if(path.endsWith('/financial-accounting'))return Promise.resolve({fiscal_periods:[{period_id:A,label:'August'}]});
+   statementReads++;return new Promise(resolve=>{finishStatement=resolve;});
+  }}});
+  const loading=h.refresh();await tick();
+  denyBook(Object.assign(new Error('Revoked private access'),{status}));await tick();
+  finishStatement(pack(A));await loading;
+  assert.match(root.textContent,/Accounting access is unavailable/);
+  assert.doesNotMatch(root.querySelector('[data-statement-results]').textContent,/August/);
+  assert.equal(root.querySelector('[data-statement-retry]').hidden,true);
+  assert.equal(root.querySelector('[data-statement-period]').disabled,true);
+  await h.refresh();assert.equal(statementReads,1);h.dispose();
+ });
+}
+
+test('late readiness denial removes an already rendered private statement',async()=>{
+ const {mountManagementFinancialStatements}=await import('../assets/management-financial-statements.js');
+ const root=new Element();let denyBook;
+ const h=mountManagementFinancialStatements({root,getSession:()=>session,api:{request(path){
+  if(path.endsWith('/book'))return new Promise((_,reject)=>{denyBook=reject;});
+  if(path.endsWith('/financial-accounting'))return Promise.resolve({fiscal_periods:[{period_id:A,label:'August'}]});
+  return Promise.resolve(pack(A));
+ }}});
+ await h.refresh();assert.match(root.querySelector('[data-statement-results]').textContent,/August/);
+ denyBook(Object.assign(new Error('Revoked'),{status:403}));await tick();
+ assert.doesNotMatch(root.textContent,/August/);assert.match(root.textContent,/Accounting access is unavailable/);
+ assert.equal(root.querySelector('[data-statement-retry]').hidden,true);h.dispose();
 });

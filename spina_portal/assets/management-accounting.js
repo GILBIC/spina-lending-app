@@ -1,4 +1,5 @@
 import { sessionHasRole } from './roles.js';
+import { mountAccountingReadiness } from './management-general-journal.js';
 import { asArray, escapeHtml as h, formatMoney, formatDate, hasPermission, titleCase } from './ui.js';
 
 const BASE = '/api/v1/management/financial-accounting';
@@ -6,12 +7,13 @@ const WORKBOOK = `${BASE}/opening-balance-workbook`;
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const DIGEST = /^[0-9a-f]{64}$/i;
 const mounts = new WeakMap();
-const tabs = { periods: 'Overview', close: 'Period close', capital: 'Initial capital', workbook: 'Opening workbook', opening: 'Opening journal', measurement: 'Loan measurement', outcomes: 'Historical outcomes', tax: 'Tax & ECL' };
+const tabs = { periods: 'Overview', book: 'Accounting book', reporting: 'Reporting evidence', disclosures: 'Cash and noncash disclosures', close: 'Period close', receipts: 'Receipt accounting', applications: 'Application accounting', transfers: 'Transfer accounting', payouts: 'Loan payouts', collector: 'Collector accounting', 'collector-controls': 'Collector controls', assessments: 'Dated cutoff assessments', elapsed: 'Historical loan assessment', liabilities: 'Liability schedule', capital: 'Initial capital', workbook: 'Opening workbook', opening: 'Opening journal', measurement: 'Loan measurement', outcomes: 'Historical outcomes', tax: 'Tax & ECL' };
 const accountingGroups = [
-  ['overview', 'Overview', [['periods', 'Overview']]],
+  ['overview', 'Overview', [['periods', 'Overview'], ['book', 'Accounting book'], ['reporting', 'Reporting evidence'], ['disclosures', 'Cash and noncash disclosures']]],
   ['periods', 'Periods & close', [['close', 'Period close']]],
+  ['sources', 'Cash & liabilities', [['receipts', 'Receipt accounting'], ['applications', 'Application accounting'], ['transfers', 'Transfer accounting'], ['payouts', 'Loan payouts'], ['collector', 'Collector accounting'], ['collector-controls', 'Collector controls'], ['assessments', 'Dated cutoff assessments'], ['liabilities', 'Liability schedule']]],
   ['opening', 'Opening & cutover', [['capital', 'Initial capital'], ['workbook', 'Opening workbook'], ['opening', 'Opening journal'], ['measurement', 'Loan measurement']]],
-  ['ecl', 'ECL & tax', [['outcomes', 'Historical outcomes'], ['tax', 'Tax & ECL']]],
+  ['ecl', 'ECL & tax', [['elapsed', 'Historical loan assessment'], ['outcomes', 'Historical outcomes'], ['tax', 'Tax & ECL']]],
 ];
 const fact = (name, value) => `<div class="detail-item"><span>${h(name)}</span><strong>${h(value ?? 'Not available')}</strong></div>`;
 const input = (name, label, { type = 'text', value = '', max = 500, required = true } = {}) => `<label>${h(label)}<input name="${name}" type="${type}" value="${h(value)}" maxlength="${max}"${required ? ' required' : ''} /></label>`;
@@ -35,10 +37,10 @@ function token() { return Array.from(globalThis.crypto.getRandomValues(new Uint8
 export async function mountManagementAccounting({ root, api, session, signal }) {
   mounts.get(root)?.();
   let disposed = false, epoch = 0, busy = false, blocked = false, selected = 'periods', page = 0;
-  let data, listeners = [], childCleanup, childController, reviewOrigin = null;
+  let data, listeners = [], readinessCleanups = [], childCleanup, childController, reviewOrigin = null;
   const can = (permission) => sessionHasRole(session, 'management') && hasPermission(session, permission);
   const active = (value = epoch) => !disposed && !signal?.aborted && value === epoch;
-  function clearListeners() { for (const remove of listeners) remove(); listeners = []; childController?.abort(); childController = null; childCleanup?.(); childCleanup = null; }
+  function clearListeners() { for (const remove of listeners) remove(); listeners = []; for (const disposeReadiness of readinessCleanups) disposeReadiness(); readinessCleanups = []; childController?.abort(); childController = null; childCleanup?.(); childCleanup = null; }
   function dispose() { if (disposed) return; disposed = true; epoch++; clearListeners(); root.innerHTML = ''; signal?.removeEventListener('abort', dispose); if (mounts.get(root) === dispose) mounts.delete(root); }
   function listen(element, event, action) {
     if (!element) return;
@@ -55,7 +57,8 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     </section>`).join('');
     root.innerHTML = `<nav class="accounting-navigation" aria-label="Accounting workflows">${workflowNavigation}</nav>
       <div class="section-heading accounting-workflow-heading"><div><h3 data-accounting-heading tabindex="-1">${tabs[selected]}</h3></div>${button('data-accounting-refresh', 'Refresh')}</div>
-      <div data-accounting-message role="status"></div>${content}`;
+      <div data-accounting-message role="status"></div><div data-accounting-readiness></div>${content}`;
+    readinessCleanups.push(mountAccountingReadiness({ root: root.querySelector('[data-accounting-readiness]'), api, signal }));
     if (restoreFocus) root.querySelector('[data-accounting-heading]')?.focus({ preventScroll: true });
     listen(root.querySelector('[data-accounting-refresh]'), 'click', () => load());
     for (const tab of root.querySelectorAll('[data-accounting-tab]')) listen(tab, 'click', () => { if (blocked) return; selected = tab.getAttribute('data-accounting-tab'); page = 0; void load(); });
@@ -142,7 +145,7 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     requireThat(data.summary && Array.isArray(data.lines), 'The opening workbook is incomplete.');
     const summary = data.summary, manage = can('accounting.cutover.manage') && data.management_enabled === true;
     const editable = manage && summary.status === 'draft' && UUID.test(summary.workbook_id ?? '');
-    frame(`<p>${h(data.notice)}</p><p>Cutover ${formatDate(summary.cutover_date)} · ${h(titleCase(summary.status))}</p><p>Debits ${formatMoney(summary.total_debit)} · Credits ${formatMoney(summary.total_credit)} · Variance ${formatMoney(summary.balance_variance)}</p>
+      frame(`<p>${h(data.notice)}</p><p>Use this workbook for supported balances that already exist at your start date. An old ledger is not required. If no opening balances are needed, start with actual transactions instead; do not create amounts just to fill this workbook.</p><p>Cutover ${formatDate(summary.cutover_date)} · ${h(titleCase(summary.status))}</p><p>Debits ${formatMoney(summary.total_debit)} · Credits ${formatMoney(summary.total_credit)} · Variance ${formatMoney(summary.balance_variance)}</p>
       ${manage && !summary.workbook_id ? form('data-workbook-create', input('cutover_date', 'Cutover date', { type: 'date' }), 'Review workbook initialization') : ''}
       ${data.lines.map((row, index) => `<article class="sub-card"><h4>${h(row.account_code)} · ${h(row.account_name)}</h4><p>Source reference ${formatMoney(row.source_reference_amount)} · ${h(row.source_basis)}</p><p>${h(row.guidance)}</p><p>Proposed debit ${formatMoney(row.proposed_debit)} · Credit ${formatMoney(row.proposed_credit)} · ${h(titleCase(row.verification_status))}</p>${editable ? form(`data-workbook-line="${index}"`, input('debit', 'Proposed debit', { value: row.proposed_debit, required: false }) + input('credit', 'Proposed credit', { value: row.proposed_credit, required: false }) + select('verification_status', 'Evidence status', [['pending', 'Pending'], ['verified', 'Verified']], row.verification_status) + input('evidence_note', 'Evidence note', { value: row.evidence_note, required: false }), 'Review opening line') : ''}</article>`).join('')}
       ${editable ? form('data-workbook-policy', select('confirmed', 'Profit and loss migration policy approved', [['true', 'Confirmed'], ['false', 'Not confirmed']], String(summary.profit_loss_policy_confirmed === true)) + input('policy_note', 'Approved policy evidence note', { value: summary.profit_loss_policy_note, max: 1000, required: false }), 'Review policy evidence') : ''}
@@ -195,7 +198,19 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     const currentEpoch = ++epoch; blocked = false;
     frame('<p>Loading protected accounting records…</p>'); busy = true;
     try {
-      if (selected === 'tax') {
+      if (['book', 'reporting', 'disclosures', 'receipts', 'liabilities', 'applications', 'assessments', 'elapsed', 'transfers', 'payouts', 'collector', 'collector-controls'].includes(selected)) {
+        busy = false;
+        frame('<div id="management-source-accounting"></div>');
+        childController = new AbortController();
+        const childSignal = childController.signal;
+        const mode = selected;
+        const protectedSource = ['applications', 'assessments'].includes(mode);
+        const module = await import(mode === 'disclosures' ? './management-journal-disclosures.js' : mode === 'collector-controls' ? './management-collector-controls.js' : mode === 'elapsed' ? './management-elapsed-assessments.js' : mode === 'collector' ? './management-collector-accounting.js' : mode === 'payouts' ? './management-payout-accounting.js' : mode === 'transfers' ? './management-transfer-accounting.js' : protectedSource ? './management-protected-accounting.js' : './management-source-accounting.js');
+        if (!active(currentEpoch)) return;
+        const mount = mode === 'disclosures' ? module.mountJournalDisclosures : mode === 'collector-controls' ? module.mountCollectorControls : mode === 'elapsed' ? module.mountElapsedAssessments : mode === 'collector' ? module.mountCollectorAccounting : mode === 'payouts' ? module.mountPayoutAccounting : mode === 'transfers' ? module.mountTransferAccounting : protectedSource ? module.mountProtectedAccounting : module.mountManagementSourceAccounting;
+        const cleanup = await mount({ root: root.querySelector('#management-source-accounting'), api, session, signal: childSignal, mode });
+        if (!active(currentEpoch)) cleanup?.(); else childCleanup = cleanup;
+      } else if (selected === 'tax') {
         busy = false;
         frame('<div id="management-tax-ecl"></div>');
         childController = new AbortController();
@@ -226,8 +241,13 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     requireThat(Array.isArray(data.items), 'The period-close queue is incomplete.');
     const protectedPolicy = (row) => row.protected_period_close_enabled === true && row.retained_earnings_close_enabled === true && row.closed_period_posting_protection_enabled === true && row.period_reopen_enabled === false && row.automatic_source_posting === false;
     const canPrepare = (row) => protectedPolicy(row) && data.permissions?.close_prepare === true && can('accounting.period.close.prepare') && row.close_status === 'ready_to_prepare';
-    const canPost = (row) => protectedPolicy(row) && data.permissions?.close_post === true && can('accounting.period.close.post') && row.close_status === 'prepared_confirmation_required' && UUID.test(row.preparation_id ?? '') && UUID.test(row.journal_entry_id ?? '') && DIGEST.test(row.close_digest ?? '') && Number.isInteger(row.temporary_account_count) && typeof row.net_income === 'string' && typeof row.retained_earnings_balance_before === 'string';
-    frame(`<p>${h(data.notice)}</p>${data.items.map((row, index) => `<article class="sub-card"><h4>${h(row.label)}</h4><p>${h(titleCase(row.close_status))} · ${h(row.close_blocker || '')}</p><div class="detail-grid">${fact('Period end', row.end_date)}${fact('Net income', formatMoney(row.net_income))}${fact('Retained earnings before close', formatMoney(row.retained_earnings_balance_before))}${fact('Temporary accounts', row.temporary_account_count)}</div>${canPrepare(row) ? button(`data-close-prepare="${index}"`, 'Review close preparation') : ''}${canPost(row) ? button(`data-close-post="${index}"`, 'Review retained earnings & close') : ''}</article>`).join('') || '<p>No fiscal periods are available.</p>'}`);
+    const noClosingJournal = (row) => row.temporary_account_count === 0 && row.net_income === '0.00' && row.journal_entry_id === null;
+    const canPost = (row) => protectedPolicy(row) && data.permissions?.close_post === true && can('accounting.period.close.post') && row.close_status === 'prepared_confirmation_required' && UUID.test(row.preparation_id ?? '') && (noClosingJournal(row) || (row.temporary_account_count > 0 && UUID.test(row.journal_entry_id ?? ''))) && DIGEST.test(row.close_digest ?? '') && Number.isInteger(row.temporary_account_count) && typeof row.net_income === 'string' && typeof row.retained_earnings_balance_before === 'string';
+    frame(`<p>${h(data.notice)}</p>${data.items.map((row, index) => `<article class="sub-card"><h4>${h(row.label)}</h4><p>${h(titleCase(row.close_status))} · ${h(row.close_blocker || '')}</p><div class="detail-grid">${fact('Period end', row.end_date)}${fact('Net income', formatMoney(row.net_income))}${fact('Retained earnings before close', formatMoney(row.retained_earnings_balance_before))}${fact('Temporary accounts', row.temporary_account_count)}${row.close_status === 'closed_protected' ? fact('Retained earnings after close', formatMoney(row.retained_earnings_balance_after)) : ''}</div>${noClosingJournal(row) ? '<p>No closing journal is required because temporary account balances are zero.</p>' : ''}${button(`data-close-sources="${index}"`, 'Review source blockers')}<div data-close-source-review="${index}"></div>${canPrepare(row) ? button(`data-close-prepare="${index}"`, 'Review close preparation') : ''}${canPost(row) ? button(`data-close-post="${index}"`, noClosingJournal(row) ? 'Review protected period close' : 'Review retained earnings & close') : ''}</article>`).join('') || '<p>No fiscal periods are available.</p>'}`);
+    for (const element of root.querySelectorAll('[data-close-sources]')) listen(element, 'click', () => {
+      const index = Number(element.getAttribute('data-close-sources'));
+      readinessCleanups.push(mountAccountingReadiness({ root: root.querySelector(`[data-close-source-review="${index}"]`), api, signal, periodId: id(data.items[index].fiscal_period_id), showBook: false }));
+    });
     for (const element of root.querySelectorAll('[data-close-prepare]')) listen(element, 'click', () => {
       const row = data.items[Number(element.getAttribute('data-close-prepare'))]; requireThat(canPrepare(row), 'Current close preparation authority is required.');
       review('Prepare formal period close', [['Period', row.label], ['End', row.end_date], ['Status', row.fiscal_period_status]], 'Prepares the protected close from current posted journals. It does not close the period yet.', { path: `${BASE}/period-close/${id(row.fiscal_period_id)}/prepare`, body: { confirm: true }, validate: (result) => result?.item?.fiscal_period_id === row.fiscal_period_id });
@@ -235,7 +255,7 @@ export async function mountManagementAccounting({ root, api, session, signal }) 
     for (const element of root.querySelectorAll('[data-close-post]')) listen(element, 'click', () => {
       const row = data.items[Number(element.getAttribute('data-close-post'))]; requireThat(canPost(row), 'Current protected close evidence is required.');
       const body = { confirm: true, confirmation_token: token(), expected_close_digest: row.close_digest, expected_net_income: exact(row.net_income, true), expected_retained_earnings_account_code: '3100', expected_period_end_date: date(row.end_date) };
-      review('Post retained earnings & close', [['Period', row.label], ['End', row.end_date], ['Net income', formatMoney(row.net_income)], ['Retained earnings before', formatMoney(row.retained_earnings_balance_before)]], 'Immutably posts the retained-earnings close and closes this fiscal period. The reviewed evidence is revalidated by the server.', { path: `${BASE}/period-close/${id(row.fiscal_period_id)}/post`, body, validate: (result) => result?.item?.fiscal_period_id === row.fiscal_period_id });
+      review(noClosingJournal(row) ? 'Close fiscal period' : 'Post retained earnings & close', [['Period', row.label], ['End', row.end_date], ['Net income', formatMoney(row.net_income)], ['Retained earnings before', formatMoney(row.retained_earnings_balance_before)]], noClosingJournal(row) ? 'No closing journal is required because temporary account balances are zero. The server revalidates the reviewed evidence, closes this fiscal period, and permanently records the confirmation.' : 'Immutably posts the retained-earnings close and closes this fiscal period. The reviewed evidence is revalidated by the server.', { path: `${BASE}/period-close/${id(row.fiscal_period_id)}/post`, body, validate: (result) => result?.item?.fiscal_period_id === row.fiscal_period_id });
     });
   }
   function pagination(count) {

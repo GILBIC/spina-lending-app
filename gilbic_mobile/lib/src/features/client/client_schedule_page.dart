@@ -5,6 +5,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 
 class ClientSchedulePage extends StatefulWidget {
   const ClientSchedulePage({
@@ -27,10 +29,12 @@ class ClientSchedulePage extends StatefulWidget {
 }
 
 class _ClientSchedulePageState extends State<ClientSchedulePage> {
-  late final ClientScheduleRepository _repository;
+  late ClientScheduleRepository _repository;
   ClientLoanSchedule? _schedule;
   String? _error;
   bool _loading = true;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -39,27 +43,75 @@ class _ClientSchedulePageState extends State<ClientSchedulePage> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(ClientSchedulePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.loanId != widget.loanId ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _readEpoch++;
+      _schedule = null;
+      _repository = widget.repository ?? SpinaClientScheduleRepository();
+      _dismissPrivateRoutes();
+      _load();
+    }
+  }
+
+  bool _current(int epoch, int requestId) =>
+      mounted && epoch == _readEpoch && requestId == _requestId;
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    // Widget updates can happen while Navigator is building its routes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
   Future<void> _load() async {
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final schedule = await _repository.loadSchedule(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final result = await _repository.loadSchedule(
+        session,
         deviceId: identity.installationId,
         loanId: widget.loanId,
       );
-      if (mounted) setState(() => _schedule = schedule);
+      if (_current(epoch, requestId)) {
+        setState(() => _schedule = result);
+      }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted && epoch == _readEpoch && staffAccessRejected(error)) {
+        // A denial also invalidates newer requests already in flight.
+        _readEpoch++;
+        setState(() {
+          _schedule = null;
+          _error = error.message;
+          _loading = false;
+        });
+        _dismissPrivateRoutes();
+      } else if (_current(epoch, requestId)) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _error = 'Payment schedule could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (_current(epoch, requestId)) {
+        setState(() => _loading = false);
+      }
     }
   }
 

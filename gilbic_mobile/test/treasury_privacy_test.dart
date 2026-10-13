@@ -283,38 +283,46 @@ void main() {
     expect(posts, 1);
     expect(repo.pendingRequestId, requestId);
   });
-  test(
-    'denied recovery erases submitted private copies and outcome identity',
-    () async {
-      var deny = false;
-      final journal = MemoryTreasuryJournal();
-      final repo = SpinaTreasuryRepository(
-        session: session(),
-        deviceId: 'external',
-        journal: journal,
-        images: images,
-        client: MockClient((r) async {
-          if (deny) return http.Response('{"detail":"Denied"}', 403);
-          if (r.method == 'GET') return jsonResponse(workspace());
-          throw http.ClientException('Synthetic disconnect');
-        }),
-      );
-      await repo.loadWorkspace();
-      await expectLater(
-        repo.uploadClaim(
-          metadata(),
-          XFile.fromData(bytes, name: 'proof.png', mimeType: 'image/png'),
-        ),
-        throwsA(isA<TreasuryUncertain>()),
-      );
-      deny = true;
-      await expectLater(repo.recover(), throwsA(isA<TreasuryAccessChanged>()));
-      expect(repo.workspace, isNull);
-      expect(repo.pendingRequestId, isNull);
-      expect(journal.value, isNull);
-      expect(await Directory('${temp.path}/private').list().toList(), isEmpty);
-    },
-  );
+  for (final denialStatus in [403, 426]) {
+    test(
+      'denied recovery $denialStatus erases submitted private copies and outcome identity',
+      () async {
+        var deny = false;
+        final journal = MemoryTreasuryJournal();
+        final repo = SpinaTreasuryRepository(
+          session: session(),
+          deviceId: 'external',
+          journal: journal,
+          images: images,
+          client: MockClient((r) async {
+            if (deny) return http.Response('{"detail":"Denied"}', denialStatus);
+            if (r.method == 'GET') return jsonResponse(workspace());
+            throw http.ClientException('Synthetic disconnect');
+          }),
+        );
+        await repo.loadWorkspace();
+        await expectLater(
+          repo.uploadClaim(
+            metadata(),
+            XFile.fromData(bytes, name: 'proof.png', mimeType: 'image/png'),
+          ),
+          throwsA(isA<TreasuryUncertain>()),
+        );
+        deny = true;
+        await expectLater(
+          repo.recover(),
+          throwsA(isA<TreasuryAccessChanged>()),
+        );
+        expect(repo.workspace, isNull);
+        expect(repo.pendingRequestId, isNull);
+        expect(journal.value, isNull);
+        expect(
+          await Directory('${temp.path}/private').list().toList(),
+          isEmpty,
+        );
+      },
+    );
+  }
   test(
     'private bytes must match the exact chosen media digest and byte count',
     () async {

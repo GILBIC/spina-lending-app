@@ -1,0 +1,26 @@
+{
+  "book_id": "d0589167-7566-4d5f-b896-f4539f9d0a76",
+  "period_id": "1b6a007b-95f1-469e-a9cd-919ab11567b5",
+  "loan_id": "93570b0c-a767-4a7c-b795-fa4caf1cd7bc",
+  "ready": true,
+  "blockers": [],
+  "as_of_date": "2026-10-12",
+  "source_digest": "81c91e93922c8ea20763b1ccbf2b6e5f02828813020119962e1cd8328f5c7c15",
+  "schedule_id": "d5f58955-7c52-406d-9288-9d83fc71f0c2",
+  "schedule_version": 1,
+  "days_past_due": 0,
+  "thirty_day_sicr_backstop_reached": false,
+  "ninety_day_default_backstop_reached": false,
+  "due_unpaid_amount": "0.00",
+  "prior_review": null,
+  "inherited_review": {
+    "id": 92,
+    "review_version": 1,
+    "stage_label": "stage_2_lifetime",
+    "default_label": false,
+    "write_off_label": "none",
+    "recovery_label": "none",
+    "reviewed_at": "2026-10-11T23:55:13.602198Z",
+    "loan_id": "e10907e5-3abe-4b84-8229-ad39134126e4"
+  }
+}

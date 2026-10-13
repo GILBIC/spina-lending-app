@@ -14,6 +14,7 @@ from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
 ROOT = Path(__file__).resolve().parents[1]
+BOOTSTRAP_THROUGH = 171
 
 
 def run(
@@ -45,7 +46,12 @@ def run(
                 )
                 created = True
             target = make_conninfo(**{**params, "dbname": name})
-            recovery.bootstrap(target)
+            previous_boundary = recovery.BOOTSTRAP_THROUGH
+            try:
+                recovery.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
+                recovery.bootstrap(target)
+            finally:
+                recovery.BOOTSTRAP_THROUGH = previous_boundary
             env = dict(os.environ)
             env["GILBIC_ACCOUNTING_EXPORT_TEST_DSN"] = target
             env.pop("GILBIC_ACCOUNTING_EXPORT_SAMPLE_OUTPUT", None)

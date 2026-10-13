@@ -24,13 +24,13 @@ class ContractCollectionActivationData {
       notice: _stringValue(payload['notice']),
       loans: rawLoans is List
           ? rawLoans
-              .whereType<Map>()
-              .map(
-                (row) => ContractCollectionActivationLoan.fromPayload(
-                  row.map((key, value) => MapEntry('$key', value)),
-                ),
-              )
-              .toList(growable: false)
+                .whereType<Map>()
+                .map(
+                  (row) => ContractCollectionActivationLoan.fromPayload(
+                    row.map((key, value) => MapEntry('$key', value)),
+                  ),
+                )
+                .toList(growable: false)
           : const <ContractCollectionActivationLoan>[],
     );
   }
@@ -67,6 +67,7 @@ class ContractCollectionActivationLoan {
     required this.canActivate,
     required this.canDeactivate,
     required this.blockers,
+    this.nativeReconciliationAvailable = false,
   });
 
   final String loanId;
@@ -98,11 +99,16 @@ class ContractCollectionActivationLoan {
   final bool canActivate;
   final bool canDeactivate;
   final List<String> blockers;
+  final bool nativeReconciliationAvailable;
 
   String get readinessLabel {
     if (activeForCurrentSchedule) return 'Active';
     if (isActive) return 'Needs deactivation';
-    if (canActivate) return 'Ready to activate';
+    if (canActivate) {
+      return nativeReconciliationAvailable
+          ? 'Ready for reconciliation'
+          : 'Ready to activate';
+    }
     if (!scheduleVerified) return 'Needs signed contract';
     if (!balanceReconciled) return 'Needs reconciliation';
     return 'Not ready';
@@ -126,9 +132,13 @@ class ContractCollectionActivationLoan {
       paymentFrequency: _stringValue(payload['payment_frequency']),
       contractReference: _stringValue(payload['contract_reference']),
       dpdDataStatus: _stringValue(payload['dpd_data_status']),
-      contractualScheduleTotal: _doubleValue(payload['contractual_schedule_total']),
+      contractualScheduleTotal: _doubleValue(
+        payload['contractual_schedule_total'],
+      ),
       allocatedScheduleTotal: _doubleValue(payload['allocated_schedule_total']),
-      unpaidContractualAmount: _doubleValue(payload['unpaid_contractual_amount']),
+      unpaidContractualAmount: _doubleValue(
+        payload['unpaid_contractual_amount'],
+      ),
       scheduleVerified: payload['schedule_verified'] == true,
       balanceReconciled: payload['balance_reconciled'] == true,
       accountingSafe: payload['accounting_safe'] == true,
@@ -141,6 +151,8 @@ class ContractCollectionActivationLoan {
       activeForCurrentSchedule: payload['active_for_current_schedule'] == true,
       canActivate: payload['can_activate'] == true,
       canDeactivate: payload['can_deactivate'] == true,
+      nativeReconciliationAvailable:
+          payload['native_reconciliation_available'] == true,
       blockers: rawBlockers is List
           ? rawBlockers.map((value) => '$value').toList(growable: false)
           : const <String>[],

@@ -85,7 +85,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
       _errorMessage = error is SpinaApiException
           ? _clientHomeFailureMessage(error)
           : 'Your latest loan information could not be loaded. Try again in a moment.';
-      if (_failureStatus == 401 || _failureStatus == 403) {
+      if (const [401, 403, 426].contains(_failureStatus)) {
         _generation++;
         _portfolio = null;
         _homeObligationSchedules = const {};
@@ -172,7 +172,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
     } on Object catch (error) {
       if (!valid()) return;
       if (error is SpinaApiException &&
-          (error.statusCode == 401 || error.statusCode == 403)) {
+          const [401, 403, 426].contains(error.statusCode)) {
         _failedRead(error, generation);
       } else {
         setState(() => _scheduleUnavailable.add(loanId));
@@ -311,7 +311,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
                   errorMessage: _errorMessage,
                   onRetry: _failureStatus == 401
                       ? () => unawaited(widget.onSignOut())
-                      : _failureStatus == 403
+                      : const [403, 426].contains(_failureStatus)
                       ? null
                       : _loadPortfolio,
                   recoveryLabel: _recoveryLabel,

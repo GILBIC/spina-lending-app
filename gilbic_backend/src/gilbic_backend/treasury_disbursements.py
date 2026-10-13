@@ -13,6 +13,71 @@ from .treasury_authorization import (
 from .treasury_repository import identity, json_value
 
 
+def consuming_source(conn, event, source_kind, source_id, *, transfer_leg=None):
+    """Check retained consumption while the caller holds the shared account lock.
+
+    Transfer bindings live outside source_links. Read both before any protected
+    source writes; an exact binding may replay, but may never fund another source.
+    """
+    links = conn.execute(
+        "select * from treasury.source_links where event_id=%s", (event["id"],)
+    ).fetchall()
+    if any(
+        link["source_kind"] != source_kind
+        or link["source_id"] != source_id
+        or link["linked_amount"] != event["amount"]
+        for link in links
+    ):
+        raise TreasuryConflict(
+            "This actual event already funds a different protected source."
+        )
+    transfers = conn.execute(
+        "select * from treasury.transfers where source_event_id=%s or destination_event_id=%s",
+        (event["id"], event["id"]),
+    ).fetchall()
+    if any(
+        source_kind != "account_transfer"
+        or row["id"] != source_id
+        or transfer_leg is None
+        or row[transfer_leg + "_event_id"] != event["id"]
+        for row in transfers
+    ):
+        raise TreasuryConflict(
+            "This actual event already belongs to a correlated transfer."
+        )
+    if conn.execute(
+        "select 1 from treasury.receipts where event_id=%s", (event["id"],)
+    ).fetchone():
+        raise TreasuryConflict(
+            "This actual event already belongs to a borrower receipt."
+        )
+    if conn.execute(
+        """select 1 from treasury.collector_settlements where event_id=%s
+        union all select 1 from treasury.collector_exceptions where event_id=%s limit 1""",
+        (event["id"], event["id"]),
+    ).fetchone():
+        raise TreasuryConflict(
+            "This actual event already belongs to protected Collector cash custody."
+        )
+    return links[0] if links else None
+
+
+def outgoing_source(conn, event, command):
+    kind = (
+        "receipt_refund"
+        if command.purpose == "refund"
+        else "loan_payout_funding"
+        if command.purpose in {"loan_release", "renewal"}
+        else command.purpose
+    )
+    return consuming_source(
+        conn,
+        event,
+        kind,
+        command.receipt_id if command.purpose == "refund" else command.source_id,
+    )
+
+
 def source_choices(conn, actor):
     # Existing salary/advance payment authority is owner-only, independently of
     # account-access grants. This projection does not expose payroll to delegates.
@@ -385,6 +450,7 @@ def outgoing_action(service, conn, actor, account, command):
 
         try:
             with conn.transaction():
+                outgoing_source(conn, event, command)
                 link = link_debit(service, conn, actor, account, event, command)
         except TreasuryConflict as error:
             link = {
@@ -400,6 +466,7 @@ def outgoing_action(service, conn, actor, account, command):
         # debit. It remains a visible exception, never a paid business record.
         try:
             with conn.transaction():
+                existing_source = outgoing_source(conn, event, command)
                 if command.purpose in {"payroll", "salary_advance"}:
                     link = link_employee_source(
                         service, conn, actor, account, event, command
@@ -413,17 +480,17 @@ def outgoing_action(service, conn, actor, account, command):
                         "select * from treasury.receipts where id=%s and account_id=%s for update",
                         (command.receipt_id, account["id"]),
                     ).fetchone()
-                    if receipt is None or receipt["amount"] - receipt[
-                        "applied_amount"
-                    ] - receipt["refunded_amount"] < Decimal(command.amount):
+                    if receipt is None or (
+                        not existing_source
+                        and receipt["amount"]
+                        - receipt["applied_amount"]
+                        - receipt["refunded_amount"]
+                        < Decimal(command.amount)
+                    ):
                         raise TreasuryConflict(
                             "Protected application reversal or current unapplied refund capacity is required."
                         )
-                    existing = conn.execute(
-                        "select 1 from treasury.source_links where event_id=%s and source_kind='receipt_refund'",
-                        (event["id"],),
-                    ).fetchone()
-                    if not existing:
+                    if not existing_source:
                         conn.execute(
                             "update treasury.receipts set refunded_amount=refunded_amount+%s,version=version+1 where id=%s",
                             (Decimal(command.amount), receipt["id"]),
@@ -538,6 +605,9 @@ def transfer(service, conn, actor, account, command):
             "classification": "account_transfer",
             "reason": command.reason,
         },
+    )
+    consuming_source(
+        conn, event, "account_transfer", command.transfer_id, transfer_leg=command.leg
     )
     if not existing:
         conn.execute(

@@ -22,6 +22,108 @@ const session = UserSession(
 );
 void main() {
   test(
+    'obsolete HTTP denial cannot revoke restored fresh-token binding',
+    () async {
+      final vault = MemoryAttendanceVault();
+      final outbox = AttendanceOutbox(vault);
+      const binding = AttendanceBinding(
+        userId: 'worker-a',
+        installationId: 'installation',
+        deviceId: 'device-a',
+      );
+      final workspace = <String, dynamic>{
+        'contract_version': 1,
+        'actor': {'user_id': 'worker-a', 'device_id': 'device-a'},
+        'capabilities': {'can_self_service': true},
+        'setup_missing': [],
+        for (final key in employeeCollections) key: [],
+      };
+      final started = Completer<void>();
+      final oldResponse = Completer<http.Response>();
+      final sent = <Map<String, dynamic>>[];
+      final tokens = <String?>[];
+      final provider = DeviceIdentityProvider(
+        store: MemoryDeviceIdentityStore()..value = 'installation',
+        platformResolver: () => 'android',
+        appVersionResolver: () async => 'test',
+      );
+      final repository = EmployeeOperationsRepository(
+        StaffOperationsClient(
+          deviceIdentityProvider: provider,
+          client: MockClient((request) async {
+            if (request.method == 'GET') {
+              return http.Response(jsonEncode(workspace), 200);
+            }
+            final command = jsonDecode(request.body) as Map<String, dynamic>;
+            sent.add(command);
+            tokens.add(request.headers['authorization']);
+            if (sent.length == 1) {
+              started.complete();
+              return oldResponse.future;
+            }
+            return http.Response(
+              jsonEncode({
+                'request_id': command['request_id'],
+                'id': command['id'],
+                'version': 1,
+                'status': 'accepted',
+              }),
+              200,
+            );
+          }),
+        ),
+      );
+      final service = EmployeeOperationsService(
+        deviceIdentityProvider: provider,
+        repository: repository,
+        outbox: outbox,
+      );
+      addTearDown(service.dispose);
+      service.foreground(false);
+      service.attach(session);
+      await service.acceptWorkspace(
+        session,
+        EmployeeWorkspace.parse(workspace, session),
+      );
+      final original = await outbox.capture(binding, 'clock_in', offline: true);
+      service.foreground(true);
+      await started.future;
+      final draining = outbox.sync(
+        binding,
+        (_) => throw StateError('Already syncing'),
+      );
+      const fresh = UserSession(
+        userId: 'worker-a',
+        username: 'a',
+        displayName: 'A',
+        role: AppRole.collector,
+        rawRole: 'Collector',
+        accessToken: 'fresh-token',
+      );
+      service.foreground(false);
+      service.attach(fresh);
+      await service.restoreBinding();
+      await service.acceptWorkspace(
+        fresh,
+        EmployeeWorkspace.parse(workspace, fresh),
+      );
+      oldResponse.complete(
+        http.Response('{"detail":"Old token expired"}', 401),
+      );
+      await draining;
+      await Future<void>.delayed(Duration.zero);
+      expect(await outbox.isAuthorized(binding), isTrue);
+      service.foreground(true);
+      await service.sync();
+      await Future<void>.delayed(Duration.zero);
+      expect(service.accessDenied, isFalse);
+      expect(service.binding?.key, binding.key);
+      expect(sent, [original.command, original.command]);
+      expect(tokens, ['Bearer worker-a-token', 'Bearer fresh-token']);
+      expect((await outbox.entries(binding)).single.state, 'accepted');
+    },
+  );
+  test(
     'fresh sign-in revalidates HR authority and automatically resumes a previously revoked pending capture',
     () async {
       final vault = MemoryAttendanceVault();

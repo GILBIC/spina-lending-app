@@ -9,8 +9,9 @@ import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_summary_page.dart';
 
 void main() {
-  testWidgets('shows all three other-area remittance and custody states',
-      (tester) async {
+  testWidgets('shows all three other-area remittance and custody states', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(900, 1800));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
@@ -46,8 +47,9 @@ void main() {
     expect(find.textContaining('Recorded: 2026-08-18 09:00'), findsWidgets);
   });
 
-  testWidgets('status filter isolates awaiting acceptance records',
-      (tester) async {
+  testWidgets('status filter isolates awaiting acceptance records', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(900, 1800));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
@@ -154,6 +156,7 @@ class _Repository implements CrossRemittanceRepository {
   Future<RemittanceRecord> submit(
     UserSession session, {
     required String deviceId,
+    required String expectedReviewDigest,
     required String recipientUserId,
     CrossRemittanceRecipientCapacity recipientCapacity =
         CrossRemittanceRecipientCapacity.assignedCollector,

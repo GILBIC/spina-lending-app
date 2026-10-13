@@ -4,6 +4,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_repository.dart';
 import 'package:gilbic_mobile/src/core/documents/client_document_saver.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/core/statements/client_statement.dart';
 import 'package:gilbic_mobile/src/core/statements/client_statement_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_document_download_button.dart';
@@ -29,10 +31,12 @@ class ClientStatementPage extends StatefulWidget {
 }
 
 class _ClientStatementPageState extends State<ClientStatementPage> {
-  late final ClientStatementRepository _repository;
+  late ClientStatementRepository _repository;
   ClientStatement? _statement;
   String? _error;
   bool _loading = true;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -41,26 +45,73 @@ class _ClientStatementPageState extends State<ClientStatementPage> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(ClientStatementPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _readEpoch++;
+      _statement = null;
+      _repository = widget.repository ?? SpinaClientStatementRepository();
+      _dismissPrivateRoutes();
+      _load();
+    }
+  }
+
+  bool _current(int epoch, int requestId) =>
+      mounted && epoch == _readEpoch && requestId == _requestId;
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    // Widget updates can happen while Navigator is building its routes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
   Future<void> _load() async {
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final statement = await _repository.loadStatement(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final result = await _repository.loadStatement(
+        session,
         deviceId: identity.installationId,
       );
-      if (mounted) setState(() => _statement = statement);
+      if (_current(epoch, requestId)) {
+        setState(() => _statement = result);
+      }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted && epoch == _readEpoch && staffAccessRejected(error)) {
+        // A denial also invalidates newer requests already in flight.
+        _readEpoch++;
+        setState(() {
+          _statement = null;
+          _error = error.message;
+          _loading = false;
+        });
+        _dismissPrivateRoutes();
+      } else if (_current(epoch, requestId)) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _error = 'Statement of Account could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (_current(epoch, requestId)) {
+        setState(() => _loading = false);
+      }
     }
   }
 

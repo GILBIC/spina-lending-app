@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -24,7 +25,14 @@ class OtherAreaCollectionSummaryPage extends StatefulWidget {
 }
 
 class _OtherAreaCollectionSummaryPageState
-    extends State<OtherAreaCollectionSummaryPage> {
+    extends State<OtherAreaCollectionSummaryPage>
+    with PrivateAccessState<OtherAreaCollectionSummaryPage> {
+  @override
+  void clearPrivateData() {
+    _records = const [];
+    _filterController.clear();
+  }
+
   late final CrossRemittanceRepository _repository;
   late final TextEditingController _filterController;
 
@@ -48,31 +56,34 @@ class _OtherAreaCollectionSummaryPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final records = await _repository.loadCollectionHistory(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _records = records);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _errorMessage = 'Other-area collection history could not be loaded.';
         });
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -115,6 +126,7 @@ class _OtherAreaCollectionSummaryPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     final visible = _visibleRecords;
     final groups = _groups(visible);
     final notRemitted = _records

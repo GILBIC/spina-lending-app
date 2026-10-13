@@ -7,7 +7,10 @@ from uuid import UUID
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import AccountContext
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
 from gilbic_backend.management_loan_api import management_loan_repository_dependency
@@ -101,7 +104,10 @@ class FakeManagementLoans:
                     principal=Decimal("5000.00"),
                     daily_amount=Decimal("50.00"),
                     interest_rate=Decimal("20.00"),
-                    remaining_balance=Decimal("4900.00"),
+                    remaining_balance=Decimal("5900.00"),
+                    paid_amount=Decimal("100.00"),
+                    contractual_total=Decimal("6000.00"),
+                    is_overdue=True,
                     date_released=date(2026, 8, 1),
                     due_date=date(2020, 1, 1),
                     loan_status="active",
@@ -148,8 +154,8 @@ def test_management_can_view_searchable_loan_portfolio() -> None:
     assert data["summary"]["active_remaining_total"] == "7900.00"
     assert data["summary"]["approved_renewal_count"] == 1
     assert data["loans"][0]["client_code"] == "TEST-REG-001"
-    assert data["loans"][0]["remaining_balance"] == "4900.00"
-    assert data["loans"][0]["paid_percent"] == "2.0"
+    assert data["loans"][0]["remaining_balance"] == "5900.00"
+    assert data["loans"][0]["paid_percent"] == "1.7"
     assert data["loans"][0]["is_overdue"] is True
     assert data["loans"][0]["renewal_request_status"] == "approved"
     assert loans.arguments == ("TEST-REG", "all", 50, 2)

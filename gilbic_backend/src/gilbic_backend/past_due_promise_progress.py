@@ -17,7 +17,7 @@ MONEY = Decimal("0.01")
 @dataclass(frozen=True, slots=True)
 class PastDueReduction:
     obligation_id: UUID
-    installment_id: int
+    installment_id: int | None
     amount_applied: Decimal
     remaining_after: Decimal
     status_after: str
@@ -32,7 +32,9 @@ class PromiseProgressChange:
     status_after: str
 
 
-def promise_deadline_status(*, promised_amount: Decimal, remaining_amount: Decimal) -> str:
+def promise_deadline_status(
+    *, promised_amount: Decimal, remaining_amount: Decimal
+) -> str:
     """Return the approved terminal status once a promise deadline has passed."""
 
     promised = _money(promised_amount)
@@ -47,10 +49,10 @@ def promise_deadline_status(*, promised_amount: Decimal, remaining_amount: Decim
 class PastDuePromiseProgress:
     """Apply actual Past Due allocation to follow-up and promise progress.
 
-    This layer runs only after the protected collection allocator has written its
-    installment-allocation rows. It never guesses from receipt cash. Only an
-    ``oldest_due_first`` allocation against an installment that already has an
-    open Past Due record may reduce that record or a linked Pending promise.
+    Contractual progress follows protected ``oldest_due_first`` allocations.
+    Transitional Regular progress follows nonvoid applied payments on the same
+    obligation date, matching the retained daily capture owner. Receipt cash and
+    payments assigned to another date never substitute for applied amounts.
 
     Pending promises whose date is already before the current collection date are
     closed *before* the new payment is applied. Therefore a late payment can pay
@@ -213,6 +215,17 @@ class PastDuePromiseProgress:
                         ),
                     )
 
+            if not allocation_rows:
+                legacy_reductions = self._reconcile_legacy_obligations(
+                    cursor,
+                    transaction_id=transaction_id,
+                    actor_user_id=actor_user_id,
+                )
+                reductions.extend(legacy_reductions)
+                touched_obligation_ids.extend(
+                    item.obligation_id for item in legacy_reductions
+                )
+
             if touched_obligation_ids:
                 promise_changes.extend(
                     self._reconcile_pending_promises(
@@ -229,6 +242,94 @@ class PastDuePromiseProgress:
                 reductions=reductions,
                 promise_changes=promise_changes,
             )
+
+    def _reconcile_legacy_obligations(
+        self,
+        cursor: Any,
+        *,
+        transaction_id: UUID,
+        actor_user_id: UUID,
+    ) -> list[PastDueReduction]:
+        # The posting transaction already owns the loan lock. Reconcile to an
+        # absolute remainder (rather than subtracting this receipt again), so
+        # repeated reconciliation cannot double-spend a same-day payment.
+        cursor.execute(
+            """select obligation.id, obligation.remaining_past_due_amount,
+                      greatest(least(loan.daily_amount - (
+                          select coalesce(sum(payment.applied_amount), 0)
+                          from lending.collection_transactions payment
+                          where payment.loan_id=receipt.loan_id
+                            and payment.collection_date=receipt.collection_date
+                            and payment.entry_type='payment' and not payment.is_voided
+                            and lower(coalesce(payment.details #>>
+                                '{contract_schedule_allocation,enabled}', 'false'))
+                                not in ('true','1','yes','on')
+                            and not exists(select 1 from lending.loan_installment_payment_allocations a
+                                           where a.transaction_id=payment.id)
+                      ), state.remaining_balance), 0)::numeric(18,2) as remaining_due
+               from lending.collection_transactions receipt
+               join lending.loans loan on loan.id=receipt.loan_id
+               join lending.loan_collection_state state on state.loan_id=loan.id
+               join lending.loan_types kind on kind.id=loan.loan_type_id
+               join lending.past_due_obligations obligation
+                 on obligation.loan_id=receipt.loan_id
+                and obligation.obligation_date=receipt.collection_date
+               where receipt.id=%s and not receipt.is_voided
+                 and receipt.entry_type='payment'
+                 and kind.calculation_mode <> 'seven_by_seven'
+                 and lower(coalesce(receipt.details #>>
+                     '{contract_schedule_allocation,enabled}', 'false'))
+                     not in ('true','1','yes','on')
+                 and not exists(select 1 from lending.loan_installment_payment_allocations a
+                                where a.transaction_id=receipt.id)
+                 and obligation.installment_id is null and obligation.status='open'
+               order by obligation.created_at, obligation.id
+               for update of obligation""",
+            (transaction_id,),
+        )
+        reductions = []
+        for obligation in cursor.fetchall():
+            before = _money(obligation["remaining_past_due_amount"])
+            after = min(before, _money(obligation["remaining_due"]))
+            if after == before:
+                continue
+            status = "paid" if after == Decimal("0.00") else "open"
+            cursor.execute(
+                """update lending.past_due_obligations
+                   set remaining_past_due_amount=%s, status=%s,
+                       resolved_at=case when %s='paid' then now() else null end,
+                       updated_at=now() where id=%s""",
+                (after, status, status, obligation["id"]),
+            )
+            reduction = PastDueReduction(
+                obligation_id=obligation["id"],
+                installment_id=None,
+                amount_applied=_money(before - after),
+                remaining_after=after,
+                status_after=status,
+            )
+            reductions.append(reduction)
+            cursor.execute(
+                """insert into core.audit_logs
+                   (actor_user_id, action, target_type, target_id, details, created_at)
+                   values (%s, 'past_due.progress.applied', 'past_due_obligation', %s, %s, now())""",
+                (
+                    actor_user_id,
+                    obligation["id"],
+                    Jsonb(
+                        {
+                            "source_transaction_id": str(transaction_id),
+                            "installment_id": None,
+                            "allocation_basis": "legacy_same_day_applied",
+                            "amount_applied": str(reduction.amount_applied),
+                            "remaining_before": str(before),
+                            "remaining_after": str(after),
+                            "status_after": status,
+                        }
+                    ),
+                ),
+            )
+        return reductions
 
     def _close_overdue_pending_promises(
         self,

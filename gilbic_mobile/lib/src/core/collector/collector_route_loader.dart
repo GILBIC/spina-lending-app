@@ -41,16 +41,20 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
 
   @override
   Future<CollectorRouteLoadResult> loadToday(UserSession session) async {
+    final cacheSession = _cache.forSession(session);
+    cacheSession.checkCurrent();
     try {
       final route = await _remote.fetchToday(session);
+      cacheSession.checkCurrent();
       final syncedAt = _now().toUtc();
       String? warning;
       try {
-        await _cache.writeForUser(session.userId, route, syncedAt);
+        await cacheSession.write(route, syncedAt);
       } on Object {
         warning =
             'The route is online, but its offline copy could not be updated.';
       }
+      cacheSession.checkCurrent();
       return CollectorRouteLoadResult(
         route: route,
         syncedAt: syncedAt,
@@ -58,9 +62,10 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
         warning: warning,
       );
     } on Object catch (remoteError, remoteStackTrace) {
+      cacheSession.checkCurrent();
       if (isCollectorRouteAccessRejected(remoteError)) {
         try {
-          await _cache.clearForUser(session.userId);
+          await _cache.invalidateSession(session);
         } on Object {
           // Access rejection must remain blocked even if storage cleanup fails.
         }
@@ -68,10 +73,11 @@ class CachedCollectorRouteLoader implements CollectorRouteLoader {
       }
       CollectorRouteCacheSnapshot? cached;
       try {
-        cached = await _cache.readForUser(session.userId);
+        cached = await cacheSession.read();
       } on Object {
         cached = null;
       }
+      cacheSession.checkCurrent();
       if (cached != null) {
         return CollectorRouteLoadResult(
           route: cached.route,

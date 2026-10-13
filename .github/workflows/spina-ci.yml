@@ -72,6 +72,13 @@ jobs:
           "$runtime/bin/python" -m pip check
           "$runtime/bin/python" -c 'import fastapi, uvicorn, psycopg, pydantic, httpx, pypdf, reportlab, docx, pymupdf, uvloop, gilbic_backend.main, spina_mobile_collections; print("Locked production runtime imports passed")'
 
+      - name: Audit the exact production dependency lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip-audit --disable-pip --no-deps -r requirements-runtime.lock \
+            -f json -o ci-artifacts/backend/pip-audit-runtime.json
+
       - name: Compile Python sources
         shell: bash
         run: |
@@ -285,7 +292,7 @@ jobs:
         shell: bash
         env:
           GILBIC_TEST_DATABASE_URL: ""
-          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
+          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:tools:.
           SPINA_TEST_SHARD_INDEX: ${{ matrix.shard }}
           SPINA_TEST_SHARD_COUNT: "8"
           COVERAGE_FILE: ci-artifacts/backend-tests/coverage.shard-${{ matrix.shard }}
@@ -497,7 +504,7 @@ jobs:
   financial-database:
     name: Financial and disposable PostgreSQL
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     services:
       postgres:
@@ -561,6 +568,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile \
+            tools/run_audit_defect_validation.py \
             tools/run_collector_payment_recovery_validation.py \
             tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py \
             tools/run_combined_collection_renewal_disposable_postgres_validation.py \
@@ -571,6 +579,16 @@ jobs:
             tools/run_0102_remittance_review_disposable_postgres_validation.py \
             tools/run_v1_tax_evidence_disposable_postgres_validation.py \
             tools/run_mvp_private_schema_barrier_validation.py \
+            tools/run_accounting_controls_disposable_validation.py \
+            tools/run_accounting_adapters_disposable_validation.py \
+            tools/run_accounting_current_schema_validation.py \
+            tools/run_accounting_transfer_review_validation.py \
+            tools/run_accounting_lending_validation.py \
+            tools/run_accounting_regular_application_validation.py \
+            tools/run_accounting_native_origin_validation.py \
+            tools/run_accounting_collector_application_validation.py \
+            tools/run_accounting_disclosure_validation.py \
+            tools/run_accounting_final_schema_validation.py \
             tools/run_treasury_disposable_postgres_validation.py
 
       - name: Create isolated validation databases
@@ -586,6 +604,7 @@ jobs:
         env:
           SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
           COLLECTOR_RECOVERY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+          AUDIT_FIX_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
           X7PREVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/x7preview?sslmode=disable
           COMBINED_RENEWAL_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/combinedrenewal?sslmode=disable
           DELEGATE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/delegatedarea?sslmode=disable
@@ -595,6 +614,8 @@ jobs:
           REMIT_REVIEW_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/remittancereview?sslmode=disable
           TAX_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/v1tax?sslmode=disable
           TREASURY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/treasury_test?sslmode=disable
+          ACCOUNTING_CONTROLS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+          SPINA_POSTGRES_BIN: /usr/lib/postgresql/17/bin
           GILBIC_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mvp_private_schema_test?sslmode=disable
         run: |
           set -euo pipefail
@@ -611,6 +632,17 @@ jobs:
             python tools/run_mvp_private_schema_barrier_validation.py
             python tools/run_treasury_disposable_postgres_validation.py
             python tools/run_collector_payment_recovery_validation.py
+            python tools/run_audit_defect_validation.py
+            python tools/run_accounting_controls_disposable_validation.py
+            python tools/run_accounting_adapters_disposable_validation.py
+            python tools/run_accounting_current_schema_validation.py
+            python tools/run_accounting_transfer_review_validation.py
+            python tools/run_accounting_lending_validation.py
+            python tools/run_accounting_regular_application_validation.py
+            python tools/run_accounting_native_origin_validation.py
+            python tools/run_accounting_collector_application_validation.py
+            python tools/run_accounting_disclosure_validation.py
+            python tools/run_accounting_final_schema_validation.py
           } 2>&1 | tee ci-artifacts/financial/disposable-validations.log
 
       - name: Restore synthetic database and private evidence from backup

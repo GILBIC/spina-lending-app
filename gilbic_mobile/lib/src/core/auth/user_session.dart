@@ -28,6 +28,14 @@ class UserSession {
   /// Verified server memberships. A workspace choice never changes authority.
   final List<String> roles;
 
+  /// Shared authority identity for navigation and private cache lifetimes.
+  /// Token rotation and presentation changes do not change authorization.
+  String get authorizationScopeKey {
+    final sortedPermissions = List<String>.of(permissions)..sort();
+    final sortedRoles = List<String>.of(roles)..sort();
+    return '$userId|${rawRole.toLowerCase()}|${sortedRoles.join('|')}|${sortedPermissions.join('|')}';
+  }
+
   bool hasRole(AppRole candidate) => role == candidate ||
       roles.any((value) => AppRole.fromValue(value) == candidate);
 

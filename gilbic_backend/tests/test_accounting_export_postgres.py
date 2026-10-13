@@ -122,7 +122,9 @@ def test_complete_read_only_snapshot_and_concurrent_consistency(monkeypatch):
     monkeypatch.setattr(repository_module, "open_connection", opened)
     before = _counts(DSN)
     repository = repository_module.PostgresAccountingExportRepository()
-    snapshot = repository.load_snapshot(start_date=START, end_date=END)
+    snapshot = repository.load_snapshot(
+        start_date=START, end_date=END, actor_user_id=actor
+    )
     content = build_accounting_export(
         snapshot, start_date=START, end_date=END, generated_by_user_id=actor
     )
@@ -158,7 +160,9 @@ def test_complete_read_only_snapshot_and_concurrent_consistency(monkeypatch):
         with monkeypatch.context() as context:
             context.setattr(repository_module, limit_name, limit_value)
             with pytest.raises(AccountingExportError) as error:
-                repository.load_snapshot(start_date=START, end_date=END)
+                repository.load_snapshot(
+                    start_date=START, end_date=END, actor_user_id=actor
+                )
             assert error.value.code == "oversized"
 
     # A second writer commits after this export's account aggregation. The same
@@ -198,6 +202,9 @@ def test_complete_read_only_snapshot_and_concurrent_consistency(monkeypatch):
         def fetchone(self):
             return self.inner.fetchone()
 
+        def fetchall(self):
+            return self.inner.fetchall()
+
         def __iter__(self):
             return iter(self.inner)
 
@@ -218,13 +225,17 @@ def test_complete_read_only_snapshot_and_concurrent_consistency(monkeypatch):
             yield Connection(connection)
 
     monkeypatch.setattr(repository_module, "open_connection", concurrent_opened)
-    concurrent = repository.load_snapshot(start_date=START, end_date=END)
+    concurrent = repository.load_snapshot(
+        start_date=START, end_date=END, actor_user_id=actor
+    )
     assert injected and verified_read_only
     assert concurrent["journals"] == snapshot["journals"]
     assert concurrent["accounts"] == snapshot["accounts"]
     assert concurrent["audit"] == snapshot["audit"]
     monkeypatch.setattr(repository_module, "open_connection", opened)
-    fresh = repository.load_snapshot(start_date=START, end_date=END)
+    fresh = repository.load_snapshot(
+        start_date=START, end_date=END, actor_user_id=actor
+    )
     assert len(fresh["journals"]) == 524
 
     sample_path = os.environ.get("GILBIC_ACCOUNTING_EXPORT_SAMPLE_OUTPUT")

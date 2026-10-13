@@ -8,7 +8,6 @@ from pathlib import Path
 
 import psycopg
 import pytest
-
 from gilbic_backend.borrower_schedule_adjustment_repository import (
     PostgresBorrowerScheduleAdjustmentRepository,
 )
@@ -16,6 +15,7 @@ from gilbic_backend.concurrent_receipt_collection_posting import (
     ConcurrentReceiptSafeCollectionPostingBridge,
 )
 
+from gilbic_backend import collection_posting
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -24,6 +24,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 TEST_DIR = Path(__file__).resolve().parent
+
+
+@pytest.fixture(autouse=True)
+def _fixed_collection_clock(monkeypatch):
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: date(2097, 8, 3)
+    )
+
+
 SOURCE_PATH = TEST_DIR / "test_seven_by_seven_mobile_collection_postgres.py"
 _spec = importlib.util.spec_from_file_location("seven_by_seven_catchup_cases", SOURCE_PATH)
 assert _spec is not None and _spec.loader is not None

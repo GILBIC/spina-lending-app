@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
@@ -24,7 +25,13 @@ class CollectorMasterReviewPage extends StatefulWidget {
       _CollectorMasterReviewPageState();
 }
 
-class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
+class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage>
+    with PrivateAccessState<CollectorMasterReviewPage> {
+  @override
+  void clearPrivateData() {
+    _result = null;
+  }
+
   CollectorRouteLoadResult? _result;
   Object? _error;
   bool _loading = true;
@@ -36,21 +43,23 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final result = await widget.loader.loadToday(widget.session);
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _result = result);
       }
     } on Object catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _error = error);
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -58,6 +67,7 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       key: const Key('collector-master-review-page'),
       appBar: AppBar(
@@ -94,7 +104,9 @@ class _CollectorMasterReviewPageState extends State<CollectorMasterReviewPage> {
         .toList(growable: false);
     final unresolved = reviews.where((review) => review.needsAction).toList();
     final attention = reviews.where((review) => review.needsAttention).toList();
-    final gcash = reviews.where((review) => review.hasExplicitGcashNote).toList();
+    final gcash = reviews
+        .where((review) => review.hasExplicitGcashNote)
+        .toList();
     final complete = reviews.length - unresolved.length;
 
     return RefreshIndicator(
@@ -224,7 +236,9 @@ class _MasterHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = route.routeDate == null ? 'Saved route' : _date(route.routeDate!);
+    final date = route.routeDate == null
+        ? 'Saved route'
+        : _date(route.routeDate!);
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -241,9 +255,9 @@ class _MasterHeader extends StatelessWidget {
                 child: Text(
                   'All-area collection check',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: SpinaTheme.brandPinkDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: SpinaTheme.brandPinkDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               _StateChip(
@@ -270,7 +284,10 @@ class _MasterHeader extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: _MasterStat(value: '$unresolvedCount', label: 'Still open'),
+                child: _MasterStat(
+                  value: '$unresolvedCount',
+                  label: 'Still open',
+                ),
               ),
             ],
           ),
@@ -278,7 +295,10 @@ class _MasterHeader extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _MasterStat(value: '$attentionCount', label: 'Attention'),
+                child: _MasterStat(
+                  value: '$attentionCount',
+                  label: 'Attention',
+                ),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -462,7 +482,9 @@ class _OutstandingClientCard extends StatelessWidget {
               spacing: 5,
               runSpacing: 5,
               children: review.chips
-                  .map((chip) => _ReviewChip(label: chip.label, tone: chip.tone))
+                  .map(
+                    (chip) => _ReviewChip(label: chip.label, tone: chip.tone),
+                  )
                   .toList(growable: false),
             ),
             if (review.detailLines.isNotEmpty) ...[
@@ -697,9 +719,9 @@ class _ClientReview {
     CollectorRouteClientGroup client,
     DateTime? routeDate,
   ) {
-    final unresolved = client.loans.where(
-      (loan) => !_isResolvedToday(loan, routeDate),
-    ).toList(growable: false);
+    final unresolved = client.loans
+        .where((loan) => !_isResolvedToday(loan, routeDate))
+        .toList(growable: false);
     final missed = client.loans.fold<int>(
       0,
       (value, loan) => loan.passCount > value ? loan.passCount : value,
@@ -779,7 +801,8 @@ class _ClientReview {
           '$loanLabel contractual days past due: ${loan.contractDaysPastDue}',
         );
       }
-      if (loan.contractNextUnpaidDate != null && loan.contractNextUnpaidAmount > 0) {
+      if (loan.contractNextUnpaidDate != null &&
+          loan.contractNextUnpaidAmount > 0) {
         details.add(
           '$loanLabel next unpaid: ${_date(loan.contractNextUnpaidDate!)} • ${_moneyCompact(loan.contractNextUnpaidAmount)}',
         );
@@ -787,26 +810,25 @@ class _ClientReview {
       if (loan.note.trim().isNotEmpty) {
         details.add('$loanLabel note: ${loan.note.trim()}');
       }
-      if (loan.todayNote.trim().isNotEmpty && loan.todayNote.trim() != loan.note.trim()) {
+      if (loan.todayNote.trim().isNotEmpty &&
+          loan.todayNote.trim() != loan.note.trim()) {
         details.add('$loanLabel today note: ${loan.todayNote.trim()}');
       }
     }
 
     final dueForAction = todayUnpaid > 0
         ? todayUnpaid
-        : unresolved.fold<double>(
-            0,
-            (total, loan) => total + loan.dailyAmount,
-          );
+        : unresolved.fold<double>(0, (total, loan) => total + loan.dailyAmount);
     final amount = dueForAction > 0
         ? dueForAction
         : nextUnpaid > 0
-            ? nextUnpaid
-            : client.expectedTotal;
+        ? nextUnpaid
+        : client.expectedTotal;
 
     String exceptionLabel = '';
     if (hasPassToday && hasAdvance) {
-      exceptionLabel = 'PASS/ADV exception recorded and no unresolved loan remains.';
+      exceptionLabel =
+          'PASS/ADV exception recorded and no unresolved loan remains.';
     } else if (hasPassToday) {
       exceptionLabel = 'PASS / unable-to-pay entry is recorded for today.';
     } else if (hasAdvance) {

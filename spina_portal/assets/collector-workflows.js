@@ -59,7 +59,7 @@ export function mountCollectorWorkflows({root, api, session, getSession=()=>sess
       const key=pairKey(pairs[Number(value(form,'pair')) || 0]);
       if(confirmedPairs.has(key))throw new Error('This Combined Pay was already saved. Review another current loan pair.');
       const request = review.submission();
-      const result = await collectorMutation({api,guard,path:'/api/v1/collector/collections/combined',options:{method:'POST',...request},verify:result=>['accepted','duplicate'].includes(result.status) && result.client_transaction_id===request.body.client_transaction_id && result.total_amount===request.body.cash_received_amount && Array.isArray(result.legs) && result.legs.length>0 && result.legs.every(leg=>request.body.legs.some(item=>item.loan_id===leg.loan_id) && typeof leg.receipt_number==='string' && leg.receipt_number.length>0)});
+      const result = await collectorMutation({api,guard,path:'/api/v1/collector/collections/combined',options:{method:'POST',...request},verify:review.resultMatches()});
       if (!current()) return;
       confirmedPairs.add(key);invalidate();
       status(result.message || 'Combined payment saved.');

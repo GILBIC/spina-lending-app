@@ -32,7 +32,9 @@ def receipt_case(monkeypatch):
         verified_regular_schedule=True, verified_seven_schedule=True
     )
     monkeypatch.setattr(
-        adapter.combined, "_current_business_date", lambda: date(2097, 8, 2)
+        adapter.combined.collection_posting,
+        "current_collection_business_date",
+        lambda: date(2097, 8, 2),
     )
     actor = SimpleNamespace(
         user_id=case.collector_id,

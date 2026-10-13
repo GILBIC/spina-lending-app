@@ -1,12 +1,25 @@
-import {asArray, badge, emptyState, errorCard, escapeHtml as esc, loadingPanel, titleCase} from './ui.js';
+import {asArray, badge, emptyState, errorCard, escapeHtml as esc, loadingPanel, titleCase, sessionPermissions} from './ui.js';
+import {sessionWorkspaceRoles} from './roles.js';
 import {buildEmployeeWorkdaySummary,employeeWorkDate} from './employee-workday.js';
 import {mountEmployeePayslipPrint,payslipPrintable} from './employee-payslip-print.js';
 
 const BASE = '/api/v1/employee-operations';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const mounts = new WeakMap();
-// In-memory, session-bound recovery survives a workspace switch without persisting payroll in browser storage.
-const pendingBySession = new WeakMap();
+// The original API owns memory-only recovery; role write-gate wrappers and tokens
+// can change without changing the authenticated actor/device/authority lifetime.
+const recoveryByApi = new WeakMap();
+const recoveryScope = (api,session) => JSON.stringify([session?.user?.id,sessionWorkspaceRoles(session).sort(),sessionPermissions(session).sort(),session?.user?.status,session?.user?.device_registered,session?.user?.device_id,api.sessionStore?.deviceId?.()??null]);
+export function clearEmployeeOperationsRecovery(api) {
+  const state=recoveryByApi.get(api);
+  if(state){state.pending=null;state.valid=false;for(const notify of state.listeners)notify(null,false,true);}
+  recoveryByApi.delete(api);
+}
+export function syncEmployeeOperationsRecovery(api,session) {
+  const scope=recoveryScope(api,session);let state=recoveryByApi.get(api);
+  if(!state||state.scope!==scope){clearEmployeeOperationsRecovery(api);state={scope,pending:null,actor:null,valid:true,listeners:new Set()};recoveryByApi.set(api,state);}
+  return state;
+}
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const field = (name, label, type = 'text', options = {}) => ({name, label, type, ...options});
 const note = (name, label, optional = false) => field(name, label, 'textarea', {optional});
@@ -209,10 +222,17 @@ function recordMarkup(workspace,record,index) {
   </article>`;
 }
 
-export function mountEmployeeOperations({root,api,session,signal,now=()=>new Date(),getSession=()=>session,onController,onSnapshot,onReadState,presentation='default',initialView='workday',beforeTaskChange,afterTaskChange}) {
+export function mountEmployeeOperations({root,api,recoveryApi=api,session,signal,now=()=>new Date(),getSession=()=>session,onController,onSnapshot,onReadState,presentation='default',initialView='workday',beforeTaskChange,afterTaskChange}) {
   if(!root)return ()=>{};
   mounts.get(root)?.();
-  const controller=new AbortController();let disposed=false;let busy=false;let stale=false;let workspace=null;let selected=null;let removers=[];let pending=pendingBySession.get(session)||null;
+  const recovery=syncEmployeeOperationsRecovery(recoveryApi,session);
+  const controller=new AbortController();let disposed=false;let busy=false;let stale=false;let workspace=null;let selected=null;let removers=[];let pending=recovery.pending;
+  const pendingChanged=(value,acknowledged,invalidated)=>{
+    pending=value;
+    if(invalidated&&!disposed){printing.close();workspace=null;selected=null;clear();onReadState?.({status:'denied'});return;}
+    if(acknowledged&&!disposed&&!busy&&workspace&&currentScope())render();
+  };
+  recovery.listeners.add(pendingChanged);
   const feedbackId=`employee-feedback-${crypto.randomUUID()}`;let opener=null;
   let editorStale=false;let renderedSelection=null;let view=Object.hasOwn(VIEWS,initialView)?initialView:'workday';let loadedDate=null,dayTimer=null,expiredDate=null;
   let dateFrom=employeeWorkDate(now()),dateTo=dateFrom,allDates=false;
@@ -240,12 +260,16 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     dayTimer=setTimeout(expireGuidance,Math.max(1,Date.UTC(year,month-1,day+1)-8*3600000-new Date(now()).getTime()));dayTimer?.unref?.();
   }
   function dateVisible(day){return allDates||day>=dateFrom&&day<=dateTo;}
-  const currentScope=()=>getSession()?.user?.id===session?.user?.id;
+  const currentScope=()=>{
+    if(!recovery.valid)return false;
+    if(recoveryScope(recoveryApi,getSession())!==recovery.scope){clearEmployeeOperationsRecovery(recoveryApi);return false;}
+    return recoveryByApi.get(recoveryApi)===recovery;
+  };
   const printing=mountEmployeePayslipPrint({root,signal:controller.signal,getCurrentScope:()=>currentScope()&&workspace?{userId:workspace.actor.user_id,employeeId:workspace.actor.employee_id,deviceId:workspace.actor.device_id}:null,loadWorkspace:async()=>{beforeTaskChange?.();const value=await api.request(`${BASE}/workspace`,{signal:controller.signal});return validateWorkspace(value,getSession());}});
   const editorMatches=command=>selected&&command.action===selected.action&&(!selected.record || command.id===selected.record.id || command.original_payroll_id===selected.record.id || command.original_history_id===selected.record.id);
   const listen=(element,event,handler)=>{if(element){element.addEventListener(event,handler);removers.push(()=>element.removeEventListener(event,handler));}};
   function clear(){for(const remove of removers)remove();removers=[];for(const input of [...root.querySelectorAll('input'),...root.querySelectorAll('textarea'),...root.querySelectorAll('select')])input.value='';root.innerHTML='';}
-  function dispose(){if(disposed)return;disposed=true;clearTimeout(dayTimer);globalThis.removeEventListener?.('focus',expireGuidance);root.ownerDocument?.removeEventListener?.('visibilitychange',expireGuidance);for(const stop of focusCleanups)stop();controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
+  function dispose(){if(disposed)return;disposed=true;recovery.listeners.delete(pendingChanged);clearTimeout(dayTimer);globalThis.removeEventListener?.('focus',expireGuidance);root.ownerDocument?.removeEventListener?.('visibilitychange',expireGuidance);for(const stop of focusCleanups)stop();controller.abort();printing.dispose();workspace=null;selected=null;clear();signal?.removeEventListener('abort',dispose);globalThis.removeEventListener?.('online',connection);globalThis.removeEventListener?.('offline',connection);if(mounts.get(root)===dispose)mounts.delete(root);}
   function message(text,error=false){const element=root.querySelector('[data-employee-status]');if(element){if(error)element.innerHTML=errorCard(text);else element.textContent=text;}}
   function focusFeedback(){root.querySelector('[data-employee-status]')?.focus();}
   function restoreFocus(){
@@ -262,7 +286,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     if(target&&!target.disabled)target.focus();
     opener=null;
   }
-  function denied(error){if([401,403].includes(error?.status)){printing.close();pending=null;pendingBySession.delete(session);workspace=null;selected=null;clear();root.innerHTML=errorCard(error);onReadState?.({status:'denied'});return true;}return false;}
+  function denied(error){if([401,403,426].includes(error?.status)){printing.close();clearEmployeeOperationsRecovery(recoveryApi);pending=null;workspace=null;selected=null;clear();root.innerHTML=errorCard(error);onReadState?.({status:'denied'});return true;}return false;}
   function connection(){if(disposed)return;expireGuidance();lock();const notice=root.querySelector('[data-employee-connection]');if(notice)notice.textContent=globalThis.navigator?.onLine===false?'Offline: Web changes are unavailable. Reconnect and refresh.':'Web changes are submitted online. Android can capture attendance offline.';}
   function lock(){
     const offline=globalThis.navigator?.onLine===false;
@@ -273,7 +297,17 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       if(editorStale && node.closest('[data-employee-editor]') && node.getAttribute('data-employee-cancel')===null)node.disabled=true;
     }
   }
-  function setPending(value){pending=value;if(value)pendingBySession.set(session,value);else pendingBySession.delete(session);}
+  function setPending(value,acknowledged=false){pending=value;if(recovery.valid&&recoveryByApi.get(recoveryApi)===recovery){recovery.pending=value;for(const notify of recovery.listeners)notify(value,acknowledged);}}
+  function pendingAllowed(next,command){
+    if(command.action==='attendance_record')return next.capabilities.can_self_service===true;
+    const capability=FORMS[command.action]?.capability;
+    if(capability&&!createAllowed(next,command.action))return false;
+    const existing=command.expected_version>0||command.original_payroll_id||command.original_history_id;
+    if(capability&&!existing)return true;
+    const id=command.original_payroll_id||command.original_history_id||command.id;
+    const record=Object.keys(COLLECTIONS).flatMap(key=>next[key]).find(item=>item.id===id&&(item.employee_id??null)===(command.employee_id??null));
+    return Boolean(record&&recordAllowed(next,record,command.action));
+  }
   async function load({recover=false,successMessage=''}={}) {
     if(disposed||busy)return;printing.close();const restoreEditorFocus=retainEditorFocus();busy=true;lock();
     if(!currentScope()){setPending(null);dispose();return;}
@@ -282,10 +316,12 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       if(disposed)return;if(!currentScope()){setPending(null);dispose();return;}
       if(value?.actor?.user_id!==getSession()?.user?.id)throw Object.assign(new Error('Employee account identity changed. Sign in again.'),{status:403});
       const next=validateWorkspace(value,getSession());
-      if(workspace && (next.actor.employee_id!==workspace.actor.employee_id || next.actor.device_id!==workspace.actor.device_id)){setPending(null);selected=null;clear();}
+      const actor=JSON.stringify([next.actor.user_id,next.actor.employee_id,next.actor.device_id,next.actor.is_owner===true]);
+      if((recovery.actor&&actor!==recovery.actor)||(pending&&!matchesResult(next.last_result,pending)&&!pendingAllowed(next,pending))){setPending(null);selected=null;clear();}
+      recovery.actor=actor;
       workspace=next;stale=false;
       loadedDate=employeeWorkDate(now());expiredDate=null;watchWorkDate();
-      if(recover&&pending&&matchesResult(workspace.last_result,pending)) {successMessage=workspace.last_result.message;if(editorMatches(pending))selected=null;setPending(null);}
+      if(pending&&matchesResult(workspace.last_result,pending)) {successMessage=workspace.last_result.message;if(editorMatches(pending))selected=null;setPending(null);}
       if(selected){
         if(selected.record){const current=Object.keys(COLLECTIONS).flatMap(key=>workspace[key]).find(record=>record.id===selected.record.id&&record.employee_id===selected.record.employee_id);
           if(!current||!recordAllowed(workspace,current,selected.action))selected=null;
@@ -297,7 +333,7 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
       render();if(successMessage)message(successMessage);
       else if(editorStale)message('This record changed. Your draft is retained with its original revision; cancel editing and review the current record before submitting.');
       else if(pending)message('The result is not confirmed. Check the saved result, or retry the same unchanged request. Do not start another payment.');
-    } catch(error){if(disposed)return;stale=true;if(!denied(error)){onReadState?.({status:'error'});if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
+    } catch(error){if(disposed)return;if(!currentScope()){setPending(null);dispose();return;}stale=true;if(!denied(error)){onReadState?.({status:'error'});if(!workspace){clear();root.innerHTML=`${errorCard(error)}<button type="button" data-employee-refresh>Refresh employee records</button>`;listen(root.querySelector('[data-employee-refresh]'),'click',()=>load());}else if(successMessage)message(`${successMessage} Current records could not refresh. The saved action must not be repeated.`);else message(error,true);}}
     finally{busy=false;if(!disposed){lock();if(successMessage&&!selected)restoreFocus();}restoreEditorFocus();}
   }
   async function execute(command) {
@@ -306,11 +342,12 @@ export function mountEmployeeOperations({root,api,session,signal,now=()=>new Dat
     setPending(command);busy=true;lock();message('Saving employee record…');let accepted='';let uncertain=false;let rejected=false;
     try {
       const result=await api.request(`${BASE}/actions`,{method:'POST',body:command,financial:true,signal:controller.signal});
-      if(disposed)return;if(!matchesResult(result,command))throw Object.assign(new Error('The saved response could not be confirmed.'),{code:'network_uncertain'});
+      if(disposed){if(recovery.valid&&recovery.pending?.request_id===command.request_id&&matchesResult(result,command))setPending(null,true);return;}
+      if(!matchesResult(result,command))throw Object.assign(new Error('The saved response could not be confirmed.'),{code:'network_uncertain'});
       if(!currentScope()){setPending(null);dispose();return;}
       accepted=result.message;if(editorMatches(command))selected=null;setPending(null);
     } catch(error){
-      if(disposed)return;if(denied(error))return;
+      if(disposed)return;if(!currentScope()){setPending(null);dispose();return;}if(denied(error))return;
       uncertain=error?.code==='network_uncertain'||!error?.status||error.status>=500;
       if(!uncertain){setPending(null);rejected=true;if(error.status===409){editorStale=Boolean(selected);stale=true;render();}message(error,true);}
     } finally{busy=false;if(!disposed){lock();if(rejected){if(stale)root.querySelector('[data-employee-refresh]')?.focus();else focusFeedback();}}}

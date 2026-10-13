@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -27,8 +28,14 @@ class ManagementTaxLiabilityPage extends StatefulWidget {
       _ManagementTaxLiabilityPageState();
 }
 
-class _ManagementTaxLiabilityPageState
-    extends State<ManagementTaxLiabilityPage> {
+class _ManagementTaxLiabilityPageState extends State<ManagementTaxLiabilityPage>
+    with PrivateAccessState<ManagementTaxLiabilityPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _postingTokens.clear();
+  }
+
   late final TaxLiabilityRepository _repository;
   late final String Function() _tokenGenerator;
   final Map<String, String> _postingTokens = <String, String>{};
@@ -46,28 +53,33 @@ class _ManagementTaxLiabilityPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) setState(() => _overview = overview);
+      if (mounted && privateAccessActive) setState(() => _overview = overview);
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () =>
               _error = 'The protected tax-liability queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
@@ -82,6 +94,7 @@ class _ManagementTaxLiabilityPageState
       widget.session.hasPermission('accounting.tax.liability.post');
 
   Future<void> _prepare(TaxLiabilityItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPrepare(overview, item)) return;
     item.requirePrepareCoordinates();
@@ -92,9 +105,10 @@ class _ManagementTaxLiabilityPageState
       consequence:
           'The backend will create a protected draft only. No balance changes until separate posting confirmation.',
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run(item.evidenceId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
@@ -105,6 +119,7 @@ class _ManagementTaxLiabilityPageState
   }
 
   Future<void> _post(TaxLiabilityItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPost(overview, item)) return;
     item.requirePostCoordinates();
@@ -116,7 +131,7 @@ class _ManagementTaxLiabilityPageState
           'The backend will immutably post the exact tax expense and Tax Payables journal with permanent audit evidence.',
       includePreparedCoordinates: true,
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final key = <String>[
       item.taxType,
       item.evidenceId,
@@ -131,6 +146,7 @@ class _ManagementTaxLiabilityPageState
     final token = _postingTokens.putIfAbsent(key, _tokenGenerator);
     await _run(item.evidenceId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.post(
         widget.session,
         deviceId: identity.installationId,
@@ -200,6 +216,7 @@ class _ManagementTaxLiabilityPageState
   );
 
   Future<void> _run(String key, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busy != null) return;
     setState(() => _busy = key);
     var succeeded = false;
@@ -208,16 +225,17 @@ class _ManagementTaxLiabilityPageState
       succeeded = true;
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The result is uncertain. Review authoritative tax state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = null);
-      if (!succeeded && mounted) setState(() {});
+      if (mounted && privateAccessActive) setState(() => _busy = null);
+      if (!succeeded && privateAccessActive) setState(() {});
     }
   }
 
@@ -228,19 +246,21 @@ class _ManagementTaxLiabilityPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Tax Liabilities'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh tax liabilities',
-          onPressed: _loading || _busy != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Tax Liabilities'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh tax liabilities',
+                onPressed: _loading || _busy != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final overview = _overview;

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 
@@ -21,6 +25,9 @@ class CollectorClientToolSelection {
 class CollectorClientToolsSheet extends StatelessWidget {
   const CollectorClientToolsSheet({
     required this.client,
+    required this.session,
+    required this.deviceIdentityProvider,
+    this.photoRepository,
     required this.directPayBlockedReasonFor,
     required this.detailsBlockedReasonFor,
     required this.correctionBlockedReasonFor,
@@ -28,6 +35,9 @@ class CollectorClientToolsSheet extends StatelessWidget {
   });
 
   final CollectorRouteClientGroup client;
+  final UserSession session;
+  final DeviceIdentityProvider deviceIdentityProvider;
+  final ClientPhotoRepository? photoRepository;
   final CollectorClientToolReason directPayBlockedReasonFor;
   final CollectorClientToolReason detailsBlockedReasonFor;
   final CollectorClientToolReason correctionBlockedReasonFor;
@@ -53,20 +63,21 @@ class CollectorClientToolsSheet extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Client Tools',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 2),
-            Text(
-              client.clientName,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+            ClientPhotoCard(
+              session: session,
+              deviceIdentityProvider: deviceIdentityProvider,
+              clientId: client.clientId,
+              clientName: client.clientName,
+              repository: photoRepository,
             ),
             const SizedBox(height: 4),
             Text(
-              'Only route and collection tools are shown here. Identity, address-source, and photo evidence stay out of the normal Collector ledger.',
+              'The client photo is view-only. Route and collection tools are shown below.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -121,16 +132,16 @@ class _LoanToolsCard extends StatelessWidget {
     final operationalMessage = directReason?.isNotEmpty == true
         ? directReason
         : collectionMessage.isNotEmpty
-            ? collectionMessage
-            : readinessMessage.isNotEmpty
-                ? readinessMessage
-                : null;
+        ? collectionMessage
+        : readinessMessage.isNotEmpty
+        ? readinessMessage
+        : null;
     final detailsReason = detailsBlockedReason?.trim();
     final detailsSubtitle = detailsReason == null || detailsReason.isEmpty
         ? '${_loanLabel(entry.loanType)} payment flow'
         : detailsReason == operationalMessage
-            ? 'Payment details unavailable until this route is eligible.'
-            : detailsReason;
+        ? 'Payment details unavailable until this route is eligible.'
+        : detailsReason;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -145,15 +156,15 @@ class _LoanToolsCard extends StatelessWidget {
                   child: Text(
                     _loanLabel(entry.loanType),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 Text(
                   'Balance ${_money(entry.balance)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -182,7 +193,8 @@ class _LoanToolsCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-            if (entry.processedToday && entry.todayCollectorName.isNotEmpty) ...[
+            if (entry.processedToday &&
+                entry.todayCollectorName.isNotEmpty) ...[
               const SizedBox(height: 3),
               Text(
                 'Latest receipt recorded by: ${entry.todayCollectorName}',
@@ -227,11 +239,11 @@ class _LoanToolsCard extends StatelessWidget {
               enabled: detailsBlockedReason == null,
               onTap: detailsBlockedReason == null
                   ? () => Navigator.of(context).pop(
-                        CollectorClientToolSelection(
-                          CollectorClientToolKind.paymentDetails,
-                          entry: entry,
-                        ),
-                      )
+                      CollectorClientToolSelection(
+                        CollectorClientToolKind.paymentDetails,
+                        entry: entry,
+                      ),
+                    )
                   : null,
             ),
             if (correctionBlockedReason == null)
@@ -287,9 +299,9 @@ class _ReceiptHistory extends StatelessWidget {
       children: [
         Text(
           "Today's receipts • ${receipts.length} • ${_money(total)}",
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 5),
         for (final receipt in receipts) ...[
@@ -305,9 +317,9 @@ class _ReceiptHistory extends StatelessWidget {
                   '${_money(receipt.amount)} • '
                   '${receipt.collectorName}'
                   '${receipt.isLocked ? ' • Locked' : ''}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 if (receipt.coveredDates.isNotEmpty)
                   Text(

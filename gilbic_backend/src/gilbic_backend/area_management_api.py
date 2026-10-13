@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import collection_posting
 from .account_repository import AccountContext, PostgresAccountRepository
 from .area_management_move_preview import preview_move_with_operational_impact
 from .area_management_repository import PostgresAreaManagementRepository
@@ -236,9 +236,7 @@ def _transfer_payload(record) -> dict[str, object]:
         "old_effective_collector_user_id": _uuid(
             record.old_effective_collector_user_id
         ),
-        "new_effective_collector_user_id": str(
-            record.new_effective_collector_user_id
-        ),
+        "new_effective_collector_user_id": str(record.new_effective_collector_user_id),
         "effective_date": record.effective_date.isoformat(),
         "timing": record.timing,
     }
@@ -296,7 +294,8 @@ def create_area_management_router() -> APIRouter:
             "success": True,
             "data": {
                 "collectors": [
-                    _collector_payload(record) for record in repository.list_collectors()
+                    _collector_payload(record)
+                    for record in repository.list_collectors()
                 ]
             },
         }
@@ -366,7 +365,7 @@ def create_area_management_router() -> APIRouter:
             preview = repository.preview_client_transfer(
                 client_id=client_id,
                 target_area_uid=target_area_id,
-                as_of_date=date.today(),
+                as_of_date=collection_posting.current_collection_business_date(),
             )
         except ValueError as error:
             _raise_client_transfer_conflict(error)
@@ -512,7 +511,7 @@ def create_area_management_router() -> APIRouter:
                 actor_user_id=actor.user_id,
                 client_id=client_id,
                 target_area_uid=request.target_area_id,
-                as_of_date=date.today(),
+                as_of_date=collection_posting.current_collection_business_date(),
             )
         except ValueError as error:
             _raise_client_transfer_conflict(error)

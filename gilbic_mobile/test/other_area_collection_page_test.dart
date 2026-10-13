@@ -6,12 +6,215 @@ import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 
 void main() {
+  testWidgets(
+    'authority denial clears uncertain payment and releases module Back',
+    (tester) async {
+      await _setLargeSurface(tester);
+      final payments = _UncertainPaymentRepository();
+      final repository = _RevokedOtherAreaRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                key: const Key('open-other-module'),
+                child: const Text('Open Other Area'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => OtherAreaCollectionPage(
+                      session: _collectorSession,
+                      paymentRepository: payments,
+                      deviceIdentityProvider: _deviceIdentityProvider(),
+                      deviceSequence: MemoryCollectionDeviceSequence(),
+                      repository: repository,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open-other-module')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-other-area-payment')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      repository.revoked = true;
+      await tester.tap(find.byKey(const Key('refresh-other-area-work')));
+      await tester.pumpAndSettle();
+      expect(find.text('Access unavailable'), findsOneWidget);
+      expect(find.textContaining('Bea Borrower'), findsNothing);
+      expect(
+        find.byKey(const Key('retry-other-area-loan-other')),
+        findsNothing,
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('open-other-module')), findsOneWidget);
+      expect(payments.drafts, hasLength(1));
+    },
+  );
+  testWidgets(
+    'uncertain attempt stays retryable after search removes its loan',
+    (tester) async {
+      await _setLargeSurface(tester);
+      final payments = _UncertainPaymentRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OtherAreaCollectionPage(
+            session: _collectorSession,
+            paymentRepository: payments,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+            repository: _EmptySearchOtherAreaRepository(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-other-area-payment')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('other-area-search')),
+        'Missing',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('record-other-area-loan-other')),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const Key('retry-other-area-loan-other')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-other-area-payment')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
+      expect(payments.drafts, hasLength(2));
+      expect(payments.drafts.last.toJson(), payments.drafts.first.toJson());
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('retry-other-area-loan-other')),
+        findsNothing,
+      );
+    },
+  );
+  testWidgets(
+    'uncertain payment blocks leaving Other Area until exact retry resolves',
+    (tester) async {
+      await _setLargeSurface(tester);
+      final payments = _UncertainPaymentRepository();
+      final sequence = MemoryCollectionDeviceSequence();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                key: const Key('open-other-module'),
+                child: const Text('Open Other Area'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => OtherAreaCollectionPage(
+                      session: _collectorSession,
+                      paymentRepository: payments,
+                      deviceIdentityProvider: _deviceIdentityProvider(),
+                      deviceSequence: sequence,
+                      repository: _OtherAreaRepository(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open-other-module')));
+      await tester.pumpAndSettle();
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('confirm-other-area-payment')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('submit-collection-entry')));
+        await tester.pumpAndSettle();
+        if (attempt == 0) {
+          await tester.pageBack();
+          await tester.pumpAndSettle();
+          await tester.pageBack();
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const Key('record-other-area-loan-other')),
+            findsOneWidget,
+          );
+          expect(find.byKey(const Key('open-other-module')), findsNothing);
+        }
+      }
+      expect(payments.drafts, hasLength(2));
+      expect(payments.drafts.last.toJson(), payments.drafts.first.toJson());
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('open-other-module')), findsOneWidget);
+    },
+  );
+  testWidgets('other-area uncertain draft survives Back and reopen', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    final payments = _UncertainPaymentRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtherAreaCollectionPage(
+          session: _collectorSession,
+          paymentRepository: payments,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          repository: _OtherAreaRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (var attempt = 0; attempt < 2; attempt++) {
+      await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-other-area-payment')));
+      await tester.pumpAndSettle();
+      if (attempt == 0) {
+        await tester.enterText(
+          find.byKey(const Key('collection-note')),
+          'Original cross-route payment',
+        );
+      }
+      await tester.tap(find.byKey(const Key('submit-collection-entry')));
+      await tester.pumpAndSettle();
+      if (attempt == 0) {
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+    }
+    expect(payments.drafts, hasLength(2));
+    expect(payments.drafts.last.toJson(), payments.drafts.first.toJson());
+  });
   testWidgets('7x7 other-area receipt requires Management correction', (
     tester,
   ) async {
@@ -428,6 +631,24 @@ class _PaymentRepository implements PaymentSubmissionRepository {
   }
 }
 
+class _UncertainPaymentRepository extends _PaymentRepository {
+  final drafts = <PaymentSubmissionDraft>[];
+  @override
+  Future<PaymentSubmissionResult> submit(
+    UserSession session,
+    PaymentSubmissionDraft draft,
+  ) async {
+    drafts.add(draft);
+    if (drafts.length == 1) {
+      throw const SpinaApiException(
+        'Uncertain result',
+        code: 'network_unavailable',
+      );
+    }
+    return super.submit(session, draft);
+  }
+}
+
 class _FailingOtherAreaRepository implements OtherAreaClientRepository {
   const _FailingOtherAreaRepository();
 
@@ -443,5 +664,32 @@ class _FailingOtherAreaRepository implements OtherAreaClientRepository {
   @override
   Future<List<OtherAreaClient>> search(UserSession session, String query) {
     throw StateError('SocketException: connection refused at 10.0.2.2');
+  }
+}
+
+class _EmptySearchOtherAreaRepository extends _OtherAreaRepository {
+  @override
+  Future<List<OtherAreaClient>> search(
+    UserSession session,
+    String query,
+  ) async => [];
+}
+
+class _RevokedOtherAreaRepository extends _OtherAreaRepository {
+  bool revoked = false;
+  @override
+  Future<List<OtherAreaClient>> listWork(
+    UserSession session,
+    DateTime workDate, {
+    String? assignedCollectorUserId,
+  }) async {
+    if (revoked) {
+      throw const SpinaApiException('Access revoked', statusCode: 403);
+    }
+    return super.listWork(
+      session,
+      workDate,
+      assignedCollectorUserId: assignedCollectorUserId,
+    );
   }
 }

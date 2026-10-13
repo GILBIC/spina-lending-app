@@ -1,4 +1,6 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/features/management/management_journal_disclosures_page.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -15,6 +17,14 @@ import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_p
 import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_initial_capital_funding_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_source_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_protected_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_transfer_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_payout_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_collector_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_collector_controls_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_elapsed_assessment_page.dart';
+import 'package:gilbic_mobile/src/core/management/source_accounting_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
@@ -29,6 +39,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
     this.initialCapitalRepository,
     this.taxEvidenceRepository,
     this.taxLiabilityRepository,
+    this.sourceAccountingRepository,
     super.key,
   });
 
@@ -41,6 +52,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
   final InitialCapitalFundingRepository? initialCapitalRepository;
   final TaxEvidenceRepository? taxEvidenceRepository;
   final TaxLiabilityRepository? taxLiabilityRepository;
+  final SourceAccountingRepository? sourceAccountingRepository;
 
   @override
   State<ManagementFinancialAccountingPage> createState() =>
@@ -48,7 +60,13 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
 }
 
 class _ManagementFinancialAccountingPageState
-    extends State<ManagementFinancialAccountingPage> {
+    extends State<ManagementFinancialAccountingPage>
+    with PrivateAccessState<ManagementFinancialAccountingPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+  }
+
   late final FinancialAccountingRepository _repository;
   FinancialAccountingOverview? _overview;
   String? _errorMessage;
@@ -63,42 +81,46 @@ class _ManagementFinancialAccountingPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.loadOverview(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _overview = overview);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _errorMessage = 'Financial Accounting could not be loaded.',
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _createFiscalPeriod() async {
+    if (!mounted || !privateAccessActive) return;
     final draft = await showDialog<_FiscalPeriodDraft>(
       context: context,
       builder: (context) => const _CreateFiscalPeriodDialog(),
     );
-    if (draft == null || !mounted) {
+    if (draft == null || (!mounted || !privateAccessActive)) {
       return;
     }
     final confirmed = await showManagementReviewConfirmation(
@@ -123,11 +145,12 @@ class _ManagementFinancialAccountingPageState
             'or change any account balance.',
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.createFiscalPeriod(
         widget.session,
         deviceId: identity.installationId,
@@ -135,7 +158,7 @@ class _ManagementFinancialAccountingPageState
         startDate: draft.startDate,
         endDate: draft.endDate,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${draft.label} accounting period created.')),
         );
@@ -147,6 +170,7 @@ class _ManagementFinancialAccountingPageState
     AccountingFiscalPeriod period,
     String targetStatus,
   ) async {
+    if (!mounted || !privateAccessActive) return;
     final targetLabel = _statusLabel(targetStatus);
     final consequence = switch (targetStatus) {
       'review' =>
@@ -191,18 +215,19 @@ class _ManagementFinancialAccountingPageState
         ],
       ),
     );
-    if (!confirmed || !mounted) {
+    if (!confirmed || (!mounted || !privateAccessActive)) {
       return;
     }
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.changeFiscalPeriodStatus(
         widget.session,
         deviceId: identity.installationId,
         periodId: period.periodId,
         status: targetStatus,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -215,6 +240,7 @@ class _ManagementFinancialAccountingPageState
   }
 
   Future<void> _openFormalPeriodClose() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementPeriodClosePage(
@@ -224,10 +250,117 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
+    if (mounted && privateAccessActive) await _load();
+  }
+
+  Future<void> _openSourceAccounting(SourceAccountingMode mode) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementSourceAccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          mode: mode,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openProtectedAccounting(ProtectedAccountingMode mode) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementProtectedAccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          mode: mode,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openTransferAccounting() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementTransferAccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openJournalDisclosures() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementJournalDisclosuresPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openPayoutAccounting() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementPayoutAccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openCollectorAccounting() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementCollectorAccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openCollectorControls() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementCollectorControlsPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openElapsedAssessment() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementElapsedAssessmentPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.sourceAccountingRepository,
+        ),
+      ),
+    );
     if (mounted) await _load();
   }
 
   Future<void> _openInitialEclAllowance() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementEclAllowancePostingPage(
@@ -237,10 +370,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openEclAdjustments() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementEclA5AccountingPage(
@@ -250,10 +384,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openInitialCapitalFunding() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementInitialCapitalFundingPage(
@@ -263,10 +398,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _openTaxAccounting() async {
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => ManagementTaxAccountingPage(
@@ -277,10 +413,11 @@ class _ManagementFinancialAccountingPageState
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   Future<void> _runPeriodAction(Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_periodActionInProgress) {
       return;
     }
@@ -289,19 +426,20 @@ class _ManagementFinancialAccountingPageState
       await action();
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Accounting period action failed.')),
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _periodActionInProgress = false);
       }
     }
@@ -309,6 +447,7 @@ class _ManagementFinancialAccountingPageState
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Financial Accounting'),
@@ -400,6 +539,175 @@ class _ManagementFinancialAccountingPageState
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: _periodActionInProgress ? null : _openFormalPeriodClose,
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('accounting-book'),
+              leading: const Icon(Icons.menu_book_outlined),
+              title: const Text('Accounting book'),
+              subtitle: const Text(
+                'Review the permanent entity identity or configure a separate owner or corporate book.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress
+                  ? null
+                  : () => _openSourceAccounting(SourceAccountingMode.book),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('reporting-evidence'),
+              leading: const Icon(Icons.assessment_outlined),
+              title: const Text('Reporting evidence'),
+              subtitle: const Text(
+                'Retain the reporting basis, notes and exact cash flow classifications for each period.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress
+                  ? null
+                  : () => _openSourceAccounting(SourceAccountingMode.reporting),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('journal-disclosures'),
+              leading: const Icon(Icons.compare_arrows),
+              title: const Text('Cash and noncash disclosures'),
+              subtitle: const Text(
+                'Review mixed journal components and reconcile financing liabilities.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openJournalDisclosures,
+            ),
+          ),
+          if (widget.session.hasPermission('accounting.journal.manage'))
+            Card(
+              child: ListTile(
+                key: const Key('receipt-accounting'),
+                leading: const Icon(Icons.account_balance_wallet_outlined),
+                title: const Text('Receipt accounting'),
+                subtitle: const Text(
+                  'Review verified borrower cash, its account mapping and a separate posting confirmation.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _periodActionInProgress
+                    ? null
+                    : () =>
+                          _openSourceAccounting(SourceAccountingMode.receipts),
+              ),
+            ),
+          if (widget.session.hasPermission('accounting.journal.manage'))
+            Card(
+              child: ListTile(
+                key: const Key('application-accounting'),
+                leading: const Icon(Icons.call_split),
+                title: const Text('Application accounting'),
+                subtitle: const Text(
+                  'Review the principal and interest accounting for money already applied from Treasury receipts.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _periodActionInProgress
+                    ? null
+                    : () => _openProtectedAccounting(
+                        ProtectedAccountingMode.applications,
+                      ),
+              ),
+            ),
+          if (widget.session.hasPermission('accounting.journal.manage'))
+            Card(
+              child: ListTile(
+                key: const Key('transfer-accounting'),
+                leading: const Icon(Icons.swap_horiz),
+                title: const Text('Transfer accounting'),
+                subtitle: const Text(
+                  'Review actual wallet transfer legs, fees and funds in transit.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _periodActionInProgress ? null : _openTransferAccounting,
+              ),
+            ),
+          if (widget.session.hasPermission('accounting.journal.manage'))
+            Card(
+              child: ListTile(
+                key: const Key('payout-accounting'),
+                leading: const Icon(Icons.swap_horiz),
+                title: const Text('Loan payouts'),
+                subtitle: const Text(
+                  'Review actual payout debit and protected borrower completion.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _periodActionInProgress ? null : _openPayoutAccounting,
+              ),
+            ),
+          if (widget.session.hasPermission('accounting.journal.manage'))
+            Card(
+              child: ListTile(
+                key: const Key('collector-accounting'),
+                leading: const Icon(Icons.account_balance_wallet_outlined),
+                title: const Text('Collector accounting'),
+                subtitle: const Text(
+                  'Review accepted counts, credit payable and actual return steps.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _periodActionInProgress
+                    ? null
+                    : _openCollectorAccounting,
+              ),
+            ),
+          Card(
+            child: ListTile(
+              key: const Key('collector-controls'),
+              leading: const Icon(Icons.balance),
+              title: const Text('Collector controls'),
+              subtitle: const Text(
+                'Read dated liabilities, returns awaiting confirmation and current reserved capacity.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openCollectorControls,
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('cutoff-assessments'),
+              leading: const Icon(Icons.fact_check_outlined),
+              title: const Text('Dated cutoff assessments'),
+              subtitle: const Text(
+                'Review actual release-boundary and allowance proof for an accounting cutoff.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress
+                  ? null
+                  : () => _openProtectedAccounting(
+                      ProtectedAccountingMode.assessments,
+                    ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('historical-loan-assessment'),
+              leading: const Icon(Icons.history),
+              title: const Text('Historical loan assessment'),
+              subtitle: const Text(
+                'Review interest and expected credit loss at a period cutoff.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openElapsedAssessment,
+            ),
+          ),
+          Card(
+            child: ListTile(
+              key: const Key('liability-schedule'),
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Liability schedule'),
+              subtitle: const Text(
+                'Register and reconcile obligations against existing posted liability lines.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress
+                  ? null
+                  : () =>
+                        _openSourceAccounting(SourceAccountingMode.liabilities),
             ),
           ),
           const SizedBox(height: 10),

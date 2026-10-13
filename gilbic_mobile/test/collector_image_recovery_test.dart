@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:async';
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/media/image_recovery_controller.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance_photo_repository.dart';
@@ -110,6 +113,39 @@ class _NoRoute implements CollectorRouteRepository {
       throw StateError('No route');
 }
 
+class _DeniedRoute extends _NoRoute {
+  _DeniedRoute(this.status);
+  final int status;
+  @override
+  Future<CollectorRoute> fetchToday(UserSession session) async =>
+      throw SpinaApiException('Route denied', statusCode: status);
+}
+
+class _DelayedImage extends XFile {
+  _DelayedImage() : super('receipt.png', mimeType: 'image/png');
+  final bytes = Completer<Uint8List>();
+  bool started = false;
+  @override
+  Future<Uint8List> readAsBytes() {
+    started = true;
+    return bytes.future;
+  }
+}
+
+class _DelayedPicker extends ImagePicker {
+  _DelayedPicker(this.image);
+  final XFile image;
+  @override
+  Future<XFile?> pickImage({
+    required ImageSource source,
+    double? maxWidth,
+    double? maxHeight,
+    int? imageQuality,
+    CameraDevice preferredCameraDevice = CameraDevice.rear,
+    bool requestFullMetadata = true,
+  }) async => image;
+}
+
 Future<ImageRecoveryController> _recovered(ImagePickContext context) async {
   final directory = Directory.systemTemp.createTempSync(
     'spina-collector-recovery-',
@@ -161,6 +197,91 @@ Future<void> _acceptRecovery(WidgetTester tester, String label) async {
 }
 
 void main() {
+  for (final status in [401, 403, 426, 503]) {
+    testWidgets('cash queue optional route $status respects authority scope', (
+      tester,
+    ) async {
+      final repository = SpinaCollectorRenewalWorkflowRepository(
+        client: MockClient(
+          (_) async => _json({
+            'requests': [_request],
+          }),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectorCashToClientPage(
+            session: _session,
+            deviceIdentityProvider: _device(),
+            repository: repository,
+            routeRepository: _DeniedRoute(status),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Borrower'),
+        status == 401 || status == 426 ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.text('Access unavailable'),
+        status == 401 || status == 426 ? findsOneWidget : findsNothing,
+      );
+    });
+  }
+  for (final status in [401, 503]) {
+    testWidgets('cash photo delayed bytes after $status cannot bypass denial', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var reads = 0;
+      var writes = 0;
+      final image = _DelayedImage();
+      final repository = SpinaCollectorRenewalWorkflowRepository(
+        client: MockClient((request) async {
+          if (request.method != 'GET') {
+            writes++;
+            return _json({'status': 'under_review'});
+          }
+          reads++;
+          return reads == 1
+              ? _json({
+                  'requests': [_request],
+                })
+              : http.Response(
+                  jsonEncode({'message': 'Refresh denied'}),
+                  status,
+                );
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectorCashToClientPage(
+            session: _session,
+            deviceIdentityProvider: _device(),
+            repository: repository,
+            routeRepository: _NoRoute(),
+            imagePicker: _DelayedPicker(image),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final refresh = tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh;
+      await tester.tap(find.byKey(const Key('cash-to-client-proof-renewal-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose from gallery'));
+      await tester.pumpAndSettle();
+      expect(image.started, isTrue);
+      await refresh();
+      await tester.pumpAndSettle();
+      image.bytes.complete(Uint8List.fromList(_png));
+      await tester.pumpAndSettle();
+      expect(writes, status == 401 ? 0 : 1);
+    });
+  }
   test('renewal context changes with the locked handover and target', () {
     final original = renewalHandoverImageContext(
       CollectorRenewalRequest.fromPayload(_request),

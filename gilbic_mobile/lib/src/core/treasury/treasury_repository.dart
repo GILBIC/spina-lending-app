@@ -126,8 +126,10 @@ abstract interface class CollectorSurplusRepository
   );
   Future<CollectorSettlementPreview> collectorSettlementPreview(
     String remittanceId,
-    String accountId,
-  );
+    String accountId, {
+    String? creditApplicationId,
+    int? creditApplicationVersion,
+  });
   Future<ClientDocumentFile> exportCollectorSurplus({
     CollectorSurplusKind kind = CollectorSurplusKind.credits,
     String? accountId,
@@ -281,7 +283,7 @@ class SpinaTreasuryRepository
       rethrow;
     }
     _current();
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    if (const [401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -476,7 +478,7 @@ class SpinaTreasuryRepository
       headers: _headers(),
     );
     _current();
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    if (const [401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -630,8 +632,10 @@ class SpinaTreasuryRepository
   @override
   Future<CollectorSettlementPreview> collectorSettlementPreview(
     String remittanceId,
-    String accountId,
-  ) async {
+    String accountId, {
+    String? creditApplicationId,
+    int? creditApplicationVersion,
+  }) async {
     _online();
     requireTreasuryId(remittanceId);
     final w = await loadCollectorSurplus(
@@ -648,8 +652,8 @@ class SpinaTreasuryRepository
           body: {
             'account_id': account.id,
             'expected_version': account.version,
-            'credit_application_id': null,
-            'credit_application_version': null,
+            'credit_application_id': creditApplicationId,
+            'credit_application_version': creditApplicationVersion,
           },
         ),
       ),
@@ -657,6 +661,8 @@ class SpinaTreasuryRepository
       deviceId: w.actor.deviceId,
       remittanceId: remittanceId,
       account: account,
+      creditApplicationId: creditApplicationId,
+      creditApplicationVersion: creditApplicationVersion,
     );
     _settlementPreview = value;
     return value;
@@ -806,6 +812,8 @@ class SpinaTreasuryRepository
         final fresh = await collectorSettlementPreview(
           remittance as String,
           accountId,
+          creditApplicationId: body['credit_application_id'] as String?,
+          creditApplicationVersion: body['credit_application_version'] as int?,
         );
         if (!fresh.canCount ||
             fresh.digest != body['source_digest'] ||
@@ -818,6 +826,9 @@ class SpinaTreasuryRepository
           'id': remittance,
           'collector_user_id': fresh.raw['collector_user_id'],
         };
+        if (command.action == TreasuryAction.collectorCountRecord) {
+          records['count_review'] = fresh.raw;
+        }
         if (count != null && count['disposition'] != 'counted_ready') {
           throw StateError('A short count cannot accept the full remittance.');
         }
@@ -868,7 +879,7 @@ class SpinaTreasuryRepository
       headers: _headers(),
     );
     _current();
-    if ([401, 403].contains(response.statusCode)) {
+    if ([401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }
@@ -989,7 +1000,8 @@ class SpinaTreasuryRepository
   @override
   Future<Map<String, dynamic>> loanPayoutSources(String accountId) async {
     if (_workspace == null) await loadWorkspace();
-    if (_workspace?.account(accountId)?.permits('loan_payout_prepare') != true) {
+    if (_workspace?.account(accountId)?.permits('loan_payout_prepare') !=
+        true) {
       throw const TreasuryAccessChanged();
     }
     final value = treasuryObject(
@@ -1743,7 +1755,7 @@ class SpinaTreasuryRepository
       headers: _headers(),
     );
     _current();
-    if ([401, 403].contains(response.statusCode)) {
+    if ([401, 403, 426].contains(response.statusCode)) {
       await _redact();
       throw const TreasuryAccessChanged();
     }

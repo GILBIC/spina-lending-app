@@ -13,6 +13,221 @@ import 'package:gilbic_mobile/src/features/management/management_staff_detail_pa
 import 'package:gilbic_mobile/src/features/management/management_staff_invite_page.dart';
 
 void main() {
+  testWidgets('staff detail reload denial erases the private directory', (
+    tester,
+  ) async {
+    final repository = _FakeAdministrationRepository(
+      onLoad: (request) async {
+        if (request.query != null) {
+          throw const SpinaApiException('Denied', statusCode: 403);
+        }
+        return _page([_ana]);
+      },
+    );
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-staff-open')));
+    await tester.pumpAndSettle();
+    await expectLater(
+      tester
+          .widget<ManagementStaffDetailPage>(
+            find.byType(ManagementStaffDetailPage),
+          )
+          .reloadAccount(),
+      throwsA(isA<SpinaApiException>()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ana West', skipOffstage: false), findsNothing);
+    expect(
+      find.byKey(const Key('management-staff-permission-denied')),
+      findsOneWidget,
+    );
+  });
+  testWidgets(
+    'same-actor token refresh preserves uncertain invitation identity',
+    (tester) async {
+      final repository = _FakeAdministrationRepository(
+        onLoad: (request) async =>
+            request.query == null ? _page([_ana]) : _page([]),
+      );
+      final provider = DeviceIdentityProvider(
+        store: MemoryDeviceIdentityStore()..value = 'management-phone',
+        platformResolver: () => 'android',
+        appVersionResolver: () async => 'test',
+      );
+      await _pumpPage(tester, repository, deviceIdentityProvider: provider);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('management-staff-invite')));
+      await tester.pumpAndSettle();
+      await tester
+          .widget<ManagementStaffInvitePage>(
+            find.byType(ManagementStaffInvitePage),
+          )
+          .onUncertainResult(username: 'ana.west', email: 'ana@example.com');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      final refreshed = UserSession(
+        userId: _session.userId,
+        username: _session.username,
+        displayName: _session.displayName,
+        role: _session.role,
+        rawRole: _session.rawRole,
+        accessToken: 'refreshed-token',
+        permissions: _session.permissions,
+      );
+      await _pumpPage(
+        tester,
+        repository,
+        deviceIdentityProvider: provider,
+        session: refreshed,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('management-staff-invite')), findsNothing);
+      expect(
+        find.byKey(const Key('management-staff-invite-reconcile-pending')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('invitation reconciliation denial erases the private directory', (
+    tester,
+  ) async {
+    final repository = _FakeAdministrationRepository(
+      onLoad: (request) async {
+        if (request.query != null) {
+          throw const SpinaApiException('Denied', statusCode: 403);
+        }
+        return _page([_ana]);
+      },
+    );
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-staff-invite')));
+    await tester.pumpAndSettle();
+    await expectLater(
+      tester
+          .widget<ManagementStaffInvitePage>(
+            find.byType(ManagementStaffInvitePage),
+          )
+          .onUncertainResult(username: 'ana.west', email: 'ana@example.com'),
+      throwsA(isA<SpinaApiException>()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ana West', skipOffstage: false), findsNothing);
+    expect(
+      find.byKey(const Key('management-staff-permission-denied')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('management-staff-invite')), findsNothing);
+    expect(
+      find.byKey(const Key('management-staff-invite-reconcile-pending')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('older staff denial clears newer in-flight search', (
+    tester,
+  ) async {
+    final denied = Completer<ManagementStaffPage>(),
+        newer = Completer<ManagementStaffPage>();
+    final repository = _FakeAdministrationRepository(
+      onLoad: (request) {
+        if (request.query == 'denied') return denied.future;
+        if (request.query == 'newer') return newer.future;
+        return Future.value(_page([_ana]));
+      },
+    );
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('management-staff-search')),
+      'denied',
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(
+      find.byKey(const Key('management-staff-search')),
+      'newer',
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    denied.completeError(const SpinaApiException('Denied', statusCode: 403));
+    await tester.pump();
+    newer.complete(_page([_ben]));
+    await tester.pumpAndSettle();
+    expect(find.text('Ben South'), findsNothing);
+    expect(find.text('Ana West'), findsNothing);
+  });
+
+  testWidgets('staff context switch clears rows and ignores old pagination', (
+    tester,
+  ) async {
+    final old = Completer<ManagementStaffPage>();
+    final newRead = Completer<ManagementStaffPage>();
+    var changed = false;
+    final repository = _FakeAdministrationRepository(
+      onLoad: (request) {
+        if (changed) return newRead.future;
+        if (request.offset > 0) return old.future;
+        return Future.value(
+          ManagementStaffPage(items: [_ana], nextOffset: 1, hasMore: true),
+        );
+      },
+    );
+    final store = MemoryDeviceIdentityStore()..value = 'management-phone';
+    final provider = DeviceIdentityProvider(
+      store: store,
+      platformResolver: () => 'android',
+      appVersionResolver: () async => 'test',
+    );
+    await _pumpPage(tester, repository, deviceIdentityProvider: provider);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-staff-load-more')));
+    await tester.pump();
+    changed = true;
+    await _pumpPage(
+      tester,
+      repository,
+      deviceIdentityProvider: provider,
+      session: _deviceOnlySession,
+    );
+    expect(find.text('Ana West'), findsNothing);
+    old.complete(_page([_ben]));
+    await tester.pump();
+    expect(find.text('Ben South'), findsNothing);
+    newRead.complete(_page([_cara]));
+    await tester.pumpAndSettle();
+    expect(find.text('Cara North'), findsOneWidget);
+  });
+
+  for (final status in [401, 403, 426, 503]) {
+    testWidgets('load more $status handles private staff rows', (tester) async {
+      final repository = _FakeAdministrationRepository(
+        onLoad: (request) async {
+          if (request.offset > 0) {
+            throw SpinaApiException('Synthetic failure', statusCode: status);
+          }
+          return ManagementStaffPage(
+            items: [_ana],
+            nextOffset: 1,
+            hasMore: true,
+          );
+        },
+      );
+      await _pumpPage(tester, repository);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('management-staff-load-more')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Ana West'),
+        status == 503 ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.byKey(const Key('management-staff-load-more')),
+        status == 503 ? findsOneWidget : findsNothing,
+      );
+    });
+  }
+
   testWidgets('shows initial loading then the authoritative staff directory', (
     tester,
   ) async {

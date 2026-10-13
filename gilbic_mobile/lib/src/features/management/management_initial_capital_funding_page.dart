@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -33,7 +34,15 @@ class ManagementInitialCapitalFundingPage extends StatefulWidget {
 }
 
 class _ManagementInitialCapitalFundingPageState
-    extends State<ManagementInitialCapitalFundingPage> {
+    extends State<ManagementInitialCapitalFundingPage>
+    with PrivateAccessState<ManagementInitialCapitalFundingPage> {
+  @override
+  void clearPrivateData() {
+    _overview = null;
+    _evidenceRetryIds.clear();
+    _postingTokens.clear();
+  }
+
   late final InitialCapitalFundingRepository _repository;
   late final String Function() _uuidGenerator;
   late final String Function() _confirmationTokenGenerator;
@@ -57,32 +66,38 @@ class _ManagementInitialCapitalFundingPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final overview = await _repository.load(
         widget.session,
         deviceId: identity.installationId,
       );
-      if (mounted) setState(() => _overview = overview);
+      if (mounted && privateAccessActive) setState(() => _overview = overview);
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _error =
               'The protected initial-capital queue could not be loaded.',
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _recordEvidence() async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canRecord(overview)) return;
     final draft = await showDialog<InitialCapitalEvidenceDraft>(
@@ -92,7 +107,7 @@ class _ManagementInitialCapitalFundingPageState
         initialDate: initialCapitalDateText(_now()),
       ),
     );
-    if (draft == null || !mounted) return;
+    if (draft == null || (!mounted || !privateAccessActive)) return;
     final account = overview.cashAccounts.singleWhere(
       (candidate) => candidate.code == draft.cashAccountCode,
     );
@@ -137,7 +152,7 @@ class _ManagementInitialCapitalFundingPageState
             'The backend will immutably retain this evidence for a separate protected preparation and posting review.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final retryKey = <String>[
       draft.fundingDate,
       draft.amount,
@@ -150,6 +165,7 @@ class _ManagementInitialCapitalFundingPageState
     final retryId = _evidenceRetryIds.putIfAbsent(retryKey, _uuidGenerator);
     await _run('evidence:$retryKey', () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordEvidence(
         widget.session,
         deviceId: identity.installationId,
@@ -162,6 +178,7 @@ class _ManagementInitialCapitalFundingPageState
   }
 
   Future<void> _prepare(InitialCapitalFundingItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPrepare(overview, item)) return;
     item.requirePrepareCoordinates();
@@ -203,9 +220,10 @@ class _ManagementInitialCapitalFundingPageState
             'The backend will create an exact two-line draft for separate posting confirmation.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     await _run(item.evidenceId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.prepare(
         widget.session,
         deviceId: identity.installationId,
@@ -216,6 +234,7 @@ class _ManagementInitialCapitalFundingPageState
   }
 
   Future<void> _post(InitialCapitalFundingItem item) async {
+    if (!mounted || !privateAccessActive) return;
     final overview = _overview;
     if (overview == null || !_canPost(overview, item)) return;
     item.requirePostCoordinates();
@@ -264,7 +283,7 @@ class _ManagementInitialCapitalFundingPageState
             'The backend will immutably post Debit selected cash account and Credit Capital 3000 with permanent audit evidence.',
       ),
     );
-    if (!confirmed || !mounted) return;
+    if (!confirmed || (!mounted || !privateAccessActive)) return;
     final tokenKey = <String>[
       item.evidenceId,
       item.evidenceDigest,
@@ -280,6 +299,7 @@ class _ManagementInitialCapitalFundingPageState
     );
     await _run(item.evidenceId, () async {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.post(
         widget.session,
         deviceId: identity.installationId,
@@ -292,6 +312,7 @@ class _ManagementInitialCapitalFundingPageState
   }
 
   Future<void> _run(String busyKey, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busyKey != null) return;
     setState(() => _busyKey = busyKey);
     var succeeded = false;
@@ -300,16 +321,17 @@ class _ManagementInitialCapitalFundingPageState
       succeeded = true;
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) _message(error.message);
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(
           'The result is uncertain. Review the authoritative server state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busyKey = null);
-      if (!succeeded && mounted) setState(() {});
+      if (mounted && privateAccessActive) setState(() => _busyKey = null);
+      if (!succeeded && privateAccessActive) setState(() {});
     }
   }
 
@@ -343,27 +365,29 @@ class _ManagementInitialCapitalFundingPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Initial Capital Funding'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh initial-capital funding',
-          onPressed: _loading || _busyKey != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    floatingActionButton: _overview != null && _canRecord(_overview!)
-        ? FloatingActionButton.small(
-            key: const Key('record-initial-capital-evidence'),
-            tooltip: 'Record retained funding evidence',
-            onPressed: _busyKey == null ? _recordEvidence : null,
-            child: const Icon(Icons.add),
-          )
-        : null,
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Initial Capital Funding'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh initial-capital funding',
+                onPressed: _loading || _busyKey != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          floatingActionButton: _overview != null && _canRecord(_overview!)
+              ? FloatingActionButton.small(
+                  key: const Key('record-initial-capital-evidence'),
+                  tooltip: 'Record retained funding evidence',
+                  onPressed: _busyKey == null ? _recordEvidence : null,
+                  child: const Icon(Icons.add),
+                )
+              : null,
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final overview = _overview;

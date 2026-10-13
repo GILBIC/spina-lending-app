@@ -11,6 +11,7 @@ import gilbic_backend.refund_due_repository as refund_repository_module
 import psycopg
 import pytest
 from gilbic_backend.collection_void_repository import (
+    CollectionVoidConflict,
     CollectionVoidRecord,
     PostgresCollectionVoidRepository,
 )
@@ -84,7 +85,7 @@ def _seed_extra_principal_case(
             """
             insert into lending.loan_collection_state (
                 loan_id, remaining_balance, is_reconciled, state_version
-            ) values (%s, 2967.00, true, 1)
+            ) values (%s, 3000.00, true, 0)
             on conflict (loan_id) do update
             set remaining_balance = excluded.remaining_balance,
                 is_reconciled = true,
@@ -92,6 +93,14 @@ def _seed_extra_principal_case(
             """,
             (loan_id,),
         )
+        # This synthetic fixture bypasses the collection posting bridge. Save
+        # the actual seeded route state just as that bridge does before posting.
+        prior_state = connection.execute(
+            """select remaining_balance,pass_count,last_payment_date,
+                      advance_until,note,state_version
+               from lending.loan_collection_state where loan_id=%s""",
+            (loan_id,),
+        ).fetchone()
         transaction_id = _insert_receipt(
             connection,
             loan_id=loan_id,
@@ -111,6 +120,13 @@ def _seed_extra_principal_case(
             where id = %s
             """,
             (transaction_id,),
+        )
+        # The bridge updates the route before recording the schedule change;
+        # reconciliation checks that posted balance in the same transaction.
+        connection.execute(
+            """update lending.loan_collection_state
+               set remaining_balance=2967.00,state_version=1 where loan_id=%s""",
+            (loan_id,),
         )
         with connection.cursor(row_factory=dict_row) as cursor:
             posting = post_seven_by_seven_extra_principal(
@@ -134,9 +150,69 @@ def _seed_extra_principal_case(
             set details = coalesce(details, '{}'::jsonb) || %s
             where id = %s
             """,
-            (Jsonb({"state_version_after": 1}), transaction_id),
+            (
+                Jsonb(
+                    {
+                        "state_version_before": prior_state[5],
+                        "state_version_after": 1,
+                        "collection_state_before": {
+                            "remaining_balance": str(prior_state[0]),
+                            "pass_count": prior_state[1],
+                            "last_payment_date": prior_state[2].isoformat()
+                            if prior_state[2]
+                            else None,
+                            "advance_until": prior_state[3].isoformat()
+                            if prior_state[3]
+                            else None,
+                            "note": prior_state[4],
+                            "state_version": prior_state[5],
+                        },
+                    }
+                ),
+                transaction_id,
+            ),
         )
     return adjustment_id, transaction_id, collector_id
+
+
+def test_missing_prior_state_rolls_back_extra_principal_reversal_request(monkeypatch):
+    _, transaction_id, actor_id = _seed_extra_principal_case(include_advance=False)
+    monkeypatch.setattr(void_repository_module, "open_connection", _test_connection)
+    request_key = uuid4()
+    with psycopg.connect(DATABASE_URL) as connection:
+        connection.execute(
+            "update lending.collection_transactions set details=details-'collection_state_before' where id=%s",
+            (transaction_id,),
+        )
+    with pytest.raises(CollectionVoidConflict, match="prior state"):
+        PostgresCollectionVoidRepository().void_unremitted(
+            actor_user_id=actor_id,
+            transaction_id=transaction_id,
+            reason="Review legacy receipt",
+            idempotency_key=request_key,
+        )
+    with psycopg.connect(DATABASE_URL) as connection:
+        assert connection.execute(
+            """select t.is_voided,s.remaining_balance,s.state_version
+               from lending.collection_transactions t
+               join lending.loan_collection_state s on s.loan_id=t.loan_id
+               where t.id=%s""",
+            (transaction_id,),
+        ).fetchone() == (False, Decimal("2967.00"), 1)
+        assert (
+            connection.execute(
+                "select count(*) from lending.seven_by_seven_extra_principal_reversal_requests where idempotency_key=%s",
+                (request_key,),
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            connection.execute(
+                "select count(*) from lending.collection_transaction_voids where transaction_id=%s",
+                (transaction_id,),
+            ).fetchone()[0]
+            == 0
+        )
 
 
 def test_completed_extra_principal_void_request_replays_exact_result(

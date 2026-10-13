@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {readFile} from 'node:fs/promises';
+import {Element,fire} from './helpers/dom.mjs';
+import {mountCollectorSurplus,surplusOutcomeMessage} from '../assets/collector-surplus.js';
+const {examples}=JSON.parse(await readFile(new URL('./fixtures/collector-credit-backend.json',import.meta.url),'utf8'));
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
+test('named remittance can select its approval beyond the first actions page',async()=>{
+ const e=examples[1],preview=e.reference,approval=preview.credit_application,root=new Element(),calls=[];
+ const account={id:e.account_id,ledger_context_id:e.ledger_context_id,version:preview.account_version,alias:'Synthetic receiving cash',actions:['count_record','count_accept']};
+ const session={user:{id:e.actor.user_id,role:'management',status:'active'},device_id:'synthetic',device_registered:true};
+ const page={mode:'staff',accounts:[account],collector_choices:[],capabilities:{view:true,count_record:true,count_accept:true},readiness:{enabled:true,treasury_ready:true,blockers:[]},totals:{},total_count:1,items:[{id:preview.remittance_id,remittance_id:preview.remittance_id}],has_more:false};
+ const client={isCurrent:()=>true,state:()=>({status:'idle'}),surplusWorkspace:async options=>{calls.push(options);return options.kind==='actions'?{...page,kind:'actions',items:options.offset===100?[approval]:[],has_more:options.offset!==100}:{...page,kind:options.kind};},surplusDetail:async()=>approval,surplusPreview:async(id,accountId,selected)=>{assert.equal(id,preview.remittance_id);assert.equal(accountId,e.account_id);assert.equal(selected.id,approval.id);return preview;}};
+ const handle=mountCollectorSurplus({root,client,session,remittanceId:preview.remittance_id});
+ await handle.ready;
+ const form=root.querySelector('[data-surplus-form="collector_count_record"]');
+ fire(form.querySelector('[data-surplus-application-choices]'),'click');
+ for(let i=0;i<8;i++)await settle();
+ assert.ok(calls.some(c=>c.kind==='actions'&&c.offset===100));
+ const picker=form.querySelector('[name="credit_application_id"]');
+ assert.match(picker.innerHTML,new RegExp(approval.id));
+ picker.value=approval.id;fire(picker,'change');
+ fire(form.querySelector('[data-surplus-preview]'),'click');
+ for(let i=0;i<5;i++)await settle();
+ assert.match(form.querySelector('[data-surplus-preview-result]').textContent,/Physical cash required:.*96.00/);
+ handle();
+});
+test('all-credit completion states zero actual cash and the exact liability consumed',()=>{
+ const e=examples.find(e=>e.command.action==='collector_count_accept'&&e.response.result.settlement.physical_amount==='0.00');
+ assert.match(surplusOutcomeMessage(e.response),/Actual cash received: PHP 0.00/);
+ assert.match(surplusOutcomeMessage(e.response),/Credit applied: PHP 100.00/);
+});

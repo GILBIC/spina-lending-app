@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/features/office/office_intake_authority.dart';
+import 'package:gilbic_mobile/src/core/office/office_operation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -27,25 +29,103 @@ class OfficeWorkspacePage extends StatefulWidget {
 
 class _OfficeWorkspacePageState extends OfficeScreenState<OfficeWorkspacePage> {
   final fields = OfficeFields();
-  late final OfficeRepository repository;
+  late OfficeRepository repository;
+  OfficeOperation _localIntakeCreate = OfficeOperation();
+  late OfficeOperation _intakeCreate;
+
+  void _replaceCreate(OfficeOperation operation) {
+    _intakeCreate.removeListener(_createChanged);
+    _intakeCreate = operation;
+    _intakeCreate.addListener(_createChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final authority = OfficeIntakeAuthority.maybeOf(context);
+    if (authority == null) {
+      return; // Standalone previews/tests own their local lifetime.
+    }
+    if (authority.authorizationScopeKey !=
+        widget.session.authorizationScopeKey) {
+      operation.invalidate();
+      denyAccess();
+      _dismissPrivateRoutes();
+      return;
+    }
+    if (!identical(_intakeCreate, authority.operation)) {
+      _replaceCreate(authority.operation);
+    }
+    if (_intakeCreate.denied) denyAccess();
+  }
+
+  void _createChanged() {
+    if (!mounted) return;
+    if (_intakeCreate.denied) {
+      operation.invalidate();
+      denyAccess();
+      _dismissPrivateRoutes();
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(OfficeWorkspacePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final scopeChanged =
+        oldWidget.session.authorizationScopeKey !=
+        widget.session.authorizationScopeKey;
+    if (scopeChanged ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      operation.invalidate();
+      clearPrivate();
+      if (scopeChanged) {
+        _localIntakeCreate.dispose();
+        _localIntakeCreate = OfficeOperation();
+        _replaceCreate(_localIntakeCreate);
+        operation.denied = false;
+        operation.blocked = false;
+      }
+      repository = widget.repository ?? OfficeRepository();
+      _dismissPrivateRoutes();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _intakeCreate = _localIntakeCreate;
     repository = widget.repository ?? OfficeRepository();
+    _intakeCreate.addListener(_createChanged);
   }
 
   @override
   void clearPrivate() => fields.clear();
   @override
   void dispose() {
+    _intakeCreate.removeListener(_createChanged);
+    _localIntakeCreate.dispose();
     fields.dispose();
     super.dispose();
   }
 
   Future<void> _open(String stage) async {
+    final session = widget.session;
     final result = await operation.run(() async {
       final identity = OfficeIdentity(
-        widget.session,
+        session,
         (await widget.deviceIdentityProvider.load()).installationId,
       );
       if (!identity.allowed) {
@@ -78,12 +158,21 @@ class _OfficeWorkspacePageState extends OfficeScreenState<OfficeWorkspacePage> {
     if (!mounted || result == null) return;
     final (identity, selected) = result;
     final page = switch (stage) {
-      'find' => OfficeFinderPage(actor: identity, repository: repository),
-      'new' => OfficeIntakePage(actor: identity, repository: repository),
+      'find' => OfficeFinderPage(
+        actor: identity,
+        repository: repository,
+        createOperation: _intakeCreate,
+      ),
+      'new' => OfficeIntakePage(
+        actor: identity,
+        repository: repository,
+        createOperation: _intakeCreate,
+      ),
       'intake' => OfficeIntakePage(
         actor: identity,
         repository: repository,
         reference: fields.text('intake-reference'),
+        createOperation: _intakeCreate,
       ),
       'cif' => OfficeCifPage(
         actor: identity,
@@ -131,6 +220,13 @@ class _OfficeWorkspacePageState extends OfficeScreenState<OfficeWorkspacePage> {
                 operation.busy ? null : () => _open('find'),
                 primary: true,
               ),
+              if (_intakeCreate.busy || _intakeCreate.blocked)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'An office intake attempt is unresolved. New intake is locked. Open the intake form or find saved records to review the outcome; a different record cannot resolve this attempt.',
+                  ),
+                ),
               officeButton(
                 'New office intake',
                 operation.busy ? null : () => _open('new'),

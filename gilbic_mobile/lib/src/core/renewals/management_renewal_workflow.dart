@@ -11,6 +11,10 @@ class ManagementRenewalWorkflowItem {
   final CollectorRenewalRequest request;
   final String? borrowerUserId;
 
+  bool get requiresExistingSignerReview => request.signers.any(
+    (signer) => signer.partyRole != 'borrower' || signer.signed,
+  );
+
   factory ManagementRenewalWorkflowItem.fromPayload(
     Map<String, dynamic> payload,
   ) {
@@ -64,14 +68,32 @@ class ManagementRenewalTermsDraft {
   final bool officeProcessingRequired;
   final List<ManagementRenewalSignerDraft> signers;
 
-  Map<String, Object?> toJson() => <String, Object?>{
-    'decision': decision,
-    'approved_principal': approvedPrincipal == null
-        ? null
-        : requestMoney(approvedPrincipal),
-    'review_note': reviewNote,
-    'override_reason': overrideReason,
-    'office_processing_required': officeProcessingRequired,
-    'signers': signers.map((item) => item.toJson()).toList(growable: false),
-  };
+  Map<String, Object?> toJson() {
+    if (signers.any((signer) => signer.partyRole != 'borrower') ||
+        signers.length > 1) {
+      throw const SpinaApiException(
+        'New renewal terms allow only one borrower signer. Supporting parties require separate approval.',
+        code: 'invalid_renewal_signers',
+      );
+    }
+    if (decision == 'approved' &&
+        !officeProcessingRequired &&
+        (signers.length != 1 ||
+            (signers.single.userId?.trim().isEmpty ?? true))) {
+      throw const SpinaApiException(
+        'Remote renewal terms require the borrower linked app account.',
+        code: 'invalid_renewal_signers',
+      );
+    }
+    return <String, Object?>{
+      'decision': decision,
+      'approved_principal': approvedPrincipal == null
+          ? null
+          : requestMoney(approvedPrincipal),
+      'review_note': reviewNote,
+      'override_reason': overrideReason,
+      'office_processing_required': officeProcessingRequired,
+      'signers': signers.map((item) => item.toJson()).toList(growable: false),
+    };
+  }
 }

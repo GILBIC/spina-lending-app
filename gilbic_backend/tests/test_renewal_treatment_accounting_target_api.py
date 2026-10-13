@@ -173,7 +173,7 @@ def test_management_can_read_modification_measurement_without_journal_coordinate
     data = response.json()["data"]
     assert data["renewal_execution_event_id"] == str(EXECUTION_ID)
     assert data["decision"] == "modification_no_derecognition"
-    assert data["policy_version"] == "renewal_treatment_accounting_target_v2"
+    assert data["policy_version"] == "renewal_treatment_accounting_target_v3"
     assert data["accounting_asset_loan_id"] == str(OLD_LOAN_ID)
     assert data["operational_renewal_loan_id"] == str(NEW_LOAN_ID)
     assert data["old_gross_carrying_amount"] == "2000.00"

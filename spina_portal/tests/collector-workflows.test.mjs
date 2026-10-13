@@ -8,7 +8,18 @@ import {mountCollectorWorkflows} from '../assets/collector-workflows.js';
 const regular={route_entry_id:'r',loan_id:'regular',client_id:'client',client_name:'Client',loan_type:'Regular',route_revision:'v1',can_enter_payment:true};
 const seven={...regular,route_entry_id:'s',loan_id:'seven',loan_type:'7x7'};
 const preview={status:'short',requires_review:true,extra_choice_required:false,allocation_order:['seven_by_seven','regular'],allocation_hash:'a'.repeat(64),cash_received_amount:'175.01',expected_total_amount:'250.00',short_amount:'74.99',extra_amount:'0.00',regular_past_due_followup_required:true,legs:[{loan_id:'seven',route_entry_id:'s',route_revision:'v1',loan_type:'seven_by_seven',collectible_amount:'50.00',scheduled_amount:'50.00',extra_amount:'0.00',total_amount:'50.00',projected_covered_dates:[]},{loan_id:'regular',route_entry_id:'r',route_revision:'v1',loan_type:'regular',collectible_amount:'200.00',scheduled_amount:'125.01',extra_amount:'0.00',total_amount:'125.01',projected_covered_dates:[]}]};
-const accepted=options=>({status:'accepted',client_transaction_id:options.body.client_transaction_id,receipt_number:'receipt',total_amount:options.body.cash_received_amount,legs:(options.body.legs || []).map(leg=>({loan_id:leg.loan_id,receipt_number:'receipt'}))});
+const accepted=(options,allocation=preview)=>({status:'accepted',duplicate:false,client_transaction_id:options.body.client_transaction_id,
+  ...(options.body.legs ? {} : {transaction_id:'single-transaction',receipt_number:'receipt',official_balance:'750.00',accepted_at:'2026-09-28T03:00:00Z'}),
+  client_id:options.body.client_id,total_amount:options.body.cash_received_amount,applied_total_amount:options.body.cash_received_amount,
+  unallocated_total_amount:'0.00',cash_allocation_state:'fully_allocated',allocation_status:allocation.status,
+  allocation_hash:allocation.allocation_hash,extra_allocation_choice:allocation.extra_allocation_choice ?? null,
+  legs:allocation.legs.flatMap(leg=>{
+    const components=leg.loan_type==='regular' ? [[leg.extra_amount!=='0.00'?'regular_scheduled_and_extra':'regular_scheduled',leg.total_amount]] :
+      [['seven_by_seven_scheduled',leg.scheduled_amount],[allocation.extra_allocation_choice,leg.extra_amount]];
+    return components.filter(([,amount])=>amount!=='0.00').map(([component,amount])=>({loan_id:leg.loan_id,
+      transaction_id:`transaction-${component}`,receipt_number:`receipt-${component}`,amount,applied_amount:amount,
+      unallocated_amount:'0.00',allocation_state:'fully_allocated',allocation_component:component,official_balance:'750.00',route_revision:'v2'}));
+  })});
 function harness({entries=[regular,seven],response=(path,options)=>path.endsWith('/combined') ? accepted(options) : preview,permissions=['collection.create','collection.correct.own_unremitted']}={}) {
   const root=new Element();const calls=[];const sequenceCounts=[];let saved=0;
   const guard=createCollectorWriteGuard({eventTarget:new EventTarget(),onLock:()=>{}});
@@ -70,4 +81,61 @@ test('changed authoritative route invalidates a mounted reviewed Combined Pay wi
   const cleanup=mountCollectorWorkflows({root,api:{request:async(path,options)=>{if(path.endsWith('/preview'))return {...preview,regular_past_due_followup_required:false};posts++;return accepted(options);}},session:{permissions:['collection.create']},getSession:()=>({permissions:['collection.create']}),entries,routeDate:route.route_date,getRoute:()=>route,registerRouteConsumer:callback=>{consumer=callback;return ()=>consumer=null;},guard,identity:()=>({deviceId:'web',deviceSequence:9,clientTransactionId:'11111111-2222-4333-8444-555555555555'}),onSaved:async()=>{}});
   const form=root.querySelector('[data-combined-form]'),cash=form.querySelector('[name="amount"]');cash.value='175.01';fire(form.querySelector('[data-preview]'),'click');await flush();assert.equal(form.querySelector('[data-combined-save]').disabled,false);
   route={...route,entries:[{...regular,route_revision:'v2'},seven]};assert.equal(typeof consumer,'function');consumer(route);fire(form,'submit');await flush();assert.equal(posts,0);assert.strictEqual(form.querySelector('[name="amount"]'),cash);assert.equal(cash.value,'175.01');assert.match(root.textContent,/Route changed/);cleanup();assert.equal(consumer,null);guard.dispose();
+});
+
+for(const status of ['accepted','duplicate']) for(const [name,change] of [
+  ['missing component',r=>({...r,legs:r.legs.slice(0,1)})],
+  ['duplicate component',r=>({...r,legs:[r.legs[0],r.legs[0]]})],
+  ['foreign component',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,allocation_component:'foreign'}:leg)})],
+  ['foreign loan',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,loan_id:'foreign'}:leg)})],
+  ['missing transaction',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,transaction_id:null}:leg)})],
+  ['repeated transaction',r=>({...r,legs:r.legs.map(leg=>({...leg,transaction_id:'same-transaction'}))})],
+  ['blank receipt',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,receipt_number:'  '}:leg)})],
+  ['malformed balance',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,official_balance:'-0.01'}:leg)})],
+  ['wrong component amount',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,amount:'125.02',applied_amount:'125.02'}:leg)})],
+  ['wrong applied amount',r=>({...r,legs:r.legs.map((leg,i)=>i?{...leg,applied_amount:'125.00'}:leg)})],
+  ['wrong total',r=>({...r,applied_total_amount:'175.02'})],
+  ['wrong review hash',r=>({...r,allocation_hash:'b'.repeat(64)})],
+  ['wrong command',r=>({...r,client_transaction_id:'foreign'})],
+  ['contradictory duplicate',r=>({...r,duplicate:status==='accepted'})],
+]) test(`mounted Combined Pay retains reviewed cash and locks for ${status} ${name}`,async()=>{
+  const h=harness({response:(path,options)=>path.endsWith('/preview')?{...preview,regular_past_due_followup_required:false}:change({...accepted(options),status,duplicate:status==='duplicate'})});
+  try {
+    const form=h.root.querySelector('[data-combined-form]');set(form,'amount','175.01');
+    fire(form.querySelector('[data-preview]'),'click');await flush();fire(form,'submit');await flush();
+    assert.equal(h.saved,0);assert.equal(h.guard.locked,true);assert.deepEqual(h.guard.pendingCommand.options.body,h.calls[1].options.body);assert.equal(form.querySelector('[name="amount"]').value,'175.01');
+    assert.match(form.querySelector('[data-combined-preview]').textContent,/125\.01/);
+    fire(form,'submit');fire(form.querySelector('[data-preview]'),'click');await flush();assert.equal(h.calls.length,2);assert.deepEqual(h.sequenceCounts,[3]);
+  } finally {h.dispose();h.guard.dispose();}
+});
+
+for(const status of ['accepted','duplicate']) for(const shape of ['short-zero','seven-extra','seven-advance','regular-extra','regular-principal']) test(`mounted Combined Pay confirms healthy ${status} ${shape} producer components`,async()=>{
+  const allocation=structuredClone(preview);allocation.regular_past_due_followup_required=false;
+  if(shape==='short-zero') {
+    Object.assign(allocation,{cash_received_amount:'25.00',short_amount:'225.00'});
+    Object.assign(allocation.legs[0],{scheduled_amount:'25.00',total_amount:'25.00'});
+    Object.assign(allocation.legs[1],{scheduled_amount:'0.00',total_amount:'0.00'});
+  } else {
+    Object.assign(allocation,{status:'excess',cash_received_amount:'300.00',short_amount:'0.00',extra_amount:'50.00',extra_allocation_choice:({ 'seven-extra':'seven_by_seven_extra_principal','seven-advance':'seven_by_seven_advance','regular-extra':'regular_advance','regular-principal':'regular_principal_reduction'})[shape]});
+    Object.assign(allocation.legs[0],{scheduled_amount:'50.00',extra_amount:shape.startsWith('seven')?'50.00':'0.00',total_amount:shape.startsWith('seven')?'100.00':'50.00'});
+    Object.assign(allocation.legs[1],{scheduled_amount:'200.00',extra_amount:shape.startsWith('regular')?'50.00':'0.00',total_amount:shape.startsWith('regular')?'250.00':'200.00'});
+  }
+  const h=harness({response:(path,options)=>path.endsWith('/preview')?allocation:{...accepted(options,allocation),status,duplicate:status==='duplicate'}});
+  try {
+    const form=h.root.querySelector('[data-combined-form]');set(form,'amount',allocation.cash_received_amount);set(form,'extraChoice',allocation.extra_allocation_choice || '');
+    fire(form.querySelector('[data-preview]'),'click');await flush();assert.equal(form.querySelector('[data-combined-save]').disabled,false);
+    fire(form,'submit');await flush();assert.equal(h.saved,1);assert.equal(h.guard.locked,false);assert.equal(h.calls[1].options.body.reviewed_allocation_hash,'a'.repeat(64));
+  } finally {h.dispose();h.guard.dispose();}
+});
+
+for(const changes of [{transaction_id:null},{official_balance:'invalid'},{accepted_at:undefined},{client_transaction_id:'foreign'},{receipt_number:'  '}]) test(`covered-date ADV retains draft on malformed final ${Object.keys(changes)[0]}`,async()=>{
+  const h=harness({entries:[regular],response:(path,options)=>options?.method==='POST' ? {...accepted(options),...changes} : ({rows:[{kind:'installment',date:'2026-09-29',remaining_amount:'100.00'}]})});
+  try {
+    fire(h.root.querySelector('[data-load-schedule]'),'click');await flush();const form=h.root.querySelector('[data-dates-form]');
+    set(form,'amount','100.00');set(form,'note','Retain ADV note');form.querySelector('[name="coveredDate"]').checked=true;
+    fire(form,'submit');await flush();assert.equal(h.saved,0);assert.equal(h.guard.locked,true);
+    assert.equal(form.querySelector('[name="note"]').value,'Retain ADV note');assert.equal(form.querySelector('[name="coveredDate"]').checked,true);
+    assert.deepEqual(h.guard.pendingCommand.options.body,h.calls[1].options.body);
+    fire(form,'submit');fire(h.root.querySelector('[data-load-schedule]'),'click');await flush();assert.equal(h.calls.length,2);assert.deepEqual(h.sequenceCounts,[1]);
+  } finally {h.dispose();h.guard.dispose();}
 });

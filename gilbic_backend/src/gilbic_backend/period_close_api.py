@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -18,7 +18,6 @@ from .period_close_repository import (
     PostgresPeriodCloseRepository,
 )
 from .request_auth import authenticated_device_context
-
 
 CLOSE_PREPARE_PERMISSION = "accounting.period.close.prepare"
 CLOSE_POST_PERMISSION = "accounting.period.close.post"
@@ -44,7 +43,9 @@ class PostPeriodCloseRequest(StrictPeriodCloseRequest):
     @classmethod
     def exact_currency_cents(cls, value: Decimal) -> Decimal:
         if value != value.quantize(Decimal("0.01")):
-            raise ValueError("Expected period profit or loss must use exact currency-cent precision.")
+            raise ValueError(
+                "Expected period profit or loss must use exact currency-cent precision."
+            )
         return value
 
 
@@ -59,19 +60,27 @@ def _item_payload(item: PeriodCloseItem) -> dict[str, object]:
         "start_date": item.start_date.isoformat(),
         "end_date": item.end_date.isoformat(),
         "fiscal_period_status": item.fiscal_period_status,
-        "closed_by_user_id": str(item.closed_by_user_id) if item.closed_by_user_id else None,
+        "closed_by_user_id": str(item.closed_by_user_id)
+        if item.closed_by_user_id
+        else None,
         "closed_at": item.closed_at.isoformat() if item.closed_at else None,
         "preparation_id": str(item.preparation_id) if item.preparation_id else None,
-        "journal_entry_id": str(item.journal_entry_id) if item.journal_entry_id else None,
+        "journal_entry_id": str(item.journal_entry_id)
+        if item.journal_entry_id
+        else None,
         "temporary_account_count": item.temporary_account_count,
-        "net_income": format(item.net_income, ".2f") if item.net_income is not None else None,
+        "net_income": format(item.net_income, ".2f")
+        if item.net_income is not None
+        else None,
         "retained_earnings_balance_before": (
             format(item.retained_earnings_balance_before, ".2f")
             if item.retained_earnings_balance_before is not None
             else None
         ),
         "close_digest": item.close_digest,
-        "close_posting_id": str(item.close_posting_id) if item.close_posting_id else None,
+        "close_posting_id": str(item.close_posting_id)
+        if item.close_posting_id
+        else None,
         "closing_entry_number": item.closing_entry_number,
         "retained_earnings_balance_after": (
             format(item.retained_earnings_balance_after, ".2f")
@@ -85,6 +94,8 @@ def _item_payload(item: PeriodCloseItem) -> dict[str, object]:
         "closed_period_posting_protection_enabled": item.closed_period_posting_protection_enabled,
         "period_reopen_enabled": item.period_reopen_enabled,
         "automatic_source_posting": item.automatic_source_posting,
+        "source_blocker_count": item.source_blocker_count,
+        "comprehensive_source_coverage": item.comprehensive_source_coverage,
     }
 
 
@@ -151,12 +162,49 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_period_close_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get(
+        "/api/v1/management/financial-accounting/period-close/{fiscal_period_id}/source-blockers"
+    )
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/period-close/{fiscal_period_id}/source-blockers",
+        include_in_schema=False,
+    )
+    def period_source_blockers(
+        fiscal_period_id: UUID,
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        close: Annotated[
+            PostgresPeriodCloseRepository, Depends(period_close_repository_dependency)
+        ],
+        limit: int = Query(default=100, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+    ) -> dict[str, object]:
+        actor = _actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        _require_permission(actor, "accounting.view")
+        try:
+            coverage = close.source_coverage(
+                fiscal_period_id, actor=actor, limit=limit, offset=offset
+            )
+        except PeriodCloseError as error:
+            raise _exception(error) from error
+        return {"success": True, "data": {"source_coverage": coverage}}
+
     @router.get("/api/v1/management/financial-accounting/period-close")
     @router.get(
         "/api/mobile/v1/management/financial-accounting/period-close",
         include_in_schema=False,
     )
     def list_period_close_items(
+        *,
         close_status: Literal[
             "all",
             "ready_for_review",
@@ -169,9 +217,13 @@ def create_period_close_router() -> APIRouter:
         offset: int = Query(default=0, ge=0),
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
-        auth: SupabaseAuthClient = Depends(auth_client_dependency),
-        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        close: PostgresPeriodCloseRepository = Depends(period_close_repository_dependency),
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        close: Annotated[
+            PostgresPeriodCloseRepository, Depends(period_close_repository_dependency)
+        ],
     ) -> dict[str, object]:
         actor = _actor(
             authorization=authorization,
@@ -185,16 +237,18 @@ def create_period_close_router() -> APIRouter:
                 "summary": _summary_payload(close.summary()),
                 "items": [
                     _item_payload(item)
-                    for item in close.list_items(status=close_status, limit=limit, offset=offset)
+                    for item in close.list_items(
+                        status=close_status, limit=limit, offset=offset
+                    )
                 ],
                 "permissions": {
                     "close_prepare": CLOSE_PREPARE_PERMISSION in actor.permissions,
                     "close_post": CLOSE_POST_PERMISSION in actor.permissions,
                 },
                 "notice": (
-                    "A formal V1 period close requires the accounting period to be placed in review after all drafts are resolved. "
+                    "A formal V1 period close requires all drafts to be resolved and supported reconciliation of Treasury and Collector sources before the period enters review. "
                     "Review freezes ordinary journal activity. The protected close snapshots exact posted income/expense balances, transfers exact period profit or loss to 3100 Retained Earnings, then atomically closes the period. "
-                    "Closed periods cannot reopen in V1 and automatic source posting remains disabled."
+                    "Late source evidence remains visible for review without reopening a closed period. Automatic source posting remains disabled; a clear initial source gate does not certify complete company accounting."
                 ),
             },
         }
@@ -207,13 +261,18 @@ def create_period_close_router() -> APIRouter:
         include_in_schema=False,
     )
     def prepare_period_close(
+        *,
         fiscal_period_id: UUID,
         body: PreparePeriodCloseRequest,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
-        auth: SupabaseAuthClient = Depends(auth_client_dependency),
-        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        close: PostgresPeriodCloseRepository = Depends(period_close_repository_dependency),
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        close: Annotated[
+            PostgresPeriodCloseRepository, Depends(period_close_repository_dependency)
+        ],
     ) -> dict[str, object]:
         actor = _actor(
             authorization=authorization,
@@ -222,9 +281,13 @@ def create_period_close_router() -> APIRouter:
             accounts=accounts,
         )
         _require_permission(actor, CLOSE_PREPARE_PERMISSION)
-        _require_confirmation(body.confirm, "preparing the immutable formal period-close snapshot")
+        _require_confirmation(
+            body.confirm, "preparing the immutable formal period-close snapshot"
+        )
         try:
-            close.prepare(fiscal_period_id=fiscal_period_id, actor_user_id=actor.user_id)
+            close.prepare(
+                fiscal_period_id=fiscal_period_id, actor_user_id=actor.user_id
+            )
             item = close.get_item(fiscal_period_id)
         except PeriodCloseError as error:
             raise _exception(error) from error
@@ -238,13 +301,18 @@ def create_period_close_router() -> APIRouter:
         include_in_schema=False,
     )
     def post_period_close(
+        *,
         fiscal_period_id: UUID,
         body: PostPeriodCloseRequest,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
-        auth: SupabaseAuthClient = Depends(auth_client_dependency),
-        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        close: PostgresPeriodCloseRepository = Depends(period_close_repository_dependency),
+        auth: Annotated[SupabaseAuthClient, Depends(auth_client_dependency)],
+        accounts: Annotated[
+            PostgresAccountRepository, Depends(account_repository_dependency)
+        ],
+        close: Annotated[
+            PostgresPeriodCloseRepository, Depends(period_close_repository_dependency)
+        ],
     ) -> dict[str, object]:
         actor = _actor(
             authorization=authorization,
@@ -253,7 +321,9 @@ def create_period_close_router() -> APIRouter:
             accounts=accounts,
         )
         _require_permission(actor, CLOSE_POST_PERMISSION)
-        _require_confirmation(body.confirm, "posting retained earnings and closing the accounting period")
+        _require_confirmation(
+            body.confirm, "posting retained earnings and closing the accounting period"
+        )
         try:
             close.post(
                 fiscal_period_id=fiscal_period_id,

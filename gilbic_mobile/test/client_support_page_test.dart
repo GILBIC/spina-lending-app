@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -8,7 +10,126 @@ import 'package:gilbic_mobile/src/core/support/support_request.dart';
 import 'package:gilbic_mobile/src/features/client/client_support_page.dart';
 
 void main() {
-  testWidgets('client can submit and monitor a support request', (tester) async {
+  testWidgets('support denial invalidates newer reads already in flight', (
+    tester,
+  ) async {
+    final repository = _ControlledSupportRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClientSupportPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final old = Completer<ClientSupportPortal>(),
+        newer = Completer<ClientSupportPortal>();
+    repository.pending = old;
+    final first = tester
+        .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+        .onRefresh();
+    await tester.pump();
+    repository.pending = newer;
+    final second = tester
+        .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+        .onRefresh();
+    await tester.pump();
+    old.completeError(const SpinaApiException('Denied', statusCode: 403));
+    await first;
+    await tester.pump();
+    expect(find.text('TEST CLIENT REGULAR'), findsNothing);
+    newer.complete(
+      await _FakeClientSupportRepository().loadPortal(
+        _session,
+        deviceId: 'client-device',
+      ),
+    );
+    await second;
+    await tester.pumpAndSettle();
+    expect(find.text('TEST CLIENT REGULAR'), findsNothing);
+  });
+
+  for (final status in [401, 403, 426, 503]) {
+    testWidgets('support refresh $status handles retained private model', (
+      tester,
+    ) async {
+      final repository = _ControlledSupportRepository();
+      final provider = _deviceIdentityProvider();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ClientSupportPage(
+            session: _session,
+            deviceIdentityProvider: provider,
+            repository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
+      repository.failure = SpinaApiException(
+        'Synthetic failure',
+        statusCode: status,
+      );
+      await tester.tap(find.byTooltip('Refresh'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('TEST CLIENT REGULAR'),
+        status == 503 ? findsOneWidget : findsNothing,
+      );
+    });
+  }
+  testWidgets('support context switch drops private data and fences old read', (
+    tester,
+  ) async {
+    final repository = _ControlledSupportRepository();
+    final provider = _deviceIdentityProvider();
+    Widget page(UserSession session) => MaterialApp(
+      home: ClientSupportPage(
+        session: session,
+        deviceIdentityProvider: provider,
+        repository: repository,
+      ),
+    );
+    await tester.pumpWidget(page(_session));
+    await tester.pumpAndSettle();
+    repository.pending = Completer<ClientSupportPortal>();
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pump();
+    final old = repository.pending!;
+    repository.pending = Completer<ClientSupportPortal>();
+    await tester.pumpWidget(
+      page(
+        const UserSession(
+          userId: 'other-client',
+          username: 'other',
+          displayName: 'Other',
+          role: AppRole.client,
+          rawRole: 'client',
+          accessToken: 'other-token',
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('TEST CLIENT REGULAR'), findsNothing);
+    old.complete(
+      await _FakeClientSupportRepository().loadPortal(
+        _session,
+        deviceId: 'client-device',
+      ),
+    );
+    await tester.pump();
+    expect(find.text('TEST CLIENT REGULAR'), findsNothing);
+    repository.pending!.completeError(
+      const SpinaApiException('Denied', statusCode: 403),
+    );
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('client can submit and monitor a support request', (
+    tester,
+  ) async {
     final repository = _FakeClientSupportRepository();
 
     await tester.pumpWidget(
@@ -24,7 +145,10 @@ void main() {
 
     expect(find.text('Support'), findsOneWidget);
     expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
-    expect(find.text('No support request has been submitted yet.'), findsOneWidget);
+    expect(
+      find.text('No support request has been submitted yet.'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('create-support-request')));
     await tester.pumpAndSettle();
@@ -141,4 +265,17 @@ SupportRequestItem _request({required String status}) {
     createdAt: DateTime.utc(2026, 8, 7, 2, 30),
     managementResponse: '',
   );
+}
+
+class _ControlledSupportRepository extends _FakeClientSupportRepository {
+  SpinaApiException? failure;
+  Completer<ClientSupportPortal>? pending;
+  @override
+  Future<ClientSupportPortal> loadPortal(
+    UserSession session, {
+    required String deviceId,
+  }) {
+    if (failure != null) return Future.error(failure!);
+    return pending?.future ?? super.loadPortal(session, deviceId: deviceId);
+  }
 }

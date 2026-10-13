@@ -21,6 +21,26 @@ import 'package:gilbic_mobile/src/features/management/management_period_close_pa
 import 'package:gilbic_mobile/src/features/management/management_tax_accounting_page.dart';
 
 void main() {
+  testWidgets('accounting navigation exposes cash and noncash disclosures', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeAccountingRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('journal-disclosures')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Cash and noncash disclosures'), findsOneWidget);
+  });
   testWidgets('Management guidance hides obsolete backend stage labels', (
     tester,
   ) async {
@@ -409,6 +429,8 @@ void main() {
       600,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.pumpAndSettle();
+    expect(launcher.hitTestable(), findsOneWidget);
     await tester.tap(launcher);
     await tester.pumpAndSettle();
 

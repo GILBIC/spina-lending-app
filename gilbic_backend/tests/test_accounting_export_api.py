@@ -60,8 +60,12 @@ class Repository:
         self.called = False
         self.error = error
 
-    def load_snapshot(self, *, start_date, end_date):
+    def load_snapshot(
+        self, *, start_date, end_date, actor_user_id, include_reporting=False
+    ):
         self.called = True
+        assert actor_user_id == ACTOR
+        self.include_reporting = include_reporting
         assert start_date == date(2026, 9, 1) and end_date == date(2026, 9, 30)
         if self.error:
             raise self.error
@@ -150,3 +154,19 @@ def test_no_posting_route():
     http, repository = client()
     assert http.post(PATH + QUERY, headers=HEADERS).status_code == 405
     assert not repository.called
+
+
+@pytest.mark.parametrize("path", [PATH, PATH.replace("/api/v1/", "/api/mobile/v1/")])
+def test_reporting_download_uses_current_actor_and_explicit_scope(path):
+    http, repository = client()
+    response = http.get(path + QUERY + "&include_reporting=true", headers=HEADERS)
+    assert response.status_code == 200
+    assert repository.include_reporting is True
+
+
+def test_private_wallet_denial_does_not_become_a_download():
+    http, _ = client(error=psycopg.errors.InsufficientPrivilege("private wallet"))
+    response = http.get(PATH + QUERY, headers=HEADERS)
+    assert response.status_code == 403
+    assert "content-disposition" not in response.headers
+    assert "private wallet" not in response.text

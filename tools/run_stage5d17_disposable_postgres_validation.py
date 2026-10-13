@@ -39,6 +39,9 @@ AUTH_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS auth"
 AUTH_USERS_SQL = "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)"
 TEST_DATABASE_PREFIX = "spina_stage5d17_"
 BOOTSTRAP_THROUGH = 39
+# The integrated accounting branch deliberately reserved 0162. All other
+# prefixes remain mandatory; see docs/accounting/migration-integration-map.md.
+RESERVED_MIGRATION_NUMBERS = frozenset({162})
 DROP_RETRY_ATTEMPTS = 5
 DROP_SESSION_WAIT_ATTEMPTS = 40
 DROP_SESSION_WAIT_SECONDS = 0.25
@@ -125,16 +128,17 @@ def _migration_paths() -> list[Path]:
     paths.sort(key=lambda item: item.name)
     if not paths or paths[0].name[:4] != "0001" or paths[-1].name[:4] != f"{BOOTSTRAP_THROUGH:04d}":
         raise SystemExit(
-            "Stage 5D.17 disposable PostgreSQL validation refused: expected migrations 0001 through 0039 are incomplete."
+            "Stage 5D.17 disposable PostgreSQL validation refused: "
+            f"expected migrations 0001 through {BOOTSTRAP_THROUGH:04d} are incomplete."
         )
 
-    expected_numbers = set(range(1, BOOTSTRAP_THROUGH + 1))
+    expected_numbers = set(range(1, BOOTSTRAP_THROUGH + 1)) - RESERVED_MIGRATION_NUMBERS
     actual_numbers = {int(path.name[:4]) for path in paths}
     missing_numbers = sorted(expected_numbers - actual_numbers)
     if missing_numbers:
         missing_text = ", ".join(f"{number:04d}" for number in missing_numbers)
         raise SystemExit(
-            "Stage 5D.17 disposable PostgreSQL validation refused: missing migration numbers before 0040: "
+            "Stage 5D.17 disposable PostgreSQL validation refused: missing required migration numbers: "
             + missing_text
         )
 

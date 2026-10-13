@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -29,7 +30,14 @@ class ManagementTaxRecoverablePage extends StatefulWidget {
 }
 
 class _ManagementTaxRecoverablePageState
-    extends State<ManagementTaxRecoverablePage> {
+    extends State<ManagementTaxRecoverablePage>
+    with PrivateAccessState<ManagementTaxRecoverablePage> {
+  @override
+  void clearPrivateData() {
+    _workspace = null;
+    _postingTokens.clear();
+  }
+
   late final TaxRecoverableRepository _repository;
   late final String Function() _token;
   late final String Function() _idempotency;
@@ -50,17 +58,19 @@ class _ManagementTaxRecoverablePageState
   }
 
   Future<bool> _load() async {
+    if (!privateAccessActive) return false;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final device = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final result = await _repository.load(
         widget.session,
         deviceId: device.installationId,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _workspace = result;
           _writeStateUncertain = false;
@@ -68,13 +78,16 @@ class _ManagementTaxRecoverablePageState
       }
       return true;
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Tax Recoverable could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
     return false;
   }
@@ -130,13 +143,14 @@ class _ManagementTaxRecoverablePageState
   );
 
   Future<void> _recordRefund(TaxRecoverableRefundCandidate candidate) async {
+    if (!mounted || !privateAccessActive) return;
     const permission = 'accounting.tax.recoverable_refund_evidence.record';
     if (!_refundAllowed('evidence', permission)) return;
     final fields = await showDialog<_RefundFields>(
       context: context,
       builder: (_) => _RefundDialog(candidate: candidate),
     );
-    if (fields == null || !mounted) return;
+    if (fields == null || (!mounted || !privateAccessActive)) return;
     if (!await _confirm(
           record: candidate.adjustmentPostingId,
           status: 'Exact unreserved 1130 Tax Recoverable',
@@ -155,11 +169,12 @@ class _ManagementTaxRecoverablePageState
             ),
           ],
         ) ||
-        !mounted) {
+        (!mounted || !privateAccessActive)) {
       return;
     }
     await _run(candidate.adjustmentPostingId, () async {
       final device = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordRefundEvidence(
         widget.session,
         deviceId: device.installationId,
@@ -177,13 +192,14 @@ class _ManagementTaxRecoverablePageState
   }
 
   Future<void> _recordCredit(TaxRecoverableCreditCandidate candidate) async {
+    if (!mounted || !privateAccessActive) return;
     const permission = 'accounting.tax.recoverable_credit_evidence.record';
     if (!_creditAllowed('evidence', permission)) return;
     final fields = await showDialog<_CreditFields>(
       context: context,
       builder: (_) => _CreditDialog(candidate: candidate),
     );
-    if (fields == null || !mounted) return;
+    if (fields == null || (!mounted || !privateAccessActive)) return;
     if (!await _confirm(
           record: candidate.adjustmentPostingId,
           status: 'Exact recoverable and unpaid same-tax return',
@@ -202,11 +218,12 @@ class _ManagementTaxRecoverablePageState
             ManagementReviewFact(label: 'Application date', value: fields.date),
           ],
         ) ||
-        !mounted) {
+        (!mounted || !privateAccessActive)) {
       return;
     }
     await _run(candidate.adjustmentPostingId, () async {
       final device = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await _repository.recordCreditEvidence(
         widget.session,
         deviceId: device.installationId,
@@ -234,6 +251,7 @@ class _ManagementTaxRecoverablePageState
   );
 
   Future<void> _postRefund(TaxRecoverableRefundItem item) async {
+    if (!mounted || !privateAccessActive) return;
     item.requirePost();
     final key =
         '${item.refundEvidenceId}|${item.evidenceDigest}|${item.refundAmount}|${item.fiscalPeriodId}';
@@ -267,6 +285,7 @@ class _ManagementTaxRecoverablePageState
   );
 
   Future<void> _postCredit(TaxRecoverableCreditItem item) async {
+    if (!mounted || !privateAccessActive) return;
     item.requirePost();
     final key =
         '${item.creditEvidenceId}|${item.evidenceDigest}|${item.creditAmount}|${item.fiscalPeriodId}';
@@ -298,6 +317,7 @@ class _ManagementTaxRecoverablePageState
     required Future<TaxRecoverableRefundItem> Function(String device) call,
     VoidCallback? success,
   }) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_refundAllowed(action, permission)) return;
     if (!await _confirm(
           record: item.refundEvidenceId,
@@ -316,11 +336,12 @@ class _ManagementTaxRecoverablePageState
             ManagementReviewFact(label: 'Status', value: item.refundStatus),
           ],
         ) ||
-        !mounted) {
+        (!mounted || !privateAccessActive)) {
       return;
     }
     await _run(item.refundEvidenceId, () async {
       final device = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await call(device.installationId);
       success?.call();
       _message('$next completed.');
@@ -337,6 +358,7 @@ class _ManagementTaxRecoverablePageState
     required Future<TaxRecoverableCreditItem> Function(String device) call,
     VoidCallback? success,
   }) async {
+    if (!mounted || !privateAccessActive) return;
     if (!_creditAllowed(action, permission)) return;
     if (!await _confirm(
           record: item.creditEvidenceId,
@@ -355,11 +377,12 @@ class _ManagementTaxRecoverablePageState
             ManagementReviewFact(label: 'Status', value: item.creditStatus),
           ],
         ) ||
-        !mounted) {
+        (!mounted || !privateAccessActive)) {
       return;
     }
     await _run(item.creditEvidenceId, () async {
       final device = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       await call(device.installationId);
       success?.call();
       _message('$next completed.');
@@ -367,39 +390,41 @@ class _ManagementTaxRecoverablePageState
   }
 
   Future<void> _run(String key, Future<void> Function() action) async {
+    if (!mounted || !privateAccessActive) return;
     if (_busy != null || _writeStateUncertain) return;
     setState(() => _busy = key);
     try {
       await action();
       final refreshed = await _load();
-      if (!refreshed && mounted) {
+      if (!refreshed && privateAccessActive) {
         setState(() => _writeStateUncertain = true);
         _message(
           'The write succeeded but authoritative refresh failed. All actions stay locked until refresh succeeds.',
         );
       }
     } on SpinaApiException catch (error) {
-      if (mounted && _isAmbiguousWrite(error)) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive && _isAmbiguousWrite(error)) {
         setState(() => _writeStateUncertain = true);
         _message(
           'The result is uncertain. Refresh authoritative Tax Recoverable state before retrying.',
         );
-      } else if (mounted) {
+      } else if (mounted && privateAccessActive) {
         _message(error.message);
       }
     } on ArgumentError catch (error) {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         _message(error.message ?? 'Exact protected fields are required.');
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _writeStateUncertain = true);
         _message(
           'The result is uncertain. Refresh authoritative Tax Recoverable state before retrying.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = null);
+      if (mounted && privateAccessActive) setState(() => _busy = null);
     }
   }
 
@@ -410,19 +435,21 @@ class _ManagementTaxRecoverablePageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Tax Recoverable'),
-      actions: <Widget>[
-        IconButton(
-          tooltip: 'Refresh Tax Recoverable',
-          onPressed: _loading || _busy != null ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: SafeArea(child: _body()),
-  );
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Tax Recoverable'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Refresh Tax Recoverable',
+                onPressed: _loading || _busy != null ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          body: SafeArea(child: _body()),
+        );
 
   Widget _body() {
     final value = _workspace;

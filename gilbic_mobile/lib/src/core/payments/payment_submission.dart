@@ -290,16 +290,19 @@ class PaymentSubmissionResult {
     Object? value, {
     required String idempotencyKey,
     required PaymentSubmissionDisposition fallbackDisposition,
+    CollectionEntryType entryType = CollectionEntryType.payment,
   }) {
     final outer = stringMap(value);
     final transaction = stringMap(
       outer['transaction'] ?? outer['payment'] ?? outer['collection'],
     );
-    final source = transaction.isEmpty ? outer : transaction;
+    final canonicalFinal =
+        outer['status'] == 'accepted' || outer['status'] == 'duplicate';
+    final source = canonicalFinal || transaction.isEmpty ? outer : transaction;
     final rawDisposition = firstNonEmptyString(<Object?>[
-      outer['disposition'],
-      outer['result'],
       outer['status'],
+      outer['disposition'],
+      if (outer['result'] is String) outer['result'],
       source['disposition'],
       source['result'],
       source['status'],
@@ -312,7 +315,7 @@ class PaymentSubmissionResult {
         ? PaymentSubmissionDisposition.duplicate
         : _dispositionFromValue(rawDisposition) ?? fallbackDisposition;
 
-    return PaymentSubmissionResult(
+    final result = PaymentSubmissionResult(
       disposition: disposition,
       idempotencyKey:
           firstNonEmptyString(<Object?>[
@@ -362,6 +365,41 @@ class PaymentSubmissionResult {
         outer['route_revision'],
       ]),
     );
+    if (result.isFinalSuccess ||
+        fallbackDisposition == PaymentSubmissionDisposition.accepted) {
+      // PostedCollection.response_payload is the authoritative single-entry
+      // contract. HTTP success, legacy aliases and duplicate flags cannot
+      // substitute for its final status and exact submitted command identity.
+      final status = outer['status'];
+      final finalStatus = status == 'accepted' || status == 'duplicate';
+      final balance = requestMoneyCents(outer['official_balance']);
+      final timestamp = outer['accepted_at'];
+      final hasTimestamp =
+          timestamp is String &&
+          RegExp(r'T.*(?:Z|[+-]\d{2}:\d{2})$').hasMatch(timestamp) &&
+          DateTime.tryParse(timestamp) != null;
+      bool hasText(Object? value) => value is String && value.trim().isNotEmpty;
+      if (!finalStatus ||
+          outer['client_transaction_id'] != idempotencyKey ||
+          !hasText(outer['transaction_id']) ||
+          balance == null ||
+          balance < BigInt.zero ||
+          result.officialBalance == null ||
+          !result.officialBalance!.isFinite ||
+          !hasTimestamp ||
+          (entryType != CollectionEntryType.pass &&
+              !hasText(outer['receipt_number'])) ||
+          (outer.containsKey('duplicate') &&
+              outer['duplicate'] != (status == 'duplicate'))) {
+        // No HTTP status: callers retain the original draft as uncertain and
+        // retry its exact UUID and device sequence, rather than creating a pay.
+        throw const SpinaApiException(
+          'The collection result is not confirmed. Retry the same transaction.',
+          code: 'invalid_server_response',
+        );
+      }
+    }
+    return result;
   }
 }
 

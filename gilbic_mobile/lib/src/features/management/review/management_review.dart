@@ -34,6 +34,15 @@ enum ManagementMutationSurface {
   taxLiability('tax-liability'),
   taxSettlement('tax-settlement'),
   taxAdjustment('tax-adjustment'),
+  receiptAccounting('receipt-accounting'),
+  applicationAccounting('application-accounting'),
+  transferAccounting('transfer-accounting'),
+  payoutAccounting('payout-accounting'),
+  collectorAccounting('collector-accounting'),
+  cutoffAssessment('cutoff-assessment'),
+  liabilitySchedule('liability-schedule'),
+  accountingBook('accounting-book'),
+  reportingEvidence('reporting-evidence'),
   additionalTax('additional-tax'),
   taxRecoverable('tax-recoverable');
 
@@ -293,6 +302,80 @@ enum ManagementMutationBinding {
       'prepare credit',
       'post credit',
     ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  receiptAccounting(
+    surface: ManagementMutationSurface.receiptAccounting,
+    owner: 'ManagementSourceAccountingPage',
+    actions: <String>[
+      'configure cash mapping',
+      'prepare receipt',
+      'post receipt',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  applicationAccounting(
+    surface: ManagementMutationSurface.applicationAccounting,
+    owner: 'ManagementProtectedAccountingPage',
+    actions: <String>[
+      'prepare application accounting',
+      'post application accounting',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  transferAccounting(
+    surface: ManagementMutationSurface.transferAccounting,
+    owner: 'ManagementTransferAccountingPage',
+    actions: <String>[
+      'prepare actual transfer leg',
+      'post actual transfer leg',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  payoutAccounting(
+    surface: ManagementMutationSurface.payoutAccounting,
+    owner: 'ManagementPayoutAccountingPage',
+    actions: <String>[
+      'prepare actual payout stage',
+      'post actual payout stage',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  collectorAccounting(
+    surface: ManagementMutationSurface.collectorAccounting,
+    owner: 'ManagementCollectorAccountingPage',
+    actions: <String>[
+      'prepare Collector accounting',
+      'post Collector accounting',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  cutoffAssessment(
+    surface: ManagementMutationSurface.cutoffAssessment,
+    owner: 'ManagementProtectedAccountingPage',
+    actions: <String>['prepare dated assessment', 'confirm dated proof'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  liabilitySchedule(
+    surface: ManagementMutationSurface.liabilitySchedule,
+    owner: 'ManagementSourceAccountingPage',
+    actions: <String>[
+      'register obligation',
+      'record settlement',
+      'record correction',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  accountingBook(
+    surface: ManagementMutationSurface.accountingBook,
+    owner: 'ManagementSourceAccountingPage',
+    actions: <String>['set permanent book identity'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  reportingEvidence(
+    surface: ManagementMutationSurface.reportingEvidence,
+    owner: 'ManagementSourceAccountingPage',
+    actions: <String>['retain reporting policy', 'classify posted cash line'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   );
 

@@ -19,6 +19,8 @@ class CollectionEntryPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     required this.deviceSequence,
     this.collectionDate,
+    this.pendingDraft,
+    this.onPendingDraftChanged,
     super.key,
   });
 
@@ -28,6 +30,8 @@ class CollectionEntryPage extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence deviceSequence;
   final DateTime? collectionDate;
+  final PaymentSubmissionDraft? pendingDraft;
+  final ValueChanged<PaymentSubmissionDraft?>? onPendingDraftChanged;
 
   @override
   State<CollectionEntryPage> createState() => _CollectionEntryPageState();
@@ -51,6 +55,13 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   DateTime? _promisedPaymentDate;
   bool _forcePastDueFollowup = false;
   bool _submitting = false;
+  bool get _editingLocked =>
+      _submitting || _pendingDraft != null || _result?.isFinalSuccess == true;
+
+  void _retainAttempt(PaymentSubmissionDraft? draft) {
+    _pendingDraft = draft;
+    widget.onPendingDraftChanged?.call(draft);
+  }
 
   bool get _sevenBySevenBlocked =>
       _isSevenBySevenLoan(widget.entry.loanType) &&
@@ -110,6 +121,21 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     _paymentNoteController = TextEditingController();
     _pastDueNoteController = TextEditingController();
     _promiseAmountController = TextEditingController();
+    final draft = widget.pendingDraft;
+    if (draft != null) {
+      _pendingDraft = draft;
+      _entryType = draft.entryType;
+      _paymentAllocationIntent = draft.paymentAllocationIntent;
+      _amountController.text = tryRequestMoney(draft.amount) ?? '';
+      _paymentNoteController.text = draft.note;
+      _unableDate = draft.collectionDate;
+      final followup = draft.pastDueFollowup;
+      _selectedReason = followup?.reasonCode;
+      _pastDueNoteController.text = followup?.note ?? '';
+      _promisedPaymentDate = followup?.promisedPaymentDate;
+      _promiseAmountController.text =
+          tryRequestMoney(followup?.promisedAmount) ?? '';
+    }
   }
 
   @override
@@ -122,7 +148,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   }
 
   void _clearSubmissionState() {
-    _pendingDraft = null;
+    if (_editingLocked) return;
     _result = null;
     _errorMessage = null;
   }
@@ -135,6 +161,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   }
 
   void _changeEntryType(CollectionEntryType type) {
+    if (_editingLocked) return;
     setState(() {
       _entryType = type;
       _forcePastDueFollowup = false;
@@ -146,7 +173,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   }
 
   void _changeAllocationIntent(PaymentAllocationIntent? intent) {
-    if (intent == null || _submitting) return;
+    if (intent == null || _editingLocked) return;
     setState(() {
       _paymentAllocationIntent = intent;
       _clearSubmissionState();
@@ -209,7 +236,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     FocusScope.of(context).unfocus();
 
     final amount = _isUnableToPay ? null : _enteredAmount;
-    final localError = _validateForm(amount);
+    final localError = _pendingDraft == null ? _validateForm(amount) : null;
     if (localError != null) {
       setState(() {
         _errorMessage = localError;
@@ -226,14 +253,14 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
 
     try {
       final draft = _pendingDraft ?? await _buildDraft(amount);
-      _pendingDraft = draft;
+      _retainAttempt(draft);
       final result = await widget.repository.submit(widget.session, draft);
+      _retainAttempt(null);
       if (!mounted) return;
       setState(() {
         _result = result;
         _errorMessage = null;
         if (!result.isFinalSuccess) {
-          _pendingDraft = null;
           if (result.code == 'past_due_reason_required') {
             _forcePastDueFollowup = true;
             _errorMessage = result.message;
@@ -241,6 +268,12 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
         }
       });
     } on SpinaApiException catch (error) {
+      final status = error.statusCode;
+      if ((status != null && status >= 400 && status != 429 && status < 500) ||
+          error.code == 'extra_allocation_choice_required' ||
+          error.code == 'past_due_reason_required') {
+        _retainAttempt(null);
+      }
       if (!mounted) return;
       setState(() {
         _errorMessage = collectorFailureMessage(
@@ -248,10 +281,6 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
           task: CollectorFailureTask.recordCollection,
         );
         _result = null;
-        if (error.code == 'extra_allocation_choice_required' ||
-            error.code == 'past_due_reason_required') {
-          _pendingDraft = null;
-        }
         if (error.code == 'past_due_reason_required') {
           _forcePastDueFollowup = true;
         }
@@ -354,294 +383,303 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Record Collection')),
-      body: SafeArea(
-        child: WorkspaceBody(
-          maxWidth: 720,
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
-            children: [
-              _ClientSummary(entry: widget.entry),
-              const SizedBox(height: 12),
-              if (_sevenBySevenBlocked)
-                const _SafetyNotice(
-                  icon: Icons.lock_outline,
-                  message:
-                      '7x7 mobile collection is disabled until the protected server allocator explicitly enables this route entry. Use SPINA desktop for this loan.',
-                )
-              else ...[
-                SegmentedButton<CollectionEntryType>(
-                  segments: const [
-                    ButtonSegment(
-                      value: CollectionEntryType.payment,
-                      label: Text('Payment'),
-                      icon: Icon(Icons.payments_outlined),
-                    ),
-                    ButtonSegment(
-                      value: CollectionEntryType.pass,
-                      label: Text('Unable to pay'),
-                      icon: Icon(Icons.event_busy_outlined),
-                    ),
-                  ],
-                  selected: <CollectionEntryType>{_entryType},
-                  onSelectionChanged: _submitting
-                      ? null
-                      : (selection) => _changeEntryType(selection.first),
-                ),
+    return PopScope(
+      canPop: !_submitting,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Record Collection')),
+        body: SafeArea(
+          child: WorkspaceBody(
+            maxWidth: 720,
+            child: ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+              children: [
+                _ClientSummary(entry: widget.entry),
                 const SizedBox(height: 12),
-                if (!_isUnableToPay) ...[
-                  TextField(
-                    key: const Key('collection-amount'),
-                    controller: _amountController,
-                    enabled: !_submitting,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Amount received',
-                      prefixText: '₱ ',
-                    ),
-                    onChanged: (_) {
-                      setState(() {
-                        _forcePastDueFollowup = false;
-                        _clearSubmissionState();
-                      });
-                    },
+                if (_sevenBySevenBlocked)
+                  const _SafetyNotice(
+                    icon: Icons.lock_outline,
+                    message:
+                        '7x7 mobile collection is disabled until the protected server allocator explicitly enables this route entry. Use SPINA desktop for this loan.',
+                  )
+                else ...[
+                  SegmentedButton<CollectionEntryType>(
+                    segments: const [
+                      ButtonSegment(
+                        value: CollectionEntryType.payment,
+                        label: Text('Payment'),
+                        icon: Icon(Icons.payments_outlined),
+                      ),
+                      ButtonSegment(
+                        value: CollectionEntryType.pass,
+                        label: Text('Unable to pay'),
+                        icon: Icon(Icons.event_busy_outlined),
+                      ),
+                    ],
+                    selected: <CollectionEntryType>{_entryType},
+                    onSelectionChanged: _editingLocked
+                        ? null
+                        : (selection) => _changeEntryType(selection.first),
                   ),
-                  const SizedBox(height: 10),
-                  Card(
-                    key: const Key('protected-allocation-card'),
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.account_tree_outlined, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Allocation',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
+                  const SizedBox(height: 12),
+                  if (!_isUnableToPay) ...[
+                    TextField(
+                      key: const Key('collection-amount'),
+                      controller: _amountController,
+                      enabled: !_editingLocked,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount received',
+                        prefixText: '₱ ',
+                      ),
+                      onChanged: (_) {
+                        setState(() {
+                          _forcePastDueFollowup = false;
+                          _clearSubmissionState();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Card(
+                      key: const Key('protected-allocation-card'),
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.account_tree_outlined,
+                                  size: 20,
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            _isSevenBySeven
-                                ? 'SPINA applies this payment using the protected 7x7 order.'
-                                : 'SPINA applies required cash automatically: oldest Past Due → Due Today.',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (!_isSevenBySeven) ...[
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<PaymentAllocationIntent>(
-                              key: const Key('regular-extra-allocation-choice'),
-                              initialValue: _paymentAllocationIntent,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'If there is extra cash',
-                                helperText:
-                                    'Choose only when the borrower gives more than required.',
-                                isDense: true,
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: PaymentAllocationIntent.scheduled,
-                                  child: Text('No extra / required only'),
-                                ),
-                                DropdownMenuItem(
-                                  value: PaymentAllocationIntent.extraAsAdvance,
-                                  child: Text('Advance'),
-                                ),
-                                DropdownMenuItem(
-                                  value: PaymentAllocationIntent
-                                      .extraAsPrincipalReduction,
-                                  child: Text('Principal Reduction'),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Allocation',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
                                 ),
                               ],
-                              onChanged: _submitting
-                                  ? null
-                                  : _changeAllocationIntent,
                             ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    key: const Key('collection-note'),
-                    controller: _paymentNoteController,
-                    enabled: !_submitting,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment note (optional)',
-                      alignLabelWithHint: true,
-                    ),
-                    onChanged: (_) => _invalidatePendingDraft(),
-                  ),
-                ] else ...[
-                  OutlinedButton.icon(
-                    key: const Key('unable-date'),
-                    onPressed: _submitting ? null : _selectUnableDate,
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text('Unable to pay date: ${_date(_unableDate)}'),
-                  ),
-                ],
-                if (_showPastDueFollowup) ...[
-                  const SizedBox(height: 10),
-                  Card(
-                    key: const Key('past-due-followup-card'),
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Past Due reason',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (!_isUnableToPay &&
-                              _estimatedPastDueRemainder > 0) ...[
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 5),
                             Text(
-                              'Remaining today: ${_money(_estimatedPastDueRemainder)}',
+                              _isSevenBySeven
+                                  ? 'SPINA applies this payment using the protected 7x7 order.'
+                                  : 'SPINA applies required cash automatically: oldest Past Due → Due Today.',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
-                          ],
-                          const SizedBox(height: 7),
-                          Wrap(
-                            spacing: 7,
-                            runSpacing: 7,
-                            children: [
-                              for (final reason in PastDueReasonCode.values)
-                                if (!_isSevenBySeven ||
-                                    reason !=
-                                        PastDueReasonCode.promisedToPayLater)
-                                  ChoiceChip(
-                                    key: Key(
-                                      'past-due-reason-${reason.apiValue}',
-                                    ),
-                                    label: Text(reason.label),
-                                    selected: _selectedReason == reason,
-                                    onSelected: _submitting
-                                        ? null
-                                        : (_) => _selectReason(reason),
+                            if (!_isSevenBySeven) ...[
+                              const SizedBox(height: 10),
+                              DropdownButtonFormField<PaymentAllocationIntent>(
+                                key: const Key(
+                                  'regular-extra-allocation-choice',
+                                ),
+                                initialValue: _paymentAllocationIntent,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'If there is extra cash',
+                                  helperText:
+                                      'Choose only when the borrower gives more than required.',
+                                  isDense: true,
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: PaymentAllocationIntent.scheduled,
+                                    child: Text('No extra / required only'),
                                   ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            key: const Key('past-due-note'),
-                            controller: _pastDueNoteController,
-                            enabled: !_submitting,
-                            maxLines: 2,
-                            decoration: InputDecoration(
-                              labelText:
-                                  _selectedReason == PastDueReasonCode.other
-                                  ? 'Short explanation (required)'
-                                  : 'Past Due note (optional)',
-                              alignLabelWithHint: true,
-                            ),
-                            onChanged: (_) => _invalidatePendingDraft(),
-                          ),
-                          if (_selectedReason ==
-                              PastDueReasonCode.promisedToPayLater) ...[
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              key: const Key('promised-payment-date'),
-                              onPressed: _submitting
-                                  ? null
-                                  : _selectPromisedPaymentDate,
-                              icon: const Icon(Icons.event_outlined),
-                              label: Text(
-                                _promisedPaymentDate == null
-                                    ? 'Promised payment date'
-                                    : 'Promise: ${_date(_promisedPaymentDate!)}',
+                                  DropdownMenuItem(
+                                    value:
+                                        PaymentAllocationIntent.extraAsAdvance,
+                                    child: Text('Advance'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: PaymentAllocationIntent
+                                        .extraAsPrincipalReduction,
+                                    child: Text('Principal Reduction'),
+                                  ),
+                                ],
+                                onChanged: _editingLocked
+                                    ? null
+                                    : _changeAllocationIntent,
                               ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      key: const Key('collection-note'),
+                      controller: _paymentNoteController,
+                      enabled: !_editingLocked,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Payment note (optional)',
+                        alignLabelWithHint: true,
+                      ),
+                      onChanged: (_) => _invalidatePendingDraft(),
+                    ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      key: const Key('unable-date'),
+                      onPressed: _editingLocked ? null : _selectUnableDate,
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text('Unable to pay date: ${_date(_unableDate)}'),
+                    ),
+                  ],
+                  if (_showPastDueFollowup) ...[
+                    const SizedBox(height: 10),
+                    Card(
+                      key: const Key('past-due-followup-card'),
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Past Due reason',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            if (!_isUnableToPay &&
+                                _estimatedPastDueRemainder > 0) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                'Remaining today: ${_money(_estimatedPastDueRemainder)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                            const SizedBox(height: 7),
+                            Wrap(
+                              spacing: 7,
+                              runSpacing: 7,
+                              children: [
+                                for (final reason in PastDueReasonCode.values)
+                                  if (!_isSevenBySeven ||
+                                      reason !=
+                                          PastDueReasonCode.promisedToPayLater)
+                                    ChoiceChip(
+                                      key: Key(
+                                        'past-due-reason-${reason.apiValue}',
+                                      ),
+                                      label: Text(reason.label),
+                                      selected: _selectedReason == reason,
+                                      onSelected: _editingLocked
+                                          ? null
+                                          : (_) => _selectReason(reason),
+                                    ),
+                              ],
                             ),
                             const SizedBox(height: 10),
                             TextField(
-                              key: const Key('promised-amount'),
-                              controller: _promiseAmountController,
-                              enabled: !_submitting,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: const InputDecoration(
-                                labelText: 'Promised amount',
-                                prefixText: '₱ ',
-                                helperText:
-                                    'May be less than the full Past Due.',
+                              key: const Key('past-due-note'),
+                              controller: _pastDueNoteController,
+                              enabled: !_editingLocked,
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                labelText:
+                                    _selectedReason == PastDueReasonCode.other
+                                    ? 'Short explanation (required)'
+                                    : 'Past Due note (optional)',
+                                alignLabelWithHint: true,
                               ),
                               onChanged: (_) => _invalidatePendingDraft(),
                             ),
+                            if (_selectedReason ==
+                                PastDueReasonCode.promisedToPayLater) ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                key: const Key('promised-payment-date'),
+                                onPressed: _editingLocked
+                                    ? null
+                                    : _selectPromisedPaymentDate,
+                                icon: const Icon(Icons.event_outlined),
+                                label: Text(
+                                  _promisedPaymentDate == null
+                                      ? 'Promised payment date'
+                                      : 'Promise: ${_date(_promisedPaymentDate!)}',
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                key: const Key('promised-amount'),
+                                controller: _promiseAmountController,
+                                enabled: !_editingLocked,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Promised amount',
+                                  prefixText: '₱ ',
+                                  helperText:
+                                      'May be less than the full Past Due.',
+                                ),
+                                onChanged: (_) => _invalidatePendingDraft(),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 10),
-                  Semantics(
-                    liveRegion: true,
-                    child: _SafetyNotice(
-                      icon: Icons.info_outline,
-                      message: _errorMessage!,
+                  ],
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 10),
+                    Semantics(
+                      liveRegion: true,
+                      child: _SafetyNotice(
+                        icon: Icons.info_outline,
+                        message: _errorMessage!,
+                      ),
+                    ),
+                  ],
+                  if (_result != null) ...[
+                    const SizedBox(height: 10),
+                    _ResultCard(
+                      result: _result!,
+                      successMessage: _successMessage(),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    key: const Key('submit-collection-entry'),
+                    onPressed: _submitting || _result?.isFinalSuccess == true
+                        ? null
+                        : _submit,
+                    icon: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cloud_upload_outlined),
+                    label: Text(
+                      _submitting
+                          ? 'Saving...'
+                          : _pendingDraft == null
+                          ? (_isUnableToPay
+                                ? 'Save unable-to-pay reason'
+                                : 'Save payment')
+                          : 'Retry same entry',
                     ),
                   ),
-                ],
-                if (_result != null) ...[
-                  const SizedBox(height: 10),
-                  _ResultCard(
-                    result: _result!,
-                    successMessage: _successMessage(),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  key: const Key('submit-collection-entry'),
-                  onPressed: _submitting || _result?.isFinalSuccess == true
-                      ? null
-                      : _submit,
-                  icon: _submitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.cloud_upload_outlined),
-                  label: Text(
-                    _submitting
-                        ? 'Saving...'
-                        : _pendingDraft == null
-                        ? (_isUnableToPay
-                              ? 'Save unable-to-pay reason'
-                              : 'Save payment')
-                        : 'Retry same entry',
-                  ),
-                ),
-                if (_result?.isFinalSuccess == true) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    key: const Key('finish-collection-entry'),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Done and refresh route'),
-                  ),
+                  if (_result?.isFinalSuccess == true) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      key: const Key('finish-collection-entry'),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Done and refresh route'),
+                    ),
+                  ],
                 ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -1,0 +1,135 @@
+title = "SPINA default secret detection with reviewed public identifiers"
+
+[extend]
+useDefault = true
+
+# Exact public identifier + exact source path; other values remain scanned.
+# Default rules and retained scanner-baseline.json are unchanged.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Exact synthetic Collector transaction identifiers"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_mobile/test/support/collector_credit_backend_examples\.json$''',
+]
+regexes = [
+  '''^aa2917f4\-224e\-4096\-b46b\-33c9e669e419$''',
+  '''^de26a41b\-5578\-421f\-9e60\-c3fcbf437947$''',
+]
+
+[[rules.allowlists]]
+description = "Exact synthetic Collector transaction identifiers"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^spina_portal/tests/fixtures/collector\-credit\-backend\.json$''',
+]
+regexes = [
+  '''^aa2917f4\-224e\-4096\-b46b\-33c9e669e419$''',
+  '''^de26a41b\-5578\-421f\-9e60\-c3fcbf437947$''',
+]
+
+[[rules.allowlists]]
+description = "Exact synthetic borrower fixture identifier"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_mobile/test/ecl_outcome_review_repository_test\.dart$''',
+]
+regexes = [
+  '''^abcdef0123456789abcdef0123456789$''',
+]
+
+[[rules.allowlists]]
+description = "Exact synthetic borrower fixture identifier"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_mobile/test/management_ecl_outcome_review_page_test\.dart$''',
+]
+regexes = [
+  '''^1234567890abcdef1234567890abcdef$''',
+  '''^abcdef0123456789abcdef0123456789$''',
+]
+
+[[rules.allowlists]]
+description = "Exact synthetic mobile transaction identifier"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^spina_backend_mobile/tests/test_router\.py$''',
+]
+regexes = [
+  '''^6cb93829\-dccd\-4d43\-a25c\-a1f31859cc1b$''',
+]
+
+[[rules.allowlists]]
+description = "Literal chart account or accounting source type"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_backend/sql/0039_add_protected_cutover_eir_snapshots\.sql$''',
+]
+regexes = [
+  '''^loans_receivable_7x7$''',
+]
+
+[[rules.allowlists]]
+description = "Literal chart account or accounting source type"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_backend/sql/0064_add_7x7_source_event_accounting_preview\.sql$''',
+]
+regexes = [
+  '''^loans_receivable_7x7$''',
+]
+
+[[rules.allowlists]]
+description = "Literal chart account or accounting source type"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_backend/sql/0143_add_legacy_source_completeness\.sql$''',
+  '''^gilbic_backend/sql/0146_add_legacy_source_completeness\.sql$''',
+]
+regexes = [
+  '''^v1_tax_additional_settlement$''',
+]
+
+[[rules.allowlists]]
+description = "Literal chart account or accounting source type"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_backend/sql/0146_add_treasury_application_accounting\.sql$''',
+  '''^gilbic_backend/sql/0149_add_treasury_application_accounting\.sql$''',
+]
+regexes = [
+  '''^loans_receivable_7x7$''',
+]
+
+[[rules.allowlists]]
+description = "Literal chart account or accounting source type"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_backend/tests/test_accounting_cutover_eir_snapshot_migration\.py$''',
+]
+regexes = [
+  '''^loans_receivable_7x7$''',
+]
+
+[[rules.allowlists]]
+description = "Literal chart account or accounting source type"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^gilbic_mobile/test/management_accounting_measurement_page_test\.dart$''',
+]
+regexes = [
+  '''^loans_receivable_7x7$''',
+]

@@ -100,7 +100,9 @@ class SpinaCombinedPaymentSubmissionRepository
     final payload = _decodeResponse(response);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return CombinedPaymentSubmissionResult.fromPayload(
-        unwrapSpinaData(payload, statusCode: response.statusCode),
+        // Unverified 2xx evidence is uncertain; retain the original attempt.
+        unwrapSpinaData(payload),
+        draft: draft,
       );
     }
 
@@ -143,7 +145,9 @@ class SpinaCombinedPaymentSubmissionRepository
     } on Object {
       throw SpinaApiException(
         'The SPINA server returned unreadable combined payment data.',
-        statusCode: response.statusCode,
+        statusCode: response.statusCode >= 200 && response.statusCode < 300
+            ? null
+            : response.statusCode,
         code: 'invalid_server_response',
       );
     }

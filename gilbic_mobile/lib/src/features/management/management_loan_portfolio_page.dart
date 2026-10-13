@@ -1,4 +1,8 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
+import 'package:gilbic_mobile/src/features/office/office_widgets.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_loan.dart';
@@ -10,12 +14,16 @@ class ManagementLoanPortfolioPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.photoRepository,
+    this.photoPicker,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ManagementLoanRepository? repository;
+  final ClientPhotoRepository? photoRepository;
+  final OfficePhotoPicker? photoPicker;
 
   @override
   State<ManagementLoanPortfolioPage> createState() =>
@@ -23,7 +31,15 @@ class ManagementLoanPortfolioPage extends StatefulWidget {
 }
 
 class _ManagementLoanPortfolioPageState
-    extends State<ManagementLoanPortfolioPage> {
+    extends State<ManagementLoanPortfolioPage>
+    with PrivateAccessState<ManagementLoanPortfolioPage> {
+  @override
+  void clearPrivateData() {
+    _portfolio = null;
+    _deviceId = null;
+    _searchController.clear();
+  }
+
   late final ManagementLoanRepository _repository;
   final TextEditingController _searchController = TextEditingController();
   ManagementLoanPortfolio? _portfolio;
@@ -46,19 +62,21 @@ class _ManagementLoanPortfolioPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final portfolio = await _repository.loadPortfolio(
         widget.session,
         deviceId: identity.installationId,
         query: _searchController.text,
         status: _status,
       );
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -66,15 +84,16 @@ class _ManagementLoanPortfolioPageState
         _portfolio = portfolio;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _errorMessage = 'Loan Management could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _loading = false);
       }
     }
@@ -85,8 +104,40 @@ class _ManagementLoanPortfolioPageState
     _load();
   }
 
+  Future<void> _openPhoto(ManagementLoanItem loan) async {
+    if (!privateAccessActive ||
+        _deviceId == null ||
+        !canManageClientPhoto(widget.session)) {
+      return;
+    }
+    final session = widget.session;
+    final deviceId = _deviceId!;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Client photo')),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ClientPhotoCard(
+                session: session,
+                deviceId: deviceId,
+                clientId: loan.clientId,
+                clientName: loan.clientName,
+                repository: widget.photoRepository,
+                picker: widget.photoPicker,
+                allowUpload: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Loan Management'),
@@ -188,7 +239,10 @@ class _ManagementLoanPortfolioPageState
           const SizedBox(height: 18),
           Row(
             children: [
-              Text('Loan records', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Loan records',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const Spacer(),
               Text('${portfolio.loans.length} shown'),
             ],
@@ -206,7 +260,13 @@ class _ManagementLoanPortfolioPageState
             )
           else
             for (final loan in portfolio.loans) ...[
-              _ManagementLoanCard(loan: loan),
+              _ManagementLoanCard(
+                loan: loan,
+                onPhoto:
+                    canManageClientPhoto(widget.session) && _deviceId != null
+                    ? () => _openPhoto(loan)
+                    : null,
+              ),
               const SizedBox(height: 10),
             ],
           if (_deviceId == null) const SizedBox.shrink(),
@@ -224,8 +284,16 @@ class _SummaryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_MetricData>[
-      _MetricData('Active loans', '${summary.activeLoanCount}', Icons.receipt_long),
-      _MetricData('Active clients', '${summary.activeClientCount}', Icons.people),
+      _MetricData(
+        'Active loans',
+        '${summary.activeLoanCount}',
+        Icons.receipt_long,
+      ),
+      _MetricData(
+        'Active clients',
+        '${summary.activeClientCount}',
+        Icons.people,
+      ),
       _MetricData(
         'Outstanding',
         _money(summary.activeRemainingTotal),
@@ -236,7 +304,11 @@ class _SummaryGrid extends StatelessWidget {
         _money(summary.activePrincipalTotal),
         Icons.payments_outlined,
       ),
-      _MetricData('Overdue', '${summary.overdueActiveCount}', Icons.warning_amber),
+      _MetricData(
+        'Overdue',
+        '${summary.overdueActiveCount}',
+        Icons.warning_amber,
+      ),
       _MetricData(
         '7x7 active',
         '${summary.activeSevenBySevenCount}',
@@ -301,9 +373,10 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _ManagementLoanCard extends StatelessWidget {
-  const _ManagementLoanCard({required this.loan});
+  const _ManagementLoanCard({required this.loan, this.onPhoto});
 
   final ManagementLoanItem loan;
+  final VoidCallback? onPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +395,12 @@ class _ManagementLoanCard extends StatelessWidget {
         trailing: _StatusChip(loan: loan),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
+          if (onPhoto != null)
+            OutlinedButton.icon(
+              onPressed: onPhoto,
+              icon: const Icon(Icons.portrait_outlined),
+              label: const Text('Client photo'),
+            ),
           if (loan.renewalRequestStatus != null) ...[
             Container(
               width: double.infinity,
@@ -344,7 +423,10 @@ class _ManagementLoanCard extends StatelessWidget {
             emphasized: true,
           ),
           _ValueRow(label: 'Principal', value: _money(loan.principal)),
-          _ValueRow(label: 'Paid toward balance', value: _money(loan.paidAmount)),
+          _ValueRow(
+            label: 'Paid toward balance',
+            value: _money(loan.paidAmount),
+          ),
           _ValueRow(label: 'Daily amount', value: _money(loan.dailyAmount)),
           if (loan.interestRate != null)
             _ValueRow(
@@ -352,14 +434,20 @@ class _ManagementLoanCard extends StatelessWidget {
               value: '${_trimNumber(loan.interestRate!)}%',
             ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: (loan.paidPercent / 100).clamp(0.0, 1.0),
-          ),
-          const SizedBox(height: 5),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('${loan.paidPercent.toStringAsFixed(1)}% paid'),
-          ),
+          if (loan.paidPercent != null) ...[
+            LinearProgressIndicator(
+              value: (loan.paidPercent! / 100).clamp(0.0, 1.0),
+            ),
+            const SizedBox(height: 5),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text('${loan.paidPercent!.toStringAsFixed(1)}% paid'),
+            ),
+          ] else
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text('Paid percentage unavailable'),
+            ),
           const Divider(height: 24),
           _DetailRow(label: 'Area', value: loan.clientArea ?? 'Not assigned'),
           _DetailRow(label: 'Released', value: _date(loan.dateReleased)),

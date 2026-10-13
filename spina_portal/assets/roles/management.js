@@ -45,6 +45,7 @@ import {
   loadManagementGeneralJournal,
   loadManagementTrialBalance,
   managementGeneralJournalMarkup,
+  mountAccountingReadiness,
 } from '../management-general-journal.js';
 import {
   bindManagementLoanOperations,
@@ -569,9 +570,9 @@ export async function mountManagementWorkspace(context) {
   },'remittance.view');
   add('management-financial-statements','management-accounting-hub','Financial statements',async()=>{const h=mountManagementFinancialStatements(options('#management-financial-statements'));await h.refresh();return h;},'accounting.view');
   add('management-general-journal','management-accounting-hub','Journal & Trial Balance',async()=>{
-    const target=root.querySelector('[data-management-journal-evidence]');let actions=()=>{},exports=()=>{},version=0;
-    const refresh=async()=>{const generation=++version;const [journals,trialBalance]=await Promise.all([loadManagementGeneralJournal(api),loadManagementTrialBalance(api)]);if(!active()||generation!==version)return;exports();target.innerHTML=managementGeneralJournalMarkup({journals,trialBalance});exports=bindManagementAccountingExport(context);context.accountingExportCleanup=exports;return journals;};
-    const journals=await refresh();if(active())actions=mountManagementJournalActions({...options('[data-management-journal-actions]'),evidenceRoot:target,initialJournals:journals,onSaved:refresh});return{refresh,dispose(){version++;actions?.();exports?.();}};
+    const target=root.querySelector('[data-management-journal-evidence]');let actions=()=>{},exports=()=>{},readiness=()=>{},version=0;
+    const refresh=async()=>{const generation=++version;readiness();const [journals,trialBalance]=await Promise.all([loadManagementGeneralJournal(api),loadManagementTrialBalance(api)]);if(!active()||generation!==version)return;exports();target.innerHTML=managementGeneralJournalMarkup({journals,trialBalance});readiness=mountAccountingReadiness({root:target.querySelector('[data-accounting-readiness]'),api,signal:context.signal});exports=bindManagementAccountingExport(context);context.accountingExportCleanup=exports;return journals;};
+    const journals=await refresh();if(active())actions=mountManagementJournalActions({...options('[data-management-journal-actions]'),evidenceRoot:target,initialJournals:journals,onSaved:refresh});return{refresh,dispose(){version++;actions?.();exports?.();readiness?.();}};
   },'accounting.view');
   add('management-cash-disbursement','management-accounting-hub','Cash Disbursement',()=>mountCashDisbursement(options('[data-cash-disbursement]')),'cash_disbursement.prepare');
   add('management-accounting','management-accounting-hub','Accounting workflows',()=>mountManagementAccounting(options('[data-management-accounting]')),'accounting.view');
@@ -581,7 +582,7 @@ export async function mountManagementWorkspace(context) {
     context.refreshStaff=h.refresh;const invite=bindStaffInvite(context);await h.refresh();return{refresh:h.refresh,isWritePending:invite.isWritePending,dispose(){invite.dispose();h.dispose();}};
   });
   add('management-area-management','management-operations','Areas',()=>mountAreaManagement({...context,root:root.querySelector('#management-area-management')}));
-  add('management-employee-operations','management-operations','Employee work',()=>{let handle;const dispose=mountEmployeeOperations({...options('[data-employee-operations]'),onController:value=>{handle=value;}});return handle||{dispose};});
+  add('management-employee-operations','management-operations','Employee work',()=>{let handle;const dispose=mountEmployeeOperations({...options('[data-employee-operations]'),recoveryApi:originalApi,onController:value=>{handle=value;}});return handle||{dispose};});
   add('management-support','management-operations','Client support',async()=>{
     const h=mountManagementSupport({...options('[data-management-support-list]'),onSaved:refreshOverview});await h.refresh();return h;
   },'support.manage');

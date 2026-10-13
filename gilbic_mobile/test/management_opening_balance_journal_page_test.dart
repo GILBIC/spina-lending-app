@@ -294,8 +294,8 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
     required String deviceId,
     required String workbookId,
     required String accountCode,
-    required double? debit,
-    required double? credit,
+    required String? debit,
+    required String? credit,
     required String verificationStatus,
     required String? evidenceNote,
   }) => throw UnimplementedError();

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
@@ -27,9 +29,9 @@ class CollectorRemittancePage extends StatefulWidget {
 }
 
 class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
-  late final RemittanceRepository _repository;
+  late RemittanceRepository _repository;
   late final TextEditingController _noteController;
-  late final DateTime _collectionDate;
+  late DateTime _collectionDate;
 
   List<RemittanceRecipient> _recipients = const <RemittanceRecipient>[];
   RemittanceSummary? _summary;
@@ -39,6 +41,10 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
   String? _errorMessage;
   bool _loading = true;
   bool _submitting = false;
+  bool _confirming = false;
+  bool _submissionUnconfirmed = false;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -51,28 +57,91 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
   }
 
   @override
+  void didUpdateWidget(CollectorRemittancePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository ||
+        oldWidget.collectionDate != widget.collectionDate) {
+      _readEpoch++;
+      _clearPrivateState();
+      _repository = widget.repository ?? SpinaRemittanceRepository();
+      final source = widget.collectionDate ?? DateTime.now();
+      _collectionDate = DateTime(source.year, source.month, source.day);
+      _dismissPrivateRoutes();
+      _load();
+    }
+  }
+
+  bool _sameContext(int epoch) => mounted && epoch == _readEpoch;
+  bool _current(int epoch, int requestId) =>
+      _sameContext(epoch) && requestId == _requestId;
+
+  void _clearPrivateState() {
+    _summary = null;
+    _submitted = null;
+    _recipients = const [];
+    _selectedRecipientId = null;
+    _deviceId = null;
+    _noteController.clear();
+    _errorMessage = null;
+    _submitting = false;
+    _confirming = false;
+    _submissionUnconfirmed = false;
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  void _denyAccess(SpinaApiException error, int epoch) {
+    if (!_sameContext(epoch)) return;
+    _readEpoch++;
+    setState(() {
+      _clearPrivateState();
+      _loading = false;
+      _errorMessage = error.message;
+    });
+    _dismissPrivateRoutes();
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
+    if (_submitting || _confirming || _submissionUnconfirmed) return;
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
+    final repository = _repository;
+    final collectionDate = _collectionDate;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final recipients = await _repository.loadRecipients(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final recipients = await repository.loadRecipients(
+        session,
         deviceId: identity.installationId,
       );
-      final summary = await _repository.loadPreview(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final summary = await repository.loadPreview(
+        session,
         deviceId: identity.installationId,
-        collectionDate: _collectionDate,
+        collectionDate: collectionDate,
       );
-      if (!mounted) {
+      if (!_current(epoch, requestId)) {
         return;
       }
       setState(() {
@@ -89,7 +158,11 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         }
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (staffAccessRejected(error)) {
+        _denyAccess(error, epoch);
+        return;
+      }
+      if (_current(epoch, requestId)) {
         setState(() {
           _errorMessage = collectorFailureMessage(
             error,
@@ -98,7 +171,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         });
       }
     } on Object catch (error) {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() {
           _errorMessage = collectorFailureMessage(
             error,
@@ -107,17 +180,25 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         });
       }
     } finally {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _loading = false);
       }
     }
   }
 
   Future<void> _submit() async {
+    final epoch = _readEpoch;
+    final repository = _repository;
+    final collectionDate = _collectionDate;
     final summary = _summary;
     final deviceId = _deviceId;
     final recipientId = _selectedRecipientId;
-    if (_submitting || summary == null || deviceId == null) {
+    if (_submitting ||
+        _confirming ||
+        _submissionUnconfirmed ||
+        _loading ||
+        summary == null ||
+        deviceId == null) {
       return;
     }
     if (summary.items.isEmpty) {
@@ -136,6 +217,16 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
       (item) => item.userId == recipientId,
     );
 
+    if (!summary.hasReviewDigest) {
+      setState(
+        () => _errorMessage =
+            'Refresh and review the remittance. Update the app if needed.',
+      );
+      return;
+    }
+    final reviewedNote = _noteController.text;
+    final reviewedSession = widget.session;
+    setState(() => _confirming = true);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -160,7 +251,10 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (!_sameContext(epoch)) return;
+    setState(() => _confirming = false);
+    if (confirmed != true || widget.session != reviewedSession) {
+      setState(() => _submitting = false);
       return;
     }
 
@@ -169,18 +263,35 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
       _errorMessage = null;
     });
     try {
-      final record = await _repository.submit(
-        widget.session,
+      final record = await repository.submit(
+        reviewedSession,
         deviceId: deviceId,
         recipientUserId: recipientId,
-        collectionDate: _collectionDate,
-        note: _noteController.text,
+        collectionDate: collectionDate,
+        note: reviewedNote,
+        expectedReviewDigest: summary.reviewDigest!,
       );
-      if (mounted) {
+      if (_sameContext(epoch)) {
         setState(() => _submitted = record);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (staffAccessRejected(error)) {
+        _denyAccess(error, epoch);
+        return;
+      }
+      if (_sameContext(epoch)) {
+        setState(() {
+          if (error.statusCode == null ||
+              error.statusCode! < 400 ||
+              error.statusCode! >= 500 ||
+              (error.code?.startsWith('invalid_') ?? false)) {
+            _submissionUnconfirmed = true;
+          } else {
+            _summary = null;
+          }
+        });
+      }
+      if (_sameContext(epoch)) {
         setState(() {
           _errorMessage = collectorFailureMessage(
             error,
@@ -189,7 +300,8 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         });
       }
     } on Object catch (error) {
-      if (mounted) {
+      if (_sameContext(epoch)) setState(() => _submissionUnconfirmed = true);
+      if (_sameContext(epoch)) {
         setState(() {
           _errorMessage = collectorFailureMessage(
             error,
@@ -198,7 +310,13 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         });
       }
     } finally {
-      if (mounted) {
+      if (_sameContext(epoch) && _submissionUnconfirmed) {
+        setState(
+          () => _errorMessage =
+              'Submission could not be confirmed. Keep this reviewed command and check remittance history with the recipient before trying again.',
+        );
+      }
+      if (_sameContext(epoch)) {
         setState(() => _submitting = false);
       }
     }
@@ -212,7 +330,14 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         actions: [
           IconButton(
             tooltip: 'Refresh summary',
-            onPressed: _loading || _submitted != null ? null : _load,
+            onPressed:
+                _loading ||
+                    _submitting ||
+                    _confirming ||
+                    _submissionUnconfirmed ||
+                    _submitted != null
+                ? null
+                : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -255,7 +380,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
                 child: Text('${recipient.fullName} • ${recipient.roleName}'),
               ),
           ],
-          onChanged: _submitting
+          onChanged: (_submitting || _confirming || _submissionUnconfirmed)
               ? null
               : (value) => setState(() => _selectedRecipientId = value),
         ),
@@ -269,7 +394,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         TextField(
           key: const Key('remittance-note'),
           controller: _noteController,
-          enabled: !_submitting,
+          enabled: !_submitting && !_confirming && !_submissionUnconfirmed,
           maxLines: 2,
           decoration: const InputDecoration(
             labelText: 'Remittance note (optional)',
@@ -307,6 +432,8 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
           key: const Key('submit-remittance'),
           onPressed:
               _submitting ||
+                  _confirming ||
+                  _submissionUnconfirmed ||
                   summary.items.isEmpty ||
                   _selectedRecipientId == null
               ? null

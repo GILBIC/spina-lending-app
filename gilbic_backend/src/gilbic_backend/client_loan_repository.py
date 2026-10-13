@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 from .collector_schedule_repository import (
@@ -15,10 +16,10 @@ from .collector_schedule_repository import (
     _money,
 )
 from .database import open_connection
+from .loan_paid_projection import PAID_PROJECTION_COLUMNS
 from .seven_by_seven_penalty_coordinator import (
     project_verified_seven_by_seven_penalty_state,
 )
-
 
 ZERO = Decimal("0.00")
 
@@ -57,12 +58,8 @@ class ClientLoanRecord:
     advance_until: date | None
     state_version: int
     payment_count: int
+    paid_amount: Decimal
     first_payment_date: date | None = None
-
-    @property
-    def paid_amount(self) -> Decimal:
-        paid = self.principal - self.remaining_balance
-        return paid if paid > 0 else Decimal("0.00")
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,7 +92,7 @@ class PostgresClientLoanRepository:
                     )
 
                 cursor.execute(
-                    """
+                    sql.SQL("""
                     select
                         loan.id as loan_id,
                         loan.loan_number,
@@ -103,6 +100,7 @@ class PostgresClientLoanRepository:
                         coalesce(nullif(btrim(loan_type.name), ''), 'Loan')
                             as loan_type_name,
                         loan.principal,
+                        {},
                         loan.daily_amount,
                         loan.interest_rate,
                         loan.date_released,
@@ -141,7 +139,7 @@ class PostgresClientLoanRepository:
                         loan.date_released desc nulls last,
                         loan.created_at desc,
                         loan.id desc
-                    """,
+                    """).format(sql.SQL(PAID_PROJECTION_COLUMNS)),
                     (client["id"],),
                 )
                 rows = cursor.fetchall()
@@ -499,5 +497,6 @@ class PostgresClientLoanRepository:
             advance_until=row["advance_until"],
             state_version=int(row["state_version"]),
             payment_count=int(row["payment_count"]),
+            paid_amount=Decimal(row["paid_amount"]).quantize(Decimal("0.01")),
             first_payment_date=row.get("first_payment_date"),
         )

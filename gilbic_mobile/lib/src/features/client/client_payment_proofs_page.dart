@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:math';
 import 'dart:convert';
 import 'package:file_selector/file_selector.dart' as documents;
@@ -40,7 +41,14 @@ class ClientPaymentProofsPage extends StatefulWidget {
       _ClientPaymentProofsPageState();
 }
 
-class _ClientPaymentProofsPageState extends State<ClientPaymentProofsPage> {
+class _ClientPaymentProofsPageState extends State<ClientPaymentProofsPage>
+    with PrivateAccessState<ClientPaymentProofsPage> {
+  @override
+  void clearPrivateData() {
+    _result = null;
+    _proofs.clear();
+  }
+
   late final ClientPaymentProofRepository _repository;
   PaymentProofList? _result;
   final List<ClientPaymentProof> _proofs = [];
@@ -54,18 +62,20 @@ class _ClientPaymentProofsPageState extends State<ClientPaymentProofsPage> {
   }
 
   Future<void> _load({bool more = false}) async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final result = await _repository.list(
         widget.session,
         deviceId: identity.installationId,
         offset: more ? _proofs.length : 0,
       );
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _result = result;
           if (!more) _proofs.clear();
@@ -73,17 +83,22 @@ class _ClientPaymentProofsPageState extends State<ClientPaymentProofsPage> {
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      revokePrivateAccess(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Payment proofs could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _create() async {
+    final owner = widget;
+    if (!mounted || !privateAccessActive) return;
     final capability = _result;
     if (capability == null || !capability.uploadAvailable) return;
     final submitted = await Navigator.of(context).push<bool>(
@@ -93,15 +108,20 @@ class _ClientPaymentProofsPageState extends State<ClientPaymentProofsPage> {
           deviceIdentityProvider: widget.deviceIdentityProvider,
           repository: _repository,
           capability: capability,
+          onAuthorityDenied: (error) {
+            if (identical(widget, owner)) revokePrivateAccess(error);
+          },
           loanRepository: widget.loanRepository,
           imagePicker: widget.imagePicker,
         ),
       ),
     );
-    if (mounted && submitted == true) await _load();
+    if (mounted && privateAccessActive && submitted == true) await _load();
   }
 
   Future<void> _open(ClientPaymentProof proof) async {
+    final owner = widget;
+    if (!mounted || !privateAccessActive) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => ClientPaymentProofDetailPage(
@@ -111,82 +131,91 @@ class _ClientPaymentProofsPageState extends State<ClientPaymentProofsPage> {
           repository: _repository,
           capability: _result!,
           imagePicker: widget.imagePicker,
+          onAuthorityDenied: (error) {
+            if (identical(widget, owner)) revokePrivateAccess(error);
+          },
           saver: widget.saver,
         ),
       ),
     );
-    if (mounted) await _load();
+    if (mounted && privateAccessActive) await _load();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Payment proofs'),
-      actions: [
-        IconButton(
-          tooltip: 'Refresh proofs',
-          onPressed: _loading ? null : _load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: _loading && _result == null
-        ? const Center(child: CircularProgressIndicator())
-        : RefreshIndicator(
-            onRefresh: _load,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text(_proofNotice),
-                const SizedBox(height: 12),
-                if (_error != null) ...[
-                  Text(_error!),
-                  OutlinedButton(
-                    onPressed: _loading ? null : _load,
-                    child: const Text('Try again'),
-                  ),
-                ],
-                if (_result != null) ...[
-                  Text(_result!.message),
-                  if (_result!.uploadAvailable)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FilledButton.icon(
-                        key: const Key('new-payment-proof'),
-                        onPressed: _loading ? null : _create,
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('Upload payment proof'),
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  if (_proofs.isEmpty)
-                    const Text('No payment proof has been submitted yet.'),
-                  for (final proof in _proofs)
-                    Card(
-                      child: ListTile(
-                        key: Key('payment-proof-${proof.proofId}'),
-                        title: Text(
-                          '${proof.loanNumber} · ${proof.loanTypeName}',
-                        ),
-                        subtitle: Text(
-                          '${paymentProofStatusLabel(proof.status)} · Version ${proof.currentVersion.versionNumber}${proof.latestReview?.reason.isNotEmpty == true ? '\n${proof.latestReview!.reason}' : ''}',
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _open(proof),
-                      ),
-                    ),
-                  if (_result!.hasMore)
-                    OutlinedButton(
-                      onPressed: _loading ? null : () => _load(more: true),
-                      child: const Text('Load more proofs'),
-                    ),
-                ],
-                if (_loading) const LinearProgressIndicator(),
-              ],
-            ),
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Payment proofs'),
+            actions: [
+              IconButton(
+                tooltip: 'Refresh proofs',
+                onPressed: _loading ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
           ),
-  );
+          body: _loading && _result == null
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      const Text(_proofNotice),
+                      const SizedBox(height: 12),
+                      if (_error != null) ...[
+                        Text(_error!),
+                        OutlinedButton(
+                          onPressed: _loading ? null : _load,
+                          child: const Text('Try again'),
+                        ),
+                      ],
+                      if (_result != null) ...[
+                        Text(_result!.message),
+                        if (_result!.uploadAvailable)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: FilledButton.icon(
+                              key: const Key('new-payment-proof'),
+                              onPressed: _loading ? null : _create,
+                              icon: const Icon(Icons.upload_file),
+                              label: const Text('Upload payment proof'),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        if (_proofs.isEmpty)
+                          const Text(
+                            'No payment proof has been submitted yet.',
+                          ),
+                        for (final proof in _proofs)
+                          Card(
+                            child: ListTile(
+                              key: Key('payment-proof-${proof.proofId}'),
+                              title: Text(
+                                '${proof.loanNumber} · ${proof.loanTypeName}',
+                              ),
+                              subtitle: Text(
+                                '${paymentProofStatusLabel(proof.status)} · Version ${proof.currentVersion.versionNumber}${proof.latestReview?.reason.isNotEmpty == true ? '\n${proof.latestReview!.reason}' : ''}',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _open(proof),
+                            ),
+                          ),
+                        if (_result!.hasMore)
+                          OutlinedButton(
+                            onPressed: _loading
+                                ? null
+                                : () => _load(more: true),
+                            child: const Text('Load more proofs'),
+                          ),
+                      ],
+                      if (_loading) const LinearProgressIndicator(),
+                    ],
+                  ),
+                ),
+        );
 }
 
 class ClientPaymentProofDetailPage extends StatefulWidget {
@@ -197,6 +226,7 @@ class ClientPaymentProofDetailPage extends StatefulWidget {
     required this.repository,
     required this.capability,
     this.imagePicker,
+    this.onAuthorityDenied,
     this.saver = saveClientDocument,
     super.key,
   });
@@ -206,6 +236,7 @@ class ClientPaymentProofDetailPage extends StatefulWidget {
   final ClientPaymentProofRepository repository;
   final PaymentProofList capability;
   final ImagePicker? imagePicker;
+  final ValueChanged<SpinaApiException>? onAuthorityDenied;
   final ClientDocumentSaver saver;
   @override
   State<ClientPaymentProofDetailPage> createState() =>
@@ -213,7 +244,21 @@ class ClientPaymentProofDetailPage extends StatefulWidget {
 }
 
 class _ClientPaymentProofDetailPageState
-    extends State<ClientPaymentProofDetailPage> {
+    extends State<ClientPaymentProofDetailPage>
+    with PrivateAccessState<ClientPaymentProofDetailPage> {
+  @override
+  void clearPrivateData() {
+    _detail = null;
+  }
+
+  void _deny(SpinaApiException error) {
+    if (!privateAccessActive) return;
+    revokePrivateAccess(error);
+    if (error.statusCode == 401 || error.statusCode == 426) {
+      widget.onAuthorityDenied?.call(error);
+    }
+  }
+
   PaymentProofDetail? _detail;
   String? _error;
   bool _loading = true;
@@ -224,30 +269,37 @@ class _ClientPaymentProofDetailPageState
   }
 
   Future<void> _load() async {
+    if (!mounted || !privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final detail = await widget.repository.load(
         widget.session,
         deviceId: identity.installationId,
         proofId: widget.proofId,
       );
-      if (mounted) setState(() => _detail = detail);
+      if (mounted && privateAccessActive) setState(() => _detail = detail);
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      _deny(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() => _error = 'Payment proof history could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
   Future<void> _correct() async {
+    final owner = widget;
+    if (!mounted || !privateAccessActive) return;
     final submitted = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => ClientPaymentProofUploadPage(
@@ -255,109 +307,131 @@ class _ClientPaymentProofDetailPageState
           deviceIdentityProvider: widget.deviceIdentityProvider,
           repository: widget.repository,
           capability: widget.capability,
+          onAuthorityDenied: (error) {
+            if (identical(widget, owner)) _deny(error);
+          },
           proof: _detail!.proof,
           imagePicker: widget.imagePicker,
         ),
       ),
     );
-    if (mounted && submitted == true) await _load();
+    if (mounted && privateAccessActive && submitted == true) await _load();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Proof status and history'),
-      actions: [
-        IconButton(
-          onPressed: _loading ? null : _load,
-          tooltip: 'Refresh proof',
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: _loading
-        ? const Center(child: CircularProgressIndicator())
-        : ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Text(_proofNotice),
-              const SizedBox(height: 12),
-              if (_error != null) ...[
-                Text(_error!),
-                OutlinedButton(
-                  onPressed: _load,
-                  child: const Text('Try again'),
-                ),
-              ],
-              if (_detail != null) ...[
-                Text(
-                  _detail!.proof.loanNumber,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Text(paymentProofStatusLabel(_detail!.proof.status)),
-                if (_detail!.proof.latestReview != null)
-                  Text(_detail!.proof.latestReview!.reason),
-                if (widget.capability.uploadAvailable &&
-                    _detail!.proof.canReupload)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      key: const Key('correct-payment-proof'),
-                      onPressed: _error == null ? _correct : null,
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload corrected proof'),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Text(
-                  'Version history',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                for (final entry in _detail!.history)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Version ${entry.version.versionNumber}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text('Uploaded: ${entry.version.uploadedAt}'),
-                          if (entry.version.note?.isNotEmpty == true)
-                            Text(entry.version.note!),
-                          for (final review in entry.reviews)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                '${paymentProofStatusLabel(review.decision)}\n${review.reason}\n${review.reviewedAt}',
-                              ),
-                            ),
-                          ClientDocumentDownloadButton(
-                            label:
-                                'Download proof version ${entry.version.versionNumber}',
-                            saver: widget.saver,
-                            load: () async {
-                              final identity = await widget
-                                  .deviceIdentityProvider
-                                  .load();
-                              return widget.repository.download(
-                                widget.session,
-                                deviceId: identity.installationId,
-                                proofId: widget.proofId,
-                                version: entry.version,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+  Widget build(BuildContext context) => privateAccessDenied
+      ? privateAccessDeniedPage()
+      : Scaffold(
+          appBar: AppBar(
+            title: const Text('Proof status and history'),
+            actions: [
+              IconButton(
+                onPressed: _loading ? null : _load,
+                tooltip: 'Refresh proof',
+                icon: const Icon(Icons.refresh),
+              ),
             ],
           ),
-  );
+          body: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const Text(_proofNotice),
+                    const SizedBox(height: 12),
+                    if (_error != null) ...[
+                      Text(_error!),
+                      OutlinedButton(
+                        onPressed: _load,
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                    if (_detail != null) ...[
+                      Text(
+                        _detail!.proof.loanNumber,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Text(paymentProofStatusLabel(_detail!.proof.status)),
+                      if (_detail!.proof.latestReview != null)
+                        Text(_detail!.proof.latestReview!.reason),
+                      if (widget.capability.uploadAvailable &&
+                          _detail!.proof.canReupload)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: FilledButton.icon(
+                            key: const Key('correct-payment-proof'),
+                            onPressed: _error == null ? _correct : null,
+                            icon: const Icon(Icons.upload_file),
+                            label: const Text('Upload corrected proof'),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Version history',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      for (final entry in _detail!.history)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Version ${entry.version.versionNumber}',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                Text('Uploaded: ${entry.version.uploadedAt}'),
+                                if (entry.version.note?.isNotEmpty == true)
+                                  Text(entry.version.note!),
+                                for (final review in entry.reviews)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      '${paymentProofStatusLabel(review.decision)}\n${review.reason}\n${review.reviewedAt}',
+                                    ),
+                                  ),
+                                ClientDocumentDownloadButton(
+                                  label:
+                                      'Download proof version ${entry.version.versionNumber}',
+                                  saver: (document) {
+                                    requirePrivateAccess();
+                                    return widget.saver(document);
+                                  },
+                                  load: () async {
+                                    final identity = await widget
+                                        .deviceIdentityProvider
+                                        .load();
+                                    requirePrivateAccess();
+                                    try {
+                                      final document = await widget.repository
+                                          .download(
+                                            widget.session,
+                                            deviceId: identity.installationId,
+                                            proofId: widget.proofId,
+                                            version: entry.version,
+                                          );
+                                      requirePrivateAccess();
+                                      return document;
+                                    } on SpinaApiException catch (error) {
+                                      if (error.statusCode == 401 ||
+                                          error.statusCode == 426) {
+                                        _deny(error);
+                                      }
+                                      rethrow;
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+        );
 }
 
 class ClientPaymentProofUploadPage extends StatefulWidget {
@@ -369,6 +443,7 @@ class ClientPaymentProofUploadPage extends StatefulWidget {
     this.proof,
     this.loanRepository,
     this.imagePicker,
+    this.onAuthorityDenied,
     this.documentPicker,
     this.requestIdGenerator,
     super.key,
@@ -380,6 +455,7 @@ class ClientPaymentProofUploadPage extends StatefulWidget {
   final ClientPaymentProof? proof;
   final ClientLoanRepository? loanRepository;
   final ImagePicker? imagePicker;
+  final ValueChanged<SpinaApiException>? onAuthorityDenied;
   final Future<XFile?> Function()? documentPicker;
   final String Function()? requestIdGenerator;
   @override
@@ -388,7 +464,25 @@ class ClientPaymentProofUploadPage extends StatefulWidget {
 }
 
 class _ClientPaymentProofUploadPageState
-    extends State<ClientPaymentProofUploadPage> {
+    extends State<ClientPaymentProofUploadPage>
+    with PrivateAccessState<ClientPaymentProofUploadPage> {
+  @override
+  void clearPrivateData() {
+    _loans = [];
+    _loanId = null;
+    _draft = null;
+    _requestId = null;
+    _note.clear();
+  }
+
+  void _deny(SpinaApiException error) {
+    if (!privateAccessActive) return;
+    revokePrivateAccess(error);
+    if (error.statusCode == 401 || error.statusCode == 426) {
+      widget.onAuthorityDenied?.call(error);
+    }
+  }
+
   final _note = TextEditingController();
   List<ClientLoan> _loans = [];
   String? _loanId;
@@ -413,31 +507,42 @@ class _ClientPaymentProofUploadPageState
   }
 
   Future<void> _loadLoans() async {
+    if (!privateAccessActive) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final portfolio =
           await (widget.loanRepository ?? SpinaClientLoanRepository())
               .loadPortfolio(widget.session, deviceId: identity.installationId);
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _loans = [...portfolio.activeLoans, ...portfolio.previousLoans];
           if (_loans.length == 1) _loanId = _loans.single.loanId;
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      _deny(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) setState(() => _error = 'Your loans could not be loaded.');
+      if (mounted && privateAccessActive) {
+        setState(() => _error = 'Your loans could not be loaded.');
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && privateAccessActive) setState(() => _loading = false);
     }
   }
 
-  Future<void> _pick(ImageSource source) async {
+  // A null source opens DocumentsUI instead of the system Photo Picker. Some
+  // Android 16 Photo Picker builds crash while displaying their own media grid;
+  // keep an explicit file route without changing camera/gallery recovery.
+  Future<void> _pick(ImageSource? source) async {
+    if (!privateAccessActive) return;
     if (_busy || _uncertain || _conflict) return;
     final loanId = _loanId;
     if (loanId == null) {
@@ -461,25 +566,37 @@ class _ClientPaymentProofUploadPageState
           }),
           label: proof == null ? 'Payment proof' : 'Correct payment proof',
         ),
-        pick: () => (widget.imagePicker ?? ImagePicker()).pickImage(
-          source: source,
-          requestFullMetadata: false,
-        ),
+        pick: () => source == null
+            ? documents.openFile(
+                acceptedTypeGroups: const [
+                  documents.XTypeGroup(
+                    label: 'Payment proof image',
+                    extensions: ['jpg', 'jpeg', 'png'],
+                    mimeTypes: ['image/jpeg', 'image/png'],
+                    uniformTypeIdentifiers: ['public.jpeg', 'public.png'],
+                  ),
+                ],
+              )
+            : (widget.imagePicker ?? ImagePicker()).pickImage(
+                source: source,
+                requestFullMetadata: false,
+              ),
       );
-      if (file == null || !mounted) return;
+      if (file == null || !privateAccessActive) return;
       if (await file.length() > widget.capability.maxBytes) {
         throw const SpinaApiException(
           'The image exceeds the upload size allowed by SPINA.',
         );
       }
       final bytes = await file.readAsBytes();
+      requirePrivateAccess();
       final type = RemittancePhotoDraft.detectContentType(bytes);
       if (bytes.isEmpty ||
           type == null ||
           !widget.capability.allowedMediaTypes.contains(type)) {
         throw const SpinaApiException('Choose a supported JPEG or PNG image.');
       }
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _draft = PaymentProofDraft(
             filename: file.name,
@@ -490,19 +607,23 @@ class _ClientPaymentProofUploadPageState
         });
       }
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      _deny(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _error = 'The image could not be opened. Try another photo.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && privateAccessActive) setState(() => _busy = false);
     }
   }
 
   Future<void> _pickDocument() async {
+    if (!privateAccessActive) return;
     if (_busy ||
         _uncertain ||
         _conflict ||
@@ -530,13 +651,14 @@ class _ClientPaymentProofUploadPageState
                   ),
                 ],
               ));
-      if (file == null || !mounted) return;
+      if (file == null || !privateAccessActive) return;
       if (await file.length() > widget.capability.maxBytes) {
         throw const SpinaApiException(
           'The PDF exceeds the upload size allowed by SPINA.',
         );
       }
       final bytes = await file.readAsBytes();
+      requirePrivateAccess();
       if (bytes.length > widget.capability.maxBytes ||
           bytes.length < 5 ||
           ascii.decode(bytes.take(5).toList(), allowInvalid: true) != '%PDF-') {
@@ -544,7 +666,7 @@ class _ClientPaymentProofUploadPageState
           'Choose a supported PDF payment proof within the allowed size.',
         );
       }
-      if (!mounted) return;
+      if (!privateAccessActive) return;
       setState(() {
         _draft = PaymentProofDraft(
           filename: file.name,
@@ -554,19 +676,23 @@ class _ClientPaymentProofUploadPageState
         _requestId = null;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      _deny(error);
+      if (mounted && privateAccessActive) {
+        setState(() => _error = error.message);
+      }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () => _error = 'The PDF could not be opened. Select it again.',
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && privateAccessActive) setState(() => _busy = false);
     }
   }
 
   Future<void> _submit() async {
+    if (!privateAccessActive) return;
     final draft = _draft;
     final loanId = _loanId;
     if (_busy ||
@@ -583,6 +709,7 @@ class _ClientPaymentProofUploadPageState
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       final proof = widget.proof;
       if (proof == null) {
         await widget.repository.upload(
@@ -604,9 +731,10 @@ class _ClientPaymentProofUploadPageState
           draft: draft,
         );
       }
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted && privateAccessActive) Navigator.of(context).pop(true);
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      _deny(error);
+      if (mounted && privateAccessActive) {
         setState(() {
           _error = error.message;
           _uncertain = error.statusCode == null || error.statusCode! >= 500;
@@ -615,7 +743,7 @@ class _ClientPaymentProofUploadPageState
         });
       }
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _uncertain = true;
           _error =
@@ -623,12 +751,13 @@ class _ClientPaymentProofUploadPageState
         });
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && privateAccessActive) setState(() => _busy = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) return privateAccessDeniedPage();
     final locked = _busy || _uncertain || _conflict;
     return PopScope(
       canPop: !_busy,
@@ -717,7 +846,16 @@ class _ClientPaymentProofUploadPageState
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Take photo'),
                   ),
+                  OutlinedButton.icon(
+                    key: const Key('proof-image-file'),
+                    onPressed: locked ? null : () => _pick(null),
+                    icon: const Icon(Icons.folder_open_outlined),
+                    label: const Text('Choose image file'),
+                  ),
                 ],
+              ),
+              const Text(
+                'If your gallery closes, use Choose image file to browse for a JPEG or PNG.',
               ),
               if (_draft != null) Text('Selected: ${_draft!.filename}'),
               if (_error != null)

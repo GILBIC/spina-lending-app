@@ -3,9 +3,11 @@ import {formatAuthoritativeMoney} from './client-schedule.js';
 
 export async function collectorMutation({api,path,options,guard,verify}) {
   let result;
+  guard.retainCommand({path,options});
   try { result=await api.request(path,{...options,financial:true}); }
   catch(error) {
     if(error.code === 'network_uncertain' || error.status >= 500) guard.lock('SPINA could not confirm the saved result. Refresh the authoritative record before another attempt.');
+    if(!guard.locked) guard.clearCommand();
     throw error;
   }
   let verified=false;
@@ -14,13 +16,33 @@ export async function collectorMutation({api,path,options,guard,verify}) {
     const error=new Error('SPINA could not verify the saved result. Refresh the authoritative record before another attempt.');
     error.code='financial_result_unverified';guard.lock(error.message);throw error;
   }
+  guard.clearCommand();
   return result;
 }
 
-export const collectionResultMatches = request => result =>
+const hasText = value => typeof value === 'string' && value.trim().length > 0;
+const isServerMoney = value => typeof value === 'string' && /^(0|[1-9]\d*)\.\d{2}$/.test(value);
+
+function hasAcceptedTime(value) {
+  if(typeof value !== 'string') return false;
+  const parts=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if(!parts || !Number.isFinite(Date.parse(value))) return false;
+  const [year,month,day,hour,minute,second]=parts.slice(1,7).map(Number);
+  const leap=year%4===0 && (year%100!==0 || year%400===0);
+  const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  return month>=1 && month<=12 && day>=1 && day<=days[month-1] && hour<24 && minute<60 && second<60;
+}
+
+const finalStatusMatches = (result,commandId) => result &&
   ['accepted','duplicate'].includes(result.status) &&
-  result.client_transaction_id === request.body.client_transaction_id &&
-  typeof result.receipt_number === 'string' && result.receipt_number.length > 0;
+  hasText(commandId) && result.client_transaction_id === commandId &&
+  (!Object.hasOwn(result,'duplicate') || result.duplicate === (result.status === 'duplicate'));
+
+export const collectionResultMatches = request => result =>
+  finalStatusMatches(result,request.body.client_transaction_id) &&
+  hasText(result.transaction_id) && isServerMoney(result.official_balance) &&
+  hasAcceptedTime(result.accepted_at) &&
+  (request.body.entry_type === 'pass' || hasText(result.receipt_number));
 
 export const EXTRA_CHOICES = {
   seven_by_seven_advance: '7x7 Advance',
@@ -64,12 +86,47 @@ export function buildCombinedSubmission({entries, amount, extraChoice = '', past
 }
 
 function serverMoney(value) {
-  if(typeof value !== 'string' || !/^(0|[1-9]\d*)\.\d{2}$/.test(value)) throw new Error('The server preview contains an invalid money value. Preview again.');
+  if(!isServerMoney(value)) throw new Error('The server preview contains an invalid money value. Preview again.');
   return value;
 }
 
 export function formatServerMoney(value) {
   return formatAuthoritativeMoney(serverMoney(value));
+}
+
+function combinedResultMatches(request,preview) {
+  // The server preview owns the allocation. Match its nonzero posted
+  // components, including a separate 7x7 extra component for the same loan.
+  const expected=new Map(),key=(loan,component)=>JSON.stringify([loan,component]);
+  for(const leg of preview.legs) {
+    if(leg.loan_type==='regular') {
+      if(leg.total_amount!=='0.00') expected.set(key(leg.loan_id,leg.extra_amount==='0.00'?'regular_scheduled':'regular_scheduled_and_extra'),leg.total_amount);
+    } else {
+      if(leg.scheduled_amount!=='0.00') expected.set(key(leg.loan_id,'seven_by_seven_scheduled'),leg.scheduled_amount);
+      if(leg.extra_amount!=='0.00') expected.set(key(leg.loan_id,preview.extra_allocation_choice),leg.extra_amount);
+    }
+  }
+  return result => {
+    if(!finalStatusMatches(result,request.body.client_transaction_id) ||
+      result.client_id!==request.body.client_id || result.allocation_hash!==request.body.reviewed_allocation_hash ||
+      result.allocation_status!==preview.status || (result.extra_allocation_choice ?? null)!==(preview.extra_allocation_choice ?? null) ||
+      !isServerMoney(result.total_amount) || result.total_amount!==request.body.cash_received_amount ||
+      result.applied_total_amount!==result.total_amount || result.unallocated_total_amount!=='0.00' ||
+      result.cash_allocation_state!=='fully_allocated' || !Array.isArray(result.legs) || result.legs.length!==expected.size) return false;
+    const seen=new Set(),transactions=new Set(),receipts=new Set();let total=0n;
+    for(const leg of result.legs) {
+      if(!leg || typeof leg!=='object') return false;
+      const component=key(leg.loan_id,leg.allocation_component),amount=expected.get(component);
+      if(!amount || seen.has(component) || !isServerMoney(leg.amount) || leg.amount!==amount ||
+        leg.applied_amount!==amount || leg.unallocated_amount!=='0.00' || leg.allocation_state!=='fully_allocated' ||
+        !isServerMoney(leg.official_balance) || !hasText(leg.route_revision) ||
+        !hasText(leg.transaction_id) || transactions.has(leg.transaction_id) ||
+        !hasText(leg.receipt_number) || receipts.has(leg.receipt_number)) return false;
+      seen.add(component);transactions.add(leg.transaction_id);receipts.add(leg.receipt_number);
+      total+=BigInt(leg.amount.replace('.',''));
+    }
+    return total===BigInt(result.total_amount.replace('.',''));
+  };
 }
 
 function validateCombinedPreview(result,draft) {
@@ -122,6 +179,10 @@ export function createCombinedReview(api) {
       if (reviewed.result.extra_choice_required) throw new Error('Choose the borrower’s extra allocation and preview again.');
       if (reviewed.result.regular_past_due_followup_required && !reviewed.draft.body.regular_past_due_followup) throw new Error('Choose a Regular Past Due reason and preview again.');
       return {headers:reviewed.draft.headers, body:{...reviewed.draft.body, reviewed_allocation_hash:reviewed.result.allocation_hash}};
+    },
+    resultMatches() {
+      const request=this.submission();
+      return combinedResultMatches(structuredClone(request),structuredClone(reviewed.result));
     },
   };
 }

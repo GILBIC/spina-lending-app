@@ -5,9 +5,11 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-
 from gilbic_backend.account_repository import AccountContext
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.cross_remittance_api import (
     cross_remittance_repository_dependency,
@@ -23,7 +25,6 @@ from gilbic_backend.remittance_repository import (
     RemittanceRecord,
     RemittanceSummaryRecord,
 )
-
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 COLLECTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -123,6 +124,7 @@ class FakeCrossRemittances:
         recipient_capacity: str,
         collection_date: date,
         note: str,
+        expected_review_digest: str,
     ) -> RemittanceRecord:
         self.submit_request = (
             collector_user_id,
@@ -192,8 +194,8 @@ def _client() -> tuple[TestClient, FakeCrossRemittances]:
     app = create_app()
     app.dependency_overrides[auth_client_dependency] = lambda: FakeAuthClient()
     app.dependency_overrides[account_repository_dependency] = lambda: FakeAccounts()
-    app.dependency_overrides[cross_remittance_repository_dependency] = (
-        lambda: remittances
+    app.dependency_overrides[cross_remittance_repository_dependency] = lambda: (
+        remittances
     )
     return TestClient(app), remittances
 
@@ -256,6 +258,7 @@ def test_cross_remittance_submission_preserves_selected_management_capacity() ->
         headers=_headers(),
         json={
             "recipient_user_id": str(MANAGEMENT_USER_ID),
+            "expected_review_digest": "a" * 64,
             "recipient_capacity": MANAGEMENT_CAPACITY,
             "collection_date": COLLECTION_DATE.isoformat(),
             "note": "Cash handed directly to Management",

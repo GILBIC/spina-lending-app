@@ -10,7 +10,13 @@ This milestone gives authenticated collectors read-only access to the last succe
 4. The database password is generated from 32 random bytes and stored separately through platform secure storage.
 5. A failed network request attempts to load the snapshot for the authenticated user.
 6. A recovered snapshot is displayed as **Offline copy** with its last-synchronized timestamp.
-7. Signing out deletes that user's cached route snapshot.
+7. Signing out invalidates that session's route access immediately and deletes that user's cached route snapshot after any in-flight storage operation finishes.
+
+## Session ordering
+
+`CollectorRouteCache` is the low-level storage adapter. Application code obtains a session lease with `forSession`; the loader performs both persistence and fallback reads through that lease. Sign-out and access denial use `invalidateSession`, which invalidates the lease synchronously and queues cleanup with the actual storage operations. A read or write already awaiting SQLCipher cannot restore a visible offline route after invalidation. Old cleanup finishes before a new authorized session's writes and cannot clear that new session again. Direct same-actor session replacement uses this same revocation and cleanup boundary, even when no explicit logout occurred; a replacement cannot fall back to a delayed write from the old session.
+
+Verified token refresh/validation uses `continueSession` to retain one authorization lifetime only when the shared session authorization scope remains equal. Permission or membership changes revoke every old alias synchronously, mark the snapshot unreadable, and queue deletion before replacement storage operations. The app applies this boundary as soon as validation/refresh returns, before awaiting secure-session persistence. A later same-user regrant needs a fresh authorized online route before offline access resumes. Equivalent grant ordering, token rotation, and display-name changes preserve authorized offline access. A 401, 403, or 426 blocks fallback; ordinary network errors can still show the authorized read-only copy. Cleanup failure keeps that user's fallback unreadable in the running cache until a new authorized online write succeeds.
 
 ## Storage boundary
 

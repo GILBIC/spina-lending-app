@@ -286,7 +286,9 @@ def test_missing_external_reference_is_owner_unresolved_without_borrower_receipt
 
 def test_actual_approved_advance_uses_protected_payout_once_and_relinks_truthfully(
     treasury,
+    employee_treasury_clock,
 ):
+    from gilbic_backend.employee_operations import EmployeeConflict
     from gilbic_backend.employee_operations_models import ACTION_ADAPTER
     from gilbic_backend.employee_operations_repository import (
         PostgresEmployeeOperationsRepository,
@@ -328,14 +330,25 @@ def test_actual_approved_advance_uses_protected_payout_once_and_relinks_truthful
         gp_partial_day_policy="prorated",
         classification_basis="Reviewed synthetic staff",
     )
+    advance_fields = {
+        "amount": "100.00",
+        "reason": "Synthetic agreed principal",
+        "employee_acknowledgment": "Agreed terms",
+        "payroll_authorization": "Actual authorization",
+    }
+    # Pinning a historical scenario must not bypass the prospective-date guard.
+    with pytest.raises(EmployeeConflict, match="prospective agreed repayment dates"):
+        call(
+            employee,
+            "advance_request",
+            installments=[{"due_date": "2026-10-01", "amount": "100.00"}],
+            **advance_fields,
+        )
     requested = call(
         employee,
         "advance_request",
-        amount="100.00",
-        reason="Synthetic agreed principal",
         installments=[{"due_date": "2026-10-10", "amount": "100.00"}],
-        employee_acknowledgment="Agreed terms",
-        payroll_authorization="Actual authorization",
+        **advance_fields,
     )
     # Exact explicit command defaults must be overridable by reviewed source IDs.
     approved_command = ACTION_ADAPTER.validate_python(

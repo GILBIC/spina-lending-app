@@ -5,6 +5,7 @@ import { mountOfficeCifWorkflow } from './office-cif-workflow.js';
 import { sessionHasRole } from './roles.js';
 import { emptyState, errorCard, hasPermission, loadingPanel } from './ui.js';
 import { createOfficeCaseContext } from './office-case-context.js';
+import { mountClientPhotoLauncher } from './client-photo.js';
 
 const mountedSelections = new WeakMap();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -33,6 +34,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   let reviewRoot;
   let correctionRoot;
   let correctionCleanup;
+  let photoCleanup;
   let workflowRoot;
   let workflowCleanup;
   let selected = null;
@@ -45,7 +47,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   const coordinator = officeCaseContext ?? createOfficeCaseContext({getSession, confirmDiscard});
   const ownsCoordinator = !officeCaseContext;
   api = bindOfficeWriteOwner(api, {isWritePending:()=>!disposed && beginning,isUncertain:()=>!disposed && beginUncertain,dispose}, coordinator);
-  const children = () => [correctionCleanup, workflowCleanup].filter(Boolean);
+  const children = () => [correctionCleanup, workflowCleanup, photoCleanup].filter(Boolean);
   const isDirty = () => children().some(child => child.isDirty?.());
   const isWritePending = () => beginning || children().some(child => child.isWritePending?.());
   const isUncertain = () => beginUncertain || children().some(child => child.isUncertain?.());
@@ -86,6 +88,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
   function invalidate() {
     currentRequest = {};
     lookupRequest = {};
+    photoCleanup?.(); photoCleanup = null;
     correctionCleanup?.();
     correctionCleanup = null;
     if (correctionRoot) correctionRoot.innerHTML = '';
@@ -171,6 +174,10 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
       }
       currentRequest = request; selected = selection;
       selectedReview = initialReview ?? null;
+      photoCleanup?.();
+      photoCleanup = mountClientPhotoLauncher({root:root.querySelector('[data-office-client-photo]'),api,getSession,signal,
+        clientId:selection.client_id,clientName:initialReview?.full_name || selection.full_name || 'Selected Client',
+        getClientId:()=>selected?.client_id,allowUpload:true,onDraftChange:edited});
       let establishedCif = Boolean(initialReview);
       let correctionActive = false;
       input.value = selection.application_reference;
@@ -321,6 +328,7 @@ export function mountOfficeCifSelection({ root, api, session, getSession = () =>
     </div>
   </form></details>
   <div data-office-cif-status role="status" aria-live="polite"></div>
+  <div data-office-client-photo></div>
   <details class="office-cif-saved-details" data-cif-saved-details open><summary>Saved CIF details</summary><div data-office-cif-review aria-live="polite"></div></details>
   <div data-office-cif-correction aria-live="polite"></div>
   <div data-office-cif-workflow aria-live="polite"></div>`;

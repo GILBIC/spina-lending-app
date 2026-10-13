@@ -28,6 +28,12 @@ test('accounting requires Management plus view permission before reading private
   }
 });
 
+test('accounting navigation exposes mixed disclosure reviews', async () => {
+  const f = await setup();
+  assert.ok(f.root.querySelector('[data-accounting-tab="disclosures"]'));
+  f.cleanup();
+});
+
 test('new fiscal period requires review and one confirmed submission', async () => {
   let resolveWrite;
   const f = await setup({ write: () => new Promise((resolve) => { resolveWrite = resolve; }) });
@@ -134,6 +140,50 @@ test('period close posts the reviewed digest, signed income and period end with 
   assert.equal(write.body.expected_net_income, '-123.45'); assert.equal(write.body.expected_close_digest, 'a'.repeat(64));
   assert.equal(write.body.expected_period_end_date, '2026-09-30'); assert.equal(write.body.expected_retained_earnings_account_code, '3100');
   assert.match(write.body.confirmation_token, /^[0-9a-f]{64}$/); f.cleanup();
+});
+
+const zeroClose = (label = 'Empty first period') => ({ fiscal_period_id: period, label, end_date: '2026-09-30', fiscal_period_status: 'review', close_status: 'prepared_confirmation_required', preparation_id: workbook, journal_entry_id: null, closing_entry_number: null, temporary_account_count: 0, net_income: '0.00', retained_earnings_balance_before: '0.00', close_digest: 'c'.repeat(64), protected_period_close_enabled: true, retained_earnings_close_enabled: true, closed_period_posting_protection_enabled: true, period_reopen_enabled: false, automatic_source_posting: false });
+
+for (const label of ['Empty first period', 'Capital-only first period']) test(`${label} confirms protected close without a synthetic closing journal`, async () => {
+  const prepared = zeroClose(label);
+  let item = { ...prepared, close_status: 'ready_to_prepare', preparation_id: null, temporary_account_count: null, net_income: null, retained_earnings_balance_before: null, close_digest: null };
+  const f = await setup({
+    read: (path) => path.endsWith('period-close') ? { items: [item], permissions: { close_prepare: true, close_post: true } } : overview,
+    write: (path) => {
+      item = path.endsWith('/prepare') ? prepared : { ...prepared, fiscal_period_status: 'closed', close_status: 'closed_protected', close_posting_id: journal, retained_earnings_balance_after: '0.00', closed_by_user_id: period, closed_at: '2026-10-01T00:00:00Z' };
+      return { item };
+    },
+  });
+  await f.tab('close');
+  fire(f.root.querySelector('[data-close-prepare]'), 'click'); await tick();
+  assert.equal(f.calls.filter((call) => call.method).length, 0);
+  fire(f.root.querySelector('[data-accounting-confirm]'), 'click'); await tick();
+  assert.deepEqual(f.calls.find((call) => call.method).body, { confirm: true });
+  assert.ok(f.root.querySelector('[data-close-post]'), 'A reviewed zero-balance close must allow final confirmation.');
+  fire(f.root.querySelector('[data-close-post]'), 'click'); await tick();
+  assert.match(f.root.textContent, /No closing journal is required/);
+  assert.equal(f.calls.filter((call) => call.method).length, 1);
+  fire(f.root.querySelector('[data-accounting-cancel]'), 'click'); await tick();
+  assert.equal(f.calls.filter((call) => call.method).length, 1);
+  fire(f.root.querySelector('[data-close-post]'), 'click'); await tick();
+  fire(f.root.querySelector('[data-accounting-confirm]'), 'click'); await tick();
+  const writes = f.calls.filter((call) => call.method);
+  assert.equal(writes.length, 2);
+  assert.equal(writes[1].path, `${base}/period-close/${period}/post`);
+  assert.deepEqual(writes[1].body, { confirm: true, confirmation_token: writes[1].body.confirmation_token, expected_close_digest: prepared.close_digest, expected_net_income: '0.00', expected_retained_earnings_account_code: '3100', expected_period_end_date: '2026-09-30' });
+  assert.match(writes[1].body.confirmation_token, /^[0-9a-f]{64}$/);
+  assert.match(f.root.textContent, /Closed Protected/);
+  assert.match(f.root.textContent, /No closing journal is required/);
+  assert.match(f.root.textContent, /Retained earnings after close/);
+  assert.equal(f.root.querySelector('[data-close-post]'), null);
+  f.cleanup();
+});
+
+test('zero-balance close still requires exact coordinates and nonzero temporary balances require a journal', async () => {
+  for (const patch of [{ temporary_account_count: 2 }, { temporary_account_count: -1 }, { temporary_account_count: null }, { net_income: '0.01' }, { journal_entry_id: journal }, { journal_entry_id: undefined }, { preparation_id: null }, { close_digest: null }, { retained_earnings_balance_before: null }, { close_status: 'closed_protected' }, { automatic_source_posting: true }]) {
+    const f = await setup({ read: (path) => path.endsWith('period-close') ? { items: [{ ...zeroClose(), ...patch }], permissions: { close_post: true } } : overview });
+    await f.tab('close'); assert.equal(f.root.querySelector('[data-close-post]'), null, JSON.stringify(patch)); f.cleanup();
+  }
 });
 
 test('capital posting uses exact evidence coordinates and never invents a balancing journal', async () => {

@@ -1,3 +1,4 @@
+import { custodySplitText } from './collector-credit-application.js';
 import {mountCollectorSurplus} from './collector-surplus.js';
 import { asArray, badge, emptyState, escapeHtml, hasPermission } from './ui.js';
 
@@ -68,7 +69,7 @@ function detailMarkup(record, decisionAllowed = true, counted=false) {
   return `<article class="data-card">
     <h3>Review ${escapeHtml(record.remittance_number)}</h3>
     <p>From ${escapeHtml(record.collector_name)} to ${escapeHtml(record.recipient_name)} · ${escapeHtml(record.collection_date)}</p>
-    <p><strong>Server cash total: PHP ${escapeHtml(record.total_amount)}</strong></p>
+    <p><strong>${record.settlement_split ? 'Settled obligation' : 'Server cash total'}: PHP ${escapeHtml(record.total_amount)}</strong></p>${record.settlement_split ? `<p>${escapeHtml(custodySplitText(record.settlement_split,record.total_amount))}</p>` : ''}
     <p>${escapeHtml(record.transaction_count)} transactions · ${escapeHtml(record.payment_count)} payments · ${escapeHtml(record.unable_to_pay_count)} unable to pay · ${escapeHtml(record.covered_payment_count)} covered payments · ${escapeHtml(record.client_count)} clients</p>
     <h4>Full payment list</h4>
     <div class="list-stack">${record.items.map((item) => `<article class="list-item" data-remittance-item>

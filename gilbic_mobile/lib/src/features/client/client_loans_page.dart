@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
 import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/loans/client_schedule_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:gilbic_mobile/src/features/client/client_schedule_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_loan_documents_page.dart';
 
@@ -14,6 +18,7 @@ class ClientLoansPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     this.repository,
     this.scheduleRepository,
+    this.photoRepository,
     super.key,
   });
 
@@ -21,16 +26,19 @@ class ClientLoansPage extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientLoanRepository? repository;
   final ClientScheduleRepository? scheduleRepository;
+  final ClientPhotoRepository? photoRepository;
 
   @override
   State<ClientLoansPage> createState() => _ClientLoansPageState();
 }
 
 class _ClientLoansPageState extends State<ClientLoansPage> {
-  late final ClientLoanRepository _repository;
+  late ClientLoanRepository _repository;
   ClientLoanPortfolio? _portfolio;
   String? _errorMessage;
   bool _loading = true;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -39,30 +47,71 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(ClientLoansPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _readEpoch++;
+      _portfolio = null;
+      _repository = widget.repository ?? SpinaClientLoanRepository();
+      _dismissPrivateRoutes();
+      _load();
+    }
+  }
+
+  bool _current(int epoch, int requestId) =>
+      mounted && epoch == _readEpoch && requestId == _requestId;
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    // Widget updates can happen while Navigator is building its routes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
   Future<void> _load() async {
+    final epoch = _readEpoch;
+    final requestId = ++_requestId;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final portfolio = await _repository.loadPortfolio(
-        widget.session,
+      if (!_current(epoch, requestId)) return;
+      final result = await _repository.loadPortfolio(
+        session,
         deviceId: identity.installationId,
       );
-      if (mounted) {
-        setState(() => _portfolio = portfolio);
+      if (_current(epoch, requestId)) {
+        setState(() => _portfolio = result);
       }
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (mounted && epoch == _readEpoch && staffAccessRejected(error)) {
+        // A denial also invalidates newer requests already in flight.
+        _readEpoch++;
+        setState(() {
+          _portfolio = null;
+          _errorMessage = error.message;
+          _loading = false;
+        });
+        _dismissPrivateRoutes();
+      } else if (_current(epoch, requestId)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _errorMessage = 'My Loans could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (_current(epoch, requestId)) {
         setState(() => _loading = false);
       }
     }
@@ -127,7 +176,12 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-          _BorrowerCard(portfolio: portfolio),
+          _BorrowerCard(
+            portfolio: portfolio,
+            session: widget.session,
+            deviceIdentityProvider: widget.deviceIdentityProvider,
+            photoRepository: widget.photoRepository,
+          ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 10),
             Card(
@@ -198,37 +252,36 @@ class _ClientLoansPageState extends State<ClientLoansPage> {
 }
 
 class _BorrowerCard extends StatelessWidget {
-  const _BorrowerCard({required this.portfolio});
+  const _BorrowerCard({
+    required this.portfolio,
+    required this.session,
+    required this.deviceIdentityProvider,
+    this.photoRepository,
+  });
 
   final ClientLoanPortfolio portfolio;
+  final UserSession session;
+  final DeviceIdentityProvider deviceIdentityProvider;
+  final ClientPhotoRepository? photoRepository;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const CircleAvatar(
-              radius: 24,
-              child: Icon(Icons.account_balance_wallet_outlined),
+            ClientPhotoCard(
+              session: session,
+              deviceIdentityProvider: deviceIdentityProvider,
+              clientId: portfolio.clientId,
+              clientName: portfolio.clientName,
+              repository: photoRepository,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    portfolio.clientName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${portfolio.clientCode}'
-                    '${portfolio.area == null ? '' : ' • ${portfolio.area}'}',
-                  ),
-                ],
-              ),
+            Text(
+              '${portfolio.clientCode}'
+              '${portfolio.area == null ? '' : ' • ${portfolio.area}'}',
             ),
           ],
         ),

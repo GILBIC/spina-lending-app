@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/clients/client_photo_repository.dart';
+import 'package:gilbic_mobile/src/features/shared/client_photo_card.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/office/office_repository.dart';
@@ -13,12 +15,16 @@ class OfficeCifPage extends StatefulWidget {
     required this.repository,
     required this.clientId,
     this.intakeReference,
+    this.photoRepository,
+    this.photoPicker,
     super.key,
   });
   final OfficeIdentity actor;
   final OfficeRepository repository;
   final String clientId;
   final String? intakeReference;
+  final ClientPhotoRepository? photoRepository;
+  final OfficePhotoPicker? photoPicker;
   @override
   State<OfficeCifPage> createState() => _OfficeCifPageState();
 }
@@ -35,6 +41,7 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
   bool confirmed = false;
   bool privacyRecorded = false;
   String? success;
+  String? photoClientName;
   @override
   void initState() {
     super.initState();
@@ -42,7 +49,22 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
   }
 
   @override
+  void didUpdateWidget(OfficeCifPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.clientId != widget.clientId ||
+        oldWidget.actor != widget.actor ||
+        oldWidget.repository != widget.repository) {
+      operation.invalidate();
+      operation.denied = false;
+      operation.blocked = false;
+      clearPrivate();
+      _load();
+    }
+  }
+
+  @override
   void clearPrivate() {
+    photoClientName = null;
     fields.clear();
     review = null;
     evidence = null;
@@ -96,6 +118,7 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
       setState(() {
         missing = value['unavailable'] == true;
         review = missing ? null : value;
+        if (!missing) photoClientName = value['full_name'];
         if (preserveDraft &&
             (value['cif_version_id'] != previousVersion ||
                 jsonEncode(cifInformation(value)) != previousInformation)) {
@@ -263,8 +286,18 @@ class _OfficeCifPageState extends OfficeScreenState<OfficeCifPage> {
   Widget build(BuildContext context) {
     final current = review;
     return screen('Client information (CIF)', [
+      if (photoClientName != null)
+        ClientPhotoCard(
+          key: ValueKey('photo-${widget.clientId}'),
+          session: widget.actor.session,
+          deviceId: widget.actor.deviceId,
+          clientId: widget.clientId,
+          clientName: photoClientName!,
+          repository: widget.photoRepository,
+          picker: widget.photoPicker,
+          allowUpload: true,
+        ),
       if (current != null) ...[
-        officeHeading(current['full_name']),
         if (widget.intakeReference != null)
           Text('Intake: ${widget.intakeReference}'),
         ExpansionTile(

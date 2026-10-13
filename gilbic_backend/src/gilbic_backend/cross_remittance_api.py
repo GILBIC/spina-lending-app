@@ -6,7 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -31,7 +31,6 @@ from .remittance_repository import (
 )
 from .request_auth import authenticated_device_context
 
-
 CrossRemittanceRecipientCapacity = Literal["assigned_collector", "management"]
 
 
@@ -42,13 +41,31 @@ class CrossRemittanceSubmissionBody(BaseModel):
     recipient_capacity: CrossRemittanceRecipientCapacity = ASSIGNED_COLLECTOR_CAPACITY
     collection_date: date
     note: str = Field(default="", max_length=500)
+    expected_review_digest: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def require_review(cls, value):
+        if isinstance(value, dict) and not value.get("expected_review_digest"):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "remittance_review_changed",
+                    "message": "Refresh and review the remittance before submitting. Update the app if needed.",
+                },
+            )
+        return value
 
 
 def cross_remittance_repository_dependency() -> PostgresCrossRemittanceRepository:
     return PostgresCrossRemittanceRepository()
 
 
-def cross_collection_status_repository_dependency() -> PostgresCrossCollectionStatusRepository:
+def cross_collection_status_repository_dependency() -> (
+    PostgresCrossCollectionStatusRepository
+):
     return PostgresCrossCollectionStatusRepository()
 
 
@@ -96,9 +113,7 @@ def _cross_collection_status_payload(
         "amount": _money(record.amount),
         "accepted_at": record.accepted_at.isoformat(),
         "is_locked": record.is_locked,
-        "remittance_id": (
-            str(record.remittance_id) if record.remittance_id else None
-        ),
+        "remittance_id": (str(record.remittance_id) if record.remittance_id else None),
         "remittance_number": record.remittance_number,
         "custody_status": record.custody_status,
         "remittance_recipient_user_id": (
@@ -110,9 +125,7 @@ def _cross_collection_status_payload(
         "submitted_at": (
             record.submitted_at.isoformat() if record.submitted_at else None
         ),
-        "received_at": (
-            record.received_at.isoformat() if record.received_at else None
-        ),
+        "received_at": (record.received_at.isoformat() if record.received_at else None),
     }
 
 
@@ -135,6 +148,7 @@ def _item_payload(item: RemittanceItemRecord) -> dict[str, object]:
 
 def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
     return {
+        "review_digest": summary.review_digest,
         "collection_date": summary.collection_date.isoformat(),
         "collector_user_id": str(summary.collector_user_id),
         "collector_name": summary.collector_name,
@@ -335,6 +349,7 @@ def create_cross_remittance_router() -> APIRouter:
                 recipient_capacity=body.recipient_capacity,
                 collection_date=body.collection_date,
                 note=body.note,
+                expected_review_digest=body.expected_review_digest,
             )
         except RemittanceError as error:
             _raise_error(error)

@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -32,7 +34,7 @@ class CollectorRenewalRequestsPage extends StatefulWidget {
 
 class _CollectorRenewalRequestsPageState
     extends State<CollectorRenewalRequestsPage> {
-  late final CollectorRenewalWorkflowRepository _repository;
+  late CollectorRenewalWorkflowRepository _repository;
   late final ImagePicker _imagePicker;
   List<CollectorRenewalRequest> _requests = const <CollectorRenewalRequest>[];
   String? _deviceId;
@@ -54,30 +56,92 @@ class _CollectorRenewalRequestsPageState
     _load();
   }
 
+  int _epoch = 0;
+  int _request = 0;
+  bool _denied = false;
+  bool _active(int epoch) => mounted && !_denied && epoch == _epoch;
+  bool _current(int epoch, int request) =>
+      _active(epoch) && request == _request;
+
+  void _clearPrivate() {
+    _requests = const [];
+    _deviceId = null;
+    _busy.clear();
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  bool _deny(SpinaApiException error, int epoch) {
+    if (!_active(epoch) || !staffAccessRejected(error)) return false;
+    _epoch++;
+    setState(() {
+      _denied = true;
+      _clearPrivate();
+      _loading = false;
+      _error = '${error.message} Sign in again before continuing.';
+    });
+    _dismissPrivateRoutes();
+    return true;
+  }
+
+  @override
+  void didUpdateWidget(CollectorRenewalRequestsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final scopeChanged =
+        oldWidget.session.authorizationScopeKey !=
+        widget.session.authorizationScopeKey;
+    if (scopeChanged ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _epoch++;
+      if (scopeChanged) _denied = false;
+      _clearPrivate();
+      _repository =
+          widget.repository ?? SpinaCollectorRenewalWorkflowRepository();
+      _dismissPrivateRoutes();
+      if (!_denied) _load();
+    }
+  }
+
   Future<void> _load() async {
+    if (_denied) return;
+    final epoch = _epoch;
+    final request = ++_request;
+    final session = widget.session;
+    final repository = _repository;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final requests = await _repository.list(
-        widget.session,
+      if (!_current(epoch, request)) return;
+      final requests = await repository.list(
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) return;
+      if (!_current(epoch, request)) return;
       setState(() {
         _deviceId = identity.installationId;
         _requests = requests;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (_deny(error, epoch)) return;
+      if (_current(epoch, request)) setState(() => _error = error.message);
     } on Object {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() => _error = 'Renewal requests could not be loaded.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (_current(epoch, request)) setState(() => _loading = false);
     }
   }
 
@@ -85,19 +149,22 @@ class _CollectorRenewalRequestsPageState
     CollectorRenewalRequest request,
     String recommendation,
   ) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     if (!_canRecommend) return;
     final result = await showDialog<_RecommendationDraft>(
       context: context,
       builder: (context) =>
           _RecommendationDialog(recommendation: recommendation),
     );
-    if (result == null) return;
+    if (result == null || !_active(epoch)) return;
     final deviceId = _deviceId;
     if (deviceId == null) return;
     await _run(
       request.requestId,
       () => _repository.recommend(
-        widget.session,
+        session,
         deviceId: deviceId,
         requestId: request.requestId,
         recommendation: recommendation,
@@ -111,6 +178,9 @@ class _CollectorRenewalRequestsPageState
   }
 
   Future<void> _confirmCashReceived(CollectorRenewalRequest request) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     if (!_canHandleCash) return;
     if (!await _confirm(
       title: 'Confirm cash received?',
@@ -125,7 +195,7 @@ class _CollectorRenewalRequestsPageState
     await _run(
       request.requestId,
       () => _repository.confirmCashReceived(
-        widget.session,
+        session,
         deviceId: deviceId,
         requestId: request.requestId,
       ),
@@ -134,6 +204,9 @@ class _CollectorRenewalRequestsPageState
   }
 
   Future<void> _confirmCashGiven(CollectorRenewalRequest request) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     if (!_canHandleCash) return;
     if (!await _confirm(
       title: 'Confirm cash given to client?',
@@ -148,7 +221,7 @@ class _CollectorRenewalRequestsPageState
     await _run(
       request.requestId,
       () => _repository.confirmCashGiven(
-        widget.session,
+        session,
         deviceId: deviceId,
         requestId: request.requestId,
       ),
@@ -158,6 +231,9 @@ class _CollectorRenewalRequestsPageState
   }
 
   Future<void> _captureProof(CollectorRenewalRequest request) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
+    final session = widget.session;
     if (!_canHandleCash) return;
     final deviceId = _deviceId;
     if (deviceId == null || _busy.contains(request.requestId)) return;
@@ -180,7 +256,7 @@ class _CollectorRenewalRequestsPageState
         ),
       ),
     );
-    if (source == null || !mounted) return;
+    if (source == null || !mounted || !_active(epoch)) return;
     try {
       final image = await pickRecoverableImage(
         context,
@@ -194,8 +270,9 @@ class _CollectorRenewalRequestsPageState
           requestFullMetadata: false,
         ),
       );
-      if (image == null || !mounted) return;
+      if (image == null || !_active(epoch)) return;
       final bytes = await image.readAsBytes();
+      if (!_active(epoch)) return;
       final draft = RenewalHandoverPhotoDraft.fromBytes(
         filename: image.name,
         bytes: Uint8List.fromList(bytes),
@@ -208,20 +285,23 @@ class _CollectorRenewalRequestsPageState
       }
       setState(() => _busy.add(request.requestId));
       await _repository.uploadHandoverPhoto(
-        widget.session,
+        session,
         deviceId: deviceId,
         requestId: request.requestId,
         draft: draft,
       );
-      if (!mounted) return;
+      if (!_active(epoch)) return;
       _message('Handover proof submitted for Management review.');
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      if (_deny(error, epoch)) return;
+      if (_active(epoch)) _message(error.message);
     } on Object {
-      if (mounted) _message('The renewal handover photo could not be saved.');
+      if (_active(epoch)) {
+        _message('The renewal handover photo could not be saved.');
+      }
     } finally {
-      if (mounted) setState(() => _busy.remove(request.requestId));
+      if (_active(epoch)) setState(() => _busy.remove(request.requestId));
     }
   }
 
@@ -230,19 +310,24 @@ class _CollectorRenewalRequestsPageState
     Future<CollectorRenewalRequest> Function() action, {
     required String successMessage,
   }) async {
+    final epoch = _epoch;
+    if (!_active(epoch)) return;
     if (_busy.contains(requestId)) return;
     setState(() => _busy.add(requestId));
     try {
       await action();
-      if (!mounted) return;
+      if (!_active(epoch)) return;
       _message(successMessage);
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) _message(error.message);
+      if (_deny(error, epoch)) return;
+      if (_active(epoch)) _message(error.message);
     } on Object {
-      if (mounted) _message('The renewal action could not be completed.');
+      if (_active(epoch)) {
+        _message('The renewal action could not be completed.');
+      }
     } finally {
-      if (mounted) setState(() => _busy.remove(requestId));
+      if (_active(epoch)) setState(() => _busy.remove(requestId));
     }
   }
 
@@ -251,7 +336,10 @@ class _CollectorRenewalRequestsPageState
     required String message,
     required String action,
   }) async {
-    return await showDialog<bool>(
+    final epoch = _epoch;
+    if (!_active(epoch)) return false;
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: Text(title),
@@ -269,6 +357,7 @@ class _CollectorRenewalRequestsPageState
           ),
         ) ??
         false;
+    return _active(epoch) && confirmed;
   }
 
   void _message(String value) {
@@ -283,7 +372,7 @@ class _CollectorRenewalRequestsPageState
         actions: [
           IconButton(
             tooltip: 'Refresh renewals',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _denied ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -306,7 +395,7 @@ class _CollectorRenewalRequestsPageState
                 icon: Icons.error_outline,
                 message: _error!,
                 action: TextButton(
-                  onPressed: _load,
+                  onPressed: _denied ? null : _load,
                   child: const Text('Retry'),
                 ),
               )

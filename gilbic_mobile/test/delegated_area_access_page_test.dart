@@ -5,9 +5,38 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/delegated_area_access.dart';
 import 'package:gilbic_mobile/src/core/collector/delegated_area_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/collector/delegated_area_access_page.dart';
 
 void main() {
+  for (final status in [401, 403, 426, 503]) {
+    testWidgets('batch access requests stop after denial $status', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = _DelegatedRepository()..creationFailureStatus = status;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DelegatedAreaAccessPage(
+            session: _collectorSession,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('request-delegated-access')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('delegated-request-reason')),
+        'Help today',
+      );
+      await tester.tap(find.byKey(const Key('request-all-delegated-areas')));
+      await tester.pumpAndSettle();
+      expect(repository.createdOwners, hasLength(status == 503 ? 2 : 1));
+    });
+  }
   testWidgets(
     'assigned collector can approve only own-area request and visitor sees active grant',
     (tester) async {
@@ -27,10 +56,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Temporary Area Access'), findsOneWidget);
-      expect(find.textContaining('never changes route ownership'), findsOneWidget);
+      expect(
+        find.textContaining('never changes route ownership'),
+        findsOneWidget,
+      );
       expect(find.textContaining('SECOND TEST AREA'), findsWidgets);
       expect(find.text('Visiting Collector'), findsOneWidget);
-      expect(find.byKey(const Key('approve-delegated-request-in')), findsOneWidget);
+      expect(
+        find.byKey(const Key('approve-delegated-request-in')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const Key('approve-delegated-request-in')));
       await tester.pumpAndSettle();
@@ -42,35 +77,40 @@ void main() {
     },
   );
 
-  testWidgets('Request All Areas fans out one owner-specific request per collector',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(900, 1600));
-    addTearDown(() async => tester.binding.setSurfaceSize(null));
-    final repository = _DelegatedRepository();
+  testWidgets(
+    'Request All Areas fans out one owner-specific request per collector',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1600));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      final repository = _DelegatedRepository();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: DelegatedAreaAccessPage(
-          session: _collectorSession,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          repository: repository,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DelegatedAreaAccessPage(
+            session: _collectorSession,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            repository: repository,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('request-delegated-access')));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('delegated-request-reason')),
-      'Help cover today route',
-    );
-    await tester.tap(find.byKey(const Key('request-all-delegated-areas')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('request-delegated-access')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('delegated-request-reason')),
+        'Help cover today route',
+      );
+      await tester.tap(find.byKey(const Key('request-all-delegated-areas')));
+      await tester.pumpAndSettle();
 
-    expect(repository.createdOwners.toSet(), <String>{'owner-two', 'owner-three'});
-    expect(repository.createdAllOwnerAreas, everyElement(isTrue));
-  });
+      expect(repository.createdOwners.toSet(), <String>{
+        'owner-two',
+        'owner-three',
+      });
+      expect(repository.createdAllOwnerAreas, everyElement(isTrue));
+    },
+  );
 }
 
 const UserSession _collectorSession = UserSession(
@@ -97,6 +137,7 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 }
 
 class _DelegatedRepository implements DelegatedAreaRepository {
+  int? creationFailureStatus;
   final List<String> approved = <String>[];
   final List<String> createdOwners = <String>[];
   final List<bool> createdAllOwnerAreas = <bool>[];
@@ -122,7 +163,9 @@ class _DelegatedRepository implements DelegatedAreaRepository {
   }
 
   @override
-  Future<List<DelegatedAreaRequest>> incomingRequests(UserSession session) async {
+  Future<List<DelegatedAreaRequest>> incomingRequests(
+    UserSession session,
+  ) async {
     return <DelegatedAreaRequest>[
       DelegatedAreaRequest(
         requestId: 'request-in',
@@ -151,7 +194,9 @@ class _DelegatedRepository implements DelegatedAreaRepository {
   }
 
   @override
-  Future<List<DelegatedAreaRequest>> outgoingRequests(UserSession session) async {
+  Future<List<DelegatedAreaRequest>> outgoingRequests(
+    UserSession session,
+  ) async {
     return const <DelegatedAreaRequest>[];
   }
 
@@ -193,6 +238,12 @@ class _DelegatedRepository implements DelegatedAreaRepository {
     required DateTime expiresAt,
   }) async {
     createdOwners.add(ownerUserId);
+    if (creationFailureStatus != null) {
+      throw SpinaApiException(
+        'Synthetic refusal',
+        statusCode: creationFailureStatus,
+      );
+    }
     createdAllOwnerAreas.add(allOwnerAreas);
     return DelegatedAreaRequest(
       requestId: 'new-$ownerUserId',

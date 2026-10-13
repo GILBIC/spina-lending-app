@@ -13,6 +13,14 @@ from typing import Any
 from uuid import UUID
 
 from . import __version__
+from .reporting_review_export import (
+    NOTICE as REPORTING_NOTICE,
+)
+from .reporting_review_export import (
+    print_reporting_review,
+    reporting_manifest,
+    validate_reporting_scope,
+)
 
 MAX_ROWS = 100_000
 MAX_BYTES = 64 * 1024 * 1024
@@ -380,6 +388,32 @@ def build_accounting_export(
     )
     readme = f"# Spina accounting review\n\n{WARNING}\n\n{AUDIT_SCOPE}\n\nInclusive posting dates: {start_date} to {end_date}. Time zone: Asia/Manila.\nOpening balances aggregate all posted entries before the start date. Movement includes posted entries in range, including reversals and formal closing entries. Closing = opening + debits - credits. Accounts include inactive/retired accounts and zero activity. The Trial Balance contains opening and closing balances; General Ledger rows start from those openings.\n\nCSV is UTF-8 with CRLF records. Text beginning with formula characters (after spaces) is prefixed with an apostrophe; control characters are visible Unicode escapes. Exact monetary columns are unprefixed decimal cents. JSON audit snapshots preserve source values; fractional JSON numbers are decimal strings to avoid binary float loss, and integers remain integers.\n\nFiles are one repeatable-read, read-only accounting snapshot. Routine authentication can update device last-seen separately. Neither this download nor its printable copy issues an invoice, posts money, approves taxpayer facts or proves registration. Hashes identify bytes, not independent government authentication.\n"
     files.add("README.md", [readme.encode("utf-8")])
+    reporting = snapshot.get("reporting_review")
+    if reporting is not None:
+        try:
+            packs = validate_reporting_scope(reporting, start_date, end_date)
+        except (ValueError, KeyError, TypeError) as error:
+            raise AccountingExportError(
+                "integrity", "Reporting periods do not cover the exact export range."
+            ) from error
+        files.add(
+            "reporting/statement-packs.json", [json_bytes(reporting)], rows=len(packs)
+        )
+        files.csv(
+            "reporting/period-coverage.csv",
+            ("period_id", "label", "start_date", "end_date", "status"),
+            [pack["period"] for pack in packs],
+        )
+        files.add("reporting/statements.html", print_reporting_review(reporting))
+        files.add(
+            "reporting/README.md",
+            [
+                (
+                    REPORTING_NOTICE
+                    + "\n\nThe JSON package includes exact decimal strings and each period's full comparative when one exists. A missing comparative remains null, including first-book periods. Missing classifications and notes remain unavailable.\n"
+                ).encode()
+            ],
+        )
     manifest = {
         "schema_version": 1,
         "kind": "spina_accounting_export",
@@ -440,6 +474,8 @@ def build_accounting_export(
         },
         "warning": WARNING,
     }
+    if reporting is not None:
+        manifest["reporting_package"] = reporting_manifest(reporting)
     files.add("manifest.json", [json_bytes(manifest)])
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:

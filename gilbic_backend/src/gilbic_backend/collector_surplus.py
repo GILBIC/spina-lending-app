@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import timezone
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -96,6 +97,16 @@ def load(conn, kind, target, version=None, lock=True) -> dict[str, Any]:
         raise TreasuryDenied("Collector record is unavailable.")
     if version is not None and row["version"] != version:
         raise TreasuryConflict("Collector record changed; review its current version.")
+    created_at = row["created_at"]
+    if (
+        row["payload"].get("source_timezone")
+        or row["payload"].get("credit_application_id")
+        or kind == "entries"
+        and row["payload"].get("kind") == "application"
+        or kind == "settlements"
+        and Decimal(row["payload"].get("authorized_credit_amount", "0.00")) > 0
+    ):
+        created_at = created_at.astimezone(timezone.utc)
     return dict(
         row["payload"],
         id=str(row["id"]),
@@ -103,7 +114,7 @@ def load(conn, kind, target, version=None, lock=True) -> dict[str, Any]:
         account_id=str(row["account_id"]),
         ledger_context_id=str(row["ledger_context_id"]),
         collector_user_id=str(row["collector_user_id"]),
-        created_at=row["created_at"].isoformat(),
+        created_at=created_at.isoformat(),
     )
 
 
@@ -214,6 +225,15 @@ def affected_accounts(conn, actor, command):
         origin = load(conn, "actions", command.source_id, lock=False)[
             "origin_account_id"
         ]
+    elif command.action in {"collector_count_record", "collector_count_accept"}:
+        application_id = command.credit_application_id
+        if command.action == "collector_count_accept":
+            retained = load(conn, "counts", command.count_id, lock=False)
+            application_id = retained.get("credit_application_id") or application_id
+        if application_id:
+            origin = load(conn, "actions", UUID(str(application_id)), lock=False)[
+                "origin_account_id"
+            ]
     return account_id, sorted(
         {account_id, UUID(origin) if origin else account_id}, key=str
     )
@@ -262,6 +282,16 @@ def replay_scope(service, conn, actor, row):
     origin = detail.get("source_account_id") or (detail.get("action_record") or {}).get(
         "origin_account_id"
     )
+    application_action = detail.get("action_record") or {}
+    if application_action.get("kind") == "application" and application_action.get(
+        "source_timezone"
+    ):
+        from .collector_credit_application import require_application_account
+
+        for wallet in sorted(
+            {UUID(application_action["origin_account_id"]), row["account_id"]}, key=str
+        ):
+            require_application_account(conn, actor, wallet)
     if row["action"] in {
         "collector_count_record",
         "collector_count_accept",
@@ -273,6 +303,13 @@ def replay_scope(service, conn, actor, row):
         count = detail.get("count")
         if count and count["recipient_user_id"] != str(actor.user_id):
             raise TreasuryDenied("Exact recipient authority is required on recovery.")
+        approval = (count or {}).get("credit_application")
+        if approval:
+            from .collector_credit_application import require_application_account
+
+            origin = approval["origin_account_id"]
+            for wallet in sorted({UUID(origin), row["account_id"]}, key=str):
+                require_application_account(conn, actor, wallet)
     evidence_ids = set()
 
     def collect(value):
@@ -650,6 +687,10 @@ def prepare(service, conn, actor, account, command):
                 or request["source_digest"] != command.source_digest
             ):
                 raise TreasuryConflict("Exact future application request is required.")
+            from .collector_credit_application import available, reserve
+
+            if available(conn):
+                return reserve(service, conn, actor, account, command, row, request)
             return outcome(
                 row,
                 "credit",
@@ -1001,6 +1042,8 @@ def settle(service, conn, actor, account, command):
 
 
 def reverse_return(service, conn, actor, account, command):
+    from .treasury_disbursements import consuming_source
+
     row = load(conn, "actions", command.action_id, command.action_version)
     independent(actor, row)
     check_account(account, row)
@@ -1039,6 +1082,7 @@ def reverse_return(service, conn, actor, account, command):
             "reason": command.reason,
         },
     )
+    consuming_source(conn, event, "collector_surplus_return_reversal", UUID(row["id"]))
     if conn.execute(
         "select 1 from treasury.source_links where event_id=%s", (event["id"],)
     ).fetchone():
@@ -1098,6 +1142,7 @@ def source_changed(service, conn, account, command, detail):
         "collector_count_accept",
         "collector_surplus_recognize",
         "collector_surplus_return_prepare",
+        "collector_surplus_application_prepare",
         "collector_surplus_return_record",
         "collector_surplus_return_reverse",
         "collector_surplus_action_cancel",
@@ -1155,6 +1200,8 @@ def source_effective(conn, row):
 
 
 def source_summary(conn, account_id):
+    from .collector_accounting_capability import collector_accounting_capability
+
     if not conn.execute(
         "select to_regclass('treasury.collector_cases') as relation"
     ).fetchone()["relation"]:
@@ -1181,6 +1228,7 @@ def source_summary(conn, account_id):
         and ((payload->>'frozen')::boolean or payload->>'status'='recovery_required')""",
         (account_id,),
     ).fetchone()
+    accounting_capability = collector_accounting_capability(conn)
     return {
         "as_of": "current",
         "available": True,
@@ -1191,6 +1239,8 @@ def source_summary(conn, account_id):
         "collector_recovery_count": recovery["n"],
         "collector_recovery_amount": format(recovery["amount"], ".2f"),
         "source_resolved": pending == "0.00" and held == "0.00" and recovery["n"] == 0,
-        "gl_posting_available": False,
-        "message": "Cash close does not settle unidentified sources, Collector liabilities, frozen source recovery or disputed custody. Protected liability GL mapping is unavailable.",
+        "gl_posting_available": accounting_capability["available"],
+        "accounting": accounting_capability,
+        "message": "Cash close does not settle unidentified sources, Collector liabilities, frozen source recovery or disputed custody. "
+        + accounting_capability["message"],
     }

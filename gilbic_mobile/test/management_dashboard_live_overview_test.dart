@@ -22,6 +22,29 @@ import 'package:gilbic_mobile/src/features/notifications/remittance_notification
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
+  testWidgets('426 refresh revokes previously loaded Management facts', (
+    tester,
+  ) async {
+    final refresh = Completer<ManagementDashboardOverview>();
+    await _pumpDashboard(
+      tester,
+      repository: FakeManagementDashboardOverviewRepository(
+        Queue.of(<Future<ManagementDashboardOverview>>[
+          Future.value(_completeOverview),
+          refresh.future,
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('management-overview-facts')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('management-overview-refresh')));
+    await tester.pump();
+    refresh.completeError(
+      const SpinaApiException('Update required', statusCode: 426),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('management-overview-facts')), findsNothing);
+  });
   testWidgets('shows loading without hiding protected launchers', (
     tester,
   ) async {

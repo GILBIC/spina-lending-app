@@ -172,6 +172,11 @@ class PeriodCloseItem {
 
   bool get isPrepared => closeStatus == 'prepared_confirmation_required';
 
+  bool get closesWithoutJournal =>
+      temporaryAccountCount == 0 &&
+      netIncome == '0.00' &&
+      journalEntryId == null;
+
   bool get usesProtectedPolicy =>
       protectedPeriodCloseEnabled &&
       retainedEarningsCloseEnabled &&
@@ -245,7 +250,9 @@ class PeriodCloseItem {
       );
     }
     if ((item.isPrepared || item.closeStatus == 'closed_protected') &&
-        !item._hasPostCoordinates) {
+        (!item._hasPostCoordinates ||
+            (item.closesWithoutJournal &&
+                !payload.containsKey('journal_entry_id')))) {
       throw const SpinaApiException(
         'The SPINA server returned incomplete period-close coordinates.',
         code: 'invalid_period_close_payload',
@@ -254,7 +261,10 @@ class PeriodCloseItem {
     if (item.closeStatus == 'closed_protected' &&
         (item.fiscalPeriodStatus != 'closed' ||
             item.closePostingId == null ||
-            item.closingEntryNumber == null ||
+            (item.closesWithoutJournal
+                ? item.closingEntryNumber != null ||
+                      !payload.containsKey('closing_entry_number')
+                : item.closingEntryNumber == null) ||
             item.retainedEarningsBalanceAfter == null ||
             item.closedByUserId == null ||
             item.closedAt == null)) {
@@ -276,8 +286,9 @@ class PeriodCloseItem {
 
   bool get _hasPostCoordinates =>
       preparationId != null &&
-      journalEntryId != null &&
       temporaryAccountCount != null &&
+      (closesWithoutJournal ||
+          (temporaryAccountCount! > 0 && journalEntryId != null)) &&
       netIncome != null &&
       retainedEarningsBalanceBefore != null &&
       closeDigest != null &&

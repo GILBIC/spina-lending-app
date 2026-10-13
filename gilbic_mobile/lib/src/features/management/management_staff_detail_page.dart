@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/shared/private_access_state.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -31,8 +32,20 @@ class ManagementStaffDetailPage extends StatefulWidget {
       _ManagementStaffDetailPageState();
 }
 
-class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
-  late ManagementStaffAccount _account;
+class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage>
+    with PrivateAccessState<ManagementStaffDetailPage> {
+  ManagementStaffAccount? _accountData;
+  ManagementStaffAccount get _account => _accountData!;
+  set _account(ManagementStaffAccount value) => _accountData = value;
+  @override
+  void clearPrivateData() {
+    _accountData = null;
+    _devices = const [];
+    _deviceId = null;
+    _selectedRole = null;
+    _selectedStatus = null;
+  }
+
   List<ManagementDevice> _devices = const <ManagementDevice>[];
   String? _deviceId;
   String? _selectedRole;
@@ -65,7 +78,8 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _initialize() async {
-    if (mounted) {
+    if (!mounted || !privateAccessActive) return;
+    if (mounted && privateAccessActive) {
       setState(() {
         _loading = true;
         _permissionDenied = false;
@@ -75,6 +89,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     }
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      requirePrivateAccess();
       var devices = const <ManagementDevice>[];
       if (_canManageDevices) {
         devices = await widget.repository.loadDevices(
@@ -83,7 +98,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           userId: _account.id,
         );
       }
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -93,11 +108,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _recordMissing = false;
       });
     } on SpinaApiException catch (error) {
+      revokePrivateAccess(error);
       final recordMissing = error.statusCode == 404;
       final directoryRefreshed = recordMissing
           ? await _refreshDirectoryAfterMissing()
           : false;
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -109,7 +125,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
             : error.message;
       });
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _loading = false;
           _error = 'The authoritative staff record could not be loaded.';
@@ -119,6 +135,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _refresh({bool clearMessages = true}) async {
+    if (!mounted || !privateAccessActive) return;
     if (_mutating) {
       return;
     }
@@ -137,6 +154,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<bool> _reloadCurrent({required bool clearMessages}) async {
+    if (!privateAccessActive) return false;
     if (clearMessages && mounted) {
       setState(() {
         _error = null;
@@ -154,7 +172,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           userId: fresh.id,
         );
       }
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return false;
       }
       setState(() {
@@ -168,11 +186,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       });
       return true;
     } on SpinaApiException catch (error) {
+      revokePrivateAccess(error);
       final recordMissing = error.statusCode == 404;
       final directoryRefreshed = recordMissing
           ? await _refreshDirectoryAfterMissing()
           : false;
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(() {
           _permissionDenied = error.statusCode == 403;
           _recordMissing = recordMissing;
@@ -183,7 +202,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       }
       return false;
     } on Object {
-      if (mounted) {
+      if (mounted && privateAccessActive) {
         setState(
           () =>
               _error = 'The authoritative staff record could not be refreshed.',
@@ -194,6 +213,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _changeRole() async {
+    if (!mounted || !privateAccessActive) return;
     final requested = _selectedRole;
     final current = _firstRole(_account);
     if (requested == null || current == null || requested == current) {
@@ -209,7 +229,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           'Changing this role changes future access after the server approves it.',
       destructive: true,
     );
-    if (!confirmed) {
+    if (!confirmed || !mounted || !privateAccessActive) {
       return;
     }
     await _runMutation(
@@ -224,6 +244,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _changeStatus() async {
+    if (!mounted || !privateAccessActive) return;
     final requested = _selectedStatus;
     final current = _account.status;
     if (requested == null || requested == current) {
@@ -240,7 +261,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           'This changes whether the staff account can use protected SPINA access.',
       destructive: requested == 'inactive' || requested == 'locked',
     );
-    if (!confirmed) {
+    if (!confirmed || !mounted || !privateAccessActive) {
       return;
     }
     await _runMutation(
@@ -255,6 +276,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _changeDevice(ManagementDevice device) async {
+    if (!mounted || !privateAccessActive) return;
     final requested = _requestedDeviceStatus(device.status);
     if (requested == device.status) {
       return;
@@ -292,7 +314,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         ),
       ],
     );
-    if (!confirmed) {
+    if (!confirmed || !mounted || !privateAccessActive) {
       return;
     }
     await _runMutation(
@@ -357,6 +379,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     Future<Object?> Function() mutation, {
     required String success,
   }) async {
+    if (!mounted || !privateAccessActive) return;
     if (_mutating || _deviceId == null) {
       return;
     }
@@ -376,7 +399,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           userId: fresh.id,
         );
       }
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       setState(() {
@@ -388,13 +411,14 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _mutating = false;
       });
     } on SpinaApiException catch (error) {
+      revokePrivateAccess(error);
       var recovered = true;
       if (error.statusCode == 404) {
         recovered = await _refreshDirectoryAfterMissing();
       } else if (error.statusCode != 403) {
         recovered = await _reloadCurrent(clearMessages: false);
       }
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       if (_recordMissing && error.statusCode != 404) {
@@ -415,7 +439,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       });
     } on Object {
       final recovered = await _reloadCurrent(clearMessages: false);
-      if (!mounted) {
+      if (!mounted || !privateAccessActive) {
         return;
       }
       if (_recordMissing) {
@@ -435,6 +459,28 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (privateAccessDenied) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Staff access unavailable')),
+        body: _DetailMessage(
+          key: const Key('management-staff-detail-permission-denied'),
+          title: 'Access unavailable',
+          message: 'Sign in again or update the app before continuing.',
+          actions: [
+            const FilledButton(
+              onPressed: null,
+              key: Key('management-staff-refresh'),
+              child: Text('Refresh'),
+            ),
+            TextButton(
+              key: const Key('management-staff-back'),
+              onPressed: () => Navigator.of(context).maybePop(),
+              child: const Text('Back'),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: Text(_account.fullName)),
       body: SafeArea(child: _buildBody(context)),

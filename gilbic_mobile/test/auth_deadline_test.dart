@@ -166,6 +166,7 @@ void main() {
       );
       final lateValidation = Completer<http.Response>();
       final lateRefresh = Completer<http.Response>();
+      final routeRepository = _RecoveringRoute();
       var refreshes = 0;
       final auth = SpinaAuthRepository(
         deviceIdentityProvider: testAppDeviceIdentity(),
@@ -204,7 +205,7 @@ void main() {
           imageRecoveryController: testAppImageRecovery(),
           deviceIdentityProvider: testAppDeviceIdentity(),
           collectorRouteCache: cache,
-          collectorRouteRepository: _OfflineRoute(),
+          collectorRouteRepository: routeRepository,
         ),
       );
       await tester.pump();
@@ -220,10 +221,38 @@ void main() {
       await tester.pumpAndSettle();
       expect((await store.read())?.accessToken, 'renewed');
       expect(find.text('Office & staff'), findsNothing);
+      // Narrowed verified memberships/grants revoke the prior offline copy.
+      expect(
+        find.byKey(const Key('collector-offline-read-only')),
+        findsNothing,
+      );
+      expect(await cache.readForUser(session.userId), isNull);
+      routeRepository.onlineRoute = const CollectorRoute(
+        routeDate: null,
+        collectorName: 'Fresh authorized route',
+        areas: [],
+        entries: [],
+        expectedTotal: 0,
+      );
+      await tester.tap(find.byTooltip('Refresh route'));
+      await tester.pumpAndSettle();
+      expect(find.text('Collector: Fresh authorized route'), findsOneWidget);
+      expect(
+        (await cache.readForUser(session.userId))?.route.collectorName,
+        'Fresh authorized route',
+      );
+      expect(
+        find.byKey(const Key('collector-offline-read-only')),
+        findsNothing,
+      );
+      routeRepository.onlineRoute = null;
+      await tester.tap(find.byTooltip('Refresh route'));
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('collector-offline-read-only')),
         findsOneWidget,
       );
+      expect(find.text('Collector: Fresh authorized route'), findsOneWidget);
       await tester
           .widget<EnhancedRoleDashboard>(find.byType(EnhancedRoleDashboard))
           .onSignOut();
@@ -289,6 +318,14 @@ class _OfflineRoute implements CollectorRouteRepository {
   @override
   Future<CollectorRoute> fetchToday(UserSession session) async =>
       throw const SpinaApiException('Offline');
+}
+
+class _RecoveringRoute extends _OfflineRoute {
+  CollectorRoute? onlineRoute;
+
+  @override
+  Future<CollectorRoute> fetchToday(UserSession session) async =>
+      onlineRoute ?? await super.fetchToday(session);
 }
 
 class _ExpiringSession extends UserSession {

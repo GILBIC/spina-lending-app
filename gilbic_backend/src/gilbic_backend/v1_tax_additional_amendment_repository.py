@@ -290,7 +290,7 @@ class PostgresV1TaxAdditionalAmendmentRepository:
     def list_items(
         self, *, status: str = "all", limit: int = 100, offset: int = 0
     ) -> tuple[V1TaxAdditionalAmendmentItem, ...]:
-        where = self._status_where(status)
+        where, filter_params = self._status_where(status)
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
@@ -302,7 +302,7 @@ class PostgresV1TaxAdditionalAmendmentRepository:
                              amendment_evidence_id
                     LIMIT %s OFFSET %s
                     """,
-                    (limit, offset),
+                    (*filter_params, limit, offset),
                 )
                 return tuple(
                     V1TaxAdditionalAmendmentItem(**dict(row))
@@ -509,7 +509,7 @@ class PostgresV1TaxAdditionalAmendmentRepository:
         )
 
     @staticmethod
-    def _status_where(status: str) -> str:
+    def _status_where(status: str) -> tuple[str, tuple[object, ...]]:
         clauses = {
             "all": "true",
             "ready": "amendment_status = 'amendment_evidence_ready'",
@@ -518,13 +518,14 @@ class PostgresV1TaxAdditionalAmendmentRepository:
             "payment_ready": "amendment_status = 'additional_payment_evidence_ready'",
             "settlement_prepared": "amendment_status = 'additional_settlement_prepared'",
             "settled": "amendment_status = 'additional_tax_settled'",
-            "review": "amendment_status LIKE '%review_required'",
-            "blocked": "amendment_status LIKE 'blocked_%'",
+            "review": "amendment_status LIKE %s",
+            "blocked": "amendment_status LIKE %s",
         }
         clause = clauses.get(status)
         if clause is None:
             raise ValueError("Unsupported V1 additional-tax amendment status filter.")
-        return clause
+        parameters = {"review": ("%review_required",), "blocked": ("blocked_%",)}
+        return clause, parameters.get(status, ())
 
     @staticmethod
     def _call_id(query: str, params: tuple[object, ...]) -> UUID:

@@ -7,8 +7,65 @@ import 'package:gilbic_mobile/src/core/management/period_close.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
+import 'support/accounting_readiness_fixture.dart';
 
 void main() {
+  testWidgets(
+    'zero-temporary-balance close reviews without a journal and retains explicit retry confirmation',
+    (tester) async {
+      final repository = _FakePeriodCloseRepository(
+        overview: _overview(items: <PeriodCloseItem>[_readyItem]),
+        noClosingJournal: true,
+        failFirstPost: true,
+      );
+      await _pumpPage(
+        tester,
+        repository,
+        confirmationTokenGenerator: () => 'd' * 64,
+      );
+      final prepare = find.byKey(
+        Key('prepare-period-${_readyItem.fiscalPeriodId}'),
+      );
+      await _tapVisible(tester, prepare);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-period-close')));
+      await tester.pumpAndSettle();
+      expect(repository.prepareCalls, 1);
+      final post = find.byKey(Key('post-period-${_readyItem.fiscalPeriodId}'));
+      await _tapVisible(tester, post);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.textContaining('No closing journal is required'),
+        findsWidgets,
+      );
+      expect(find.text('Immutable journal reference'), findsNothing);
+      expect(find.text(_digest), findsOneWidget);
+      expect(repository.postCalls, 0);
+      await tester.tap(find.byKey(const Key('cancel-period-close')));
+      await tester.pumpAndSettle();
+      expect(repository.postCalls, 0);
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await _tapVisible(tester, post);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('confirm-period-close')));
+        await tester.pumpAndSettle();
+      }
+      expect(repository.postCalls, 2);
+      expect(repository.confirmationTokens, ['d' * 64, 'd' * 64]);
+      expect(
+        repository.postedItems.every((item) => item.journalEntryId == null),
+        isTrue,
+      );
+      expect(find.text('Closed with protected evidence'), findsOneWidget);
+      expect(
+        find.textContaining('No closing journal is required'),
+        findsOneWidget,
+      );
+      expect(find.text('Retained Earnings after close: 0.00'), findsOneWidget);
+      expect(post, findsNothing);
+    },
+  );
   testWidgets(
     'shows authoritative summary, blocker, and intersected permissions',
     (tester) async {
@@ -25,20 +82,29 @@ void main() {
       await _pumpPage(tester, repository, session: _prepareOnlySession);
 
       expect(find.byKey(const Key('period-close-summary')), findsOneWidget);
-      expect(find.text('Resolve the draft journals first.'), findsOneWidget);
+      await _show(tester, find.text('Posting permission is not assigned.'));
+      expect(find.text('Posting permission is not assigned.'), findsOneWidget);
+      await _show(
+        tester,
+        find.byKey(
+          const Key('prepare-period-11111111-1111-4111-8111-111111111111'),
+        ),
+      );
       expect(
         find.byKey(
           const Key('prepare-period-11111111-1111-4111-8111-111111111111'),
         ),
         findsOneWidget,
       );
+      await _show(tester, find.text('Resolve the draft journals first.'));
+      expect(find.text('Resolve the draft journals first.'), findsOneWidget);
+      await _show(tester, find.text('July 2026'));
       expect(
         find.byKey(
           const Key('post-period-22222222-2222-4222-8222-222222222222'),
         ),
         findsNothing,
       );
-      expect(find.text('Posting permission is not assigned.'), findsOneWidget);
     },
   );
 
@@ -53,7 +119,7 @@ void main() {
       final prepare = find.byKey(
         const Key('prepare-period-11111111-1111-4111-8111-111111111111'),
       );
-      await tester.tap(prepare);
+      await _tapVisible(tester, prepare);
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('management-review-period-close')),
@@ -65,7 +131,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(repository.prepareCalls, 0);
 
-      await tester.tap(prepare);
+      await _tapVisible(tester, prepare);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('confirm-period-close')));
       await tester.pumpAndSettle();
@@ -104,7 +170,7 @@ void main() {
       final post = find.byKey(
         const Key('post-period-22222222-2222-4222-8222-222222222222'),
       );
-      await tester.tap(post);
+      await _tapVisible(tester, post);
       await tester.pumpAndSettle();
       expect(find.text('Net profit / loss'), findsOneWidget);
       expect(find.text('60.00'), findsOneWidget);
@@ -122,7 +188,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(repository.postCalls, 0);
 
-      await tester.tap(post);
+      await _tapVisible(tester, post);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('confirm-period-close')));
       await tester.pumpAndSettle();
@@ -132,7 +198,7 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(post);
+      await _tapVisible(tester, post);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('confirm-period-close')));
       await tester.pump();
@@ -167,11 +233,68 @@ void main() {
       ),
       findsNothing,
     );
+    await _show(tester, find.text('Preparation permission is not assigned.'));
     expect(
       find.text('Preparation permission is not assigned.'),
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'source checks stay collapsed and an unavailable check never reports ready',
+    (tester) async {
+      final repository = _FakePeriodCloseRepository(
+        overview: _overview(items: [_blockedItem]),
+      );
+      final readiness = FakeAccountingReadinessRepository(
+        sourceError: const SpinaApiException(
+          'Source service unavailable.',
+          statusCode: 503,
+        ),
+      );
+      await _pumpPage(tester, repository, readinessRepository: readiness);
+      expect(readiness.bookReads, 1);
+      expect(readiness.sourcePeriods, isEmpty);
+      expect(
+        find.textContaining('Book identity is unconfigured'),
+        findsOneWidget,
+      );
+      await _tapVisible(tester, find.text('Review source blockers'));
+      await tester.pumpAndSettle();
+      final failure = find.text(
+        'Accounting readiness evidence is unavailable. Refresh before relying on this review.',
+      );
+      await _show(tester, failure);
+      expect(failure, findsOneWidget);
+      expect(readiness.sourcePeriods, [_blockedItem.fiscalPeriodId]);
+      expect(find.textContaining('No blockers returned'), findsNothing);
+      expect(find.textContaining('Showing 0 of 0'), findsNothing);
+      expect(repository.prepareCalls, 0);
+      expect(repository.postCalls, 0);
+      await _tapVisible(tester, find.text('Hide source blockers'));
+      await tester.pumpAndSettle();
+      expect(failure, findsNothing);
+    },
+  );
+}
+
+Future<void> _show(WidgetTester tester, Finder target) async {
+  if (target.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      target,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+  } else {
+    await tester.ensureVisible(target);
+  }
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapVisible(WidgetTester tester, Finder target) async {
+  await _show(tester, target);
+  expect(target.hitTestable(), findsOneWidget);
+  await tester.tap(target);
 }
 
 Future<void> _pumpPage(
@@ -179,6 +302,7 @@ Future<void> _pumpPage(
   _FakePeriodCloseRepository repository, {
   UserSession session = _fullSession,
   String Function()? confirmationTokenGenerator,
+  FakeAccountingReadinessRepository? readinessRepository,
 }) async {
   await tester.binding.setSurfaceSize(const Size(390, 844));
   addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -188,6 +312,8 @@ Future<void> _pumpPage(
         session: session,
         deviceIdentityProvider: _deviceIdentityProvider(),
         repository: repository,
+        readinessRepository:
+            readinessRepository ?? FakeAccountingReadinessRepository(),
         confirmationTokenGenerator: confirmationTokenGenerator,
       ),
     ),
@@ -212,6 +338,7 @@ const _fullSession = UserSession(
   rawRole: 'Management',
   accessToken: 'management-token',
   permissions: <String>[
+    'accounting.view',
     'accounting.period.close.prepare',
     'accounting.period.close.post',
   ],
@@ -224,7 +351,7 @@ const _prepareOnlySession = UserSession(
   role: AppRole.management,
   rawRole: 'Management',
   accessToken: 'management-token',
-  permissions: <String>['accounting.period.close.prepare'],
+  permissions: <String>['accounting.view', 'accounting.period.close.prepare'],
 );
 
 const _digest =
@@ -340,10 +467,12 @@ class _FakePeriodCloseRepository implements PeriodCloseRepository {
   _FakePeriodCloseRepository({
     required PeriodCloseOverview overview,
     this.failFirstPost = false,
+    this.noClosingJournal = false,
   }) : _overviewValue = overview;
 
   PeriodCloseOverview _overviewValue;
   final bool failFirstPost;
+  final bool noClosingJournal;
   int prepareCalls = 0;
   int postCalls = 0;
   String? preparedPeriodId;
@@ -377,10 +506,12 @@ class _FakePeriodCloseRepository implements PeriodCloseRepository {
       closedByUserId: null,
       closedAt: null,
       preparationId: '66666666-6666-4666-8666-666666666666',
-      journalEntryId: '77777777-7777-4777-8777-777777777777',
-      temporaryAccountCount: 2,
-      netIncome: '60.00',
-      retainedEarningsBalanceBefore: '1000.00',
+      journalEntryId: noClosingJournal
+          ? null
+          : '77777777-7777-4777-8777-777777777777',
+      temporaryAccountCount: noClosingJournal ? 0 : 2,
+      netIncome: noClosingJournal ? '0.00' : '60.00',
+      retainedEarningsBalanceBefore: noClosingJournal ? '0.00' : '1000.00',
       closeDigest: _digest,
       closePostingId: null,
       closingEntryNumber: null,
@@ -428,8 +559,8 @@ class _FakePeriodCloseRepository implements PeriodCloseRepository {
       retainedEarningsBalanceBefore: item.retainedEarningsBalanceBefore,
       closeDigest: item.closeDigest,
       closePostingId: '99999999-9999-4999-8999-999999999999',
-      closingEntryNumber: 'GJ-2026-0099',
-      retainedEarningsBalanceAfter: '1060.00',
+      closingEntryNumber: noClosingJournal ? null : 'GJ-2026-0099',
+      retainedEarningsBalanceAfter: noClosingJournal ? '0.00' : '1060.00',
       closeStatus: 'closed_protected',
       closeBlocker: null,
       protectedPeriodCloseEnabled: true,

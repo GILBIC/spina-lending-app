@@ -13,6 +13,7 @@ from .treasury_authorization import (
     require_account,
     require_live_permission,
 )
+from .treasury_disbursements import consuming_source
 from .treasury_repository import identity, json_value
 
 
@@ -69,9 +70,23 @@ def source_snapshot(conn, remittance_id):
 
 
 def preview(service, conn, actor, remittance_id, command):
+    from . import collector_credit_application as applications
+
+    application_installed = bool(
+        command.credit_application_id
+    ) and applications.available(conn)
+    selected_approval = None
+    if application_installed:
+        selected_approval = applications.lock_selection_accounts(
+            conn, actor, command.account_id, command.credit_application_id
+        )
     account = require_account(conn, actor, command.account_id, PREFIX + "receive")
     require_live_permission(conn, actor, "remittance.receive")
-    row, snapshot, digest, gross, refund = source_snapshot(conn, remittance_id)
+    if application_installed:
+        with applications.source_timezone(conn, selected_approval):
+            row, snapshot, digest, gross, refund = source_snapshot(conn, remittance_id)
+    else:
+        row, snapshot, digest, gross, refund = source_snapshot(conn, remittance_id)
     if (
         row["recipient_user_id"] != actor.user_id
         or account["kind"] != "physical_cash"
@@ -90,7 +105,13 @@ def preview(service, conn, actor, remittance_id, command):
                 "message": "Only a current submitted remittance may be counted.",
             }
         )
-    if command.credit_application_id:
+    approval = None
+    remittance_digest = digest
+    if command.credit_application_id and application_installed:
+        approval, digest = applications.review_selection(
+            service, conn, actor, account, row, digest, gross, refund, command
+        )
+    elif command.credit_application_id:
         blockers.append(
             {
                 "code": "collector_application_custody_unavailable",
@@ -125,14 +146,24 @@ def preview(service, conn, actor, remittance_id, command):
             "source_digest": digest,
             "gross_obligation": gross,
             "refund_due_total": refund,
-            "authorized_credit_application": "0.00",
-            "physical_cash_required": gross - refund,
+            "authorized_credit_application": approval["amount"] if approval else "0.00",
+            "physical_cash_required": gross
+            - refund
+            - (Decimal(approval["amount"]) if approval else Decimal("0.00")),
             "source_snapshot": snapshot,
             "source_items": snapshot["items"],
             "refund_due_releases": snapshot["refund_due_releases"],
             "remittance_snapshot": snapshot["remittance"],
             "can_count": not blockers,
             "blockers": blockers,
+            **(
+                {
+                    "credit_application": approval,
+                    "remittance_source_digest": remittance_digest,
+                }
+                if approval
+                else {}
+            ),
         }
     )
 
@@ -149,7 +180,10 @@ def settlement_action(service, conn, actor, account, command):
             actor,
             command.remittance_id,
             SettlementPreview(
-                account_id=account["id"], expected_version=account["version"]
+                account_id=account["id"],
+                expected_version=account["version"],
+                credit_application_id=command.credit_application_id,
+                credit_application_version=command.credit_application_version,
             ),
         )
         if (
@@ -186,6 +220,14 @@ def settlement_action(service, conn, actor, account, command):
             evidence_id=str(command.evidence_id),
             recipient_attestation=command.recipient_attestation,
         )
+        if p.get("credit_application"):
+            data.update(
+                credit_application_id=p["credit_application"]["id"],
+                credit_application_version=p["credit_application"]["version"],
+                authorized_credit_application=p["authorized_credit_application"],
+                credit_application=p["credit_application"],
+                remittance_source_digest=p["remittance_source_digest"],
+            )
         count = save(
             conn,
             "counts",
@@ -250,6 +292,7 @@ def settlement_action(service, conn, actor, account, command):
                 "reason": command.reason,
             },
         )
+        consuming_source(conn, event, "collector_custody_exception", UUID(count["id"]))
         row = save(
             conn,
             "exceptions",
@@ -303,20 +346,26 @@ def settlement_action(service, conn, actor, account, command):
                 "reason": "Counted cash settlement; excess remains pending identification.",
             },
         )
-    now = service.clock()
-    conn.execute(
-        "insert into lending.collection_remittance_reviews(remittance_id,reviewed_by_user_id,reviewed_at) values(%s,%s,%s) on conflict(remittance_id) do nothing",
-        (UUID(count["remittance_id"]), actor.user_id, now),
+        # A legitimate new count can fund both remittance and excess portions.
+        # Establish exclusive custody before writing either of those portions.
+        consuming_source(
+            conn, event, "collector_cash_settlement", UUID(count["remittance_id"])
+        )
+    approval = p.get("credit_application")
+    if approval and (
+        count.get("credit_application") != approval
+        or count.get("remittance_source_digest") != p["remittance_source_digest"]
+    ):
+        raise TreasuryConflict("The count must retain the exact reviewed application.")
+    now = (
+        conn.execute("SELECT clock_timestamp() AS accepted_at").fetchone()[
+            "accepted_at"
+        ]
+        if approval
+        else service.clock()
     )
-    conn.execute(
-        "select set_config('spina.collector_count_accept',%s,true)",
-        (count["remittance_id"],),
-    )
-    conn.execute(
-        "update lending.collection_remittances set status='received',received_at=%s,received_by_user_id=%s,updated_at=%s where id=%s",
-        (now, actor.user_id, now, UUID(count["remittance_id"])),
-    )
-    conn.execute("select set_config('spina.collector_count_accept','',true)")
+    if not approval:
+        _accept_custody(conn, actor, count, now)
     settlement = save(
         conn,
         "settlements",
@@ -329,7 +378,7 @@ def settlement_action(service, conn, actor, account, command):
             "recipient_user_id": str(actor.user_id),
             "event_id": str(event["id"]) if event else None,
             "physical_amount": count["counted_amount"],
-            "authorized_credit_amount": "0.00",
+            "authorized_credit_amount": approval["amount"] if approval else "0.00",
             "gross_obligation": count["gross_obligation"],
             "accepted_at": now,
         },
@@ -374,13 +423,38 @@ def settlement_action(service, conn, actor, account, command):
                 Decimal(case["received_excess_amount"]),
             ),
         )
+    application_result = {}
+    if approval:
+        from .collector_credit_application import consume
+
+        application_result = consume(
+            service, conn, actor, account, command, count, approval, settlement, now
+        )
+        _accept_custody(conn, actor, count, now)
     return outcome(
         settlement,
         "settlement",
         "accepted_pending_identification" if case else "accepted_exact",
         count=count,
         case=case,
+        **application_result,
     )
+
+
+def _accept_custody(conn, actor, count, accepted_at):
+    conn.execute(
+        "insert into lending.collection_remittance_reviews(remittance_id,reviewed_by_user_id,reviewed_at) values(%s,%s,%s) on conflict(remittance_id) do nothing",
+        (UUID(count["remittance_id"]), actor.user_id, accepted_at),
+    )
+    conn.execute(
+        "select set_config('spina.collector_count_accept',%s,true)",
+        (count["remittance_id"],),
+    )
+    conn.execute(
+        "update lending.collection_remittances set status='received',received_at=%s,received_by_user_id=%s,updated_at=%s where id=%s",
+        (accepted_at, actor.user_id, accepted_at, UUID(count["remittance_id"])),
+    )
+    conn.execute("select set_config('spina.collector_count_accept','',true)")
 
 
 def guard_legacy_receive(cursor, remittance_id):

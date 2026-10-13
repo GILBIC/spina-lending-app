@@ -8,21 +8,6 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from psycopg.types.json import Jsonb
-from spina_mobile_collections.contracts import (
-    ActorContext,
-    CollectionCommand,
-    CollectionEntryType,
-    CollectionStatus,
-    PaymentAllocationIntent,
-)
-from spina_mobile_collections.postgres import PostgresCollectionExecutor
-from spina_mobile_collections.service import (
-    CONTRACT_VERSION,
-    CollectionSubmissionService,
-    SubmissionHeaders,
-)
-
 from gilbic_backend.contract_schedule_registration_service import (
     register_verified_contract_schedule,
 )
@@ -42,7 +27,22 @@ from gilbic_backend.seven_by_seven_penalty_coordinator import (
 from gilbic_backend.seven_by_seven_signed_schedule import (
     generate_signed_seven_by_seven_schedule,
 )
+from psycopg.types.json import Jsonb
+from spina_mobile_collections.contracts import (
+    ActorContext,
+    CollectionCommand,
+    CollectionEntryType,
+    CollectionStatus,
+    PaymentAllocationIntent,
+)
+from spina_mobile_collections.postgres import PostgresCollectionExecutor
+from spina_mobile_collections.service import (
+    CONTRACT_VERSION,
+    CollectionSubmissionService,
+    SubmissionHeaders,
+)
 
+from gilbic_backend import collection_posting
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -346,7 +346,13 @@ def _submit(case: Case, command: CollectionCommand):
         device_id=case.installation_id,
         contract_version=CONTRACT_VERSION,
     )
-    return _service().submit(actor=case.actor, headers=headers, command=command)
+    with pytest.MonkeyPatch.context() as test_clock:
+        test_clock.setattr(
+            collection_posting,
+            "current_collection_business_date",
+            lambda: command.collection_date,
+        )
+        return _service().submit(actor=case.actor, headers=headers, command=command)
 
 
 def test_post_maturity_nc_voluntary_receipt_freezes_only_shared_coordinator_penalty() -> None:

@@ -27,6 +27,7 @@ from spina_mobile_collections.service import (
     CollectionRejected,
 )
 
+from . import collection_posting
 from .collection_api import collection_actor_dependency
 from .concurrent_receipt_collection_posting import (
     ConcurrentReceiptSafeCollectionPostingBridge,
@@ -1344,7 +1345,7 @@ def _validate_request_envelope(
 
 
 def _current_business_date() -> date:
-    return datetime.now(PHILIPPINES_TIMEZONE).date()
+    return collection_posting.current_collection_business_date()
 
 
 def _validate_current_route_date(collection_date: date) -> None:

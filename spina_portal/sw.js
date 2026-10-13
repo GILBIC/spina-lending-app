@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spina-company-shell-v31-office-usability';
+const CACHE_NAME = 'spina-company-shell-v34-accounting';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -53,6 +53,7 @@ const SHELL_ASSETS = [
   '/assets/account-credentials.js',
   '/assets/client-account-admin.js',
   '/assets/client-documents.js',
+  '/assets/client-photo.js',
   '/assets/payment-proofs.js',
   '/assets/area-management.js',
   '/assets/office-cif-selection.js',
@@ -79,6 +80,17 @@ const SHELL_ASSETS = [
   '/assets/management-collection-actions.js',
   '/assets/management-journal-actions.js',
   '/assets/management-accounting.js',
+  '/assets/accounting-disclosures.js',
+  '/assets/accounting-reporting.js',
+  '/assets/collector-credit-application.js',
+  '/assets/management-collector-accounting.js',
+  '/assets/management-collector-controls.js',
+  '/assets/management-elapsed-assessments.js',
+  '/assets/management-journal-disclosures.js',
+  '/assets/management-payout-accounting.js',
+  '/assets/management-protected-accounting.js',
+  '/assets/management-source-accounting.js',
+  '/assets/management-transfer-accounting.js',
   '/assets/management-tax-ecl.js',
   '/assets/management-tax-evidence.js',
   '/assets/management-loan-operations.js',

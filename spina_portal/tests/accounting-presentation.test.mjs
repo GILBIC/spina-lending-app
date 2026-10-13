@@ -44,7 +44,7 @@ const overview = {
   },
 };
 
-test('Accounting workflows are grouped into four clear navigation areas without changing workflow IDs', async () => {
+test('Accounting workflows keep existing IDs and group cash and liability evidence separately', async () => {
   const root = new Element();
   const controller = new AbortController();
   try {
@@ -58,14 +58,15 @@ test('Accounting workflows are grouped into four clear navigation areas without 
     const groups = root.querySelectorAll('[data-accounting-group]');
     assert.deepEqual(
       groups.map((group) => group.getAttribute('data-accounting-group')),
-      ['overview', 'periods', 'opening', 'ecl'],
+      ['overview', 'periods', 'sources', 'opening', 'ecl'],
     );
     assert.match(groups[0].textContent, /Overview/);
     assert.match(groups[1].textContent, /Periods (?:&|&amp;) close/);
-    assert.match(groups[2].textContent.replaceAll('&amp;', '&'), /Opening & cutover/);
-    assert.match(groups[3].textContent, /ECL (?:&|&amp;) tax/);
+    assert.match(groups[2].textContent.replaceAll('&amp;', '&'), /Cash & liabilities/);
+    assert.match(groups[3].textContent.replaceAll('&amp;', '&'), /Opening & cutover/);
+    assert.match(groups[4].textContent, /ECL (?:&|&amp;) tax/);
 
-    for (const workflow of ['periods','close','capital','workbook','opening','measurement','outcomes','tax']) {
+    for (const workflow of ['periods','book','receipts','transfers','payouts','collector','collector-controls','assessments','elapsed','liabilities','close','capital','workbook','opening','measurement','outcomes','tax']) {
       assert.ok(root.querySelector(`[data-accounting-tab="${workflow}"]`), workflow);
     }
   } finally {

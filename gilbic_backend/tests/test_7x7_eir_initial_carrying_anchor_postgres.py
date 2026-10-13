@@ -72,6 +72,16 @@ def _loan_type(connection, suffix: str):
     ).fetchone()[0]
 
 
+def _uses_amortizing_signed_schedule(connection) -> bool:
+    # The stage-specific disposable verifiers stop at 0062/0064/0066, while
+    # current-schema tests include 0115. Seed the contract each authority accepts;
+    # never replace or relax the installed readiness guard to fit the fixture.
+    return connection.execute(
+        """select position('agreed_daily_payment_not_above_interest' in
+               pg_get_viewdef('accounting.seven_by_seven_contractual_cash_flow_lines'::regclass)) > 0"""
+    ).fetchone()[0]
+
+
 def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date):
     client_id = connection.execute(
         """
@@ -86,7 +96,7 @@ def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date
             loan_number, client_id, loan_type_id, principal, daily_amount,
             date_released, due_date, status, created_by_user_id
         ) values (
-            %s, %s, %s, 3000.00, 21.00,
+            %s, %s, %s, 3000.00, %s,
             %s, %s, 'active', %s
         ) returning id
         """,
@@ -94,6 +104,7 @@ def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date
             f"X7ANCH-L-{suffix}",
             client_id,
             loan_type_id,
+            Decimal("46.00") if _uses_amortizing_signed_schedule(connection) else Decimal("21.00"),
             release_date,
             release_date + timedelta(days=120),
             actor_id,
@@ -102,6 +113,9 @@ def _loan(connection, *, suffix: str, actor_id, loan_type_id, release_date: date
 
 
 def _verified_schedule(connection, *, loan_id, actor_id, release_date: date, suffix: str):
+    # Migration 0115 validates the signed amortizing schedule: 25 principal
+    # plus 21 fixed-original-principal interest daily, over the same 120 days.
+    amortizing = _uses_amortizing_signed_schedule(connection)
     schedule_id = connection.execute(
         """
         insert into lending.loan_contract_schedules (
@@ -131,12 +145,14 @@ def _verified_schedule(connection, *, loan_id, actor_id, release_date: date, suf
             %s,
             day_number,
             %s::date + day_number,
-            case when day_number = 120 then 3021.00::numeric else 21.00::numeric end,
-            case when day_number = 120 then 3000.00::numeric else 0.00::numeric end,
+            case when %s then 46.00::numeric
+                 when day_number = 120 then 3021.00::numeric else 21.00::numeric end,
+            case when %s then 25.00::numeric
+                 when day_number = 120 then 3000.00::numeric else 0.00::numeric end,
             21.00::numeric
         from generate_series(1, 120) day_number
         """,
-        (schedule_id, release_date),
+        (schedule_id, release_date, amortizing, amortizing),
     )
     connection.execute(
         """
@@ -274,6 +290,13 @@ def test_eir_anchor_promotes_from_initial_measurement_not_operational_rate_and_s
                 suffix,
                 date(2094, 1, 1),
             )
+            # Independent annuity solution for the current signed schedule:
+            # PV(120 daily payments of 46)=3000. Historical bullet-only stages
+            # retain their original 0.007 base preview.
+            expected_base_eir = Decimal(
+                "0.011397928723" if _uses_amortizing_signed_schedule(connection)
+                else "0.007000000000"
+            )
 
             before = connection.execute(
                 """
@@ -293,7 +316,7 @@ def test_eir_anchor_promotes_from_initial_measurement_not_operational_rate_and_s
             assert before == (
                 "management_initial_measurement_and_eir_anchor_required",
                 False,
-                Decimal("0.007000000000"),
+                expected_base_eir,
                 False,
                 False,
                 False,
@@ -367,7 +390,7 @@ def test_eir_anchor_promotes_from_initial_measurement_not_operational_rate_and_s
             ).fetchone()
             assert after is not None
             assert after[:6] == (True, True, True, True, True, True)
-            assert after[6] == Decimal("0.007000000000")
+            assert after[6] == expected_base_eir
             assert after[7] is not None
             assert after[7] > after[6]
             assert after[8] == Decimal("2970.00")

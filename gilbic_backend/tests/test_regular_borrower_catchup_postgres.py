@@ -9,7 +9,6 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-
 from gilbic_backend.borrower_schedule_adjustment_repository import (
     BorrowerScheduleAdjustmentConflict,
     PostgresBorrowerScheduleAdjustmentRepository,
@@ -22,6 +21,7 @@ from spina_mobile_collections.contracts import (
     CollectionEntryType,
 )
 
+from gilbic_backend import collection_posting
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -30,6 +30,16 @@ pytestmark = pytest.mark.skipif(
 )
 
 TEST_DIR = Path(__file__).resolve().parent
+
+
+@pytest.fixture(autouse=True)
+def _fixed_collection_clock(monkeypatch):
+    # The latest synthetic receipt date exercised by these catch-up cases.
+    monkeypatch.setattr(
+        collection_posting, "current_collection_business_date", lambda: date(2097, 8, 4)
+    )
+
+
 SOURCE_PATH = TEST_DIR / "test_combined_collection_renewal_workflow_postgres.py"
 _spec = importlib.util.spec_from_file_location("regular_catchup_cases", SOURCE_PATH)
 assert _spec is not None and _spec.loader is not None

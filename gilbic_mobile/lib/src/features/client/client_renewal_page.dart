@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -27,12 +29,14 @@ class ClientRenewalPage extends StatefulWidget {
 }
 
 class _ClientRenewalPageState extends State<ClientRenewalPage> {
-  late final ClientRenewalRepository _repository;
+  late ClientRenewalRepository _repository;
   ClientRenewalPortal? _portal;
   String? _deviceId;
   String? _errorMessage;
   bool _loading = true;
   bool _submitting = false;
+  int _readEpoch = 0;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -41,18 +45,66 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(ClientRenewalPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _readEpoch++;
+      _portal = null;
+      _deviceId = null;
+      _submitting = false;
+      _repository = widget.repository ?? SpinaRenewalRepository();
+      _dismissPrivateRoutes();
+      _load();
+    }
+  }
+
+  bool _active(int epoch) => mounted && epoch == _readEpoch;
+  bool _current(int epoch, int request) =>
+      _active(epoch) && request == _requestId;
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  bool _deny(SpinaApiException error, int epoch) {
+    if (!_active(epoch) || !staffAccessRejected(error)) return false;
+    _readEpoch++;
+    setState(() {
+      _portal = null;
+      _deviceId = null;
+      _loading = false;
+      _submitting = false;
+      _errorMessage = error.message;
+    });
+    _dismissPrivateRoutes();
+    return true;
+  }
+
   Future<void> _load() async {
+    final epoch = _readEpoch;
+    final request = ++_requestId;
+    final session = widget.session;
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
+      if (!_current(epoch, request)) return;
       final portal = await _repository.loadPortal(
-        widget.session,
+        session,
         deviceId: identity.installationId,
       );
-      if (!mounted) {
+      if (!_current(epoch, request)) {
         return;
       }
       setState(() {
@@ -60,15 +112,15 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
         _portal = portal;
       });
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (!_deny(error, epoch) && _current(epoch, request)) {
         setState(() => _errorMessage = error.message);
       }
     } on Object {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() => _errorMessage = 'Renewal could not be loaded.');
       }
     } finally {
-      if (mounted) {
+      if (_current(epoch, request)) {
         setState(() => _loading = false);
       }
     }
@@ -90,23 +142,25 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
   }
 
   Future<void> _requestRenewal(RenewalLoanOption loan) async {
+    final epoch = _readEpoch;
+    final session = widget.session;
     final draft = await showDialog<_RenewalDraft>(
       context: context,
       builder: (context) => _RenewalRequestDialog(loan: loan),
     );
-    if (draft == null || _deviceId == null) {
+    if (!_active(epoch) || draft == null || _deviceId == null) {
       return;
     }
     setState(() => _submitting = true);
     try {
       await _repository.submit(
-        widget.session,
+        session,
         deviceId: _deviceId!,
         loanId: loan.loanId,
         requestedAmount: draft.amount,
         message: draft.message,
       );
-      if (!mounted) {
+      if (!mounted || !_active(epoch)) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,19 +172,21 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       );
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (mounted && !_deny(error, epoch) && _active(epoch)) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
-      if (mounted) {
+      if (_active(epoch)) {
         setState(() => _submitting = false);
       }
     }
   }
 
   Future<void> _cancelRequest(RenewalRequestItem request) async {
+    final epoch = _readEpoch;
+    final session = widget.session;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -151,17 +207,17 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
         ],
       ),
     );
-    if (confirmed != true || _deviceId == null) {
+    if (!_active(epoch) || confirmed != true || _deviceId == null) {
       return;
     }
     setState(() => _submitting = true);
     try {
       await _repository.cancel(
-        widget.session,
+        session,
         deviceId: _deviceId!,
         requestId: request.requestId,
       );
-      if (!mounted) {
+      if (!mounted || !_active(epoch)) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,13 +225,13 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       );
       await _load();
     } on SpinaApiException catch (error) {
-      if (mounted) {
+      if (mounted && !_deny(error, epoch) && _active(epoch)) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
-      if (mounted) {
+      if (_active(epoch)) {
         setState(() => _submitting = false);
       }
     }

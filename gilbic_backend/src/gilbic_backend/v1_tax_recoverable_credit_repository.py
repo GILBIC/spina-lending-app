@@ -254,7 +254,7 @@ class PostgresV1TaxRecoverableCreditRepository:
     def list_items(
         self, *, status: str = "all", limit: int = 100, offset: int = 0
     ) -> tuple[V1TaxRecoverableCreditItem, ...]:
-        where = self._status_where(status)
+        where, filter_params = self._status_where(status)
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
@@ -265,7 +265,7 @@ class PostgresV1TaxRecoverableCreditRepository:
                     ORDER BY application_date DESC, recorded_at DESC, credit_evidence_id
                     LIMIT %s OFFSET %s
                     """,
-                    (limit, offset),
+                    (*filter_params, limit, offset),
                 )
                 return tuple(
                     V1TaxRecoverableCreditItem(**dict(row)) for row in cursor.fetchall()
@@ -375,18 +375,19 @@ class PostgresV1TaxRecoverableCreditRepository:
         )
 
     @staticmethod
-    def _status_where(status: str) -> str:
+    def _status_where(status: str) -> tuple[str, tuple[object, ...]]:
         clauses = {
             "all": "true",
             "ready": "credit_status = 'credit_evidence_ready'",
             "prepared": "credit_status = 'credit_prepared'",
             "applied": "credit_status = 'credit_applied'",
-            "blocked": "credit_status LIKE 'blocked_%'",
+            "blocked": "credit_status LIKE %s",
         }
         clause = clauses.get(status)
         if clause is None:
             raise ValueError("Unsupported V1 Tax Recoverable credit status filter.")
-        return clause
+        parameters = {"blocked": ("blocked_%",)}
+        return clause, parameters.get(status, ())
 
     @staticmethod
     def _call_id(query: str, params: tuple[object, ...]) -> UUID:

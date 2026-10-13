@@ -182,7 +182,11 @@ def test_other_area_original_recorder_can_find_own_payment_for_undo(
 def _paid_case(monkeypatch, *, contract=True, payoff=False, prior_count=0):
     from gilbic_backend import combined_collection_api
 
-    monkeypatch.setattr(combined_collection_api, "_current_business_date", lambda: DAY)
+    monkeypatch.setattr(
+        combined_collection_api.collection_posting,
+        "current_collection_business_date",
+        lambda: DAY,
+    )
     case = _setup_combined_case(verified_regular_schedule=contract)
     if prior_count:
         with _connect() as conn:
@@ -341,6 +345,9 @@ def test_undo_rejects_unauthorized_stale_or_protected_receipts(monkeypatch, chan
         from gilbic_backend.remittance_repository import PostgresRemittanceRepository
 
         PostgresRemittanceRepository().submit(
+            expected_review_digest=PostgresRemittanceRepository()
+            .preview(collector_user_id=case.collector_id, collection_date=DAY)
+            .review_digest,
             collector_user_id=case.collector_id,
             recipient_user_id=recipient,
             collection_date=DAY,

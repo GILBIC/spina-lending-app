@@ -1,4 +1,5 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/management/reporting_evidence.dart';
 
 class FinancialStatementLine {
   const FinancialStatementLine({
@@ -9,13 +10,13 @@ class FinancialStatementLine {
 
   final String accountCode;
   final String accountName;
-  final double amount;
+  final String amount;
 
   factory FinancialStatementLine.fromPayload(Map<String, dynamic> payload) {
     return FinancialStatementLine(
       accountCode: _requiredString(payload, 'account_code'),
       accountName: _requiredString(payload, 'account_name'),
-      amount: _requiredDouble(payload, 'amount'),
+      amount: _requiredMoney(payload, 'amount'),
     );
   }
 }
@@ -57,17 +58,17 @@ class ProfitOrLossStatement {
 
   final List<FinancialStatementLine> incomeLines;
   final List<FinancialStatementLine> expenseLines;
-  final double totalIncome;
-  final double totalExpenses;
-  final double netIncome;
+  final String totalIncome;
+  final String totalExpenses;
+  final String netIncome;
 
   factory ProfitOrLossStatement.fromPayload(Map<String, dynamic> payload) {
     return ProfitOrLossStatement(
       incomeLines: _lines(payload['income_lines']),
       expenseLines: _lines(payload['expense_lines']),
-      totalIncome: _requiredDouble(payload, 'total_income'),
-      totalExpenses: _requiredDouble(payload, 'total_expenses'),
-      netIncome: _requiredDouble(payload, 'net_income'),
+      totalIncome: _requiredMoney(payload, 'total_income'),
+      totalExpenses: _requiredMoney(payload, 'total_expenses'),
+      netIncome: _requiredMoney(payload, 'net_income'),
     );
   }
 }
@@ -91,12 +92,12 @@ class FinancialPositionStatement {
   final List<FinancialStatementLine> assetLines;
   final List<FinancialStatementLine> liabilityLines;
   final List<FinancialStatementLine> equityLines;
-  final double totalAssets;
-  final double totalLiabilities;
-  final double recordedEquity;
-  final double unclosedEarningsToDate;
-  final double totalEquity;
-  final double totalLiabilitiesAndEquity;
+  final String totalAssets;
+  final String totalLiabilities;
+  final String recordedEquity;
+  final String unclosedEarningsToDate;
+  final String totalEquity;
+  final String totalLiabilitiesAndEquity;
   final bool balanced;
 
   factory FinancialPositionStatement.fromPayload(Map<String, dynamic> payload) {
@@ -105,14 +106,18 @@ class FinancialPositionStatement {
       assetLines: _lines(payload['asset_lines']),
       liabilityLines: _lines(payload['liability_lines']),
       equityLines: _lines(payload['equity_lines']),
-      totalAssets: _requiredDouble(payload, 'total_assets'),
-      totalLiabilities: _requiredDouble(payload, 'total_liabilities'),
-      recordedEquity: _requiredDouble(payload, 'recorded_equity'),
-      unclosedEarningsToDate:
-          _requiredDouble(payload, 'unclosed_earnings_to_date'),
-      totalEquity: _requiredDouble(payload, 'total_equity'),
-      totalLiabilitiesAndEquity:
-          _requiredDouble(payload, 'total_liabilities_and_equity'),
+      totalAssets: _requiredMoney(payload, 'total_assets'),
+      totalLiabilities: _requiredMoney(payload, 'total_liabilities'),
+      recordedEquity: _requiredMoney(payload, 'recorded_equity'),
+      unclosedEarningsToDate: _requiredMoney(
+        payload,
+        'unclosed_earnings_to_date',
+      ),
+      totalEquity: _requiredMoney(payload, 'total_equity'),
+      totalLiabilitiesAndEquity: _requiredMoney(
+        payload,
+        'total_liabilities_and_equity',
+      ),
       balanced: payload['balanced'] == true,
     );
   }
@@ -125,6 +130,7 @@ class AccountingFinancialStatements {
     required this.financialPosition,
     required this.source,
     required this.notice,
+    this.reportingSupplement,
   });
 
   final FinancialStatementPeriod period;
@@ -132,17 +138,28 @@ class AccountingFinancialStatements {
   final FinancialPositionStatement financialPosition;
   final String source;
   final String notice;
+  final Map<String, dynamic>? reportingSupplement;
 
-  factory AccountingFinancialStatements.fromPayload(Map<String, dynamic> payload) {
+  factory AccountingFinancialStatements.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
     return AccountingFinancialStatements(
-      period: FinancialStatementPeriod.fromPayload(stringMap(payload['period'])),
-      profitOrLoss:
-          ProfitOrLossStatement.fromPayload(stringMap(payload['profit_or_loss'])),
+      period: FinancialStatementPeriod.fromPayload(
+        stringMap(payload['period']),
+      ),
+      profitOrLoss: ProfitOrLossStatement.fromPayload(
+        stringMap(payload['profit_or_loss']),
+      ),
       financialPosition: FinancialPositionStatement.fromPayload(
         stringMap(payload['financial_position']),
       ),
       source: _requiredString(payload, 'source'),
       notice: _requiredString(payload, 'notice'),
+      reportingSupplement: payload['reporting_supplement'] == null
+          ? null
+          : validateReportingSupplement(
+              stringMap(payload['reporting_supplement']),
+            ),
     );
   }
 }
@@ -170,19 +187,16 @@ String _requiredString(Map<String, dynamic> payload, String key) {
   return value;
 }
 
-double _requiredDouble(Map<String, dynamic> payload, String key) {
+String _requiredMoney(Map<String, dynamic> payload, String key) {
   final value = payload[key];
-  if (value is num) {
-    return value.toDouble();
-  }
-  final parsed = double.tryParse(value?.toString() ?? '');
-  if (parsed == null) {
+  if (value is! String ||
+      !RegExp(r'^-?(0|[1-9][0-9]*)\.[0-9]{2}$').hasMatch(value)) {
     throw const SpinaApiException(
       'The SPINA server returned incomplete Financial Statement data.',
       code: 'invalid_financial_statement_payload',
     );
   }
-  return parsed;
+  return value;
 }
 
 DateTime _requiredDate(Map<String, dynamic> payload, String key) {

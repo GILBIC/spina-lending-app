@@ -575,13 +575,14 @@ def reverse_application(conn, actor, receipt, application, command):
         raise TreasuryConflict("Application evidence is invalid.")
     conn.execute("select set_config('spina.treasury_application_reversal','on',true)")
     repo = PostgresCollectionVoidRepository()
+    previous_void_by_loan = {}
     for transaction_id in reversed(ids):
         # Funding identity is immutable. Read it without a row lock, then let
         # the existing void path acquire its advisory lock before row locks.
         # It rechecks existence/status under that lock and owns principal review.
         with conn.cursor(row_factory=dict_row) as cursor:
             row = cursor.execute(
-                "select funding_receipt_id,is_voided from lending.collection_transactions where id=%s",
+                "select funding_receipt_id,is_voided,loan_id from lending.collection_transactions where id=%s",
                 (transaction_id,),
             ).fetchone()
         if (
@@ -598,6 +599,9 @@ def reverse_application(conn, actor, receipt, application, command):
             reason=command.reason,
             idempotency_key=uuid5(command.request_id, str(transaction_id)),
             connection=conn,
+            treasury_previous_void_transaction_id=previous_void_by_loan.get(
+                row["loan_id"]
+            ),
         )
         if not conn.execute(
             "select is_voided from lending.collection_transactions where id=%s",
@@ -606,5 +610,6 @@ def reverse_application(conn, actor, receipt, application, command):
             raise TreasuryConflict(
                 "This source needs its separate protected reversal approval before funds can be released."
             )
+        previous_void_by_loan[row["loan_id"]] = transaction_id
     conn.execute("select set_config('spina.treasury_application_reversal','',true)")
     return {"status": "reversed", "application_id": str(application["id"])}

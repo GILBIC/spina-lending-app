@@ -1,3 +1,5 @@
+import 'package:gilbic_mobile/src/core/network/staff_operations_client.dart'
+    show staffAccessRejected;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -31,7 +33,7 @@ class _ManagementStaffDevicesPageState
   static const int _pageSize = 50;
   static const Duration _searchDelay = Duration(milliseconds: 350);
 
-  late final ManagementAdministrationRepository _repository;
+  late ManagementAdministrationRepository _repository;
   final TextEditingController _searchController = TextEditingController();
   final List<ManagementStaffAccount> _items = <ManagementStaffAccount>[];
   Timer? _searchTimer;
@@ -42,6 +44,7 @@ class _ManagementStaffDevicesPageState
   String? _errorMessage;
   int _nextOffset = 0;
   int _requestGeneration = 0;
+  int _readEpoch = 0;
   bool _hasMore = false;
   bool _loading = true;
   bool _loadingMore = false;
@@ -61,6 +64,64 @@ class _ManagementStaffDevicesPageState
   }
 
   @override
+  void didUpdateWidget(ManagementStaffDevicesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session != widget.session ||
+        oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+        oldWidget.repository != widget.repository) {
+      _readEpoch++;
+      _requestGeneration++;
+      _searchTimer?.cancel();
+      _items.clear();
+      _deviceId = null;
+      _nextOffset = 0;
+      _hasMore = false;
+      _loadingMore = false;
+      if (oldWidget.session.userId != widget.session.userId ||
+          oldWidget.deviceIdentityProvider != widget.deviceIdentityProvider ||
+          oldWidget.repository != widget.repository) {
+        _unresolvedInvitation = null;
+      }
+      _checkingUnresolvedInvitation = false;
+      _repository =
+          widget.repository ?? SpinaManagementAdministrationRepository();
+      _dismissPrivateRoutes();
+      unawaited(_initialize());
+    }
+  }
+
+  void _dismissPrivateRoutes() {
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && route != null && route.isActive && !route.isCurrent) {
+        navigator.popUntil((candidate) => candidate == route);
+      }
+    });
+  }
+
+  bool _deny(Object error, int epoch) {
+    if (!mounted || epoch != _readEpoch || !staffAccessRejected(error)) {
+      return false;
+    }
+    _readEpoch++;
+    _requestGeneration++;
+    _searchTimer?.cancel();
+    setState(() {
+      _items.clear();
+      _nextOffset = 0;
+      _hasMore = false;
+      _loading = false;
+      _loadingMore = false;
+      _permissionDenied = true;
+      _checkingUnresolvedInvitation = false;
+      _errorMessage = (error as SpinaApiException).message;
+    });
+    _dismissPrivateRoutes();
+    return true;
+  }
+
+  @override
   void dispose() {
     _requestGeneration += 1;
     _searchTimer?.cancel();
@@ -69,6 +130,7 @@ class _ManagementStaffDevicesPageState
   }
 
   Future<void> _initialize() async {
+    final epoch = _readEpoch;
     if (mounted) {
       setState(() {
         _loading = true;
@@ -78,13 +140,13 @@ class _ManagementStaffDevicesPageState
     }
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      if (!mounted) {
+      if (!mounted || epoch != _readEpoch) {
         return;
       }
       _deviceId = identity.installationId;
       await _load(reset: true);
     } on Object catch (error) {
-      if (!mounted) {
+      if (!mounted || epoch != _readEpoch) {
         return;
       }
       setState(() {
@@ -98,6 +160,8 @@ class _ManagementStaffDevicesPageState
   }
 
   Future<bool> _load({required bool reset}) async {
+    final epoch = _readEpoch;
+    final session = widget.session;
     final deviceId = _deviceId;
     if (deviceId == null) {
       return false;
@@ -120,7 +184,7 @@ class _ManagementStaffDevicesPageState
 
     try {
       final page = await _repository.loadStaff(
-        widget.session,
+        session,
         deviceId: deviceId,
         query: _query.trim().isEmpty ? null : _query.trim(),
         role: _role,
@@ -128,7 +192,7 @@ class _ManagementStaffDevicesPageState
         limit: _pageSize,
         offset: offset,
       );
-      if (!mounted || generation != _requestGeneration) {
+      if (!mounted || epoch != _readEpoch || generation != _requestGeneration) {
         return false;
       }
       setState(() {
@@ -147,7 +211,8 @@ class _ManagementStaffDevicesPageState
       });
       return true;
     } on Object catch (error) {
-      if (!mounted || generation != _requestGeneration) {
+      if (_deny(error, epoch)) return false;
+      if (!mounted || epoch != _readEpoch || generation != _requestGeneration) {
         return false;
       }
       final message = error is SpinaApiException
@@ -164,8 +229,7 @@ class _ManagementStaffDevicesPageState
         _loading = false;
         _loadingMore = false;
         _errorMessage = message;
-        _permissionDenied =
-            error is SpinaApiException && error.statusCode == 403;
+        _permissionDenied = staffAccessRejected(error);
       });
       return false;
     }
@@ -231,6 +295,7 @@ class _ManagementStaffDevicesPageState
   }
 
   Future<void> _openInvite() async {
+    final epoch = _readEpoch;
     final account = await Navigator.of(context).push<ManagementStaffAccount>(
       MaterialPageRoute<ManagementStaffAccount>(
         builder: (_) => ManagementStaffInvitePage(
@@ -242,7 +307,7 @@ class _ManagementStaffDevicesPageState
         ),
       ),
     );
-    if (!mounted || account == null) {
+    if (!mounted || epoch != _readEpoch || account == null) {
       return;
     }
     setState(() => _unresolvedInvitation = null);
@@ -253,6 +318,8 @@ class _ManagementStaffDevicesPageState
     required String username,
     required String email,
   }) async {
+    final epoch = _readEpoch;
+    final session = widget.session;
     final deviceId = _deviceId;
     if (deviceId == null) {
       throw const SpinaApiException(
@@ -270,13 +337,25 @@ class _ManagementStaffDevicesPageState
         ),
       );
     }
-    final page = await _repository.loadStaff(
-      widget.session,
-      deviceId: deviceId,
-      query: normalizedUsername,
-      limit: _pageSize,
-      offset: 0,
-    );
+    late ManagementStaffPage page;
+    try {
+      page = await _repository.loadStaff(
+        session,
+        deviceId: deviceId,
+        query: normalizedUsername,
+        limit: _pageSize,
+        offset: 0,
+      );
+    } on Object catch (error) {
+      _deny(error, epoch);
+      rethrow;
+    }
+    if (!mounted || epoch != _readEpoch) {
+      throw const SpinaApiException(
+        'The staff session changed.',
+        statusCode: 403,
+      );
+    }
     final account = page.items.where((item) {
       final exactUsername = item.username.trim().toLowerCase();
       final exactEmail = item.email?.trim().toLowerCase();
@@ -291,6 +370,7 @@ class _ManagementStaffDevicesPageState
   }
 
   Future<void> _checkUnresolvedInvitation() async {
+    final epoch = _readEpoch;
     final unresolved = _unresolvedInvitation;
     if (unresolved == null || _checkingUnresolvedInvitation) {
       return;
@@ -301,7 +381,7 @@ class _ManagementStaffDevicesPageState
         username: unresolved.username,
         email: unresolved.email,
       );
-      if (!mounted) {
+      if (!mounted || epoch != _readEpoch) {
         return;
       }
       if (account == null) {
@@ -315,13 +395,13 @@ class _ManagementStaffDevicesPageState
         return;
       }
       await _load(reset: true);
-      if (mounted) {
+      if (mounted && epoch == _readEpoch) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invitation account confirmed.')),
         );
       }
     } on Object catch (error) {
-      if (mounted) {
+      if (mounted && epoch == _readEpoch) {
         final message = error is SpinaApiException
             ? error.message
             : 'The invitation result could not be checked.';
@@ -330,7 +410,7 @@ class _ManagementStaffDevicesPageState
         ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
-      if (mounted) {
+      if (mounted && epoch == _readEpoch) {
         setState(() => _checkingUnresolvedInvitation = false);
       }
     }
@@ -354,6 +434,8 @@ class _ManagementStaffDevicesPageState
   Future<ManagementStaffAccount> _reloadAccount(
     ManagementStaffAccount account,
   ) async {
+    final epoch = _readEpoch;
+    final session = widget.session;
     final deviceId = _deviceId;
     if (deviceId == null) {
       throw const SpinaApiException(
@@ -361,13 +443,25 @@ class _ManagementStaffDevicesPageState
         code: 'network_unavailable',
       );
     }
-    final page = await _repository.loadStaff(
-      widget.session,
-      deviceId: deviceId,
-      query: account.username,
-      limit: _pageSize,
-      offset: 0,
-    );
+    late ManagementStaffPage page;
+    try {
+      page = await _repository.loadStaff(
+        session,
+        deviceId: deviceId,
+        query: account.username,
+        limit: _pageSize,
+        offset: 0,
+      );
+    } on Object catch (error) {
+      _deny(error, epoch);
+      rethrow;
+    }
+    if (!mounted || epoch != _readEpoch) {
+      throw const SpinaApiException(
+        'The staff session changed.',
+        statusCode: 403,
+      );
+    }
     final fresh = page.items.where((item) => item.id == account.id).firstOrNull;
     if (fresh == null) {
       throw const SpinaApiException(

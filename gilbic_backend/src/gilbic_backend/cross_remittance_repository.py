@@ -14,11 +14,12 @@ from .remittance_repository import (
     RemittanceEmpty,
     RemittanceError,
     RemittanceItemRecord,
-    RemittanceRecord,
     RemittanceRecipientInvalid,
+    RemittanceRecord,
     RemittanceSummaryRecord,
+    assert_review_digest,
+    require_review_digest,
 )
-
 
 ASSIGNED_COLLECTOR_CAPACITY = "assigned_collector"
 MANAGEMENT_CAPACITY = "management"
@@ -102,7 +103,10 @@ class PostgresCrossRemittanceRepository:
                 management_summary = cursor.fetchone()
 
                 management_rows = ()
-                if management_summary and int(management_summary["transaction_count"]) > 0:
+                if (
+                    management_summary
+                    and int(management_summary["transaction_count"]) > 0
+                ):
                     cursor.execute(
                         """
                         select distinct
@@ -159,6 +163,9 @@ class PostgresCrossRemittanceRepository:
         capacity = self._normalize_capacity(recipient_capacity)
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    "set transaction isolation level repeatable read, read only"
+                )
                 collector_name = PostgresRemittanceRepository._user_name(
                     cursor,
                     collector_user_id,
@@ -181,6 +188,7 @@ class PostgresCrossRemittanceRepository:
             collector_name=collector_name,
             collection_date=collection_date,
             items=items,
+            review_scope=("cross_collector", str(recipient_user_id), capacity),
         )
 
     def submit(
@@ -190,8 +198,10 @@ class PostgresCrossRemittanceRepository:
         recipient_user_id: UUID,
         collection_date: date,
         note: str,
+        expected_review_digest: str | None = None,
         recipient_capacity: str = ASSIGNED_COLLECTOR_CAPACITY,
     ) -> RemittanceRecord:
+        expected_review_digest = require_review_digest(expected_review_digest)
         capacity = self._normalize_capacity(recipient_capacity)
         if collector_user_id == recipient_user_id:
             raise RemittanceRecipientInvalid(
@@ -201,6 +211,7 @@ class PostgresCrossRemittanceRepository:
         with open_connection() as connection:
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
+                    PostgresRemittanceRepository._lock_review_sources(cursor)
                     cursor.execute(
                         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
                         (
@@ -230,7 +241,13 @@ class PostgresCrossRemittanceRepository:
                         collector_name=collector_name,
                         collection_date=collection_date,
                         items=items,
+                        review_scope=(
+                            "cross_collector",
+                            str(recipient_user_id),
+                            capacity,
+                        ),
                     )
+                    assert_review_digest(summary, expected_review_digest)
                     if not summary.items:
                         if capacity == MANAGEMENT_CAPACITY:
                             message = (
@@ -320,9 +337,7 @@ class PostgresCrossRemittanceRepository:
                                 item.entry_type,
                                 item.amount,
                                 item.receipt_number,
-                                Jsonb(
-                                    PostgresRemittanceRepository._item_payload(item)
-                                ),
+                                Jsonb(PostgresRemittanceRepository._item_payload(item)),
                             ),
                         )
 
@@ -414,6 +429,7 @@ class PostgresCrossRemittanceRepository:
                             Jsonb(
                                 {
                                     "remittance_number": remittance_number,
+                                    "review_digest": summary.review_digest,
                                     "recipient_user_id": str(recipient_user_id),
                                     "recipient_capacity": capacity,
                                     "transaction_count": summary.transaction_count,
@@ -545,6 +561,7 @@ class PostgresCrossRemittanceRepository:
             f"""
             select
                 transaction.id as transaction_id,
+                to_jsonb(transaction)::text as review_source,
                 transaction.client_id,
                 client.full_name as client_name,
                 transaction.loan_id,

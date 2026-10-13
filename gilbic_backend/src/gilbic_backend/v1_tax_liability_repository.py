@@ -76,7 +76,7 @@ class PostgresV1TaxLiabilityRepository:
     def list_items(
         self, *, status: str = "all", limit: int = 100, offset: int = 0
     ) -> tuple[V1TaxLiabilityItem, ...]:
-        where = self._status_where(status)
+        where, filter_params = self._status_where(status)
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
@@ -87,7 +87,7 @@ class PostgresV1TaxLiabilityRepository:
                     ORDER BY recognition_date DESC, tax_type, evidence_version DESC
                     LIMIT %s OFFSET %s
                     """,
-                    (limit, offset),
+                    (*filter_params, limit, offset),
                 )
                 return tuple(
                     V1TaxLiabilityItem(**dict(row)) for row in cursor.fetchall()
@@ -175,14 +175,14 @@ class PostgresV1TaxLiabilityRepository:
         )
 
     @staticmethod
-    def _status_where(status: str) -> str:
+    def _status_where(status: str) -> tuple[str, tuple[object, ...]]:
         clauses = {
             "all": "true",
             "ready": "accounting_status = 'evidence_ready'",
             "prepared": "accounting_status = 'prepared_not_posted'",
             "posted": "accounting_status = 'posted'",
             "adjustment_review": "accounting_status = 'posted_adjustment_review_required'",
-            "adjusted": "accounting_status LIKE 'posted_adjusted_%'",
+            "adjusted": "accounting_status LIKE %s",
             "covered": "accounting_status = 'covered_by_settled_adjustment'",
             "blocked": (
                 "accounting_status NOT IN "
@@ -194,7 +194,8 @@ class PostgresV1TaxLiabilityRepository:
         clause = clauses.get(status)
         if clause is None:
             raise ValueError("Unsupported V1 tax-liability status filter.")
-        return clause
+        parameters = {"adjusted": ("posted_adjusted_%",)}
+        return clause, parameters.get(status, ())
 
     @staticmethod
     def _call_id(query: str, params: tuple[object, ...]) -> UUID:

@@ -1,3 +1,4 @@
+import 'package:gilbic_mobile/src/features/office/office_intake_authority.dart';
 import 'package:gilbic_mobile/src/core/mirror/mirror_controller.dart';
 import 'package:gilbic_mobile/src/core/mirror/mirror_repository.dart';
 import 'package:gilbic_mobile/src/features/mirror/mirror_host.dart';
@@ -189,7 +190,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       if (!_isCurrentGeneration(generation)) return;
       if (session != null) {
         try {
-          await _collectorRouteCache?.clearForUser(session.userId);
+          await _collectorRouteCache?.invalidateSession(session);
         } on Object {
           // Invalid-session cleanup must continue if local cache storage fails.
         }
@@ -206,7 +207,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       if (!_isCurrentGeneration(generation)) return;
       if (session != null) {
         try {
-          await _collectorRouteCache?.clearForUser(session.userId);
+          await _collectorRouteCache?.invalidateSession(session);
         } on Object {
           // Invalid-session cleanup must continue if local cache storage fails.
         }
@@ -239,6 +240,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       current,
     );
     if (!_isCurrentGeneration(generation)) return current;
+    _collectorRouteCache?.continueSession(current, refreshed);
     await _persistSession(refreshed, generation);
     if (!_isCurrentGeneration(generation)) return current;
     current.applyRefresh(refreshed);
@@ -255,6 +257,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       final validated = await (validator as SessionValidationRepository)
           .validate(current);
       if (!_isCurrentGeneration(generation)) return current;
+      _collectorRouteCache?.continueSession(current, validated);
       await _persistSession(validated, generation);
       if (!_isCurrentGeneration(generation)) return current;
       current.applyRefresh(validated);
@@ -347,6 +350,13 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     String? updateRequiredMessage,
   }) async {
     final generation = ++_sessionGeneration;
+    // Revoke route leases before waiting for secure-session persistence. The
+    // shared storage queue orders any in-flight route write before its cleanup.
+    final routeCleanup = session == null
+        ? Future<void>.value()
+        : (_collectorRouteCache?.invalidateSession(session) ??
+                  Future<void>.value())
+              .catchError((Object _) {});
     _refreshingSession = false;
     _mirror.attach(null);
     _employeeOperations.attach(null);
@@ -361,13 +371,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       });
     }
     await _persistSession(null, generation);
-    try {
-      if (session != null) {
-        await _collectorRouteCache?.clearForUser(session.userId);
-      }
-    } on Object {
-      // Session removal must continue even if the local cache is unavailable.
-    }
+    await routeCleanup;
   }
 
   Future<void> _showUpdateRequired(UserSession? session, String message) async {
@@ -453,6 +457,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       final validated = await (validator as SessionValidationRepository)
           .validate(current);
       if (!_isCurrentGeneration(generation)) return;
+      _collectorRouteCache?.continueSession(current, validated);
       await _persistSession(validated, generation);
       if (!_isCurrentGeneration(generation)) {
         return;
@@ -516,6 +521,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         current,
       );
       if (!_isCurrentGeneration(generation)) return;
+      _collectorRouteCache?.continueSession(current, refreshed);
       await _persistSession(refreshed, generation);
       if (!_isCurrentGeneration(generation)) {
         return;
@@ -557,19 +563,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     );
   }
 
-  String _authorizationScopeKey(UserSession? session) {
-    if (session == null) {
-      return 'signed-out';
-    }
-    final permissions = List<String>.of(session.permissions)..sort();
-    final roles = List<String>.of(session.roles)..sort();
-    return '${session.userId}|${session.rawRole.toLowerCase()}|${roles.join('|')}|${permissions.join('|')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      key: ValueKey<String>(_authorizationScopeKey(_session)),
+      key: ValueKey<String>(_session?.authorizationScopeKey ?? 'signed-out'),
       navigatorKey: _navigator,
       navigatorObservers: [_mirrorNavigation],
       title: 'SPINA',
@@ -589,7 +586,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           deviceIdentityProvider: _deviceIdentityProvider,
           child: EmployeeOperationsScope(
             service: _employeeOperations,
-            child: child!,
+            child: OfficeIntakeAuthorityHost(session: _session, child: child!),
           ),
         ),
       ),

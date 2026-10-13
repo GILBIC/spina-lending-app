@@ -1,0 +1,179 @@
+{
+  "status": "complete_for_posted_ledger",
+  "scope": "all_posted_journals",
+  "coverage": {
+    "journal_count": 1,
+    "reviewed_count": 1,
+    "excluded_count": 0,
+    "blocked_count": 0
+  },
+  "blockers": [],
+  "noncash_components": [
+    {
+      "journal_entry_id": "13a6432a-dd5e-4057-aa25-f5853e3c2792",
+      "entry_number": "JE-202610-00000022",
+      "posting_date": "2026-10-05",
+      "source_type": "manual",
+      "reversal_of_entry_id": null,
+      "amount": "600.00",
+      "debit_line_id": "9ad2ba64-ce06-43c9-80c0-111a6f43b094",
+      "classification": "noncash_investing_financing",
+      "credit_line_id": "2fb55921-d08f-4c2d-baf5-f58c113c0779",
+      "evidence_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "evidence_reference": "test:asset-funding",
+      "debit_account_code": "1598",
+      "credit_account_code": "2300"
+    }
+  ],
+  "financing_liabilities": [
+    {
+      "account_code": "2300",
+      "account_name": "External Borrowings",
+      "opening_balance": "0.00",
+      "cash_changes": "0.00",
+      "noncash_changes": "600.00",
+      "opening_adjustments": "0.00",
+      "closing_balance": "600.00",
+      "difference": "0.00",
+      "reconciled": true
+    }
+  ],
+  "notice": "Coverage is limited to the posted ledger and retained financing-account policy. Components are gross reviewed amounts; reversals identify their original journal. No aggregate noncash total is inferred.",
+  "book_id": "a55ee08a-37ac-4939-af0c-05fc5a2aa53a",
+  "period": {
+    "id": "44371906-2bfd-428c-bd0d-6f9df1877f25",
+    "label": "572f8a557a074c6797c1046d46009a20",
+    "start_date": "2026-10-05",
+    "end_date": "2026-10-17",
+    "status": "open"
+  },
+  "cash_account_codes": [
+    "1010",
+    "1020",
+    "1030"
+  ],
+  "policy": {
+    "reviewed": true,
+    "evidence_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "evidence_reference": "test:funding-policy",
+    "financing_account_codes": [
+      "2300"
+    ],
+    "id": "a83fef8a-da03-4c6c-8c72-5eaba8b962c2",
+    "book_id": "a55ee08a-37ac-4939-af0c-05fc5a2aa53a",
+    "reporting_policy_id": "ca5aca1d-7ab9-4dda-a68b-0bbe2ec91513",
+    "fiscal_period_id": "44371906-2bfd-428c-bd0d-6f9df1877f25",
+    "version": 1,
+    "definition_valid": true,
+    "reviewed_at": "2026-10-05T20:02:31.873706+08:00"
+  },
+  "reporting_policy_id": "ca5aca1d-7ab9-4dda-a68b-0bbe2ec91513",
+  "journals": [
+    {
+      "journal_entry_id": "13a6432a-dd5e-4057-aa25-f5853e3c2792",
+      "entry_number": "JE-202610-00000022",
+      "posting_date": "2026-10-05",
+      "source_type": "manual",
+      "reversal_of_entry_id": null,
+      "protected_kind": null,
+      "source_status": "current",
+      "review_status": "current",
+      "review_version": 1,
+      "review_id": "32e7363a-5aae-48d5-932a-dc25b60737b2",
+      "reviewed_at": "2026-10-05T20:02:31.909106+08:00",
+      "source_digest": "08604d72cf86bd782f58909696d8197aa6a6e07f653bc5b8ba032958394585b8",
+      "lines": [
+        {
+          "id": "9ad2ba64-ce06-43c9-80c0-111a6f43b094",
+          "account_code": "1598",
+          "account_name": "Synthetic mixed acquisition",
+          "debit": "1000.00",
+          "credit": "0.00",
+          "cash_allocations": null
+        },
+        {
+          "id": "8e4d0a16-28c6-400c-b7c1-9faf8aaf02c8",
+          "account_code": "1010",
+          "account_name": "Cash - Office",
+          "debit": "0.00",
+          "credit": "400.00",
+          "cash_allocations": [
+            {
+              "amount": "-400.00",
+              "category": "investing"
+            }
+          ]
+        },
+        {
+          "id": "2fb55921-d08f-4c2d-baf5-f58c113c0779",
+          "account_code": "2300",
+          "account_name": "External Borrowings",
+          "debit": "0.00",
+          "credit": "600.00",
+          "cash_allocations": null
+        }
+      ],
+      "components": [
+        {
+          "amount": "400.00",
+          "debit_line_id": "9ad2ba64-ce06-43c9-80c0-111a6f43b094",
+          "classification": "cash_investing",
+          "credit_line_id": "8e4d0a16-28c6-400c-b7c1-9faf8aaf02c8",
+          "evidence_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "evidence_reference": "test:asset-funding"
+        },
+        {
+          "amount": "600.00",
+          "debit_line_id": "9ad2ba64-ce06-43c9-80c0-111a6f43b094",
+          "classification": "noncash_investing_financing",
+          "credit_line_id": "2fb55921-d08f-4c2d-baf5-f58c113c0779",
+          "evidence_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "evidence_reference": "test:asset-funding"
+        }
+      ],
+      "reason": "Asset funded partly in cash and partly by borrowing."
+    }
+  ],
+  "financing_account_options": [
+    {
+      "code": "2000",
+      "name": "Accounts Payable"
+    },
+    {
+      "code": "2100",
+      "name": "Tax Payables"
+    },
+    {
+      "code": "2200",
+      "name": "Unapplied Borrower Funds"
+    },
+    {
+      "code": "2210",
+      "name": "Unidentified Collector Excess"
+    },
+    {
+      "code": "2220",
+      "name": "Collector Credit Payable"
+    },
+    {
+      "code": "2300",
+      "name": "External Borrowings"
+    },
+    {
+      "code": "2310",
+      "name": "Repayable Owner and Related-Party Funding"
+    },
+    {
+      "code": "2320",
+      "name": "Accrued Funding Interest"
+    },
+    {
+      "code": "2330",
+      "name": "Wages Payable"
+    },
+    {
+      "code": "2340",
+      "name": "Statutory Contributions Payable"
+    }
+  ]
+}
