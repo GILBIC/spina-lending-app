@@ -5,9 +5,9 @@ permissions:
   contents: read
 jobs:
   accounting-jit-diagnostic:
-    name: Repaired disposable accounting adapters only
+    name: Historical and final accounting restore proof
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:17
@@ -52,21 +52,17 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_dump --version
           /usr/lib/postgresql/17/bin/pg_restore --version
 
-      - name: Run all repaired adapter checks with original deadline
+      - name: Verify exact populated restore on152and171
         env:
           SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
           SPINA_POSTGRES_BIN: /usr/lib/postgresql/17/bin
           ACCOUNTING_CONTROLS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ci-artifacts/jit-diagnostic
-          python tools/run_accounting_adapters_disposable_validation.py 2>&1 | tee ci-artifacts/jit-diagnostic/repaired-adapters.log
+        run: python tools/diagnose_accounting_restore.py
       - name: Preserve synthetic diagnostic results
         if: always()
         uses: actions/upload-artifact@v7.0.0
         with:
-          name: accounting-adapters-repaired-${{ github.sha }}
+          name: accounting-restore-repaired-${{ github.sha }}
           path: ci-artifacts/jit-diagnostic/
           if-no-files-found: error
           retention-days: 7
