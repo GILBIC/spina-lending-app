@@ -86,6 +86,11 @@ def main(
             SPINA_ALLOW_DISPOSABLE_DATABASE="1",
             SPINA_CURRENT_SCHEMA_THROUGH=str(bootstrap_through),
             PYTHONDONTWRITEBYTECODE="1",
+            # The hosted database has no JIT. LLVM compilation of the composed
+            # source checks dominates short-lived synthetic databases on Linux.
+            # Keep the same SQL, assertions and deadlines under that execution
+            # mode, replacing rather than inheriting ambient libpq options.
+            PGOPTIONS="-c jit=off",
         )
         if os.getenv("SPINA_POSTGRES_BIN"):
             env["SPINA_POSTGRES_BIN"] = os.environ["SPINA_POSTGRES_BIN"]

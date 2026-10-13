@@ -32,7 +32,12 @@ MIGRATION = (
 def legacy_close():
     with _connect() as conn:
         try:
-            if os.getenv("SPINA_LEGACY_CLOSE_BASELINE") != "1":
+            if (
+                os.getenv("SPINA_LEGACY_CLOSE_BASELINE") != "1"
+                and not conn.execute(
+                    "SELECT to_regprocedure('accounting.period_legacy_source_blockers(uuid)') IS NOT NULL"
+                ).fetchone()[0]
+            ):
                 conn.execute(close._body(MIGRATION.read_text(encoding="utf-8")))
             suffix = uuid4().hex
             actor = close._management_actor(conn, suffix)
@@ -391,8 +396,28 @@ def test_tax_population_includes_raw_source_without_any_posting(
 
 
 def test_valid_unpaid_liability_does_not_require_zero_payables(legacy_close):
+    from test_accounting_book_postgres import configure
+    from test_liability_control_postgres import register
+
     f = legacy_close
-    close._manual_journal(
+    # Valid unpaid does not mean unattributed: retain the actual counterparty
+    # obligation required by the composed liability control, with no settlement.
+    if (
+        not f["conn"]
+        .execute(
+            "SELECT to_regprocedure('accounting.register_liability_obligation(uuid,uuid,jsonb,uuid)') IS NOT NULL"
+        )
+        .fetchone()[0]
+    ):
+        f["conn"].execute(
+            close._body(
+                (
+                    MIGRATION.parent / "0147_add_liability_control_schedule.sql"
+                ).read_text(encoding="utf-8")
+            )
+        )
+    book = configure(f["conn"], f["actor"], "owner_operations")
+    journal, _ = close._manual_journal(
         f["conn"],
         actor_id=f["actor"],
         posting_date=f["start"],
@@ -402,8 +427,27 @@ def test_valid_unpaid_liability_does_not_require_zero_payables(legacy_close):
             {"account_code": "2000", "debit": "0.00", "credit": "100.00"},
         ],
     )
+    line = (
+        f["conn"]
+        .execute(
+            "SELECT line.id FROM accounting.journal_lines line JOIN accounting.accounts account "
+            "ON account.id=line.account_id WHERE line.journal_entry_id=%s AND account.code='2000'",
+            (journal,),
+        )
+        .fetchone()[0]
+    )
+    obligation = register(f | {"book": book, "day": f["start"]}, line)
     assert _blockers(f) == []
     close._move_to_review(f["conn"], f["period"], f["actor"])
+    assert (
+        f["conn"]
+        .execute(
+            "SELECT outstanding_amount FROM accounting.liability_control_schedule(%s) WHERE obligation_id=%s",
+            (f["end"], obligation),
+        )
+        .fetchone()[0]
+        == 100
+    )
 
 
 def test_unallocated_loan_control_balance_cannot_hide_from_assessment(legacy_close):

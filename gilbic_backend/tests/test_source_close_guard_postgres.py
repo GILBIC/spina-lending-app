@@ -45,11 +45,27 @@ def _connect():
     return psycopg.connect(url)
 
 
+def _source_controls_composed(conn):
+    """Identify installed 148+ controls without replacing them with 141."""
+    with conn.cursor(row_factory=psycopg.rows.tuple_row) as cursor:
+        composed, liability, families = cursor.execute(
+            "SELECT to_regprocedure('accounting.period_initial_source_blockers(uuid)') IS NOT NULL, "
+            "to_regprocedure('accounting.period_liability_source_blockers(uuid)') IS NOT NULL, "
+            "EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('accounting.period_source_close_state') "
+            "AND attname='source_families' AND NOT attisdropped)"
+        ).fetchone()
+    if composed:
+        assert liability and families, "Installed source composition is incomplete"
+    return composed
+
+
 @pytest.fixture
 def source_close():
     with _connect() as conn:
         try:
-            if os.getenv("SPINA_SOURCE_CLOSE_BASELINE") != "1":
+            if os.getenv(
+                "SPINA_SOURCE_CLOSE_BASELINE"
+            ) != "1" and not _source_controls_composed(conn):
                 conn.execute(close._body(MIGRATION.read_text(encoding="utf-8")))
             suffix = uuid4().hex
             actor = close._management_actor(conn, suffix)
@@ -197,7 +213,11 @@ def test_queue_and_summary_explain_unreconciled_sources(source_close):
 def test_migration_replay_preserves_blocker_and_private_function_grants(source_close):
     f = source_close
     event = _event(f)
-    f["conn"].execute(close._body(MIGRATION.read_text(encoding="utf-8")))
+    # The 144 controls profile proves exact 141 replay. Composed adapter/current
+    # profiles verify the same blocker and private grants on installed guards;
+    # replaying their predecessor would replace later source admission rules.
+    if not _source_controls_composed(f["conn"]):
+        f["conn"].execute(close._body(MIGRATION.read_text(encoding="utf-8")))
     assert any(row[1] == event for row in _blockers(f))
     assert (
         f["conn"]

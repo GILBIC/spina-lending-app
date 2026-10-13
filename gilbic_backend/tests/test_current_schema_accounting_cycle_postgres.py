@@ -78,6 +78,7 @@ def fresh_current_database():
                 for migration in migrations:
                     conn.execute(migration.read_text(encoding="utf-8"))
             yield {
+                "schema_through": through,
                 "params": params,
                 "names": names,
                 "source": source_url,
@@ -359,7 +360,10 @@ def test_current_schema_populated_private_evidence_restores_exactly(
     assert expected_rows["accounting.liability_obligations"]["rows"] == 1
     assert expected_rows["accounting.reporting_policy_versions"]["rows"] == 1
     assert expected_rows["accounting.initial_capital_funding_postings"]["rows"] == 1
-    assert expected_rows["accounting.period_review_manifests"]["rows"] == 1
+    if case["schema_through"] >= 154:
+        assert expected_rows["accounting.period_review_manifests"]["rows"] == 1
+    else:
+        assert "accounting.period_review_manifests" not in expected_rows
     assert expected_rows["accounting.period_close_postings"]["rows"] == 1
     assert expected_files
     expected_schema = recovery.schema_snapshot(
