@@ -102,11 +102,8 @@ def test_full_range_transfer_principal_close_and_private_export_authority(
     from test_reporting_policy_postgres import policy
 
     url = isolated_statement_database
-    # Run on the installed schema; the original fixture defaults to historical
-    # migration reinstalls, which are intentionally disabled for this proof.
-    monkeypatch.setattr(
-        transfer, "seed", lambda conn: receipt.seed(conn, install_migrations=False)
-    )
+    # seed_transfer already preserves the installed schema by passing
+    # install_migrations=False to the receipt fixture.
     with psycopg.connect(url, row_factory=dict_row) as conn:
         f = transfer.seed_transfer(conn, tmp_path)
         actor = f["actor"].user_id
