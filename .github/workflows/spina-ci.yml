@@ -5,9 +5,9 @@ permissions:
   contents: read
 jobs:
   accounting-jit-diagnostic:
-    name: Disposable accounting JIT diagnostic only
+    name: Remaining disposable accounting checks only
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 90
     services:
       postgres:
         image: postgres:17
@@ -33,16 +33,36 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check --upgrade pip
           python -m pip install --disable-pip-version-check -e ./spina_backend_mobile -e './gilbic_backend[test]'
-      - name: Compare exact test and schema with JIT on and off
+      - name: Install matching PostgreSQL backup tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          # https://www.postgresql.org/download/linux/ubuntu/
+          if [ ! -x /usr/lib/postgresql/17/bin/pg_dump ]; then
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl --fail --silent --show-error \
+              https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+              -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+            . /etc/os-release
+            printf 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt %s-pgdg main\n' "$VERSION_CODENAME" \
+              | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+            sudo apt-get update -qq
+            sudo apt-get install --yes --no-install-recommends postgresql-client-17
+          fi
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          /usr/lib/postgresql/17/bin/pg_restore --version
+
+      - name: Diagnose every remaining unchanged accounting validator
         env:
           SPINA_ALLOW_DISPOSABLE_DATABASE: "1"
+          SPINA_POSTGRES_BIN: /usr/lib/postgresql/17/bin
           ACCOUNTING_CONTROLS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        run: python tools/diagnose_accounting_jit.py
+        run: python tools/diagnose_remaining_accounting.py
       - name: Preserve synthetic diagnostic results
         if: always()
         uses: actions/upload-artifact@v7.0.0
         with:
-          name: accounting-jit-diagnostic-${{ github.sha }}
+          name: accounting-remaining-diagnostic-${{ github.sha }}
           path: ci-artifacts/jit-diagnostic/
           if-no-files-found: error
           retention-days: 7
