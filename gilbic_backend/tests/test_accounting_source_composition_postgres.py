@@ -14,6 +14,7 @@ from test_legacy_source_completeness_postgres import legacy_close as _legacy_clo
 from test_liability_control_postgres import liabilities as _liabilities
 from test_liability_control_postgres import line, movement, register
 from test_period_close_postgres import _body, _move_to_review
+from test_source_close_guard_postgres import _source_controls_composed
 from test_treasury_receipt_accounting_postgres import (
     install,
     mapping,
@@ -35,6 +36,8 @@ isolated_statement_database = _isolated_statement_database
 
 
 def compose(conn):
+    if _source_controls_composed(conn):
+        return
     for name in (
         "0141_add_accounting_source_close_guard.sql",
         "0145_add_treasury_receipt_accounting.sql",
